@@ -23,11 +23,12 @@ struct FontCommentController: RouteCollection {
 
     /// POST /fonts/:fontID/comments — añade un comentario a la fuente.
     @Sendable func create(req: Request) async throws -> Response {
+        let user = try req.auth.require(User.self)
         let fontID = try await requireFontID(req)
         try CreateCommentDTO.validate(content: req)
         let dto = try req.content.decode(CreateCommentDTO.self)
 
-        let comment = FontComment(fontID: fontID, body: dto.body)
+        let comment = FontComment(fontID: fontID, userID: try user.requireID(), body: dto.body)
         try await comment.save(on: req.db)
 
         let response = Response(status: .created)
@@ -58,12 +59,14 @@ extension CreateCommentDTO: Validatable {
 struct CommentResponse: Content {
     let id: UUID?
     let fontID: UUID
+    let userID: UUID?
     let body: String
     let createdAt: Date?
 
     init(_ comment: FontComment) {
         self.id = comment.id
         self.fontID = comment.$font.id
+        self.userID = comment.$user.id
         self.body = comment.body
         self.createdAt = comment.createdAt
     }

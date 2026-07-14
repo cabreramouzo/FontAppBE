@@ -34,12 +34,23 @@ public func configure(_ app: Application) async throws {
     // Hashing de contraseñas.
     app.passwords.use(.bcrypt)
 
+    // CORS: necesario para un frontend web servido en otro origen.
+    // En producción, restringir `allowedOrigin` a los dominios del front.
+    let cors = CORSMiddleware(configuration: .init(
+        allowedOrigin: .all,
+        allowedMethods: [.GET, .POST, .PUT, .DELETE, .OPTIONS],
+        allowedHeaders: [.accept, .authorization, .contentType, .origin]
+    ))
+    app.middleware.use(cors, at: .beginning)
+
     // Migraciones: una por modelo.
     app.migrations.add(CreateUser())
     app.migrations.add(CreateUserToken())
     app.migrations.add(CreateFont())
     app.migrations.add(CreateFontReport())
     app.migrations.add(CreateFontComment())
+    app.migrations.add(AddUserToFontReport())
+    app.migrations.add(AddUserToFontComment())
 
     // Rutas.
     try routes(app)

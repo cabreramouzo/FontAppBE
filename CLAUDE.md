@@ -2,7 +2,7 @@
 
 Backend REST de una app para localizar **fuentes de agua** cercanas por geolocalización
 ("font" = fuente, no tipografía), con usuarios, reportes de problemas y comentarios.
-La spec de endpoints está en [definitions.md](definitions.md).
+El contrato real de la API está en [docs/api.md](docs/api.md); el brief original en [definitions.md](definitions.md).
 
 ## Stack
 - Swift 6.3 · Vapor 4 · Fluent + PostgreSQL · SwiftPM (sin proyecto Xcode).

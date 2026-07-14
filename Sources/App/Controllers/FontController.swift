@@ -10,6 +10,7 @@ struct FontController: RouteCollection {
         let fonts = routes.grouped("fonts")
 
         // Lectura pública.
+        fonts.get(use: index)
         fonts.get("near", use: near)
         fonts.get("near", "download", use: nearDownload)
         fonts.get(":fontID", use: show)
@@ -32,6 +33,13 @@ struct FontController: RouteCollection {
         let response = Response(status: .created)
         try response.content.encode(font)
         return response
+    }
+
+    /// GET /fonts?page={}&per={} — listado paginado de todas las fuentes.
+    @Sendable func index(req: Request) async throws -> Page<Font> {
+        try await Font.query(on: req.db)
+            .sort(\.$name)
+            .paginate(for: req)
     }
 
     @Sendable func show(req: Request) async throws -> Font {

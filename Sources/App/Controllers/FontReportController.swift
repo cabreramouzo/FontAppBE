@@ -23,11 +23,12 @@ struct FontReportController: RouteCollection {
 
     /// POST /fonts/:fontID/report — reporta un problema en la fuente.
     @Sendable func create(req: Request) async throws -> Response {
+        let user = try req.auth.require(User.self)
         let fontID = try await requireFontID(req)
         try CreateReportDTO.validate(content: req)
         let dto = try req.content.decode(CreateReportDTO.self)
 
-        let report = FontReport(fontID: fontID, message: dto.message)
+        let report = FontReport(fontID: fontID, userID: try user.requireID(), message: dto.message)
         try await report.save(on: req.db)
 
         let response = Response(status: .created)
@@ -58,12 +59,14 @@ extension CreateReportDTO: Validatable {
 struct ReportResponse: Content {
     let id: UUID?
     let fontID: UUID
+    let userID: UUID?
     let message: String
     let createdAt: Date?
 
     init(_ report: FontReport) {
         self.id = report.id
         self.fontID = report.$font.id
+        self.userID = report.$user.id
         self.message = report.message
         self.createdAt = report.createdAt
     }
