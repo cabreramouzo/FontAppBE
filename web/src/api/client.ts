@@ -1,4 +1,4 @@
-import type { LoginResponse } from './types'
+import type { Font, LoginResponse } from './types'
 
 // En dev, Vite hace proxy de /api -> backend (ver vite.config.ts).
 const BASE = '/api'
@@ -49,4 +49,24 @@ export async function loginRequest(username: string, password: string): Promise<
     headers: { Authorization: 'Basic ' + btoa(`${username}:${password}`) },
   })
   return (await parse(res)) as LoginResponse
+}
+
+/** Sube una imagen (multipart) y devuelve su URL relativa. */
+export async function uploadImage(file: File): Promise<string> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await apiFetch<{ url: string }>('/images', { method: 'POST', body: form })
+  return res.url
+}
+
+export interface NewFont {
+  name: string
+  latitude: number
+  longitude: number
+  image?: string
+  description?: string
+}
+
+export async function createFont(data: NewFont): Promise<Font> {
+  return apiFetch<Font>('/fonts', { method: 'POST', body: JSON.stringify(data) })
 }

@@ -44,7 +44,44 @@ a:hover { text-decoration: underline; }
 .pad { padding: 20px; max-width: 720px; margin: 0 auto; }
 
 /* Mapa: ocupa el alto de la ventana menos la barra. */
+.map-wrap { position: relative; }
 .map-wrap, .map { height: calc(100vh - 56px); width: 100%; }
+
+/* Overlays sobre el mapa (Leaflet usa z-index hasta ~700). */
+.fab {
+  position: absolute;
+  right: 16px;
+  bottom: 24px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.hint {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  box-shadow: var(--shadow, 0 2px 8px rgba(0, 0, 0, 0.2));
+}
+.panel {
+  position: absolute;
+  left: 16px;
+  bottom: 24px;
+  z-index: 1000;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.panel h3 { margin: 0 0 4px; }
+.panel .col { max-width: none; }
 
 /* Detalle */
 .detail h1 { margin: 12px 0 4px; }
