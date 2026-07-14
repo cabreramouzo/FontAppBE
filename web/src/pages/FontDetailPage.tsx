@@ -203,6 +203,7 @@ export function FontDetailPage() {
   const [comments, setComments] = useState<CommentResponse[]>([])
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -237,6 +238,21 @@ export function FontDetailPage() {
       load()
     } catch (e) {
       setError((e as Error).message)
+    }
+  }
+
+  // Confirma que el último estado sigue vigente (refresca la frescura sin escribir reseña).
+  async function confirmStatus() {
+    const current = comments[0]
+    if (!id || !current?.waterStatus) return
+    setConfirming(true)
+    try {
+      await createComment(id, { body: 'Sigue igual ✅', waterStatus: current.waterStatus })
+      await load()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setConfirming(false)
     }
   }
 
@@ -282,6 +298,11 @@ export function FontDetailPage() {
           <>
             <p className="muted small">Última actualización:</p>
             <ReviewCard c={latest} highlight canManage={user?.id === latest.userID} onChanged={load} />
+            {user && latest.waterStatus && (
+              <button className="confirm-btn" onClick={confirmStatus} disabled={confirming}>
+                {confirming ? 'Confirmando…' : '👍 Sigue igual'}
+              </button>
+            )}
           </>
         ) : (
           <p className="muted">Aún no hay actualizaciones. ¡Sé el primero en informar del estado!</p>
