@@ -14,15 +14,25 @@ struct UserController: RouteCollection {
         }
     }
 
-    @Sendable func create(req: Request) async throws -> UserResponse {
+    @Sendable func create(req: Request) async throws -> Response {
+        try CreateUserDTO.validate(content: req)
         let dto = try req.content.decode(CreateUserDTO.self)
+
+        // 409 limpio en vez de dejar que el constraint de unicidad reviente en 500.
+        guard try await User.query(on: req.db).filter(\.$username == dto.username).first() == nil else {
+            throw Abort(.conflict, reason: "El username '\(dto.username)' ya está en uso")
+        }
+
         let user = User(
             name: dto.name,
             username: dto.username,
             passwordHash: try req.password.hash(dto.password)
         )
         try await user.save(on: req.db)
-        return UserResponse(user)
+
+        let response = Response(status: .created)
+        try response.content.encode(UserResponse(user))
+        return response
     }
 
     @Sendable func show(req: Request) async throws -> UserResponse {
@@ -30,8 +40,16 @@ struct UserController: RouteCollection {
     }
 
     @Sendable func update(req: Request) async throws -> UserResponse {
+        try UpdateUserDTO.validate(content: req)
         let user = try await find(req)
         let dto = try req.content.decode(UpdateUserDTO.self)
+
+        // Si el username cambia a uno que ya tiene OTRO usuario -> 409.
+        if let clash = try await User.query(on: req.db).filter(\.$username == dto.username).first(),
+           clash.id != user.id {
+            throw Abort(.conflict, reason: "El username '\(dto.username)' ya está en uso")
+        }
+
         user.name = dto.name
         user.username = dto.username
         if let password = dto.password {
@@ -61,8 +79,24 @@ struct CreateUserDTO: Content {
     let password: String
 }
 
+extension CreateUserDTO: Validatable {
+    static func validations(_ validations: inout Validations) {
+        validations.add("name", as: String.self, is: !.empty)
+        validations.add("username", as: String.self, is: .count(3...))
+        validations.add("password", as: String.self, is: .count(8...))
+    }
+}
+
 struct UpdateUserDTO: Content {
     let name: String
     let username: String
     let password: String?
+}
+
+extension UpdateUserDTO: Validatable {
+    static func validations(_ validations: inout Validations) {
+        validations.add("name", as: String.self, is: !.empty)
+        validations.add("username", as: String.self, is: .count(3...))
+        validations.add("password", as: String.self, is: .count(8...), required: false)
+    }
 }
