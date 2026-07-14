@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { Link } from 'react-router-dom'
 import type { LatLng, Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
-import type { FontSummary } from '../api/types'
+import type { Font, FontSummary, Page } from '../api/types'
 import { apiFetch, createFont, uploadImage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { WATER_STATUS, waterStatusInfo } from '../lib/waterStatus'
-import { statusIcon } from '../lib/statusMarker'
 import { formatDist, haversineKm } from '../lib/geo'
 import { timeAgo } from '../lib/time'
 
@@ -48,26 +48,7 @@ function FontMarkers({ nonce, onlyWithWater }: { nonce: number; onlyWithWater: b
   }, [map, loadBounds, nonce])
 
   const shown = onlyWithWater ? fonts.filter(hasWater) : fonts
-
-  return (
-    <>
-      {shown.map((f) => {
-        const ws = waterStatusInfo(f.lastWaterStatus)
-        return (
-          <Marker key={f.id} position={[f.latitude, f.longitude]} icon={statusIcon(f.lastWaterStatus)}>
-            <Popup>
-              <strong>{f.name}</strong>
-              {ws && <div className="badge">{ws.emoji} {ws.label}</div>}
-              {f.lastUpdate && <div className="muted small">Actualizado {timeAgo(f.lastUpdate)}</div>}
-              <div>
-                <Link to={`/fonts/${f.id}`}>Ver detalle →</Link>
-              </div>
-            </Popup>
-          </Marker>
-        )
-      })}
-    </>
-  )
+  return <ClusteredMarkers fonts={shown} />
 }
 
 // Captura el clic en el mapa para situar la nueva fuente.
@@ -76,13 +57,40 @@ function PlacePicker({ onPick }: { onPick: (pos: LatLng) => void }) {
   return null
 }
 
-// Recentra el mapa cuando cambia el objetivo (p. ej. "cerca de mí").
+// Recentra el mapa cuando cambia el objetivo (cerca de mí / búsqueda).
 function Recenter({ target }: { target: [number, number] | null }) {
   const map = useMap()
   useEffect(() => {
-    if (target) map.setView(target, 15)
+    if (target) map.setView(target, 16)
   }, [target, map])
   return null
+}
+
+function SearchBox({ onSelect }: { onSelect: (f: Font) => void }) {
+  const [all, setAll] = useState<Font[]>([])
+  const [q, setQ] = useState('')
+
+  useEffect(() => {
+    apiFetch<Page<Font>>('/fonts?per=300').then((p) => setAll(p.items)).catch(() => setAll([]))
+  }, [])
+
+  const term = q.trim().toLowerCase()
+  const matches = term.length >= 2 ? all.filter((f) => f.name.toLowerCase().includes(term)).slice(0, 8) : []
+
+  return (
+    <div className="search">
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 Buscar fuente…" />
+      {matches.length > 0 && (
+        <ul className="search-list">
+          {matches.map((f) => (
+            <li key={f.id}>
+              <button className="search-item" onClick={() => { onSelect(f); setQ('') }}>{f.name}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () => void; onCreated: () => void }) {
@@ -128,7 +136,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
 
 // Lista de fuentes cercanas, ordenadas por distancia, con estado y frescura.
 function NearbyPanel({ pos, onClose }: { pos: [number, number]; onClose: () => void }) {
-  const [items, setItems] = useState<FontSummary[]>([])
+  const [items, setItems] = useState<FontSummary[] | null>(null)
 
   useEffect(() => {
     apiFetch<FontSummary[]>(`/fonts/near?lat=${pos[0]}&long=${pos[1]}&quantity=25`)
@@ -143,7 +151,8 @@ function NearbyPanel({ pos, onClose }: { pos: [number, number]; onClose: () => v
         <button className="link" onClick={onClose}>✕</button>
       </div>
       <ul className="nearby-list">
-        {items.map((f) => {
+        {items === null && <li className="muted">Cargando…</li>}
+        {items?.map((f) => {
           const ws = waterStatusInfo(f.lastWaterStatus)
           const dist = haversineKm(pos[0], pos[1], f.latitude, f.longitude)
           return (
@@ -158,7 +167,7 @@ function NearbyPanel({ pos, onClose }: { pos: [number, number]; onClose: () => v
             </li>
           )
         })}
-        {items.length === 0 && <li className="muted">Sin fuentes cerca.</li>}
+        {items?.length === 0 && <li className="muted">Sin fuentes cerca.</li>}
       </ul>
     </div>
   )
@@ -182,6 +191,7 @@ export function MapPage() {
   const [pos, setPos] = useState<LatLng | null>(null)
   const [nonce, setNonce] = useState(0)
   const [me, setMe] = useState<[number, number] | null>(null)
+  const [goto, setGoto] = useState<[number, number] | null>(null)
   const [geoError, setGeoError] = useState('')
   const [onlyWithWater, setOnlyWithWater] = useState(false)
   const [showNearby, setShowNearby] = useState(false)
@@ -218,10 +228,13 @@ export function MapPage() {
         />
         <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} />
         <Recenter target={me} />
+        <Recenter target={goto} />
         {me && <Marker position={me} />}
         {placing && <PlacePicker onPick={setPos} />}
         {pos && <Marker position={pos} />}
       </MapContainer>
+
+      <SearchBox onSelect={(f) => setGoto([f.latitude, f.longitude])} />
 
       <div className="map-controls">
         <button className="ctrl" onClick={locateMe}>📍 Cerca de mí</button>

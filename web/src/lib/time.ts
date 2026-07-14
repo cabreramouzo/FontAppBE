@@ -12,3 +12,8 @@ export function timeAgo(iso: string): string {
   if (days < 30) return `hace ${days} días`
   return new Date(iso).toLocaleDateString()
 }
+
+/** ¿El estado es demasiado antiguo para fiarse? (por defecto, > 30 días). */
+export function isStale(iso: string, days = 30): boolean {
+  return Date.now() - new Date(iso).getTime() > days * 24 * 3600 * 1000
+}

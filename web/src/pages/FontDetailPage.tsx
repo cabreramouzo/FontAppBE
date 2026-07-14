@@ -14,7 +14,7 @@ import {
 import { useAuth } from '../auth/AuthContext'
 import { StarRating } from '../components/StarRating'
 import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
-import { timeAgo } from '../lib/time'
+import { isStale, timeAgo } from '../lib/time'
 
 function ReviewCard({
   c,
@@ -297,6 +297,9 @@ export function FontDetailPage() {
         {latest ? (
           <>
             <p className="muted small">Última actualización:</p>
+            {latest.createdAt && isStale(latest.createdAt) && (
+              <p className="stale-warn">⚠️ Sin actualizar {timeAgo(latest.createdAt)} — el estado puede haber cambiado.</p>
+            )}
             <ReviewCard c={latest} highlight canManage={user?.id === latest.userID} onChanged={load} />
             {user && latest.waterStatus && (
               <button className="confirm-btn" onClick={confirmStatus} disabled={confirming}>
