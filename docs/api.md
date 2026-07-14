@@ -40,6 +40,11 @@ Login con credenciales inválidas → **401**.
 { "id": "uuid", "name": "string", "latitude": 40.4, "longitude": -3.7,
   "image": "url|null", "description": "string|null", "createdAt": "iso8601" }
 
+// FontSummary  (Font + último estado; lo devuelven los listados del mapa)
+{ ...campos de Font,
+  "lastWaterStatus": "flowing|trickle|dry|unknown|null",
+  "lastUpdate": "iso8601|null" }
+
 // UserResponse  (nunca incluye passwordHash)
 { "id": "uuid", "name": "string", "username": "string" }
 
@@ -47,10 +52,14 @@ Login con credenciales inválidas → **401**.
 { "id": "uuid", "fontID": "uuid", "userID": "uuid|null", "username": "string|null",
   "message": "string", "createdAt": "iso8601" }
 
-// CommentResponse
+// CommentResponse  (= actualización de estado / reseña)
 { "id": "uuid", "fontID": "uuid", "userID": "uuid|null", "username": "string|null",
-  "body": "string", "createdAt": "iso8601" }
+  "body": "string", "rating": "1-5|null",
+  "waterStatus": "flowing|trickle|dry|unknown|null",
+  "image": "url|null", "createdAt": "iso8601" }
 ```
+
+`waterStatus` (estado del agua): `flowing` (sale agua), `trickle` (poca), `dry` (seca), `unknown`.
 
 ## Users
 
@@ -68,9 +77,9 @@ Login con credenciales inválidas → **401**.
 | Método | Ruta | 🔒 | Cuerpo / Query | Éxito | Errores |
 |--------|------|----|----------------|-------|---------|
 | GET | `/fonts?page=&per=` | — | query de paginación | 200 `Page<Font>` | — |
-| GET | `/fonts/near?lat=&long=&quantity=` | — | `lat`,`long` req.; `quantity` opc. (máx 100, def 10) | 200 `[Font]` (por distancia) | 400 |
-| GET | `/fonts/near/download?...` | — | igual que `near` | 200 `[Font]` | 400 |
-| GET | `/fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=` | — | bounding box (para el mapa) | 200 `[Font]` | 400 |
+| GET | `/fonts/near?lat=&long=&quantity=` | — | `lat`,`long` req.; `quantity` opc. (máx 100, def 10) | 200 `[FontSummary]` (por distancia) | 400 |
+| GET | `/fonts/near/download?...` | — | igual que `near` | 200 `[FontSummary]` | 400 |
+| GET | `/fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=` | — | bounding box (para el mapa) | 200 `[FontSummary]` | 400 |
 | GET | `/fonts/:id` | — | — | 200 `Font` | 404 |
 | POST | `/fonts` | Bearer | `{name, latitude[-90,90], longitude[-180,180], image?, description?}` | 201 `Font` | 400, 401 |
 | PUT | `/fonts/:id` | Bearer | igual que POST | 200 `Font` | 400, 401, 404 |
@@ -88,13 +97,19 @@ Login con credenciales inválidas → **401**.
 |--------|------|----|--------|-------|---------|
 | GET | `/fonts/:id/report` | — | — | 200 `[ReportResponse]` (recientes primero) | 404 (fuente) |
 | POST | `/fonts/:id/report` | Bearer | `{message (1–1000)}` | 201 `ReportResponse` | 400, 401, 404 |
+| DELETE | `/fonts/:id/report/:reportID` | Bearer | — | 204 | 401, 403 (no es tuya), 404 |
 
-## Comments (comentarios sobre una fuente)
+## Comments (actualizaciones de estado / reseñas)
+
+Cada comentario es una **actualización del estado actual** de la fuente: texto y,
+opcionalmente, `rating` (1-5), `waterStatus` y `image`. El más reciente es el estado vigente.
 
 | Método | Ruta | 🔒 | Cuerpo | Éxito | Errores |
 |--------|------|----|--------|-------|---------|
 | GET | `/fonts/:id/comments` | — | — | 200 `[CommentResponse]` (recientes primero) | 404 (fuente) |
-| POST | `/fonts/:id/comments` | Bearer | `{body (1–2000)}` | 201 `CommentResponse` | 400, 401, 404 |
+| POST | `/fonts/:id/comments` | Bearer | `{body (1–2000), rating?(1-5), waterStatus?, image?}` | 201 `CommentResponse` | 400, 401, 404 |
+| PUT | `/fonts/:id/comments/:commentID` | Bearer | igual que POST | 200 `CommentResponse` | 400, 401, 403 (no es tuya), 404 |
+| DELETE | `/fonts/:id/comments/:commentID` | Bearer | — | 204 | 401, 403 (no es tuya), 404 |
 
 ## Images
 
@@ -108,8 +123,8 @@ Las imágenes subidas se sirven como estáticos en `GET /uploads/<archivo>`.
 
 ## Datos de ejemplo (dev)
 
-`swift run App seed [--force]` inserta ~26 fuentes de la comarca del **Moianès**
-para tener datos con los que maquetar el frontend.
+`swift run App seed [--force]` inserta ~67 fuentes **reales** de la comarca del
+**Moianès** (datos de OpenStreetMap, licencia ODbL) para maquetar el frontend.
 
 ## Pendiente (no implementado)
 

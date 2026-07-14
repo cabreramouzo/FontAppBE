@@ -9,7 +9,12 @@ struct FontCommentController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let comments = routes.grouped("fonts", ":fontID", "comments")
         comments.get(use: index) // lectura pública
-        comments.grouped(UserToken.authenticator(), User.guardMiddleware()).post(use: create)
+        let auth = comments.grouped(UserToken.authenticator(), User.guardMiddleware())
+        auth.post(use: create)
+        auth.group(":commentID") { c in
+            c.put(use: update)
+            c.delete(use: destroy)
+        }
     }
 
     /// GET /fonts/:fontID/comments — actualizaciones, más recientes primero.
@@ -51,6 +56,39 @@ struct FontCommentController: RouteCollection {
             throw Abort(.notFound, reason: "No existe la fuente indicada")
         }
         return try font.requireID()
+    }
+
+    /// PUT /fonts/:fontID/comments/:commentID — edita una reseña propia.
+    @Sendable func update(req: Request) async throws -> CommentResponse {
+        let user = try req.auth.require(User.self)
+        let comment = try await requireOwnComment(req, user: user)
+        try CreateCommentDTO.validate(content: req)
+        let dto = try req.content.decode(CreateCommentDTO.self)
+        comment.body = dto.body
+        comment.rating = dto.rating
+        comment.waterStatus = dto.waterStatus
+        comment.image = dto.image
+        try await comment.save(on: req.db)
+        return CommentResponse(comment, username: user.username)
+    }
+
+    /// DELETE /fonts/:fontID/comments/:commentID — borra una reseña propia.
+    @Sendable func destroy(req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        let comment = try await requireOwnComment(req, user: user)
+        try await comment.delete(on: req.db)
+        return .noContent
+    }
+
+    /// Carga la reseña por id; 404 si no existe, 403 si no es del usuario autenticado.
+    private func requireOwnComment(_ req: Request, user: User) async throws -> FontComment {
+        guard let comment = try await FontComment.find(req.parameters.get("commentID"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        guard comment.$user.id == user.id else {
+            throw Abort(.forbidden, reason: "Solo puedes modificar tus propias reseñas")
+        }
+        return comment
     }
 }
 

@@ -69,7 +69,7 @@ struct FontController: RouteCollection {
     /// GET /fonts/near?lat={}&long={}&quantity={}
     /// Prefiltro por bounding box (indexado por lat/long) + haversine + orden por distancia.
     /// TODO: a escala real, sustituir por PostGIS (columna `geography` + índice GiST).
-    @Sendable func near(req: Request) async throws -> [Font] {
+    @Sendable func near(req: Request) async throws -> [FontSummary] {
         try NearQuery.validate(query: req)
         let params = try req.query.decode(NearQuery.self)
         let quantity = min(max(1, params.quantity ?? 10), Self.maxNearQuantity)
@@ -83,32 +83,34 @@ struct FontController: RouteCollection {
             .limit(Self.maxNearQuantity * 5) // cota de seguridad sobre el candidate set en memoria.
             .all()
 
-        return candidates
+        let sorted = candidates
             .sorted {
                 haversineKm(params.lat, params.long, $0.latitude, $0.longitude)
                     < haversineKm(params.lat, params.long, $1.latitude, $1.longitude)
             }
             .prefix(quantity)
             .map { $0 }
+        return try await Font.summaries(for: sorted, on: req.db)
     }
 
     /// GET /fonts/near/download — mismo conjunto que `near`, pensado para cachear offline en el cliente.
-    @Sendable func nearDownload(req: Request) async throws -> [Font] {
+    @Sendable func nearDownload(req: Request) async throws -> [FontSummary] {
         try await near(req: req)
     }
 
     /// GET /fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=
     /// Fuentes dentro del área visible de un mapa. Indexado por (latitude, longitude).
-    @Sendable func inBounds(req: Request) async throws -> [Font] {
+    @Sendable func inBounds(req: Request) async throws -> [FontSummary] {
         try BoundsQuery.validate(query: req)
         let b = try req.query.decode(BoundsQuery.self)
-        return try await Font.query(on: req.db)
+        let fonts = try await Font.query(on: req.db)
             .filter(\.$latitude >= b.minLat)
             .filter(\.$latitude <= b.maxLat)
             .filter(\.$longitude >= b.minLong)
             .filter(\.$longitude <= b.maxLong)
             .limit(Self.maxNearQuantity * 5) // cota de seguridad.
             .all()
+        return try await Font.summaries(for: fonts, on: req.db)
     }
 
     private func find(_ req: Request) async throws -> Font {

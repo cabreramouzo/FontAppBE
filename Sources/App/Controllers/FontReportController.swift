@@ -7,7 +7,11 @@ struct FontReportController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let reports = routes.grouped("fonts", ":fontID", "report")
         reports.get(use: index) // lectura pública
-        reports.grouped(UserToken.authenticator(), User.guardMiddleware()).post(use: create)
+        let auth = reports.grouped(UserToken.authenticator(), User.guardMiddleware())
+        auth.post(use: create)
+        auth.group(":reportID") { r in
+            r.delete(use: destroy)
+        }
     }
 
     /// GET /fonts/:fontID/report — lista los problemas reportados en la fuente.
@@ -42,6 +46,19 @@ struct FontReportController: RouteCollection {
             throw Abort(.notFound, reason: "No existe la fuente indicada")
         }
         return try font.requireID()
+    }
+
+    /// DELETE /fonts/:fontID/report/:reportID — borra una incidencia propia.
+    @Sendable func destroy(req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        guard report.$user.id == user.id else {
+            throw Abort(.forbidden, reason: "Solo puedes borrar tus propias incidencias")
+        }
+        try await report.delete(on: req.db)
+        return .noContent
     }
 }
 

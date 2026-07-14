@@ -1,13 +1,89 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { CommentResponse, Font, ReportResponse } from '../api/types'
-import { apiFetch, createComment, deleteFont, updateFont, uploadImage } from '../api/client'
+import {
+  apiFetch,
+  createComment,
+  deleteComment,
+  deleteFont,
+  deleteReport,
+  updateComment,
+  updateFont,
+  uploadImage,
+} from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { StarRating } from '../components/StarRating'
 import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 
-function ReviewCard({ c, highlight }: { c: CommentResponse; highlight?: boolean }) {
+function ReviewCard({
+  c,
+  highlight,
+  canManage,
+  onChanged,
+}: {
+  c: CommentResponse
+  highlight?: boolean
+  canManage: boolean
+  onChanged: () => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [body, setBody] = useState(c.body)
+  const [rating, setRating] = useState(c.rating ?? 0)
+  const [waterStatus, setWaterStatus] = useState(c.waterStatus ?? '')
+  const [error, setError] = useState('')
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    try {
+      await updateComment(c.fontID, c.id, {
+        body,
+        rating: rating || undefined,
+        waterStatus: waterStatus || undefined,
+        image: c.image ?? undefined,
+      })
+      setEditing(false)
+      onChanged()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  async function remove() {
+    if (!confirm('¿Borrar esta reseña?')) return
+    try {
+      await deleteComment(c.fontID, c.id)
+      onChanged()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  if (editing) {
+    return (
+      <form className="review" onSubmit={save}>
+        <div className="update-row">
+          <label>Estado:
+            <select value={waterStatus} onChange={(e) => setWaterStatus(e.target.value)}>
+              <option value="">—</option>
+              {WATER_STATUS_OPTIONS.map((k) => (
+                <option key={k} value={k}>{WATER_STATUS[k].emoji} {WATER_STATUS[k].label}</option>
+              ))}
+            </select>
+          </label>
+          <label>Valoración: <StarRating value={rating} onChange={setRating} size={18} /></label>
+        </div>
+        <textarea value={body} onChange={(e) => setBody(e.target.value)} required />
+        {error && <p className="error">{error}</p>}
+        <div className="row">
+          <button type="submit">Guardar</button>
+          <button type="button" className="link" onClick={() => setEditing(false)}>Cancelar</button>
+        </div>
+      </form>
+    )
+  }
+
   const ws = waterStatusInfo(c.waterStatus)
   return (
     <div className={'review' + (highlight ? ' latest' : '')}>
@@ -18,6 +94,13 @@ function ReviewCard({ c, highlight }: { c: CommentResponse; highlight?: boolean 
       {c.rating != null && <StarRating value={c.rating} size={16} />}
       <p>{c.body}</p>
       {c.image && <img className="review-img" src={c.image} alt="" />}
+      {error && <p className="error">{error}</p>}
+      {canManage && (
+        <div className="row small">
+          <button className="link" onClick={() => setEditing(true)}>Editar</button>
+          <button className="link danger" onClick={remove}>Borrar</button>
+        </div>
+      )}
     </div>
   )
 }
@@ -137,11 +220,21 @@ export function FontDetailPage() {
     load().catch((e) => setError((e as Error).message))
   }, [load])
 
-  async function remove() {
+  async function removeFont() {
     if (!id || !confirm('¿Borrar esta fuente?')) return
     try {
       await deleteFont(id)
       navigate('/')
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  async function removeReport(reportID: string) {
+    if (!id || !confirm('¿Borrar esta incidencia?')) return
+    try {
+      await deleteReport(id, reportID)
+      load()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -163,7 +256,7 @@ export function FontDetailPage() {
         {user && !editing && (
           <div className="row">
             <button className="link" onClick={() => setEditing(true)}>Editar</button>
-            <button className="link danger" onClick={remove}>Borrar</button>
+            <button className="link danger" onClick={removeFont}>Borrar</button>
           </div>
         )}
       </div>
@@ -188,7 +281,7 @@ export function FontDetailPage() {
         {latest ? (
           <>
             <p className="muted small">Última actualización:</p>
-            <ReviewCard c={latest} highlight />
+            <ReviewCard c={latest} highlight canManage={user?.id === latest.userID} onChanged={load} />
           </>
         ) : (
           <p className="muted">Aún no hay actualizaciones. ¡Sé el primero en informar del estado!</p>
@@ -203,7 +296,9 @@ export function FontDetailPage() {
         {rest.length > 0 && (
           <>
             <h3 className="muted small">Anteriores</h3>
-            {rest.map((c) => <ReviewCard key={c.id} c={c} />)}
+            {rest.map((c) => (
+              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID} onChanged={load} />
+            ))}
           </>
         )}
       </section>
@@ -215,6 +310,9 @@ export function FontDetailPage() {
           {reports.map((r) => (
             <li key={r.id}>
               <strong>{r.username ?? 'anónimo'}:</strong> {r.message}
+              {user?.id === r.userID && (
+                <button className="link danger small" onClick={() => removeReport(r.id)}> · Borrar</button>
+              )}
             </li>
           ))}
         </ul>

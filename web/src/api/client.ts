@@ -92,3 +92,18 @@ export async function createComment(fontID: string, data: NewComment): Promise<C
     body: JSON.stringify(data),
   })
 }
+
+export async function updateComment(fontID: string, commentID: string, data: NewComment): Promise<CommentResponse> {
+  return apiFetch<CommentResponse>(`/fonts/${fontID}/comments/${commentID}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteComment(fontID: string, commentID: string): Promise<void> {
+  await apiFetch(`/fonts/${fontID}/comments/${commentID}`, { method: 'DELETE' })
+}
+
+export async function deleteReport(fontID: string, reportID: string): Promise<void> {
+  await apiFetch(`/fonts/${fontID}/report/${reportID}`, { method: 'DELETE' })
+}

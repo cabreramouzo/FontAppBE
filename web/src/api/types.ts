@@ -47,3 +47,9 @@ export interface Page<T> {
   items: T[]
   metadata: { total: number; per: number; page: number }
 }
+
+/** Fuente + último estado del agua reportado (listado del mapa). */
+export interface FontSummary extends Font {
+  lastWaterStatus: string | null
+  lastUpdate: string | null
+}

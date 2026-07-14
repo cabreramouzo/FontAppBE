@@ -4,15 +4,16 @@ import { Link } from 'react-router-dom'
 import type { LatLng, Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
-import type { Font } from '../api/types'
+import type { FontSummary } from '../api/types'
 import { apiFetch, createFont, uploadImage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { waterStatusInfo } from '../lib/waterStatus'
 
 // Centro por defecto: comarca del Moianès.
 const MOIANES: [number, number] = [41.81, 2.09]
 
 function FontMarkers({ nonce }: { nonce: number }) {
-  const [fonts, setFonts] = useState<Font[]>([])
+  const [fonts, setFonts] = useState<FontSummary[]>([])
 
   const loadBounds = useCallback(async (map: LeafletMap) => {
     const b = map.getBounds()
@@ -23,7 +24,7 @@ function FontMarkers({ nonce }: { nonce: number }) {
       maxLong: String(b.getEast()),
     })
     try {
-      setFonts(await apiFetch<Font[]>(`/fonts/in-bounds?${params}`))
+      setFonts(await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`))
     } catch {
       // silencioso: mapa vacío si falla
     }
@@ -44,17 +45,21 @@ function FontMarkers({ nonce }: { nonce: number }) {
 
   return (
     <>
-      {fonts.map((f) => (
-        <Marker key={f.id} position={[f.latitude, f.longitude]}>
-          <Popup>
-            <strong>{f.name}</strong>
-            {f.description && <div className="muted">{f.description}</div>}
-            <div>
-              <Link to={`/fonts/${f.id}`}>Ver detalle →</Link>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+      {fonts.map((f) => {
+        const ws = waterStatusInfo(f.lastWaterStatus)
+        return (
+          <Marker key={f.id} position={[f.latitude, f.longitude]}>
+            <Popup>
+              <strong>{f.name}</strong>
+              {ws && <div className="badge">{ws.emoji} {ws.label}</div>}
+              {f.description && <div className="muted">{f.description}</div>}
+              <div>
+                <Link to={`/fonts/${f.id}`}>Ver detalle →</Link>
+              </div>
+            </Popup>
+          </Marker>
+        )
+      })}
     </>
   )
 }
