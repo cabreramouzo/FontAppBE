@@ -10,7 +10,11 @@ La spec de endpoints está en [definitions.md](definitions.md).
 ## Comandos
 - Build: `swift build`
 - Tests: `swift test`
-- Levantar Postgres local: `docker compose up db -d`
+- Levantar Postgres local (dos opciones):
+  - Homebrew (setup actual): `brew services start postgresql@16` — binarios en
+    `/opt/homebrew/opt/postgresql@16/bin` (keg-only, no están en el PATH).
+    Requiere rol `vapor` y DB `fontapp` (ver `env.development`).
+  - Docker: `docker compose up db -d` (usa `docker-compose.yml`).
 - Migrar: `swift run App migrate --yes` · revertir: `swift run App migrate --revert --yes`
 - Arrancar servidor: `swift run App serve` (por defecto `127.0.0.1:8080`)
 - Cargar entorno local: `export $(cat env.development | xargs)` antes de `swift run`
