@@ -37,6 +37,9 @@ export interface CommentResponse {
   userID: string | null
   username: string | null
   body: string
+  rating: number | null
+  waterStatus: string | null
+  image: string | null
   createdAt: string
 }
 

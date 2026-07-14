@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { Link } from 'react-router-dom'
 import type { LatLng, Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -112,11 +112,22 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
   )
 }
 
+// Recentra el mapa cuando cambia el objetivo (p. ej. "cerca de mí").
+function Recenter({ target }: { target: [number, number] | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (target) map.setView(target, 15)
+  }, [target, map])
+  return null
+}
+
 export function MapPage() {
   const { user } = useAuth()
   const [placing, setPlacing] = useState(false)
   const [pos, setPos] = useState<LatLng | null>(null)
   const [nonce, setNonce] = useState(0)
+  const [me, setMe] = useState<[number, number] | null>(null)
+  const [geoError, setGeoError] = useState('')
 
   function cancel() {
     setPlacing(false)
@@ -125,6 +136,17 @@ export function MapPage() {
   function created() {
     cancel()
     setNonce((n) => n + 1) // fuerza recarga de marcadores
+  }
+  function locateMe() {
+    setGeoError('')
+    if (!navigator.geolocation) {
+      setGeoError('Geolocalización no disponible')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (p) => setMe([p.coords.latitude, p.coords.longitude]),
+      () => setGeoError('No se pudo obtener tu ubicación'),
+    )
   }
 
   return (
@@ -135,9 +157,14 @@ export function MapPage() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FontMarkers nonce={nonce} />
+        <Recenter target={me} />
+        {me && <Marker position={me} />}
         {placing && <PlacePicker onPick={setPos} />}
         {pos && <Marker position={pos} />}
       </MapContainer>
+
+      <button className="locate" onClick={locateMe}>📍 Cerca de mí</button>
+      {geoError && <div className="hint hint-error">{geoError}</div>}
 
       {user && !placing && (
         <button className="fab" onClick={() => { setPlacing(true); setPos(null) }}>

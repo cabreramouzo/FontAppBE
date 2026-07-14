@@ -54,6 +54,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateFontComment())
     app.migrations.add(AddUserToFontReport())
     app.migrations.add(AddUserToFontComment())
+    app.migrations.add(AddReviewFieldsToFontComment())
 
     // Comandos CLI.
     app.asyncCommands.use(SeedCommand(), as: "seed")

@@ -117,3 +117,81 @@ button.link {
   text-decoration: underline;
 }
 .auth { max-width: 360px; }
+
+textarea {
+  width: 100%;
+  min-height: 64px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  resize: vertical;
+}
+select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* Botón "cerca de mí" sobre el mapa (arriba a la derecha). */
+.locate {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 1000;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.hint-error { color: var(--error); }
+
+/* Estrellas */
+.stars { display: inline-flex; line-height: 1; }
+.star {
+  background: none;
+  border: none;
+  padding: 0 1px;
+  color: var(--border);
+  cursor: default;
+  font-size: inherit;
+}
+.star.on { color: #f5b301; }
+.stars .star:not(:disabled) { cursor: pointer; }
+.avg { display: flex; align-items: center; gap: 6px; }
+.small { font-size: 14px; }
+
+/* Detalle: cabecera con acciones */
+.detail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.danger { color: var(--error); }
+
+/* Reseñas / actualizaciones */
+.review {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0;
+}
+.review.latest { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.review-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.review p { margin: 6px 0; }
+.review-img { max-width: 100%; border-radius: 6px; margin-top: 6px; }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-bg, rgba(14, 165, 233, 0.15));
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Formulario de actualización */
+.update-form { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.update-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.update-row label { display: inline-flex; align-items: center; gap: 6px; }

@@ -1,4 +1,4 @@
-import type { Font, LoginResponse } from './types'
+import type { CommentResponse, Font, LoginResponse } from './types'
 
 // En dev, Vite hace proxy de /api -> backend (ver vite.config.ts).
 const BASE = '/api'
@@ -69,4 +69,26 @@ export interface NewFont {
 
 export async function createFont(data: NewFont): Promise<Font> {
   return apiFetch<Font>('/fonts', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export async function updateFont(id: string, data: NewFont): Promise<Font> {
+  return apiFetch<Font>(`/fonts/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+}
+
+export async function deleteFont(id: string): Promise<void> {
+  await apiFetch(`/fonts/${id}`, { method: 'DELETE' })
+}
+
+export interface NewComment {
+  body: string
+  rating?: number
+  waterStatus?: string
+  image?: string
+}
+
+export async function createComment(fontID: string, data: NewComment): Promise<CommentResponse> {
+  return apiFetch<CommentResponse>(`/fonts/${fontID}/comments`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
 }
