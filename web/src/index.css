@@ -1,0 +1,82 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #0ea5e9;
+  --accent-fg: #ffffff;
+  --error: #dc2626;
+  color-scheme: light dark;
+  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --fg: #e5e7eb;
+    --muted: #9ca3af;
+    --border: #2a2e37;
+    --accent: #38bdf8;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.brand { font-weight: 700; font-size: 18px; }
+.nav { display: flex; align-items: center; gap: 12px; }
+.main { flex: 1; }
+
+.muted { color: var(--muted); }
+.error { color: var(--error); }
+.pad { padding: 20px; max-width: 720px; margin: 0 auto; }
+
+/* Mapa: ocupa el alto de la ventana menos la barra. */
+.map-wrap, .map { height: calc(100vh - 56px); width: 100%; }
+
+/* Detalle */
+.detail h1 { margin: 12px 0 4px; }
+.font-img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
+.list { list-style: none; padding: 0; margin: 8px 0; }
+.list li { padding: 6px 0; border-bottom: 1px solid var(--border); }
+
+/* Formularios */
+.row { display: flex; gap: 8px; margin-top: 8px; }
+.col { display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
+input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  cursor: pointer;
+  font-size: 15px;
+}
+button:hover { opacity: 0.9; }
+button.link {
+  background: none;
+  color: var(--accent);
+  padding: 0;
+  text-decoration: underline;
+}
+.auth { max-width: 360px; }
