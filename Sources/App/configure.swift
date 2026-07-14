@@ -36,6 +36,7 @@ public func configure(_ app: Application) async throws {
 
     // Migraciones: una por modelo.
     app.migrations.add(CreateUser())
+    app.migrations.add(CreateUserToken())
     app.migrations.add(CreateFont())
     app.migrations.add(CreateFontReport())
     app.migrations.add(CreateFontComment())

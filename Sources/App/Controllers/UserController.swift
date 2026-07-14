@@ -6,9 +6,12 @@ import Vapor
 struct UserController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let users = routes.grouped("users")
-        users.post(use: create)
-        users.group(":userID") { user in
-            user.get(use: show)
+        users.post(use: create)             // registro: público
+        users.get(":userID", use: show)     // lectura: pública
+
+        // Editar/borrar requiere token y solo sobre la propia cuenta (self-only).
+        let protected = users.grouped(UserToken.authenticator(), User.guardMiddleware())
+        protected.group(":userID") { user in
             user.put(use: update)
             user.delete(use: destroy)
         }
@@ -42,6 +45,7 @@ struct UserController: RouteCollection {
     @Sendable func update(req: Request) async throws -> UserResponse {
         try UpdateUserDTO.validate(content: req)
         let user = try await find(req)
+        try requireSelf(req, target: user)
         let dto = try req.content.decode(UpdateUserDTO.self)
 
         // Si el username cambia a uno que ya tiene OTRO usuario -> 409.
@@ -61,6 +65,7 @@ struct UserController: RouteCollection {
 
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
         let user = try await find(req)
+        try requireSelf(req, target: user)
         try await user.delete(on: req.db)
         return .noContent
     }
@@ -70,6 +75,14 @@ struct UserController: RouteCollection {
             throw Abort(.notFound)
         }
         return user
+    }
+
+    /// 403 si el usuario autenticado intenta modificar una cuenta que no es la suya.
+    private func requireSelf(_ req: Request, target: User) throws {
+        let authUser = try req.auth.require(User.self)
+        guard authUser.id == target.id else {
+            throw Abort(.forbidden, reason: "Solo puedes modificar tu propia cuenta")
+        }
     }
 }
 

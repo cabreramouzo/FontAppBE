@@ -8,11 +8,16 @@ struct FontController: RouteCollection {
 
     func boot(routes: RoutesBuilder) throws {
         let fonts = routes.grouped("fonts")
-        fonts.post(use: create)
+
+        // Lectura pública.
         fonts.get("near", use: near)
         fonts.get("near", "download", use: nearDownload)
-        fonts.group(":fontID") { font in
-            font.get(use: show)
+        fonts.get(":fontID", use: show)
+
+        // Escritura: requiere token Bearer válido.
+        let protected = fonts.grouped(UserToken.authenticator(), User.guardMiddleware())
+        protected.post(use: create)
+        protected.group(":fontID") { font in
             font.put(use: update)
             font.delete(use: destroy)
         }

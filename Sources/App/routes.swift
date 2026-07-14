@@ -10,6 +10,9 @@ func routes(_ app: Application) throws {
         .ok
     }
 
+    try app.register(collection: AuthController())
     try app.register(collection: UserController())
     try app.register(collection: FontController())
+    try app.register(collection: FontReportController())
+    try app.register(collection: FontCommentController())
 }

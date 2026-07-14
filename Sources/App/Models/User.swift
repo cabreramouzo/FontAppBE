@@ -20,9 +20,15 @@ final class User: Model, @unchecked Sendable {
         self.username = username
         self.passwordHash = passwordHash
     }
+}
 
-    func verify(password: String, req: Request) throws -> Bool {
-        try req.password.verify(password, created: self.passwordHash)
+// Permite login por usuario/contraseña (Basic auth) para emitir tokens.
+extension User: ModelAuthenticatable {
+    static let usernameKey = \User.$username
+    static let passwordHashKey = \User.$passwordHash
+
+    func verify(password: String) throws -> Bool {
+        try Bcrypt.verify(password, created: self.passwordHash)
     }
 }
 
