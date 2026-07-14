@@ -47,6 +47,20 @@ playground.xcworkspace
 # .swiftpm
 
 .build/
+.swiftpm/
+
+# Vapor / server
+Package.pins
+.env
+.env.*
+!env.development
+db/
+
+# macOS
+.DS_Store
+
+# Claude Code (config personal, no compartida)
+.claude/settings.local.json
 
 # CocoaPods
 #
