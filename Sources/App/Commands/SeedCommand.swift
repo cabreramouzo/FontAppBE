@@ -1,19 +1,23 @@
 import Fluent
+import SQLKit
 import Vapor
 
 /// Siembra la BD con fuentes REALES de la comarca del Moianès.
 /// Fuente de datos: OpenStreetMap (Overpass API, área comarcal), licencia ODbL — © colaboradores de OSM.
-/// Uso: `swift run App seed` (o `swift run App seed --force` para reemplazar).
+/// Uso: `swift run App seed` · `--force` para reemplazar · `--demo` añade usuarios y reseñas.
 struct SeedCommand: AsyncCommand {
     struct Signature: CommandSignature {
         @Flag(name: "force", help: "Borra las fuentes existentes antes de sembrar")
         var force: Bool
+        @Flag(name: "demo", help: "Además crea usuarios y reseñas de ejemplo (contraseña: demo12345)")
+        var demo: Bool
     }
 
     var help: String { "Inserta fuentes reales del Moianès (datos de OpenStreetMap, ODbL)" }
 
     func run(using context: CommandContext, signature: Signature) async throws {
-        let db = context.application.db
+        let app = context.application
+        let db = app.db
 
         let existing = try await Font.query(on: db).count()
         if existing > 0 && !signature.force {
@@ -24,10 +28,115 @@ struct SeedCommand: AsyncCommand {
             try await Font.query(on: db).delete()
         }
 
+        var fonts: [Font] = []
         for (name, lat, long) in Self.moianesFonts {
-            try await Font(name: name, latitude: lat, longitude: long).save(on: db)
+            let font = Font(name: name, latitude: lat, longitude: long)
+            try await font.save(on: db)
+            fonts.append(font)
         }
-        context.console.info("Insertadas \(Self.moianesFonts.count) fuentes reales del Moianès (OSM, ODbL).")
+        context.console.info("Insertadas \(fonts.count) fuentes reales del Moianès (OSM, ODbL).")
+
+        if signature.demo {
+            try await seedDemo(app: app, fonts: fonts, console: context.console)
+        }
+    }
+
+    /// Crea usuarios de ejemplo y una o varias reseñas por fuente, con estados variados
+    /// y fechas repartidas en los últimos 14 días.
+    private func seedDemo(app: Application, fonts: [Font], console: Console) async throws {
+        let db = app.db
+
+        var users: [User] = []
+        for (username, name) in Self.demoUsers {
+            if let existing = try await User.query(on: db).filter(\.$username == username).first() {
+                users.append(existing)
+            } else {
+                let user = User(name: name, username: username, passwordHash: try Bcrypt.hash("demo12345"))
+                try await user.save(on: db)
+                users.append(user)
+            }
+        }
+        console.info("Usuarios demo: \(users.count) (contraseña: demo12345).")
+
+        let sql = db as? SQLDatabase
+        var reviews = 0
+        for font in fonts {
+            let fontID = try font.requireID()
+            for _ in 0..<Int.random(in: 1...3) {
+                guard let user = users.randomElement() else { continue }
+                let status = Self.weightedStatus()
+                let (text, rating) = Self.reviewText(for: status)
+                let comment = FontComment(
+                    fontID: fontID,
+                    userID: try user.requireID(),
+                    body: text,
+                    rating: rating,
+                    waterStatus: status
+                )
+                try await comment.save(on: db)
+                // Repartimos la fecha en los últimos 14 días (para el "última actualización").
+                if let sql, let commentID = comment.id {
+                    let date = Date().addingTimeInterval(-Double.random(in: 0...(14 * 24 * 3600)))
+                    try await sql.raw("UPDATE font_comments SET created_at = \(bind: date) WHERE id = \(bind: commentID)").run()
+                }
+                reviews += 1
+            }
+        }
+        console.info("Insertadas \(reviews) reseñas de ejemplo en \(fonts.count) fuentes.")
+    }
+
+    static let demoUsers: [(String, String)] = [
+        ("xavi123", "Xavi Puig"),
+        ("marta_r", "Marta Roca"),
+        ("jordi88", "Jordi Serra"),
+        ("laia_m", "Laia Martí"),
+        ("pau_moia", "Pau Vidal"),
+        ("nuria_f", "Núria Ferrer"),
+        ("oriol_t", "Oriol Torres"),
+        ("cristina", "Cristina Bosch"),
+        ("marc_sola", "Marc Solà"),
+        ("gemma_r", "Gemma Riera"),
+    ]
+
+    /// Estado del agua ponderado: la mayoría rajan, algunas poc/seques.
+    static func weightedStatus() -> String {
+        switch Int.random(in: 0..<100) {
+        case ..<55: return "flowing"
+        case ..<75: return "trickle"
+        case ..<92: return "dry"
+        default: return "unknown"
+        }
+    }
+
+    /// Texto y valoración coherentes con el estado.
+    static func reviewText(for status: String) -> (String, Int?) {
+        switch status {
+        case "flowing":
+            return ([
+                "Raja perfectament, aigua ben fresca 👌",
+                "Aigua abundant, ideal per omplir cantimplores",
+                "Perfecta, sale con buena presión",
+                "Molt bona, un lujo després de la pujada",
+            ].randomElement()!, Int.random(in: 4...5))
+        case "trickle":
+            return ([
+                "Raja poc a poc, cal paciència",
+                "Un filet d'aigua només",
+                "Sale poca, hay que esperar un rato",
+            ].randomElement()!, Int.random(in: 2...3))
+        case "dry":
+            return ([
+                "No raja aigua, s'ha assecat",
+                "Seca del tot, ni gota",
+                "Sin agua ahora mismo, no vale la pena desviarse",
+            ].randomElement()!, Int.random(in: 1...2))
+        default:
+            return ([
+                "Bonic indret per fer un descans",
+                "Ombra i una taula per dinar al costat",
+                "Fàcil d'arribar-hi, ben senyalitzada",
+            ].randomElement()!, Int.random(in: 3...5))
+        }
     }
 
     // Fonts reales con nombre de la comarca del Moianès (OpenStreetMap, natural=spring / amenity=drinking_water).
