@@ -3,7 +3,6 @@ import Vapor
 
 // Reportes de problemas sobre una fuente — ver definitions.md (Fonts problem management).
 // Un "report" avisa de una INCIDENCIA en la fuente (avería, sin agua, sucia, grifo roto…).
-// TODO: cuando exista auth, asociar cada report al usuario que lo crea (user_id) y añadir estado.
 struct FontReportController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let reports = routes.grouped("fonts", ":fontID", "report")
@@ -18,7 +17,8 @@ struct FontReportController: RouteCollection {
             .filter(\.$font.$id == fontID)
             .sort(\.$createdAt, .descending)
             .all()
-        return reports.map(ReportResponse.init)
+        let names = try await User.usernames(for: reports.compactMap { $0.$user.id }, on: req.db)
+        return reports.map { ReportResponse($0, username: $0.$user.id.flatMap { names[$0] }) }
     }
 
     /// POST /fonts/:fontID/report — reporta un problema en la fuente.
@@ -32,7 +32,7 @@ struct FontReportController: RouteCollection {
         try await report.save(on: req.db)
 
         let response = Response(status: .created)
-        try response.content.encode(ReportResponse(report))
+        try response.content.encode(ReportResponse(report, username: user.username))
         return response
     }
 
@@ -60,13 +60,15 @@ struct ReportResponse: Content {
     let id: UUID?
     let fontID: UUID
     let userID: UUID?
+    let username: String?
     let message: String
     let createdAt: Date?
 
-    init(_ report: FontReport) {
+    init(_ report: FontReport, username: String?) {
         self.id = report.id
         self.fontID = report.$font.id
         self.userID = report.$user.id
+        self.username = username
         self.message = report.message
         self.createdAt = report.createdAt
     }

@@ -43,6 +43,9 @@ public func configure(_ app: Application) async throws {
     ))
     app.middleware.use(cors, at: .beginning)
 
+    // Sirve ficheros estáticos de /Public (incluye las imágenes subidas en /Public/uploads).
+    app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
+
     // Migraciones: una por modelo.
     app.migrations.add(CreateUser())
     app.migrations.add(CreateUserToken())
@@ -51,6 +54,9 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateFontComment())
     app.migrations.add(AddUserToFontReport())
     app.migrations.add(AddUserToFontComment())
+
+    // Comandos CLI.
+    app.asyncCommands.use(SeedCommand(), as: "seed")
 
     // Rutas.
     try routes(app)

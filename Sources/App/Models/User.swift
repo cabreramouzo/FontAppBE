@@ -32,6 +32,18 @@ extension User: ModelAuthenticatable {
     }
 }
 
+extension User {
+    /// Diccionario `id -> username` para los ids dados, en una sola query (evita N+1).
+    static func usernames(for ids: [UUID], on db: Database) async throws -> [UUID: String] {
+        let unique = Array(Set(ids))
+        guard !unique.isEmpty else { return [:] }
+        let users = try await User.query(on: db).filter(\.$id ~~ unique).all()
+        return Dictionary(uniqueKeysWithValues: users.compactMap { user in
+            user.id.map { ($0, user.username) }
+        })
+    }
+}
+
 /// Representación pública de un usuario (sin el hash de contraseña).
 struct UserResponse: Content {
     let id: UUID?

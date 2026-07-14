@@ -3,7 +3,6 @@ import Vapor
 
 // Comentarios sobre una fuente — ver definitions.md (Fonts comments management).
 // Un "comment" es texto libre de un usuario (opinión, nota), sin implicar incidencia.
-// TODO: cuando exista auth, asociar cada comentario al usuario que lo escribe (user_id).
 struct FontCommentController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let comments = routes.grouped("fonts", ":fontID", "comments")
@@ -18,7 +17,8 @@ struct FontCommentController: RouteCollection {
             .filter(\.$font.$id == fontID)
             .sort(\.$createdAt, .descending)
             .all()
-        return comments.map(CommentResponse.init)
+        let names = try await User.usernames(for: comments.compactMap { $0.$user.id }, on: req.db)
+        return comments.map { CommentResponse($0, username: $0.$user.id.flatMap { names[$0] }) }
     }
 
     /// POST /fonts/:fontID/comments — añade un comentario a la fuente.
@@ -32,7 +32,7 @@ struct FontCommentController: RouteCollection {
         try await comment.save(on: req.db)
 
         let response = Response(status: .created)
-        try response.content.encode(CommentResponse(comment))
+        try response.content.encode(CommentResponse(comment, username: user.username))
         return response
     }
 
@@ -60,13 +60,15 @@ struct CommentResponse: Content {
     let id: UUID?
     let fontID: UUID
     let userID: UUID?
+    let username: String?
     let body: String
     let createdAt: Date?
 
-    init(_ comment: FontComment) {
+    init(_ comment: FontComment, username: String?) {
         self.id = comment.id
         self.fontID = comment.$font.id
         self.userID = comment.$user.id
+        self.username = username
         self.body = comment.body
         self.createdAt = comment.createdAt
     }

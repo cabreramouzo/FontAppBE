@@ -56,6 +56,9 @@ Package.pins
 !env.development
 db/
 
+# Imágenes subidas en local (no versionar)
+Public/uploads/
+
 # macOS
 .DS_Store
 

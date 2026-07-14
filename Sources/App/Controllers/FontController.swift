@@ -13,6 +13,7 @@ struct FontController: RouteCollection {
         fonts.get(use: index)
         fonts.get("near", use: near)
         fonts.get("near", "download", use: nearDownload)
+        fonts.get("in-bounds", use: inBounds)
         fonts.get(":fontID", use: show)
 
         // Escritura: requiere token Bearer válido.
@@ -96,6 +97,20 @@ struct FontController: RouteCollection {
         try await near(req: req)
     }
 
+    /// GET /fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=
+    /// Fuentes dentro del área visible de un mapa. Indexado por (latitude, longitude).
+    @Sendable func inBounds(req: Request) async throws -> [Font] {
+        try BoundsQuery.validate(query: req)
+        let b = try req.query.decode(BoundsQuery.self)
+        return try await Font.query(on: req.db)
+            .filter(\.$latitude >= b.minLat)
+            .filter(\.$latitude <= b.maxLat)
+            .filter(\.$longitude >= b.minLong)
+            .filter(\.$longitude <= b.maxLong)
+            .limit(Self.maxNearQuantity * 5) // cota de seguridad.
+            .all()
+    }
+
     private func find(_ req: Request) async throws -> Font {
         guard let font = try await Font.find(req.parameters.get("fontID"), on: req.db) else {
             throw Abort(.notFound)
@@ -124,6 +139,22 @@ struct NearQuery: Content {
     let lat: Double
     let long: Double
     let quantity: Int?
+}
+
+struct BoundsQuery: Content {
+    let minLat: Double
+    let maxLat: Double
+    let minLong: Double
+    let maxLong: Double
+}
+
+extension BoundsQuery: Validatable {
+    static func validations(_ validations: inout Validations) {
+        validations.add("minLat", as: Double.self, is: .range(-90...90))
+        validations.add("maxLat", as: Double.self, is: .range(-90...90))
+        validations.add("minLong", as: Double.self, is: .range(-180...180))
+        validations.add("maxLong", as: Double.self, is: .range(-180...180))
+    }
 }
 
 extension NearQuery: Validatable {

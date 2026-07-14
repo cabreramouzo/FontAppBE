@@ -44,11 +44,11 @@ Login con credenciales inválidas → **401**.
 { "id": "uuid", "name": "string", "username": "string" }
 
 // ReportResponse
-{ "id": "uuid", "fontID": "uuid", "userID": "uuid|null",
+{ "id": "uuid", "fontID": "uuid", "userID": "uuid|null", "username": "string|null",
   "message": "string", "createdAt": "iso8601" }
 
 // CommentResponse
-{ "id": "uuid", "fontID": "uuid", "userID": "uuid|null",
+{ "id": "uuid", "fontID": "uuid", "userID": "uuid|null", "username": "string|null",
   "body": "string", "createdAt": "iso8601" }
 ```
 
@@ -70,6 +70,7 @@ Login con credenciales inválidas → **401**.
 | GET | `/fonts?page=&per=` | — | query de paginación | 200 `Page<Font>` | — |
 | GET | `/fonts/near?lat=&long=&quantity=` | — | `lat`,`long` req.; `quantity` opc. (máx 100, def 10) | 200 `[Font]` (por distancia) | 400 |
 | GET | `/fonts/near/download?...` | — | igual que `near` | 200 `[Font]` | 400 |
+| GET | `/fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=` | — | bounding box (para el mapa) | 200 `[Font]` | 400 |
 | GET | `/fonts/:id` | — | — | 200 `Font` | 404 |
 | POST | `/fonts` | Bearer | `{name, latitude[-90,90], longitude[-180,180], image?, description?}` | 201 `Font` | 400, 401 |
 | PUT | `/fonts/:id` | Bearer | igual que POST | 200 `Font` | 400, 401, 404 |
@@ -95,8 +96,23 @@ Login con credenciales inválidas → **401**.
 | GET | `/fonts/:id/comments` | — | — | 200 `[CommentResponse]` (recientes primero) | 404 (fuente) |
 | POST | `/fonts/:id/comments` | Bearer | `{body (1–2000)}` | 201 `CommentResponse` | 400, 401, 404 |
 
+## Images
+
+Subida de imágenes al disco local; devuelve la URL relativa a usar como campo `image` de una fuente.
+
+| Método | Ruta | 🔒 | Cuerpo | Éxito | Errores |
+|--------|------|----|--------|-------|---------|
+| POST | `/images` | Bearer | `multipart/form-data`, campo `file` (jpg/png/webp, ≤8 MB) | 200 `{ "url": "/uploads/<uuid>.<ext>" }` | 401, 415 |
+
+Las imágenes subidas se sirven como estáticos en `GET /uploads/<archivo>`.
+
+## Datos de ejemplo (dev)
+
+`swift run App seed [--force]` inserta ~26 fuentes de la comarca del **Moianès**
+para tener datos con los que maquetar el frontend.
+
 ## Pendiente (no implementado)
 
-- Enriquecer reports/comments con el `username` del autor (hoy solo `userID`).
-- Subida de imágenes (hoy `image` es una URL que aporta el cliente).
+- Almacenamiento de imágenes en producción (hoy es disco local, no escala): migrar a S3/similar.
 - Limpieza de tokens expirados y rate-limit en el login.
+- Paginación en reports/comments si una fuente acumula muchos.
