@@ -12,6 +12,17 @@
       "Bash(git restore:*)",
       "Bash(git stash:*)",
       "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(file:*)",
+      "Bash(du:*)",
+      "Bash(which:*)",
+      "Bash(realpath:*)",
+      "Bash(readlink:*)",
       "Bash(docker compose:*)"
     ]
   }
