@@ -22,12 +22,8 @@ struct ImageController: RouteCollection {
             throw Abort(.unsupportedMediaType, reason: "Formato no soportado (jpg, png, webp)")
         }
 
-        let filename = "\(UUID().uuidString).\(ext)"
-        let dir = req.application.directory.publicDirectory + "uploads/"
-        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-        try await req.fileio.writeFile(payload.file.data, at: dir + filename)
-
-        return ImageUploadResponse(url: "/uploads/\(filename)")
+        let url = try await req.imageStorage.save(payload.file.data, ext: ext)
+        return ImageUploadResponse(url: url)
     }
 }
 

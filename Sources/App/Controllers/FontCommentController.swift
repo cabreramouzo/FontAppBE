@@ -64,11 +64,13 @@ struct FontCommentController: RouteCollection {
         let comment = try await requireOwnComment(req, user: user)
         try CreateCommentDTO.validate(content: req)
         let dto = try req.content.decode(CreateCommentDTO.self)
+        let oldImage = comment.image
         comment.body = dto.body
         comment.rating = dto.rating
         comment.waterStatus = dto.waterStatus
         comment.image = dto.image
         try await comment.save(on: req.db)
+        if let oldImage, oldImage != dto.image { try? await req.imageStorage.delete(oldImage) }
         return CommentResponse(comment, username: user.username)
     }
 
@@ -76,6 +78,7 @@ struct FontCommentController: RouteCollection {
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
         let comment = try await requireOwnComment(req, user: user)
+        if let image = comment.image { try? await req.imageStorage.delete(image) }
         try await comment.delete(on: req.db)
         return .noContent
     }

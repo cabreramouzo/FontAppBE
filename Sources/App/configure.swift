@@ -1,5 +1,7 @@
 import Fluent
 import FluentPostgresDriver
+import SotoCore
+import SotoS3
 import Vapor
 
 // Configuración de la aplicación: base de datos, migraciones y rutas.
@@ -59,6 +61,19 @@ public func configure(_ app: Application) async throws {
 
     // Sirve ficheros estáticos de /Public (incluye las imágenes subidas en /Public/uploads).
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
+
+    // Almacenamiento de imágenes: Cloudflare R2 si hay credenciales; si no, disco local.
+    if let endpoint = Environment.get("R2_ENDPOINT"),
+       let accessKey = Environment.get("R2_ACCESS_KEY_ID"),
+       let secret = Environment.get("R2_SECRET_ACCESS_KEY"),
+       let bucket = Environment.get("R2_BUCKET"),
+       let publicBase = Environment.get("R2_PUBLIC_URL") {
+        let awsClient = AWSClient(credentialProvider: .static(accessKeyId: accessKey, secretAccessKey: secret))
+        let s3 = S3(client: awsClient, region: .init(rawValue: "auto"), endpoint: endpoint)
+        let base = publicBase.hasSuffix("/") ? String(publicBase.dropLast()) : publicBase
+        app.imageStorage = R2ImageStorage(s3: s3, bucket: bucket, publicBase: base)
+        app.lifecycle.use(AWSClientShutdown(client: awsClient))
+    }
 
     // Migraciones: una por modelo.
     app.migrations.add(CreateUser())

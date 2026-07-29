@@ -14,6 +14,7 @@ import {
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { StarRating } from '../components/StarRating'
+import { compressImage } from '../lib/image'
 import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
 import { isStale, timeAgo } from '../lib/time'
 
@@ -120,7 +121,7 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
     setSaving(true)
     try {
       let image: string | undefined
-      if (file) image = await uploadImage(file)
+      if (file) image = await uploadImage(await compressImage(file))
       await createComment(fontID, {
         body,
         rating: rating || undefined,

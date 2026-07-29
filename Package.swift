@@ -10,6 +10,8 @@ let package = Package(
         .package(url: "https://github.com/vapor/vapor.git", from: "4.106.0"),
         .package(url: "https://github.com/vapor/fluent.git", from: "4.11.0"),
         .package(url: "https://github.com/vapor/fluent-postgres-driver.git", from: "2.9.0"),
+        // Cliente S3 para subir imágenes a Cloudflare R2 (compatible con S3).
+        .package(url: "https://github.com/soto-project/soto.git", from: "7.0.0"),
     ],
     targets: [
         .executableTarget(
@@ -18,6 +20,7 @@ let package = Package(
                 .product(name: "Fluent", package: "fluent"),
                 .product(name: "FluentPostgresDriver", package: "fluent-postgres-driver"),
                 .product(name: "Vapor", package: "vapor"),
+                .product(name: "SotoS3", package: "soto"),
             ]
         ),
         .testTarget(

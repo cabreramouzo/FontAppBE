@@ -25,6 +25,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - `Sources/App/Migrations/` — una migración por cambio de esquema.
 - `Sources/App/Controllers/` — un `RouteCollection` por recurso (User, Font, Report, Comment, Auth, Image).
 - `Sources/App/Commands/SeedCommand.swift` · `Sources/App/Utils/Geo.swift` (haversine).
+- `Sources/App/Storage/` — abstracción `ImageStorage` (disco local / Cloudflare R2 vía Soto).
 - `Tests/AppTests/` — XCTVapor (smoke + integración con DB).
 - `web/` — frontend (mapa, detalle, auth, reseñas); ver `web/README.md`.
 
@@ -42,9 +43,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Web: build con `VITE_API_URL=<origen del backend>`. Guía completa: [DEPLOY.md](DEPLOY.md).
 
 ## Pendiente / deuda
-- Imágenes en disco local (`Public/uploads`); en prod → S3 / Cloudflare R2 (falta el código de subida, dep. Soto).
+- `R2ImageStorage` (Soto) compila pero **sin probar** contra un bucket real (necesita credenciales `R2_*`); en local usa disco.
+- Compresión de imágenes: en el cliente (canvas). El borrado del fichero al eliminar fuente/reseña es best-effort (`try?`).
 - Sin rate-limit en `/auth/login` ni limpieza de tokens caducados.
-- Sin aviso legal/privacidad (GDPR) ni atribución visible de datos OSM (ODbL) para los datos de fuentes.
 
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).

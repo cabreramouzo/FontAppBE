@@ -51,17 +51,26 @@ struct FontController: RouteCollection {
         try CreateFontDTO.validate(content: req)
         let font = try await find(req)
         let dto = try req.content.decode(CreateFontDTO.self)
+        let oldImage = font.image
         font.name = dto.name
         font.latitude = dto.latitude
         font.longitude = dto.longitude
         font.image = dto.image
         font.description = dto.description
         try await font.save(on: req.db)
+        if let oldImage, oldImage != dto.image { try? await req.imageStorage.delete(oldImage) }
         return font
     }
 
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
         let font = try await find(req)
+        // Limpia las imágenes asociadas (de la fuente y de sus reseñas) antes de borrar.
+        if let image = font.image { try? await req.imageStorage.delete(image) }
+        let commentImages = try await FontComment.query(on: req.db)
+            .filter(\.$font.$id == font.requireID())
+            .all()
+            .compactMap(\.image)
+        for image in commentImages { try? await req.imageStorage.delete(image) }
         try await font.delete(on: req.db)
         return .noContent
     }

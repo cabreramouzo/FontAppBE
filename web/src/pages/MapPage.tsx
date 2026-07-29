@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { WATER_STATUS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
+import { compressImage } from '../lib/image'
 import { timeAgo } from '../lib/time'
 
 // Centro por defecto: comarca del Moianès.
@@ -106,7 +107,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
     setSaving(true)
     try {
       let image: string | undefined
-      if (file) image = await uploadImage(file)
+      if (file) image = await uploadImage(await compressImage(file))
       await createFont({ name, latitude: pos.lat, longitude: pos.lng, image, description: description || undefined })
       onCreated()
     } catch (e) {
