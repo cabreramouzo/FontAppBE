@@ -16,6 +16,8 @@ import { useAuth } from '../auth/AuthContext'
 import { StarRating } from '../components/StarRating'
 import { compressImage } from '../lib/image'
 import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
+import { DRINKABLE_INFO, SOURCE_INFO, drinkableInfo, sourceInfo } from '../lib/waterType'
+import type { Drinkable, WaterSource } from '../api/types'
 import { isStale, timeAgo } from '../lib/time'
 
 function ReviewCard({
@@ -164,6 +166,8 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
 function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => void; onCancel: () => void }) {
   const [name, setName] = useState(font.name)
   const [description, setDescription] = useState(font.description ?? '')
+  const [source, setSource] = useState<WaterSource | ''>(font.source ?? '')
+  const [drinkable, setDrinkable] = useState<Drinkable | ''>(font.drinkable ?? '')
   const [error, setError] = useState('')
 
   async function submit(e: FormEvent) {
@@ -176,6 +180,8 @@ function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => 
         longitude: font.longitude,
         image: font.image ?? undefined,
         description: description || undefined,
+        source: source || undefined,
+        drinkable: drinkable || undefined,
       })
       onSaved()
     } catch (e) {
@@ -187,6 +193,22 @@ function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => 
     <form onSubmit={submit} className="col">
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" required />
       <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción" />
+      <label>Tipo:
+        <select value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')}>
+          <option value="">— desconocido —</option>
+          {(Object.keys(SOURCE_INFO) as WaterSource[]).map((k) => (
+            <option key={k} value={k}>{SOURCE_INFO[k].emoji} {SOURCE_INFO[k].label}</option>
+          ))}
+        </select>
+      </label>
+      <label>Potabilidad:
+        <select value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')}>
+          <option value="">— desconocida —</option>
+          {(Object.keys(DRINKABLE_INFO) as Drinkable[]).map((k) => (
+            <option key={k} value={k}>{DRINKABLE_INFO[k].emoji} {DRINKABLE_INFO[k].label}</option>
+          ))}
+        </select>
+      </label>
       {error && <p className="error">{error}</p>}
       <div className="row">
         <button type="submit">Guardar</button>
@@ -284,6 +306,17 @@ export function FontDetailPage() {
       ) : (
         <>
           {font.description && <p className="muted">{font.description}</p>}
+          {(() => {
+            const src = sourceInfo(font.source)
+            const dr = drinkableInfo(font.drinkable)
+            if (!src && !dr) return null
+            return (
+              <p className="badges">
+                {src && <span className="badge">{src.emoji} {src.label}</span>}
+                {dr && <span className={'badge' + (font.drinkable === 'no' ? ' danger' : '')}>{dr.emoji} {dr.label}</span>}
+              </p>
+            )
+          })()}
           {font.image && <img className="font-img" src={assetUrl(font.image)} alt={font.name} />}
           <p className="muted">Lat {font.latitude.toFixed(4)}, Long {font.longitude.toFixed(4)}</p>
           {avg != null && (

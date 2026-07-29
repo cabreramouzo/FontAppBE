@@ -11,6 +11,7 @@ import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { WATER_STATUS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
 import { compressImage } from '../lib/image'
+import { isNotPotable } from '../lib/waterType'
 import { timeAgo } from '../lib/time'
 
 // Centro por defecto: comarca del Moianès.
@@ -18,7 +19,7 @@ const MOIANES: [number, number] = [41.81, 2.09]
 
 const hasWater = (f: FontSummary) => f.lastWaterStatus === 'flowing' || f.lastWaterStatus === 'trickle'
 
-function FontMarkers({ nonce, onlyWithWater }: { nonce: number; onlyWithWater: boolean }) {
+function FontMarkers({ nonce, onlyWithWater, showNonPotable }: { nonce: number; onlyWithWater: boolean; showNonPotable: boolean }) {
   const [fonts, setFonts] = useState<FontSummary[]>([])
 
   const loadBounds = useCallback(async (map: LeafletMap) => {
@@ -48,7 +49,8 @@ function FontMarkers({ nonce, onlyWithWater }: { nonce: number; onlyWithWater: b
     return () => clearTimeout(t)
   }, [map, loadBounds, nonce])
 
-  const shown = onlyWithWater ? fonts.filter(hasWater) : fonts
+  let shown = showNonPotable ? fonts : fonts.filter((f) => !isNotPotable(f.drinkable))
+  if (onlyWithWater) shown = shown.filter(hasWater)
   return <ClusteredMarkers fonts={shown} />
 }
 
@@ -203,6 +205,7 @@ export function MapPage() {
   const [goto, setGoto] = useState<[number, number] | null>(null)
   const [geoError, setGeoError] = useState('')
   const [onlyWithWater, setOnlyWithWater] = useState(false)
+  const [showNonPotable, setShowNonPotable] = useState(false)
   const [showNearby, setShowNearby] = useState(false)
 
   function cancel() {
@@ -235,7 +238,7 @@ export function MapPage() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} />
+        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} />
         <Recenter target={me} />
         <Recenter target={goto} />
         {me && <Marker position={me} />}
@@ -249,6 +252,9 @@ export function MapPage() {
         <button className="ctrl" onClick={locateMe}>📍 Cerca de mí</button>
         <button className={'ctrl' + (onlyWithWater ? ' active' : '')} onClick={() => setOnlyWithWater((v) => !v)}>
           💧 Solo con agua
+        </button>
+        <button className={'ctrl' + (showNonPotable ? ' active' : '')} onClick={() => setShowNonPotable((v) => !v)} title="Modo emergencia: incluye fuentes marcadas como no potables">
+          🚱 Incluir no potables
         </button>
       </div>
       {geoError && <div className="hint hint-error">{geoError}</div>}

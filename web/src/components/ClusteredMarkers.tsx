@@ -8,6 +8,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import type { FontSummary } from '../api/types'
 import { statusIcon } from '../lib/statusMarker'
 import { waterStatusInfo } from '../lib/waterStatus'
+import { drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 
 function escapeHtml(s: string): string {
@@ -28,10 +29,13 @@ export function ClusteredMarkers({ fonts }: { fonts: FontSummary[] }) {
     for (const f of fonts) {
       const marker = L.marker([f.latitude, f.longitude], { icon: statusIcon(f.lastWaterStatus) })
       const ws = waterStatusInfo(f.lastWaterStatus)
+      const src = sourceInfo(f.source)
+      const dr = drinkableInfo(f.drinkable)
       const stale = f.lastUpdate ? isStale(f.lastUpdate) : false
       const el = document.createElement('div')
       el.innerHTML = `
         <strong>${escapeHtml(f.name)}</strong>
+        <div class="muted small">${src ? `${src.emoji} ${src.label}` : ''}${src && dr ? ' · ' : ''}${dr ? `${dr.emoji} ${dr.label}` : ''}</div>
         ${ws ? `<div class="badge">${ws.emoji} ${ws.label}</div>` : ''}
         ${f.lastUpdate ? `<div class="muted small">Actualizado ${timeAgo(f.lastUpdate)}${stale ? ' ⚠️' : ''}</div>` : ''}
         <div><a href="/fonts/${f.id}" class="popup-link">Ver detalle →</a></div>`

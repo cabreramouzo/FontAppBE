@@ -30,7 +30,7 @@ struct FontController: RouteCollection {
     @Sendable func create(req: Request) async throws -> Response {
         try CreateFontDTO.validate(content: req)
         let dto = try req.content.decode(CreateFontDTO.self)
-        let font = Font(name: dto.name, latitude: dto.latitude, longitude: dto.longitude, image: dto.image, description: dto.description)
+        let font = Font(name: dto.name, latitude: dto.latitude, longitude: dto.longitude, image: dto.image, description: dto.description, source: dto.source, drinkable: dto.drinkable)
         try await font.save(on: req.db)
 
         let response = Response(status: .created)
@@ -61,6 +61,8 @@ struct FontController: RouteCollection {
         font.longitude = dto.longitude
         font.image = dto.image
         font.description = dto.description
+        font.source = dto.source
+        font.drinkable = dto.drinkable
         try await font.save(on: req.db)
         if let oldImage, oldImage != dto.image { try? await req.imageStorage.delete(oldImage) }
         return font
@@ -140,6 +142,8 @@ struct CreateFontDTO: Content {
     let longitude: Double
     let image: String?
     let description: String?
+    let source: WaterSource?
+    let drinkable: Drinkable?
 }
 
 extension CreateFontDTO: Validatable {

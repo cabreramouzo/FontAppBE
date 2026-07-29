@@ -1,4 +1,4 @@
-import type { CommentResponse, Font, LoginResponse } from './types'
+import type { CommentResponse, Drinkable, Font, LoginResponse, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -72,6 +72,8 @@ export interface NewFont {
   longitude: number
   image?: string
   description?: string
+  source?: WaterSource
+  drinkable?: Drinkable
 }
 
 export async function createFont(data: NewFont): Promise<Font> {

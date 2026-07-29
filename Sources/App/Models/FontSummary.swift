@@ -10,6 +10,8 @@ struct FontSummary: Content {
     let longitude: Double
     let image: String?
     let description: String?
+    let source: WaterSource?
+    let drinkable: Drinkable?
     let createdAt: Date?
     let lastWaterStatus: String?
     let lastUpdate: Date?
@@ -21,6 +23,8 @@ struct FontSummary: Content {
         self.longitude = font.longitude
         self.image = font.image
         self.description = font.description
+        self.source = font.source
+        self.drinkable = font.drinkable
         self.createdAt = font.createdAt
         self.lastWaterStatus = lastWaterStatus
         self.lastUpdate = lastUpdate
