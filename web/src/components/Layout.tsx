@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { Footer } from './Footer'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -20,6 +21,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
       </header>
       <main className="main">{children}</main>
+      <Footer />
     </div>
   )
 }

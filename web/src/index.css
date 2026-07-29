@@ -43,9 +43,26 @@ a:hover { text-decoration: underline; }
 .error { color: var(--error); }
 .pad { padding: 20px; max-width: 720px; margin: 0 auto; }
 
-/* Mapa: ocupa el alto de la ventana menos la barra. */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 0 16px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.legal h2 { margin: 20px 0 6px; }
+.legal ul { margin: 6px 0; padding-left: 20px; }
+.legal li { margin: 3px 0; }
+.legal p { margin: 8px 0; }
+
+/* Mapa: ocupa el alto de la ventana menos la barra (56) y el footer (40). */
 .map-wrap { position: relative; }
-.map-wrap, .map { height: calc(100vh - 56px); width: 100%; }
+.map-wrap, .map { height: calc(100vh - 96px); width: 100%; }
 
 /* Overlays sobre el mapa (Leaflet usa z-index hasta ~700). */
 .fab {
