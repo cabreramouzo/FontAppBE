@@ -21,11 +21,24 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); }
+html, body {
+  height: 100%;
+  /* Sin rebote elástico ni scroll de página: se comporta como una app. */
+  overscroll-behavior: none;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  /* Tacto tipo nativo: sin flash azul al tocar, sin selección accidental de la UI. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-.app { display: flex; flex-direction: column; min-height: 100vh; }
+/* Alto real del viewport en móvil (dvh evita el salto por la barra de URL). */
+.app { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 
 .topbar {
   display: flex;
@@ -33,7 +46,11 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   height: 56px;
   padding: 0 16px;
+  /* Respeta el notch / isla dinámica en iOS. */
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
   border-bottom: 1px solid var(--border);
+  user-select: none;
 }
 .brand { font-weight: 700; font-size: 18px; }
 .nav { display: flex; align-items: center; gap: 12px; }
@@ -61,17 +78,19 @@ a:hover { text-decoration: underline; }
 .legal p { margin: 8px 0; }
 
 /* Mapa: ocupa el alto de la ventana menos la barra (56) y el footer (40). */
-.map-wrap { position: relative; }
-.map-wrap, .map { height: calc(100vh - 96px); width: 100%; }
+.map-wrap { position: relative; touch-action: none; }
+.map-wrap, .map { height: calc(100vh - 96px); height: calc(100dvh - 96px); width: 100%; }
 
 /* Overlays sobre el mapa (Leaflet usa z-index hasta ~700). */
 .fab {
   position: absolute;
-  right: 16px;
-  bottom: 24px;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px));
   z-index: 1000;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
+/* Overlays de UI del mapa: no seleccionables, tacto limpio. */
+.map-controls, .legend, .search, .fab, .nearby, .panel, .hint { user-select: none; }
 .hint {
   position: absolute;
   top: 12px;
@@ -329,9 +348,19 @@ select {
 
 /* Móvil */
 @media (max-width: 560px) {
-  .search { left: 12px; right: 12px; width: auto; max-width: none; top: 96px; }
-  .map-controls { gap: 6px; }
-  .ctrl, .fab { font-size: 14px; padding: 8px 10px; }
+  .search {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    width: auto;
+    max-width: none;
+    top: 12px;
+  }
+  /* Con el buscador ocupando arriba, los controles bajan bajo él. */
+  .map-controls { top: 60px; right: max(12px, env(safe-area-inset-right)); gap: 8px; }
+  /* Áreas de toque cómodas (~44px) tipo app nativa. */
+  .ctrl { font-size: 14px; padding: 10px 12px; min-height: 44px; }
+  .fab { font-size: 15px; padding: 12px 16px; min-height: 48px; border-radius: 999px; }
+  .search input { padding: 11px 12px; font-size: 16px; } /* 16px evita el auto-zoom de iOS al enfocar */
   .nearby {
     top: auto;
     bottom: 0;
@@ -339,9 +368,15 @@ select {
     right: 0;
     width: 100%;
     max-width: 100%;
-    max-height: 50%;
-    border-radius: 12px 12px 0 0;
+    max-height: 55%;
+    border-radius: 16px 16px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
   }
-  .legend { font-size: 11px; padding: 6px 8px; }
+  .legend { font-size: 11px; padding: 6px 8px; bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px)); }
+  .panel { bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px)); }
   .pad { padding: 14px; }
+  /* Inputs a 16px: iOS no hace zoom al enfocar un campo. */
+  input, select, textarea { font-size: 16px; }
+  /* El pinch ya hace zoom del mapa: liberamos la esquina para el buscador. */
+  .leaflet-control-zoom { display: none; }
 }
