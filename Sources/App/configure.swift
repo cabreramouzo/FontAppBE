@@ -93,6 +93,7 @@ public func configure(_ app: Application) async throws {
 
     // Comandos CLI.
     app.asyncCommands.use(SeedCommand(), as: "seed")
+    app.asyncCommands.use(ImportCommand(), as: "import-fonts")
 
     // Rutas.
     try routes(app)

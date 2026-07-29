@@ -68,15 +68,23 @@ function Recenter({ target }: { target: [number, number] | null }) {
 }
 
 function SearchBox({ onSelect }: { onSelect: (f: Font) => void }) {
-  const [all, setAll] = useState<Font[]>([])
   const [q, setQ] = useState('')
+  const [matches, setMatches] = useState<Font[]>([])
 
+  // Búsqueda en el servidor (escala a cualquier tamaño), con debounce.
   useEffect(() => {
-    apiFetch<Page<Font>>('/fonts?per=300').then((p) => setAll(p.items)).catch(() => setAll([]))
-  }, [])
-
-  const term = q.trim().toLowerCase()
-  const matches = term.length >= 2 ? all.filter((f) => f.name.toLowerCase().includes(term)).slice(0, 8) : []
+    const term = q.trim()
+    if (term.length < 2) {
+      setMatches([])
+      return
+    }
+    const t = setTimeout(() => {
+      apiFetch<Page<Font>>(`/fonts?search=${encodeURIComponent(term)}&per=8`)
+        .then((p) => setMatches(p.items))
+        .catch(() => setMatches([]))
+    }, 250)
+    return () => clearTimeout(t)
+  }, [q])
 
   return (
     <div className="search">
@@ -85,7 +93,7 @@ function SearchBox({ onSelect }: { onSelect: (f: Font) => void }) {
         <ul className="search-list">
           {matches.map((f) => (
             <li key={f.id}>
-              <button className="search-item" onClick={() => { onSelect(f); setQ('') }}>{f.name}</button>
+              <button className="search-item" onClick={() => { onSelect(f); setQ(''); setMatches([]) }}>{f.name}</button>
             </li>
           ))}
         </ul>

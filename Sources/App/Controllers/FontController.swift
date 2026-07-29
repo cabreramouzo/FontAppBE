@@ -5,6 +5,8 @@ import Vapor
 struct FontController: RouteCollection {
     /// Tope de resultados devueltos por `/fonts/near` (evita respuestas ilimitadas).
     static let maxNearQuantity = 100
+    /// Tope de marcadores de `/fonts/in-bounds` (el mapa; markercluster agrupa el resto).
+    static let maxInBoundsResults = 3000
 
     func boot(routes: RoutesBuilder) throws {
         let fonts = routes.grouped("fonts")
@@ -36,11 +38,13 @@ struct FontController: RouteCollection {
         return response
     }
 
-    /// GET /fonts?page={}&per={} — listado paginado de todas las fuentes.
+    /// GET /fonts?page=&per=&search= — listado paginado; `search` filtra por nombre (ILIKE, insensible a mayúsculas).
     @Sendable func index(req: Request) async throws -> Page<Font> {
-        try await Font.query(on: req.db)
-            .sort(\.$name)
-            .paginate(for: req)
+        let query = Font.query(on: req.db).sort(\.$name)
+        if let search = req.query[String.self, at: "search"], !search.isEmpty {
+            query.filter(\.$name, .custom("ILIKE"), "%\(search)%")
+        }
+        return try await query.paginate(for: req)
     }
 
     @Sendable func show(req: Request) async throws -> Font {
@@ -117,7 +121,7 @@ struct FontController: RouteCollection {
             .filter(\.$latitude <= b.maxLat)
             .filter(\.$longitude >= b.minLong)
             .filter(\.$longitude <= b.maxLong)
-            .limit(Self.maxNearQuantity * 5) // cota de seguridad.
+            .limit(Self.maxInBoundsResults)
             .all()
         return try await Font.summaries(for: fonts, on: req.db)
     }
