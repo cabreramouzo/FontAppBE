@@ -65,6 +65,54 @@ VITE_API_URL=https://api.tu-dominio.com npm run build   # genera web/dist
 Sube `web/dist` al hosting estático. En Cloudflare Pages / Netlify define `VITE_API_URL`
 como variable de entorno de build (ver `web/.env.example`).
 
+## Despliegue en Fly.io (paso a paso)
+
+Requisitos: `brew install flyctl` y `fly auth signup` (o `fly auth login`). El `fly.toml` ya está en el repo.
+
+### 1. Backend + Postgres
+```bash
+git push                          # sube los últimos commits a GitHub
+
+fly launch --no-deploy            # detecta Dockerfile + fly.toml; nombre único + región (mad)
+fly postgres create               # Postgres gestionado (o durante el launch)
+fly postgres attach <nombre-pg>   # inyecta DATABASE_URL como secret automáticamente
+```
+Si el arranque falla por TLS (BD interna de Fly), fuerza sin TLS:
+```bash
+fly secrets set DATABASE_URL="postgres://usuario:pass@host:5432/db?sslmode=disable"
+```
+
+### 2. R2 + secrets
+En Cloudflare: crea un **bucket R2**, hazlo **público** (URL `pub-xxxx.r2.dev`) y un **token de API**
+(Object Read & Write) → obtienes access key, secret y el endpoint. Luego:
+```bash
+fly secrets set \
+  R2_ENDPOINT="https://<accountid>.r2.cloudflarestorage.com" \
+  R2_ACCESS_KEY_ID="..." R2_SECRET_ACCESS_KEY="..." \
+  R2_BUCKET="fontapp-images" R2_PUBLIC_URL="https://pub-xxxx.r2.dev"
+```
+
+### 3. Desplegar y comprobar
+```bash
+fly deploy
+fly open      # https://<tu-app>.fly.dev  (prueba /health)
+fly logs      # arranque + migraciones (AUTO_MIGRATE)
+```
+Sembrar las fuentes reales una vez (**nunca `--demo` en producción**):
+```bash
+fly ssh console --command "/app/App seed"
+```
+
+### 4. Web (Cloudflare Pages) + cerrar el CORS
+En Cloudflare Pages → conectar el repo de GitHub:
+- **Root directory:** `web` · **Build:** `npm run build` · **Output:** `dist`
+- **Variable de entorno:** `VITE_API_URL = https://<tu-app>.fly.dev`
+
+Cuando tengas la URL de la web, ciérrale el CORS al backend:
+```bash
+fly secrets set WEB_ORIGIN="https://xxx.pages.dev"
+```
+
 ## Checklist antes de abrir al público
 
 - [ ] `WEB_ORIGIN` restringido al dominio real del web.
