@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { CommentResponse, Font, ReportResponse } from '../api/types'
 import {
   apiFetch,
+  assetUrl,
   createComment,
   deleteComment,
   deleteFont,
@@ -93,7 +94,7 @@ function ReviewCard({
       </div>
       {c.rating != null && <StarRating value={c.rating} size={16} />}
       <p>{c.body}</p>
-      {c.image && <img className="review-img" src={c.image} alt="" />}
+      {c.image && <img className="review-img" src={assetUrl(c.image)} alt="" />}
       {error && <p className="error">{error}</p>}
       {canManage && (
         <div className="row small">
@@ -282,7 +283,7 @@ export function FontDetailPage() {
       ) : (
         <>
           {font.description && <p className="muted">{font.description}</p>}
-          {font.image && <img className="font-img" src={font.image} alt={font.name} />}
+          {font.image && <img className="font-img" src={assetUrl(font.image)} alt={font.name} />}
           <p className="muted">Lat {font.latitude.toFixed(4)}, Long {font.longitude.toFixed(4)}</p>
           {avg != null && (
             <p className="avg"><StarRating value={avg} size={18} /> {avg.toFixed(1)} ({rated.length})</p>

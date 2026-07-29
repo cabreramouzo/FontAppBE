@@ -1,0 +1,8 @@
+.build/
+.git/
+.github/
+web/
+.swiftpm/
+.DS_Store
+env.development
+Public/uploads/

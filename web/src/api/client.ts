@@ -1,8 +1,15 @@
 import type { CommentResponse, Font, LoginResponse } from './types'
 
-// En dev, Vite hace proxy de /api -> backend (ver vite.config.ts).
-const BASE = '/api'
+// Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
+// Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
+const BASE = import.meta.env.VITE_API_URL || '/api'
 const TOKEN_KEY = 'fontapp_token'
+
+/** Resuelve una ruta del backend (p. ej. /uploads/x) a URL absoluta cuando hay VITE_API_URL. */
+export function assetUrl(path: string): string {
+  if (/^https?:\/\//.test(path)) return path
+  return (import.meta.env.VITE_API_URL || '') + path
+}
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
