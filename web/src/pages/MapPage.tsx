@@ -13,7 +13,10 @@ import Stack from '@mui/material/Stack'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import InputBase from '@mui/material/InputBase'
+import IconButton from '@mui/material/IconButton'
+import Divider from '@mui/material/Divider'
 import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import ListSubheader from '@mui/material/ListSubheader'
@@ -23,6 +26,9 @@ import NavigationIcon from '@mui/icons-material/Navigation'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import DoNotDisturbAltIcon from '@mui/icons-material/DoNotDisturbAlt'
 import AddIcon from '@mui/icons-material/Add'
+import RemoveIcon from '@mui/icons-material/Remove'
+import CloseIcon from '@mui/icons-material/Close'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
@@ -163,6 +169,18 @@ function FlyToPlace({ place }: { place: Place | null }) {
     }
   }, [place, map])
   return null
+}
+
+// Control de zoom Material (sustituye al +/- por defecto de Leaflet).
+function ZoomControls() {
+  const map = useMap()
+  return (
+    <Paper className="zoom-ctrl" elevation={3} sx={{ display: 'flex', flexDirection: 'column', borderRadius: 3, overflow: 'hidden' }}>
+      <IconButton size="small" onClick={() => map.zoomIn()} aria-label="zoom in"><AddIcon fontSize="small" /></IconButton>
+      <Divider />
+      <IconButton size="small" onClick={() => map.zoomOut()} aria-label="zoom out"><RemoveIcon fontSize="small" /></IconButton>
+    </Paper>
+  )
 }
 
 function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; onSelectPlace: (p: Place) => void }) {
@@ -318,45 +336,51 @@ function NearbyPanel({
   }, [pos])
 
   return (
-    <div className="nearby">
-      <div className="nearby-head">
-        <strong>{t('map.nearbyTitle')}</strong>
-        <button className="link" onClick={onClose}>✕</button>
-      </div>
-      <ul className="nearby-list">
-        {items === null && <li className="muted">{t('map.loading')}</li>}
+    <Paper className="nearby" elevation={6} sx={{ display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography sx={{ fontWeight: 700 }}>{t('map.nearbyTitle')}</Typography>
+        <IconButton size="small" onClick={onClose} aria-label="close"><CloseIcon fontSize="small" /></IconButton>
+      </Box>
+      <List dense sx={{ overflowY: 'auto' }}>
+        {items === null && <ListItem><Typography color="text.secondary">{t('map.loading')}</Typography></ListItem>}
         {items?.map((f) => {
           const ws = waterStatusInfo(f.lastWaterStatus)
           const dist = haversineKm(pos[0], pos[1], f.latitude, f.longitude)
           return (
-            <li key={f.id} className={'nearby-row' + (f.id === selectedID ? ' selected' : '')}>
-              <button className="nearby-focus" onClick={() => onFocus(f)}>
-                <span className="nearby-name">{f.name}</span>
-                <span className="nearby-meta muted">
-                  {ws && <span title={t(`status.${ws.key}`)}>{ws.emoji}</span>} {formatDist(dist)}
-                  {f.lastUpdate && ` · ${timeAgo(f.lastUpdate, t)}`}
-                </span>
-              </button>
-              <Link className="nearby-go" to={`/fonts/${f.id}`} aria-label={t('nearby.goAria', { name: f.name })}>→</Link>
-            </li>
+            <ListItem
+              key={f.id}
+              disablePadding
+              secondaryAction={
+                <IconButton edge="end" component={Link} to={`/fonts/${f.id}`} aria-label={t('nearby.goAria', { name: f.name })}>
+                  <ArrowForwardIcon />
+                </IconButton>
+              }
+            >
+              <ListItemButton selected={f.id === selectedID} onClick={() => onFocus(f)}>
+                <ListItemText
+                  primary={f.name}
+                  secondary={<>{ws && <span title={t(`status.${ws.key}`)}>{ws.emoji}</span>} {formatDist(dist)}{f.lastUpdate && ` · ${timeAgo(f.lastUpdate, t)}`}</>}
+                />
+              </ListItemButton>
+            </ListItem>
           )
         })}
-        {items?.length === 0 && <li className="muted">{t('map.nearbyEmpty')}</li>}
-      </ul>
-    </div>
+        {items?.length === 0 && <ListItem><Typography color="text.secondary">{t('map.nearbyEmpty')}</Typography></ListItem>}
+      </List>
+    </Paper>
   )
 }
 
 function MapLegend() {
   const { t } = useI18n()
   return (
-    <div className="legend">
+    <Paper className="legend" elevation={3} sx={{ borderRadius: 2, p: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
       {(['flowing', 'trickle', 'dry'] as const).map((k) => (
-        <span key={k} className="legend-item">
-          <span className="dot" style={{ background: WATER_STATUS[k].color }} /> {t(`status.${k}`)}
-        </span>
+        <Box key={k} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
+          <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: WATER_STATUS[k].color }} /> {t(`status.${k}`)}
+        </Box>
       ))}
-    </div>
+    </Paper>
   )
 }
 
@@ -422,7 +446,7 @@ export function MapPage() {
 
   return (
     <div className="map-wrap">
-      <MapContainer center={MOIANES} zoom={12} className="map" scrollWheelZoom>
+      <MapContainer center={MOIANES} zoom={12} className="map" scrollWheelZoom zoomControl={false}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -430,6 +454,7 @@ export function MapPage() {
         <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
         <FocusOn target={goto} />
         <FlyToPlace place={place} />
+        <ZoomControls />
         {me && <Marker position={me} />}
         {placing && <PlacePicker onPick={setPos} />}
         {pos && <Marker position={pos} />}

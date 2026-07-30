@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router-dom'
+import Box from '@mui/material/Box'
+import Link from '@mui/material/Link'
 import { useI18n } from '../i18n/I18nContext'
 
 // NOTA: plantilla de partida, NO asesoramiento legal. Antes de publicar:
@@ -6,10 +8,23 @@ import { useI18n } from '../i18n/I18nContext'
 export function LegalPage() {
   const { lang, t } = useI18n()
   return (
-    <div className="pad legal">
-      <Link to="/">{t('detail.backMap')}</Link>
+    <Box
+      className="pad legal"
+      sx={{
+        maxWidth: 720,
+        mx: 'auto',
+        '& h1': { typography: 'h4', fontWeight: 800, mt: 1, mb: 2 },
+        '& h2': { typography: 'h6', mt: 3, mb: 1 },
+        '& p': { typography: 'body1', my: 1.5 },
+        '& ul': { pl: 3, my: 1 },
+        '& li': { typography: 'body2', my: 0.5 },
+        '& code': { bgcolor: 'action.hover', px: 0.5, borderRadius: 1, fontSize: 13 },
+        '& a': { color: 'primary.main' },
+      }}
+    >
+      <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
       {lang === 'ca' ? <LegalCA /> : lang === 'en' ? <LegalEN /> : <LegalES />}
-    </div>
+    </Box>
   )
 }
 
