@@ -1,0 +1,14 @@
+{
+  "name": "FontApp — fonts d'aigua",
+  "short_name": "FontApp",
+  "description": "Troba fonts d'aigua a prop teu i consulta'n l'estat.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1115",
+  "theme_color": "#0ea5e9",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

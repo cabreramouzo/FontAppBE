@@ -51,6 +51,17 @@ export interface CommentResponse {
   lastConfirmedAt: string | null
 }
 
+/** Reseña propia con el nombre de la fuente (pantalla de perfil). */
+export interface MyComment {
+  id: string
+  fontID: string
+  fontName: string | null
+  body: string
+  rating: number | null
+  waterStatus: string | null
+  createdAt: string
+}
+
 export interface Page<T> {
   items: T[]
   metadata: { total: number; per: number; page: number }

@@ -24,6 +24,15 @@ document.addEventListener(
   { passive: false },
 )
 
+// PWA: registramos el service worker solo en producción (en dev interferiría con el HMR de Vite).
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // sin SW la app sigue funcionando; solo no será instalable/offline
+    })
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

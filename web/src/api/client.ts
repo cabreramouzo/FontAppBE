@@ -1,4 +1,4 @@
-import type { CommentResponse, Drinkable, Font, LoginResponse, WaterSource } from './types'
+import type { CommentResponse, Drinkable, Font, LoginResponse, MyComment, ReportResponse, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -120,6 +120,26 @@ export async function confirmComment(fontID: string, commentID: string, on: bool
   })
 }
 
+export async function createReport(fontID: string, message: string): Promise<ReportResponse> {
+  return apiFetch<ReportResponse>(`/fonts/${fontID}/report`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  })
+}
+
 export async function deleteReport(fontID: string, reportID: string): Promise<void> {
   await apiFetch(`/fonts/${fontID}/report/${reportID}`, { method: 'DELETE' })
+}
+
+// Perfil: fuentes y reseñas del usuario autenticado.
+export async function getMyFonts(): Promise<Font[]> {
+  return apiFetch<Font[]>('/auth/me/fonts')
+}
+
+export async function getMyComments(): Promise<MyComment[]> {
+  return apiFetch<MyComment[]>('/auth/me/comments')
+}
+
+export async function deleteAccount(userID: string): Promise<void> {
+  await apiFetch(`/users/${userID}`, { method: 'DELETE' })
 }

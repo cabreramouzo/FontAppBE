@@ -6,6 +6,7 @@ import { MapPage } from './pages/MapPage'
 import { FontDetailPage } from './pages/FontDetailPage'
 import { LoginPage } from './pages/LoginPage'
 import { LegalPage } from './pages/LegalPage'
+import { ProfilePage } from './pages/ProfilePage'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
               <Route path="/" element={<MapPage />} />
               <Route path="/fonts/:id" element={<FontDetailPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/me" element={<ProfilePage />} />
               <Route path="/legal" element={<LegalPage />} />
             </Routes>
           </Layout>

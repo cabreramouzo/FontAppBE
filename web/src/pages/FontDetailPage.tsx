@@ -6,6 +6,7 @@ import {
   assetUrl,
   confirmComment,
   createComment,
+  createReport,
   deleteComment,
   deleteFont,
   deleteReport,
@@ -174,12 +175,12 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
   )
 }
 
-// Acciones de ubicación: abrir en Google Maps ("cómo llegar") y copiar coordenadas.
-function LocationActions({ lat, long }: { lat: number; long: number }) {
+// Acciones de ubicación: cómo llegar, copiar coordenadas y compartir.
+function LocationActions({ font }: { font: Font }) {
   const { t } = useI18n()
   const [copied, setCopied] = useState(false)
-  const coords = `${lat.toFixed(6)}, ${long.toFixed(6)}`
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${long}`
+  const coords = `${font.latitude.toFixed(6)}, ${font.longitude.toFixed(6)}`
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${font.latitude},${font.longitude}`
 
   async function copy() {
     try {
@@ -191,13 +192,57 @@ function LocationActions({ lat, long }: { lat: number; long: number }) {
     }
   }
 
+  async function share() {
+    const url = window.location.href
+    try {
+      if (navigator.share) await navigator.share({ title: font.name, url })
+      else await navigator.clipboard.writeText(url)
+    } catch {
+      // el usuario canceló el diálogo de compartir: sin acción
+    }
+  }
+
   return (
     <div className="loc-actions">
       <a className="loc-btn" href={mapsUrl} target="_blank" rel="noreferrer">🧭 {t('detail.directions')}</a>
       <button type="button" className="loc-btn" onClick={copy}>
         📋 {copied ? t('detail.copied') : `${coords}`}
       </button>
+      <button type="button" className="loc-btn" onClick={share}>🔗 {t('detail.share')}</button>
     </div>
+  )
+}
+
+// Formulario para reportar una incidencia (avería, sin agua, sucia…).
+function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void }) {
+  const { t } = useI18n()
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSaving(true)
+    try {
+      await createReport(fontID, message)
+      setMessage('')
+      onPosted()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="report-form">
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t('report.placeholder')} required />
+      {error && <p className="error">{error}</p>}
+      <button type="submit" className="report-btn" disabled={saving}>
+        ⚠️ {saving ? t('report.sending') : t('report.submit')}
+      </button>
+    </form>
   )
 }
 
@@ -359,7 +404,7 @@ export function FontDetailPage() {
             )
           })()}
           {font.image && <img className="font-img" src={assetUrl(font.image)} alt={font.name} />}
-          <LocationActions lat={font.latitude} long={font.longitude} />
+          <LocationActions font={font} />
           {avg != null && (
             <p className="avg"><StarRating value={avg} size={18} /> {avg.toFixed(1)} ({rated.length})</p>
           )}
@@ -434,6 +479,11 @@ export function FontDetailPage() {
             </li>
           ))}
         </ul>
+        {user ? (
+          <ReportForm fontID={font.id} onPosted={load} />
+        ) : (
+          <p className="muted"><Link to="/login">{t('nav.enter')}</Link> {t('report.loginToReport')}</p>
+        )}
       </section>
     </div>
   )

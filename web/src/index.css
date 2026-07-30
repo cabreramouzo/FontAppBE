@@ -20,6 +20,24 @@
   }
 }
 
+/* Override manual del tema (gana sobre prefers-color-scheme). */
+:root[data-theme='dark'] {
+  --bg: #0f1115;
+  --fg: #e5e7eb;
+  --muted: #9ca3af;
+  --border: #2a2e37;
+  --accent: #38bdf8;
+  color-scheme: dark;
+}
+:root[data-theme='light'] {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #0ea5e9;
+  color-scheme: light;
+}
+
 * { box-sizing: border-box; }
 html, body {
   height: 100%;
@@ -61,6 +79,15 @@ a:hover { text-decoration: underline; }
   border-radius: 6px;
   background: var(--bg);
   color: var(--fg);
+  cursor: pointer;
+}
+.theme-toggle {
+  padding: 4px 8px;
+  font-size: 16px;
+  line-height: 1;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
   cursor: pointer;
 }
 .main { flex: 1; }
@@ -146,6 +173,17 @@ a:hover { text-decoration: underline; }
   text-decoration: none;
 }
 .loc-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+/* Formulario de incidencia */
+.report-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.report-btn { align-self: flex-start; background: #b45309; }
+
+/* Perfil */
+.profile section { margin: 18px 0; }
+.profile h2 { margin: 0 0 8px; }
+.profile .list li { padding: 8px 0; }
+.profile .list p { margin: 4px 0 0; }
+.badge.small { font-size: 12px; padding: 1px 6px; }
 .font-img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
 .list { list-style: none; padding: 0; margin: 8px 0; }
 .list li { padding: 6px 0; border-bottom: 1px solid var(--border); }
