@@ -19,6 +19,7 @@ export interface UserResponse {
   id: string
   name: string
   username: string
+  email?: string | null
 }
 
 export interface LoginResponse {

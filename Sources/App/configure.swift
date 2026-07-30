@@ -87,6 +87,8 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddWaterTypeToFont())
     app.migrations.add(CreateFontConfirmation())
     app.migrations.add(AddCreatorToFont())
+    app.migrations.add(AddEmailToUser())
+    app.migrations.add(CreatePasswordReset())
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

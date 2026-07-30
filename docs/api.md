@@ -20,8 +20,12 @@ Token **Bearer** respaldado en BD.
 | Ruta | 🔒 | Descripción |
 |------|----|-------------|
 | `POST /auth/login` | Basic | Emite un token |
-| `GET /auth/me` | Bearer | Usuario autenticado |
+| `GET /auth/me` | Bearer | Usuario autenticado (incluye `email`) |
+| `GET /auth/me/fonts` | Bearer | Fuentes creadas por el usuario |
+| `GET /auth/me/comments` | Bearer | Reseñas del usuario (con `fontName`) |
 | `POST /auth/logout` | Bearer | Revoca el token usado |
+| `POST /auth/forgot-password` | — | `{email}` → siempre 200 `{ok, devLink}` (no enumera; `devLink` solo fuera de producción) |
+| `POST /auth/reset-password` | — | `{token, password≥8}` → 200; invalida el token y cierra sesiones. 400 si no es válido/caducó |
 
 **`LoginResponse`** (200 de `/auth/login`):
 ```json
@@ -45,8 +49,9 @@ Login con credenciales inválidas → **401**.
   "lastWaterStatus": "flowing|trickle|dry|unknown|null",
   "lastUpdate": "iso8601|null" }
 
-// UserResponse  (nunca incluye passwordHash)
-{ "id": "uuid", "name": "string", "username": "string" }
+// UserResponse  (nunca incluye passwordHash; `email` solo en respuestas propias
+//                — login/me/registro/edición —, nunca en `GET /users/:id`)
+{ "id": "uuid", "name": "string", "username": "string", "email": "string|null" }
 
 // ReportResponse
 { "id": "uuid", "fontID": "uuid", "userID": "uuid|null", "username": "string|null",
@@ -65,9 +70,9 @@ Login con credenciales inválidas → **401**.
 
 | Método | Ruta | 🔒 | Cuerpo | Éxito | Errores |
 |--------|------|----|--------|-------|---------|
-| POST | `/users` | — | `{name, username≥3, password≥8}` | 201 `UserResponse` | 400, 409 (username en uso) |
-| GET | `/users/:id` | — | — | 200 `UserResponse` | 404 |
-| PUT | `/users/:id` | Bearer | `{name, username, password?}` | 200 `UserResponse` | 400, 401, 403 (no eres tú), 404, 409 |
+| POST | `/users` | — | `{name, username≥3, email, password≥8}` | 201 `UserResponse` | 400, 409 (username/email en uso) |
+| GET | `/users/:id` | — | — | 200 `UserResponse` (sin email) | 404 |
+| PUT | `/users/:id` | Bearer | `{name, username, email, password?}` | 200 `UserResponse` | 400, 401, 403 (no eres tú), 404, 409 |
 | DELETE | `/users/:id` | Bearer | — | 204 | 401, 403, 404 |
 
 `PUT`/`DELETE` son **self-only**: solo sobre tu propia cuenta (si no, 403).

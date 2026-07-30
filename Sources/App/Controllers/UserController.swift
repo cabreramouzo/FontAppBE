@@ -25,16 +25,21 @@ struct UserController: RouteCollection {
         guard try await User.query(on: req.db).filter(\.$username == dto.username).first() == nil else {
             throw Abort(.conflict, reason: "El username '\(dto.username)' ya está en uso")
         }
+        let email = dto.email.lowercased()
+        guard try await User.query(on: req.db).filter(\.$email == email).first() == nil else {
+            throw Abort(.conflict, reason: "El correo '\(email)' ya está registrado")
+        }
 
         let user = User(
             name: dto.name,
             username: dto.username,
+            email: email,
             passwordHash: try req.password.hash(dto.password)
         )
         try await user.save(on: req.db)
 
         let response = Response(status: .created)
-        try response.content.encode(UserResponse(user))
+        try response.content.encode(UserResponse(user, includeEmail: true))
         return response
     }
 
@@ -53,14 +58,20 @@ struct UserController: RouteCollection {
            clash.id != user.id {
             throw Abort(.conflict, reason: "El username '\(dto.username)' ya está en uso")
         }
+        let email = dto.email.lowercased()
+        if let clash = try await User.query(on: req.db).filter(\.$email == email).first(),
+           clash.id != user.id {
+            throw Abort(.conflict, reason: "El correo '\(email)' ya está registrado")
+        }
 
         user.name = dto.name
         user.username = dto.username
+        user.email = email
         if let password = dto.password {
             user.passwordHash = try req.password.hash(password)
         }
         try await user.save(on: req.db)
-        return UserResponse(user)
+        return UserResponse(user, includeEmail: true)
     }
 
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
@@ -89,6 +100,7 @@ struct UserController: RouteCollection {
 struct CreateUserDTO: Content {
     let name: String
     let username: String
+    let email: String
     let password: String
 }
 
@@ -96,6 +108,7 @@ extension CreateUserDTO: Validatable {
     static func validations(_ validations: inout Validations) {
         validations.add("name", as: String.self, is: !.empty)
         validations.add("username", as: String.self, is: .count(3...))
+        validations.add("email", as: String.self, is: .email)
         validations.add("password", as: String.self, is: .count(8...))
     }
 }
@@ -103,6 +116,7 @@ extension CreateUserDTO: Validatable {
 struct UpdateUserDTO: Content {
     let name: String
     let username: String
+    let email: String
     let password: String?
 }
 
@@ -110,6 +124,7 @@ extension UpdateUserDTO: Validatable {
     static func validations(_ validations: inout Validations) {
         validations.add("name", as: String.self, is: !.empty)
         validations.add("username", as: String.self, is: .count(3...))
+        validations.add("email", as: String.self, is: .email)
         validations.add("password", as: String.self, is: .count(8...), required: false)
     }
 }

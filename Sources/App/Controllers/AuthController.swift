@@ -10,6 +10,10 @@ struct AuthController: RouteCollection {
         // Login con Basic auth (usuario/contraseña).
         auth.grouped(User.authenticator()).post("login", use: login)
 
+        // Recuperación de contraseña (público).
+        auth.post("forgot-password", use: forgotPassword)
+        auth.post("reset-password", use: resetPassword)
+
         // Rutas que requieren un token válido.
         let tokenProtected = auth.grouped(UserToken.authenticator(), User.guardMiddleware())
         tokenProtected.get("me", use: me)
@@ -23,12 +27,58 @@ struct AuthController: RouteCollection {
         let user = try req.auth.require(User.self)
         let token = try UserToken.generate(for: user)
         try await token.save(on: req.db)
-        return LoginResponse(token: token.value, expiresAt: token.expiresAt, user: UserResponse(user))
+        return LoginResponse(token: token.value, expiresAt: token.expiresAt, user: UserResponse(user, includeEmail: true))
     }
 
-    /// GET /auth/me — devuelve el usuario autenticado.
+    /// GET /auth/me — devuelve el usuario autenticado (con su email).
     @Sendable func me(req: Request) async throws -> UserResponse {
-        UserResponse(try req.auth.require(User.self))
+        UserResponse(try req.auth.require(User.self), includeEmail: true)
+    }
+
+    /// POST /auth/forgot-password — genera un token de reset y "envía" el enlace.
+    /// Responde siempre 200 (no revela si el correo existe). En dev devuelve el enlace.
+    @Sendable func forgotPassword(req: Request) async throws -> ForgotResponse {
+        let dto = try req.content.decode(ForgotDTO.self)
+        let email = dto.email.lowercased()
+
+        guard let user = try await User.query(on: req.db).filter(\.$email == email).first() else {
+            return ForgotResponse(ok: true, devLink: nil) // no enumeramos usuarios
+        }
+        let userID = try user.requireID()
+        try await PasswordReset.query(on: req.db).filter(\.$user.$id == userID).delete()
+        let reset = PasswordReset.generate(for: userID)
+        try await reset.save(on: req.db)
+
+        let base = Environment.get("WEB_ORIGIN")?.split(separator: ",").first.map(String.init)
+            ?? "http://localhost:5174"
+        let link = "\(base)/reset?token=\(reset.token)"
+        // TODO producción: enviar por email (Resend/SMTP). En dev lo registramos y devolvemos.
+        req.logger.info("Password reset para \(email): \(link)")
+        let isProd = req.application.environment == .production
+        return ForgotResponse(ok: true, devLink: isProd ? nil : link)
+    }
+
+    /// POST /auth/reset-password — fija una nueva contraseña con un token válido.
+    @Sendable func resetPassword(req: Request) async throws -> HTTPStatus {
+        try ResetDTO.validate(content: req)
+        let dto = try req.content.decode(ResetDTO.self)
+
+        guard let reset = try await PasswordReset.query(on: req.db).filter(\.$token == dto.token).first() else {
+            throw Abort(.badRequest, reason: "Enlace de recuperación no válido")
+        }
+        guard reset.expiresAt > Date() else {
+            try await reset.delete(on: req.db)
+            throw Abort(.badRequest, reason: "El enlace de recuperación ha caducado")
+        }
+        guard let user = try await User.find(reset.$user.id, on: req.db) else {
+            throw Abort(.badRequest, reason: "Enlace de recuperación no válido")
+        }
+        user.passwordHash = try req.password.hash(dto.password)
+        try await user.save(on: req.db)
+        // Invalida el token usado y cierra las sesiones abiertas por seguridad.
+        try await PasswordReset.query(on: req.db).filter(\.$user.$id == user.requireID()).delete()
+        try await UserToken.query(on: req.db).filter(\.$user.$id == user.requireID()).delete()
+        return .ok
     }
 
     /// GET /auth/me/fonts — fuentes creadas por el usuario autenticado (más recientes primero).
@@ -68,6 +118,28 @@ struct LoginResponse: Content {
     let token: String
     let expiresAt: Date?
     let user: UserResponse
+}
+
+struct ForgotDTO: Content {
+    let email: String
+}
+
+/// Respuesta de forgot-password. `devLink` solo se rellena fuera de producción.
+struct ForgotResponse: Content {
+    let ok: Bool
+    let devLink: String?
+}
+
+struct ResetDTO: Content {
+    let token: String
+    let password: String
+}
+
+extension ResetDTO: Validatable {
+    static func validations(_ validations: inout Validations) {
+        validations.add("token", as: String.self, is: !.empty)
+        validations.add("password", as: String.self, is: .count(8...))
+    }
 }
 
 /// Reseña propia con el nombre de la fuente, para la pantalla "mi perfil".

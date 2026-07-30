@@ -13,6 +13,7 @@ const FontDetailPage = lazy(() => import('./pages/FontDetailPage').then((m) => (
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const LegalPage = lazy(() => import('./pages/LegalPage').then((m) => ({ default: m.LegalPage })))
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
                   <Route path="/" element={<MapPage />} />
                   <Route path="/fonts/:id" element={<FontDetailPage />} />
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/reset" element={<ResetPasswordPage />} />
                   <Route path="/me" element={<ProfilePage />} />
                   <Route path="/legal" element={<LegalPage />} />
                   <Route path="*" element={<NotFoundPage />} />

@@ -47,6 +47,7 @@ export function ProfilePage() {
       <section>
         <h2>{t('profile.account')}</h2>
         <p><strong>{user.name}</strong> · @{user.username}</p>
+        {user.email && <p className="muted">{t('profile.email')}: {user.email}</p>}
         {error && <p className="error">{error}</p>}
         <button className="link danger" onClick={removeAccount}>{t('profile.deleteAccount')}</button>
       </section>

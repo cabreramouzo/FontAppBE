@@ -6,7 +6,7 @@ interface AuthState {
   user: UserResponse | null
   loading: boolean
   login: (username: string, password: string) => Promise<void>
-  register: (name: string, username: string, password: string) => Promise<void>
+  register: (name: string, username: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -36,10 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user)
   }
 
-  async function register(name: string, username: string, password: string) {
+  async function register(name: string, username: string, email: string, password: string) {
     await apiFetch<UserResponse>('/users', {
       method: 'POST',
-      body: JSON.stringify({ name, username, password }),
+      body: JSON.stringify({ name, username, email, password }),
     })
     await login(username, password)
   }

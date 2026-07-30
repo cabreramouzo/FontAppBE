@@ -162,3 +162,12 @@ export async function getMyComments(): Promise<MyComment[]> {
 export async function deleteAccount(userID: string): Promise<void> {
   await apiFetch(`/users/${userID}`, { method: 'DELETE' })
 }
+
+// Recuperación de contraseña. forgot devuelve devLink solo fuera de producción.
+export async function forgotPassword(email: string): Promise<{ ok: boolean; devLink: string | null }> {
+  return apiFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) })
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) })
+}

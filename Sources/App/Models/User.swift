@@ -9,15 +9,18 @@ final class User: Model, @unchecked Sendable {
     @ID(key: .id) var id: UUID?
     @Field(key: "name") var name: String
     @Field(key: "username") var username: String
+    // Nullable: los usuarios previos (demo) no tienen; los nuevos sí (validado). Único.
+    @OptionalField(key: "email") var email: String?
     @Field(key: "password_hash") var passwordHash: String
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
 
-    init(id: UUID? = nil, name: String, username: String, passwordHash: String) {
+    init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String) {
         self.id = id
         self.name = name
         self.username = username
+        self.email = email
         self.passwordHash = passwordHash
     }
 }
@@ -45,14 +48,18 @@ extension User {
 }
 
 /// Representación pública de un usuario (sin el hash de contraseña).
+/// El email es PII: solo se incluye en respuestas propias (login, /auth/me, edición),
+/// nunca en la lectura pública `GET /users/:id`.
 struct UserResponse: Content {
     let id: UUID?
     let name: String
     let username: String
+    let email: String?
 
-    init(_ user: User) {
+    init(_ user: User, includeEmail: Bool = false) {
         self.id = user.id
         self.name = user.name
         self.username = user.username
+        self.email = includeEmail ? user.email : nil
     }
 }
