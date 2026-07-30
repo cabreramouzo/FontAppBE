@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { Font, MyComment } from '../api/types'
-import { deleteAccount, getMyComments, getMyFonts } from '../api/client'
+import { deleteAccount, describeError, getMyComments, getMyFonts } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
+import { Skeleton } from '../components/Skeleton'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 
@@ -32,7 +33,7 @@ export function ProfilePage() {
       await logout()
       navigate('/')
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     }
   }
 
@@ -52,7 +53,7 @@ export function ProfilePage() {
 
       <section>
         <h2>{t('profile.myFonts')}</h2>
-        {fonts === null && <p className="muted">{t('detail.loading')}</p>}
+        {fonts === null && <Skeleton lines={2} />}
         {fonts?.length === 0 && <p className="muted">{t('profile.noFonts')}</p>}
         <ul className="list">
           {fonts?.map((f) => (
@@ -63,7 +64,7 @@ export function ProfilePage() {
 
       <section>
         <h2>{t('profile.myReviews')}</h2>
-        {comments === null && <p className="muted">{t('detail.loading')}</p>}
+        {comments === null && <Skeleton lines={3} />}
         {comments?.length === 0 && <p className="muted">{t('profile.noReviews')}</p>}
         <ul className="list">
           {comments?.map((c) => {

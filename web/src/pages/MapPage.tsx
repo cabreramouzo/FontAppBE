@@ -5,13 +5,15 @@ import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
 import type { Drinkable, Font, FontSummary, Page, WaterSource } from '../api/types'
-import { apiFetch, createFont, uploadImage } from '../api/client'
+import { apiFetch, createFont, describeError, uploadImage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
+import { useToast } from '../components/ToastContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { ImagePicker } from '../components/ImagePicker'
 import { WATER_STATUS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
+import { searchPlaces, type Place } from '../lib/geocode'
 import { compressImage } from '../lib/image'
 import { DRINKABLE_OPTIONS, SOURCE_OPTIONS, DRINKABLE_EMOJI, SOURCE_EMOJI, isNotPotable } from '../lib/waterType'
 import { timeAgo } from '../lib/time'
@@ -25,11 +27,13 @@ function FontMarkers({
   nonce,
   onlyWithWater,
   showNonPotable,
+  sourceFilter,
   selectedID,
 }: {
   nonce: number
   onlyWithWater: boolean
   showNonPotable: boolean
+  sourceFilter: WaterSource | 'all'
   selectedID: string | null
 }) {
   const [fonts, setFonts] = useState<FontSummary[]>([])
@@ -63,21 +67,13 @@ function FontMarkers({
 
   let shown = showNonPotable ? fonts : fonts.filter((f) => !isNotPotable(f.drinkable))
   if (onlyWithWater) shown = shown.filter(hasWater)
+  if (sourceFilter !== 'all') shown = shown.filter((f) => f.source === sourceFilter)
   return <ClusteredMarkers fonts={shown} selectedID={selectedID} />
 }
 
 // Captura el clic en el mapa para situar la nueva fuente.
 function PlacePicker({ onPick }: { onPick: (pos: LatLng) => void }) {
   useMapEvents({ click: (e) => onPick(e.latlng) })
-  return null
-}
-
-// Recentra el mapa cuando cambia el objetivo (cerca de mí / búsqueda).
-function Recenter({ target }: { target: [number, number] | null }) {
-  const map = useMap()
-  useEffect(() => {
-    if (target) map.setView(target, 16)
-  }, [target, map])
   return null
 }
 
@@ -113,34 +109,70 @@ function FocusOn({ target }: { target: [number, number] | null }) {
   return null
 }
 
-function SearchBox({ onSelect }: { onSelect: (f: Font) => void }) {
-  const { t } = useI18n()
+// Encuadra el mapa a un lugar buscado (usa su bounding box si lo hay).
+function FlyToPlace({ place }: { place: Place | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!place) return
+    if (place.bbox) {
+      const [s, n, w, e] = place.bbox
+      map.fitBounds([[s, w], [n, e]], { maxZoom: 16 })
+    } else {
+      map.setView([place.lat, place.lon], 14)
+    }
+  }, [place, map])
+  return null
+}
+
+function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; onSelectPlace: (p: Place) => void }) {
+  const { t, lang } = useI18n()
   const [q, setQ] = useState('')
   const [matches, setMatches] = useState<Font[]>([])
+  const [places, setPlaces] = useState<Place[]>([])
 
-  // Búsqueda en el servidor (escala a cualquier tamaño), con debounce.
+  // Búsqueda con debounce: fuentes (nuestra API) y lugares (Nominatim/OSM) en paralelo.
   useEffect(() => {
     const term = q.trim()
     if (term.length < 2) {
       setMatches([])
+      setPlaces([])
       return
     }
-    const t = setTimeout(() => {
-      apiFetch<Page<Font>>(`/fonts?search=${encodeURIComponent(term)}&per=8`)
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => {
+      apiFetch<Page<Font>>(`/fonts?search=${encodeURIComponent(term)}&per=6`)
         .then((p) => setMatches(p.items))
         .catch(() => setMatches([]))
-    }, 250)
-    return () => clearTimeout(t)
-  }, [q])
+      searchPlaces(term, lang, ctrl.signal).then(setPlaces)
+    }, 350)
+    return () => {
+      clearTimeout(timer)
+      ctrl.abort()
+    }
+  }, [q, lang])
 
+  function clear() {
+    setQ('')
+    setMatches([])
+    setPlaces([])
+  }
+
+  const hasResults = matches.length > 0 || places.length > 0
   return (
     <div className="search">
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('map.searchPlaceholder')} />
-      {matches.length > 0 && (
+      {hasResults && (
         <ul className="search-list">
+          {matches.length > 0 && <li className="search-group">💧 {t('search.fountains')}</li>}
           {matches.map((f) => (
             <li key={f.id}>
-              <button className="search-item" onClick={() => { onSelect(f); setQ(''); setMatches([]) }}>{f.name}</button>
+              <button className="search-item" onClick={() => { onSelect(f); clear() }}>{f.name}</button>
+            </li>
+          ))}
+          {places.length > 0 && <li className="search-group">📍 {t('search.places')}</li>}
+          {places.map((p, i) => (
+            <li key={`p${i}`}>
+              <button className="search-item place" onClick={() => { onSelectPlace(p); clear() }}>{p.name}</button>
             </li>
           ))}
         </ul>
@@ -151,6 +183,7 @@ function SearchBox({ onSelect }: { onSelect: (f: Font) => void }) {
 
 function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () => void; onCreated: () => void }) {
   const { t } = useI18n()
+  const toast = useToast()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [source, setSource] = useState<WaterSource | ''>('')
@@ -175,9 +208,10 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
         source: source || undefined,
         drinkable: drinkable || undefined,
       })
+      toast.show(t('toast.fontCreated'))
       onCreated()
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     } finally {
       setSaving(false)
     }
@@ -293,8 +327,10 @@ export function MapPage() {
   const [geoError, setGeoError] = useState('')
   const [onlyWithWater, setOnlyWithWater] = useState(false)
   const [showNonPotable, setShowNonPotable] = useState(false)
+  const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>('all')
   const [showNearby, setShowNearby] = useState(false)
   const [selectedID, setSelectedID] = useState<string | null>(null)
+  const [place, setPlace] = useState<Place | null>(null)
 
   function focusFont(f: FontSummary) {
     setGoto([f.latitude, f.longitude])
@@ -309,7 +345,8 @@ export function MapPage() {
     cancel()
     setNonce((n) => n + 1) // fuerza recarga de marcadores
   }
-  function locateMe() {
+  // Geolocaliza: centra en mí y (opcionalmente) abre la lista de cercanas.
+  function locate(openList: boolean) {
     setGeoError('')
     if (!navigator.geolocation) {
       setGeoError(t('map.geoUnavailable'))
@@ -317,8 +354,10 @@ export function MapPage() {
     }
     navigator.geolocation.getCurrentPosition(
       (p) => {
-        setMe([p.coords.latitude, p.coords.longitude])
-        setShowNearby(true)
+        const c: [number, number] = [p.coords.latitude, p.coords.longitude]
+        setMe(c)
+        setGoto([...c])
+        if (openList) setShowNearby(true)
       },
       () => setGeoError(t('map.geoFailed')),
     )
@@ -331,24 +370,31 @@ export function MapPage() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} selectedID={selectedID} />
-        <Recenter target={me} />
+        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
         <FocusOn target={goto} />
+        <FlyToPlace place={place} />
         {me && <Marker position={me} />}
         {placing && <PlacePicker onPick={setPos} />}
         {pos && <Marker position={pos} />}
       </MapContainer>
 
-      <SearchBox onSelect={(f) => setGoto([f.latitude, f.longitude])} />
+      <SearchBox onSelect={(f) => { setGoto([f.latitude, f.longitude]); setSelectedID(f.id) }} onSelectPlace={setPlace} />
 
       <div className="map-controls">
-        <button className="ctrl" onClick={locateMe}>{t('map.near')}</button>
+        <button className="ctrl" onClick={() => locate(true)}>{t('map.near')}</button>
+        <button className="ctrl" onClick={() => locate(false)} title={t('map.recenter')} aria-label={t('map.recenter')}>🎯</button>
         <button className={'ctrl' + (onlyWithWater ? ' active' : '')} onClick={() => setOnlyWithWater((v) => !v)}>
           {t('map.onlyWater')}
         </button>
         <button className={'ctrl' + (showNonPotable ? ' active' : '')} onClick={() => setShowNonPotable((v) => !v)} title={t('map.includeNonPotableTitle')}>
           {t('map.includeNonPotable')}
         </button>
+        <select className="ctrl type-filter" value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as WaterSource | 'all')} aria-label={t('map.filterType')}>
+          <option value="all">{t('map.filterType')}: {t('map.allTypes')}</option>
+          {SOURCE_OPTIONS.map((k) => (
+            <option key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</option>
+          ))}
+        </select>
       </div>
       {geoError && <div className="hint hint-error">{geoError}</div>}
 

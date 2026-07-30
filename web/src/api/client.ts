@@ -21,11 +21,21 @@ export function setToken(token: string | null) {
 }
 
 export class ApiError extends Error {
-  status: number
+  status: number // 0 = fallo de red / servidor inalcanzable
   constructor(status: number, message: string) {
     super(message)
     this.status = status
   }
+}
+
+/** Traduce un error de red/API a un mensaje legible en el idioma actual. */
+export function describeError(e: unknown, t: (key: string) => string): string {
+  if (e instanceof ApiError) {
+    if (e.status === 0) return t('error.network')
+    if (e.status === 401) return t('error.unauthorized')
+    return e.message || t('error.generic')
+  }
+  return (e as Error)?.message || t('error.generic')
 }
 
 async function parse(res: Response) {
@@ -37,6 +47,15 @@ async function parse(res: Response) {
   return data
 }
 
+/** fetch con captura del fallo de red como ApiError(0). */
+async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init)
+  } catch {
+    throw new ApiError(0, 'network')
+  }
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers)
   const token = getToken()
@@ -44,14 +63,14 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  const res = await fetch(`${BASE}${path}`, { ...options, headers })
+  const res = await safeFetch(`${BASE}${path}`, { ...options, headers })
   if (res.status === 204) return undefined as T
   return (await parse(res)) as T
 }
 
 /** Login con Basic auth (usuario:contraseña) -> token. */
 export async function loginRequest(username: string, password: string): Promise<LoginResponse> {
-  const res = await fetch(`${BASE}/auth/login`, {
+  const res = await safeFetch(`${BASE}/auth/login`, {
     method: 'POST',
     headers: { Authorization: 'Basic ' + btoa(`${username}:${password}`) },
   })

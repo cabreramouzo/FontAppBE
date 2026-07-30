@@ -5,6 +5,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { Footer } from './Footer'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
+import { OfflineBanner } from './OfflineBanner'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -26,6 +27,7 @@ export function Layout({ children }: { children: ReactNode }) {
           )}
         </nav>
       </header>
+      <OfflineBanner />
       <main className="main">{children}</main>
       <Footer />
     </div>

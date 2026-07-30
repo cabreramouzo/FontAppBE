@@ -10,14 +10,18 @@ import {
   deleteComment,
   deleteFont,
   deleteReport,
+  describeError,
   updateComment,
   updateFont,
   uploadImage,
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
+import { useToast } from '../components/ToastContext'
 import { StarRating } from '../components/StarRating'
 import { ImagePicker } from '../components/ImagePicker'
+import { Skeleton } from '../components/Skeleton'
+import { ZoomableImage } from '../components/ZoomableImage'
 import { compressImage } from '../lib/image'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import {
@@ -61,7 +65,7 @@ function ReviewCard({
       setEditing(false)
       onChanged()
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     }
   }
 
@@ -71,7 +75,7 @@ function ReviewCard({
       await deleteComment(c.fontID, c.id)
       onChanged()
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     }
   }
 
@@ -108,7 +112,7 @@ function ReviewCard({
       </div>
       {c.rating != null && <StarRating value={c.rating} size={16} />}
       <p>{c.body}</p>
-      {c.image && <img className="review-img" src={assetUrl(c.image)} alt="" />}
+      {c.image && <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />}
       {error && <p className="error">{error}</p>}
       {canManage && (
         <div className="row small">
@@ -122,6 +126,7 @@ function ReviewCard({
 
 function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void }) {
   const { t } = useI18n()
+  const toast = useToast()
   const [body, setBody] = useState('')
   const [rating, setRating] = useState(0)
   const [waterStatus, setWaterStatus] = useState('')
@@ -146,9 +151,10 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
       setRating(0)
       setWaterStatus('')
       setFile(null)
+      toast.show(t('toast.reviewPosted'))
       onPosted()
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     } finally {
       setSaving(false)
     }
@@ -178,6 +184,7 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
 // Acciones de ubicación: cómo llegar, copiar coordenadas y compartir.
 function LocationActions({ font }: { font: Font }) {
   const { t } = useI18n()
+  const toast = useToast()
   const [copied, setCopied] = useState(false)
   const coords = `${font.latitude.toFixed(6)}, ${font.longitude.toFixed(6)}`
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${font.latitude},${font.longitude}`
@@ -186,6 +193,7 @@ function LocationActions({ font }: { font: Font }) {
     try {
       await navigator.clipboard.writeText(coords)
       setCopied(true)
+      toast.show(t('toast.coordsCopied'))
       setTimeout(() => setCopied(false), 1500)
     } catch {
       // navegadores sin permiso de portapapeles: no hacemos nada
@@ -196,7 +204,10 @@ function LocationActions({ font }: { font: Font }) {
     const url = window.location.href
     try {
       if (navigator.share) await navigator.share({ title: font.name, url })
-      else await navigator.clipboard.writeText(url)
+      else {
+        await navigator.clipboard.writeText(url)
+        toast.show(t('toast.linkCopied'))
+      }
     } catch {
       // el usuario canceló el diálogo de compartir: sin acción
     }
@@ -216,6 +227,7 @@ function LocationActions({ font }: { font: Font }) {
 // Formulario para reportar una incidencia (avería, sin agua, sucia…).
 function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void }) {
   const { t } = useI18n()
+  const toast = useToast()
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -227,9 +239,10 @@ function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
     try {
       await createReport(fontID, message)
       setMessage('')
+      toast.show(t('toast.reportSent'))
       onPosted()
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     } finally {
       setSaving(false)
     }
@@ -269,7 +282,7 @@ function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => 
       })
       onSaved()
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     }
   }
 
@@ -336,7 +349,7 @@ export function FontDetailPage() {
       await deleteFont(id)
       navigate('/')
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     }
   }
 
@@ -346,7 +359,7 @@ export function FontDetailPage() {
       await deleteReport(id, reportID)
       load()
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     }
   }
 
@@ -360,13 +373,13 @@ export function FontDetailPage() {
       await confirmComment(id, current.id, !current.confirmedByMe)
       await load()
     } catch (e) {
-      setError((e as Error).message)
+      setError(describeError(e, t))
     } finally {
       setConfirming(false)
     }
   }
 
-  if (!font) return <p className="pad">{error || t('detail.loading')}</p>
+  if (!font) return <div className="pad">{error ? <p className="error">{error}</p> : <Skeleton lines={5} />}</div>
 
   const rated = comments.filter((c) => c.rating != null)
   const avg = rated.length ? rated.reduce((a, c) => a + (c.rating ?? 0), 0) / rated.length : null
@@ -403,7 +416,7 @@ export function FontDetailPage() {
               </p>
             )
           })()}
-          {font.image && <img className="font-img" src={assetUrl(font.image)} alt={font.name} />}
+          {font.image && <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={font.name} />}
           <LocationActions font={font} />
           {avg != null && (
             <p className="avg"><StarRating value={avg} size={18} /> {avg.toFixed(1)} ({rated.length})</p>

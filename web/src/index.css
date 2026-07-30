@@ -501,6 +501,91 @@ select {
 .stale-warn { color: #b45309; font-weight: 600; font-size: 14px; margin: 4px 0; }
 @media (prefers-color-scheme: dark) { .stale-warn { color: #fbbf24; } }
 
+/* Toasts (notificaciones efímeras) */
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  background: #111827;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  animation: toast-in 0.18s ease-out;
+}
+.toast.error { background: var(--error); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Skeletons de carga */
+.skeleton { display: flex; flex-direction: column; gap: 10px; }
+.skel-line {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--border) 25%, color-mix(in srgb, var(--border) 40%, transparent) 37%, var(--border) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+.skel-line:nth-child(2) { width: 80%; }
+.skel-line:nth-child(3) { width: 60%; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/* Lightbox (visor de imágenes) */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  cursor: zoom-out;
+}
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+
+/* Aviso sin conexión */
+.offline-banner {
+  background: #b45309;
+  color: #fff;
+  text-align: center;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Página 404 */
+.notfound { text-align: center; padding-top: 48px; }
+.notfound-icon { font-size: 56px; }
+.notfound h1 { font-size: 64px; margin: 8px 0 0; }
+
+/* Buscador: grupos y lugares */
+.search-group {
+  padding: 6px 8px 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.search-item.place { white-space: normal; font-size: 13px; line-height: 1.3; }
+
+/* Filtro por tipo (select en la barra de controles del mapa) */
+.type-filter { font-size: 14px; max-width: 200px; }
+
+/* Pin seleccionado: sombra para que resalte sobre el resto. */
+.status-pin.selected { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); z-index: 1000 !important; }
+
 /* Móvil */
 @media (max-width: 560px) {
   .search {

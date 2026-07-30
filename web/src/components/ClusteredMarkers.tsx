@@ -27,6 +27,7 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
   // Grupo y marcadores por id, para poder abrir el popup del seleccionado.
   const groupRef = useRef<L.MarkerClusterGroup | null>(null)
   const markersRef = useRef<Map<string, L.Marker>>(new Map())
+  const prevSelected = useRef<string | null>(null)
 
   useEffect(() => {
     const group = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 })
@@ -68,17 +69,25 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
   }, [fonts, map, navigate, t])
 
   // Al cambiar la fuente seleccionada (o al reconstruirse los marcadores tras
-  // recentrar), abre su popup — desclusterizándola antes si está agrupada.
+  // recentrar): resalta su pin, restaura el anterior y abre su popup.
   useEffect(() => {
+    const statusOf = (id: string) => fonts.find((f) => f.id === id)?.lastWaterStatus ?? null
+
+    // Restaura el icono normal del pin previamente seleccionado.
+    const prev = prevSelected.current
+    if (prev && prev !== selectedID) {
+      markersRef.current.get(prev)?.setIcon(statusIcon(statusOf(prev), false))
+    }
+    prevSelected.current = selectedID ?? null
+
     const group = groupRef.current
     if (!selectedID || !group) return
     const marker = markersRef.current.get(selectedID)
     if (!marker) return
+    marker.setIcon(statusIcon(statusOf(selectedID), true))
     // Si el marcador ya está desclusterizado, abre el popup directamente
     // (el callback de zoomToShowLayer no dispara cuando no hay zoom que hacer).
     const visible = group.getVisibleParent(marker)
-    // Si el marcador ya está desclusterizado, abre el popup directamente
-    // (el callback de zoomToShowLayer no dispara cuando no hay zoom que hacer).
     if (!visible || visible === marker) {
       marker.openPopup()
     } else {
