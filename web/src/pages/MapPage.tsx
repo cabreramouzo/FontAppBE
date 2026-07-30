@@ -11,6 +11,13 @@ import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
 import Stack from '@mui/material/Stack'
 import Box from '@mui/material/Box'
+import Paper from '@mui/material/Paper'
+import InputBase from '@mui/material/InputBase'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import ListItemText from '@mui/material/ListItemText'
+import ListSubheader from '@mui/material/ListSubheader'
+import SearchIcon from '@mui/icons-material/Search'
 import MyLocationIcon from '@mui/icons-material/MyLocation'
 import NavigationIcon from '@mui/icons-material/Navigation'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
@@ -193,25 +200,36 @@ function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; o
 
   const hasResults = matches.length > 0 || places.length > 0
   return (
-    <div className="search">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('map.searchPlaceholder')} />
+    <Box className="search">
+      <Paper elevation={3} sx={{ display: 'flex', alignItems: 'center', px: 1.5, borderRadius: '24px' }}>
+        <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+        <InputBase
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t('map.searchPlaceholder').replace(/^[^\p{L}]+/u, '')}
+          fullWidth
+          sx={{ py: 1, fontSize: 16 }}
+        />
+      </Paper>
       {hasResults && (
-        <ul className="search-list">
-          {matches.length > 0 && <li className="search-group">💧 {t('search.fountains')}</li>}
-          {matches.map((f) => (
-            <li key={f.id}>
-              <button className="search-item" onClick={() => { onSelect(f); clear() }}>{f.name}</button>
-            </li>
-          ))}
-          {places.length > 0 && <li className="search-group">📍 {t('search.places')}</li>}
-          {places.map((p, i) => (
-            <li key={`p${i}`}>
-              <button className="search-item place" onClick={() => { onSelectPlace(p); clear() }}>{p.name}</button>
-            </li>
-          ))}
-        </ul>
+        <Paper elevation={4} sx={{ mt: 0.5, borderRadius: 3, overflow: 'hidden', maxHeight: '50vh', overflowY: 'auto' }}>
+          <List dense disablePadding>
+            {matches.length > 0 && <ListSubheader>💧 {t('search.fountains')}</ListSubheader>}
+            {matches.map((f) => (
+              <ListItemButton key={f.id} onClick={() => { onSelect(f); clear() }}>
+                <ListItemText primary={f.name} />
+              </ListItemButton>
+            ))}
+            {places.length > 0 && <ListSubheader>📍 {t('search.places')}</ListSubheader>}
+            {places.map((p, i) => (
+              <ListItemButton key={`p${i}`} onClick={() => { onSelectPlace(p); clear() }}>
+                <ListItemText primary={p.name} sx={{ '& .MuiListItemText-primary': { fontSize: 13 } }} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Paper>
       )}
-    </div>
+    </Box>
   )
 }
 
