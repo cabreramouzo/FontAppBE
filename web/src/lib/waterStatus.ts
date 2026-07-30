@@ -1,14 +1,17 @@
+// Estado del agua: emoji y color son fijos; la etiqueta se traduce vía i18n
+// con la clave `status.<key>` (ver dictionaries.ts).
+
 export interface WaterStatusInfo {
-  label: string
+  key: string
   emoji: string
   color: string
 }
 
 export const WATER_STATUS: Record<string, WaterStatusInfo> = {
-  flowing: { label: 'Sale agua', emoji: '💧', color: '#22c55e' },
-  trickle: { label: 'Poca agua', emoji: '💦', color: '#f59e0b' },
-  dry: { label: 'Seca', emoji: '🚱', color: '#ef4444' },
-  unknown: { label: 'Se desconoce', emoji: '❔', color: '#9ca3af' },
+  flowing: { key: 'flowing', emoji: '💧', color: '#22c55e' },
+  trickle: { key: 'trickle', emoji: '💦', color: '#f59e0b' },
+  dry: { key: 'dry', emoji: '🚱', color: '#ef4444' },
+  unknown: { key: 'unknown', emoji: '❔', color: '#9ca3af' },
 }
 
 export const WATER_STATUS_OPTIONS = ['flowing', 'trickle', 'dry', 'unknown'] as const
@@ -22,4 +25,9 @@ export function waterStatusInfo(key: string | null): WaterStatusInfo | null {
 
 export function statusColor(key: string | null): string {
   return (key && WATER_STATUS[key]?.color) || NO_STATUS_COLOR
+}
+
+/** Clave i18n de la etiqueta de un estado (para usar con `t()`). */
+export function statusLabelKey(key: string): string {
+  return `status.${key}`
 }

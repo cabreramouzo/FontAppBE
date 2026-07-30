@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
+import { I18nProvider } from './i18n/I18nContext'
 import { Layout } from './components/Layout'
 import { MapPage } from './pages/MapPage'
 import { FontDetailPage } from './pages/FontDetailPage'
@@ -9,16 +10,18 @@ import { LegalPage } from './pages/LegalPage'
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<MapPage />} />
-            <Route path="/fonts/:id" element={<FontDetailPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/legal" element={<LegalPage />} />
-          </Routes>
-        </Layout>
-      </AuthProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<MapPage />} />
+              <Route path="/fonts/:id" element={<FontDetailPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/legal" element={<LegalPage />} />
+            </Routes>
+          </Layout>
+        </AuthProvider>
+      </I18nProvider>
     </BrowserRouter>
   )
 }

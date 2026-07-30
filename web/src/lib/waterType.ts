@@ -1,27 +1,31 @@
 import type { Drinkable, WaterSource } from '../api/types'
 
-// Etiquetas e iconos del tipo de punto (source) y la potabilidad (drinkable).
+// Tipo de punto (source) y potabilidad (drinkable): el emoji es fijo; la etiqueta
+// se traduce vía i18n con las claves `source.<key>` / `drink.<key>`.
 
-export const SOURCE_INFO: Record<WaterSource, { label: string; emoji: string }> = {
-  tap: { label: 'Fuente / grifo', emoji: '💧' },
-  spring: { label: 'Manantial', emoji: '⛰️' },
-  well: { label: 'Pozo', emoji: '🪣' },
-  fountain: { label: 'Ornamental', emoji: '⛲' },
-  other: { label: 'Otro', emoji: '💧' },
+export const SOURCE_EMOJI: Record<WaterSource, string> = {
+  tap: '💧',
+  spring: '⛰️',
+  well: '🪣',
+  fountain: '⛲',
+  other: '💧',
 }
 
-export const DRINKABLE_INFO: Record<Drinkable, { label: string; emoji: string }> = {
-  yes: { label: 'Potable', emoji: '✅' },
-  no: { label: 'No potable', emoji: '🚱' },
-  conditional: { label: 'Potable con condiciones', emoji: '⚠️' },
+export const DRINKABLE_EMOJI: Record<Drinkable, string> = {
+  yes: '✅',
+  no: '🚱',
+  conditional: '⚠️',
 }
 
-export function sourceInfo(s: WaterSource | null | undefined) {
-  return s ? SOURCE_INFO[s] : null
+export const SOURCE_OPTIONS: WaterSource[] = ['tap', 'spring', 'well', 'fountain', 'other']
+export const DRINKABLE_OPTIONS: Drinkable[] = ['yes', 'no', 'conditional']
+
+export function sourceInfo(s: WaterSource | null | undefined): { emoji: string; labelKey: string } | null {
+  return s ? { emoji: SOURCE_EMOJI[s], labelKey: `source.${s}` } : null
 }
 
-export function drinkableInfo(d: Drinkable | null | undefined) {
-  return d ? DRINKABLE_INFO[d] : null
+export function drinkableInfo(d: Drinkable | null | undefined): { emoji: string; labelKey: string } | null {
+  return d ? { emoji: DRINKABLE_EMOJI[d], labelKey: `drink.${d}` } : null
 }
 
 /** true salvo que esté explícitamente marcada como no potable (null = desconocido ⇒ se muestra). */

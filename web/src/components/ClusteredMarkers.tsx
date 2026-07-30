@@ -6,6 +6,7 @@ import 'leaflet.markercluster'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import type { FontSummary } from '../api/types'
+import { useI18n } from '../i18n/I18nContext'
 import { statusIcon } from '../lib/statusMarker'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { drinkableInfo, sourceInfo } from '../lib/waterType'
@@ -22,6 +23,7 @@ function escapeHtml(s: string): string {
 export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; selectedID?: string | null }) {
   const map = useMap()
   const navigate = useNavigate()
+  const { t } = useI18n()
   // Grupo y marcadores por id, para poder abrir el popup del seleccionado.
   const groupRef = useRef<L.MarkerClusterGroup | null>(null)
   const markersRef = useRef<Map<string, L.Marker>>(new Map())
@@ -37,13 +39,15 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
       const src = sourceInfo(f.source)
       const dr = drinkableInfo(f.drinkable)
       const stale = f.lastUpdate ? isStale(f.lastUpdate) : false
+      const srcText = src ? `${src.emoji} ${t(src.labelKey)}` : ''
+      const drText = dr ? `${dr.emoji} ${t(dr.labelKey)}` : ''
       const el = document.createElement('div')
       el.innerHTML = `
         <strong>${escapeHtml(f.name)}</strong>
-        <div class="muted small">${src ? `${src.emoji} ${src.label}` : ''}${src && dr ? ' · ' : ''}${dr ? `${dr.emoji} ${dr.label}` : ''}</div>
-        ${ws ? `<div class="badge">${ws.emoji} ${ws.label}</div>` : ''}
-        ${f.lastUpdate ? `<div class="muted small">Actualizado ${timeAgo(f.lastUpdate)}${stale ? ' ⚠️' : ''}</div>` : ''}
-        <div><a href="/fonts/${f.id}" class="popup-link">Ver detalle →</a></div>`
+        <div class="muted small">${srcText}${src && dr ? ' · ' : ''}${drText}</div>
+        ${ws ? `<div class="badge">${ws.emoji} ${t(`status.${ws.key}`)}</div>` : ''}
+        ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
+        <div><a href="/fonts/${f.id}" class="popup-link">${t('popup.detail')}</a></div>`
       el.querySelector('.popup-link')?.addEventListener('click', (e) => {
         e.preventDefault()
         navigate(`/fonts/${f.id}`)
@@ -61,7 +65,7 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
       map.removeLayer(group)
       if (groupRef.current === group) groupRef.current = null
     }
-  }, [fonts, map, navigate])
+  }, [fonts, map, navigate, t])
 
   // Al cambiar la fuente seleccionada (o al reconstruirse los marcadores tras
   // recentrar), abre su popup — desclusterizándola antes si está agrupada.

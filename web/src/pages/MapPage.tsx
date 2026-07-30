@@ -4,15 +4,16 @@ import { Link } from 'react-router-dom'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
-import type { Font, FontSummary, Page } from '../api/types'
+import type { Drinkable, Font, FontSummary, Page, WaterSource } from '../api/types'
 import { apiFetch, createFont, uploadImage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { ImagePicker } from '../components/ImagePicker'
 import { WATER_STATUS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
 import { compressImage } from '../lib/image'
-import { isNotPotable } from '../lib/waterType'
+import { DRINKABLE_OPTIONS, SOURCE_OPTIONS, DRINKABLE_EMOJI, SOURCE_EMOJI, isNotPotable } from '../lib/waterType'
 import { timeAgo } from '../lib/time'
 
 // Centro por defecto: comarca del Moianès.
@@ -113,6 +114,7 @@ function FocusOn({ target }: { target: [number, number] | null }) {
 }
 
 function SearchBox({ onSelect }: { onSelect: (f: Font) => void }) {
+  const { t } = useI18n()
   const [q, setQ] = useState('')
   const [matches, setMatches] = useState<Font[]>([])
 
@@ -133,7 +135,7 @@ function SearchBox({ onSelect }: { onSelect: (f: Font) => void }) {
 
   return (
     <div className="search">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 Buscar fuente…" />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('map.searchPlaceholder')} />
       {matches.length > 0 && (
         <ul className="search-list">
           {matches.map((f) => (
@@ -148,8 +150,11 @@ function SearchBox({ onSelect }: { onSelect: (f: Font) => void }) {
 }
 
 function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () => void; onCreated: () => void }) {
+  const { t } = useI18n()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [source, setSource] = useState<WaterSource | ''>('')
+  const [drinkable, setDrinkable] = useState<Drinkable | ''>('')
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -161,7 +166,15 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
     try {
       let image: string | undefined
       if (file) image = await uploadImage(await compressImage(file))
-      await createFont({ name, latitude: pos.lat, longitude: pos.lng, image, description: description || undefined })
+      await createFont({
+        name,
+        latitude: pos.lat,
+        longitude: pos.lng,
+        image,
+        description: description || undefined,
+        source: source || undefined,
+        drinkable: drinkable || undefined,
+      })
       onCreated()
     } catch (e) {
       setError((e as Error).message)
@@ -172,16 +185,32 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
 
   return (
     <div className="panel">
-      <h3>Nueva fuente</h3>
+      <h3>{t('newFont.title')}</h3>
       <p className="muted">Lat {pos.lat.toFixed(5)}, Long {pos.lng.toFixed(5)}</p>
       <form onSubmit={submit} className="col">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" required />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción (opcional)" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('newFont.name')} required />
+        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('newFont.descriptionOpt')} />
+        <label>{t('detail.type')}
+          <select value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')}>
+            <option value="">{t('detail.unknownType')}</option>
+            {SOURCE_OPTIONS.map((k) => (
+              <option key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</option>
+            ))}
+          </select>
+        </label>
+        <label>{t('detail.drinkability')}
+          <select value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')}>
+            <option value="">{t('detail.unknownDrink')}</option>
+            {DRINKABLE_OPTIONS.map((k) => (
+              <option key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</option>
+            ))}
+          </select>
+        </label>
         <ImagePicker file={file} onChange={setFile} />
         {error && <p className="error">{error}</p>}
         <div className="row">
-          <button type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Crear'}</button>
-          <button type="button" className="link" onClick={onCancel}>Cancelar</button>
+          <button type="submit" disabled={saving}>{saving ? t('form.saving') : t('form.create')}</button>
+          <button type="button" className="link" onClick={onCancel}>{t('form.cancel')}</button>
         </div>
       </form>
     </div>
@@ -201,6 +230,7 @@ function NearbyPanel({
   onFocus: (f: FontSummary) => void
   selectedID: string | null
 }) {
+  const { t } = useI18n()
   const [items, setItems] = useState<FontSummary[] | null>(null)
 
   useEffect(() => {
@@ -212,11 +242,11 @@ function NearbyPanel({
   return (
     <div className="nearby">
       <div className="nearby-head">
-        <strong>Cerca de ti</strong>
+        <strong>{t('map.nearbyTitle')}</strong>
         <button className="link" onClick={onClose}>✕</button>
       </div>
       <ul className="nearby-list">
-        {items === null && <li className="muted">Cargando…</li>}
+        {items === null && <li className="muted">{t('map.loading')}</li>}
         {items?.map((f) => {
           const ws = waterStatusInfo(f.lastWaterStatus)
           const dist = haversineKm(pos[0], pos[1], f.latitude, f.longitude)
@@ -225,26 +255,27 @@ function NearbyPanel({
               <button className="nearby-focus" onClick={() => onFocus(f)}>
                 <span className="nearby-name">{f.name}</span>
                 <span className="nearby-meta muted">
-                  {ws && <span title={ws.label}>{ws.emoji}</span>} {formatDist(dist)}
-                  {f.lastUpdate && ` · ${timeAgo(f.lastUpdate)}`}
+                  {ws && <span title={t(`status.${ws.key}`)}>{ws.emoji}</span>} {formatDist(dist)}
+                  {f.lastUpdate && ` · ${timeAgo(f.lastUpdate, t)}`}
                 </span>
               </button>
-              <Link className="nearby-go" to={`/fonts/${f.id}`} aria-label={`Ver detalle de ${f.name}`}>→</Link>
+              <Link className="nearby-go" to={`/fonts/${f.id}`} aria-label={t('nearby.goAria', { name: f.name })}>→</Link>
             </li>
           )
         })}
-        {items?.length === 0 && <li className="muted">Sin fuentes cerca.</li>}
+        {items?.length === 0 && <li className="muted">{t('map.nearbyEmpty')}</li>}
       </ul>
     </div>
   )
 }
 
 function MapLegend() {
+  const { t } = useI18n()
   return (
     <div className="legend">
       {(['flowing', 'trickle', 'dry'] as const).map((k) => (
         <span key={k} className="legend-item">
-          <span className="dot" style={{ background: WATER_STATUS[k].color }} /> {WATER_STATUS[k].label}
+          <span className="dot" style={{ background: WATER_STATUS[k].color }} /> {t(`status.${k}`)}
         </span>
       ))}
     </div>
@@ -253,6 +284,7 @@ function MapLegend() {
 
 export function MapPage() {
   const { user } = useAuth()
+  const { t } = useI18n()
   const [placing, setPlacing] = useState(false)
   const [pos, setPos] = useState<LatLng | null>(null)
   const [nonce, setNonce] = useState(0)
@@ -280,7 +312,7 @@ export function MapPage() {
   function locateMe() {
     setGeoError('')
     if (!navigator.geolocation) {
-      setGeoError('Geolocalización no disponible')
+      setGeoError(t('map.geoUnavailable'))
       return
     }
     navigator.geolocation.getCurrentPosition(
@@ -288,7 +320,7 @@ export function MapPage() {
         setMe([p.coords.latitude, p.coords.longitude])
         setShowNearby(true)
       },
-      () => setGeoError('No se pudo obtener tu ubicación'),
+      () => setGeoError(t('map.geoFailed')),
     )
   }
 
@@ -310,12 +342,12 @@ export function MapPage() {
       <SearchBox onSelect={(f) => setGoto([f.latitude, f.longitude])} />
 
       <div className="map-controls">
-        <button className="ctrl" onClick={locateMe}>📍 Cerca de mí</button>
+        <button className="ctrl" onClick={locateMe}>{t('map.near')}</button>
         <button className={'ctrl' + (onlyWithWater ? ' active' : '')} onClick={() => setOnlyWithWater((v) => !v)}>
-          💧 Solo con agua
+          {t('map.onlyWater')}
         </button>
-        <button className={'ctrl' + (showNonPotable ? ' active' : '')} onClick={() => setShowNonPotable((v) => !v)} title="Modo emergencia: incluye fuentes marcadas como no potables">
-          🚱 Incluir no potables
+        <button className={'ctrl' + (showNonPotable ? ' active' : '')} onClick={() => setShowNonPotable((v) => !v)} title={t('map.includeNonPotableTitle')}>
+          {t('map.includeNonPotable')}
         </button>
       </div>
       {geoError && <div className="hint hint-error">{geoError}</div>}
@@ -328,12 +360,12 @@ export function MapPage() {
 
       {user && !placing && (
         <button className="fab" onClick={() => { setPlacing(true); setPos(null) }}>
-          ➕ Añadir fuente
+          {t('map.addFont')}
         </button>
       )}
       {placing && !pos && (
         <div className="hint">
-          Toca el mapa para situar la fuente · <button className="link" onClick={cancel}>cancelar</button>
+          {t('map.tapToPlace')} · <button className="link" onClick={cancel}>{t('map.cancel')}</button>
         </div>
       )}
       {placing && pos && <NewFontForm pos={pos} onCancel={cancel} onCreated={created} />}

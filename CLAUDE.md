@@ -7,6 +7,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 ## Stack
 - **Backend:** Swift 6.3 · Vapor 4 · Fluent + PostgreSQL · SwiftPM (sin proyecto Xcode).
 - **Web:** Vite + React 19 + TypeScript en `web/` (Leaflet + markercluster para el mapa).
+  i18n propio sin dependencias en `web/src/i18n/` (CA por defecto + ES, selector en la barra, detecta navegador y persiste en `localStorage`).
 
 ## Comandos
 - Build / tests backend: `swift build` · `swift test` (los tests de integración usan la DB `fontapp_test`).

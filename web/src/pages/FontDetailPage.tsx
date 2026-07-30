@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import type { CommentResponse, Font, ReportResponse } from '../api/types'
+import type { CommentResponse, Drinkable, Font, ReportResponse, WaterSource } from '../api/types'
 import {
   apiFetch,
   assetUrl,
@@ -14,12 +14,19 @@ import {
   uploadImage,
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
 import { StarRating } from '../components/StarRating'
 import { ImagePicker } from '../components/ImagePicker'
 import { compressImage } from '../lib/image'
-import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
-import { DRINKABLE_INFO, SOURCE_INFO, drinkableInfo, sourceInfo } from '../lib/waterType'
-import type { Drinkable, WaterSource } from '../api/types'
+import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
+import {
+  DRINKABLE_EMOJI,
+  DRINKABLE_OPTIONS,
+  SOURCE_EMOJI,
+  SOURCE_OPTIONS,
+  drinkableInfo,
+  sourceInfo,
+} from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 
 function ReviewCard({
@@ -33,6 +40,7 @@ function ReviewCard({
   canManage: boolean
   onChanged: () => void
 }) {
+  const { t } = useI18n()
   const [editing, setEditing] = useState(false)
   const [body, setBody] = useState(c.body)
   const [rating, setRating] = useState(c.rating ?? 0)
@@ -57,7 +65,7 @@ function ReviewCard({
   }
 
   async function remove() {
-    if (!confirm('¿Borrar esta reseña?')) return
+    if (!confirm(t('review.confirmDelete'))) return
     try {
       await deleteComment(c.fontID, c.id)
       onChanged()
@@ -70,32 +78,32 @@ function ReviewCard({
     return (
       <form className="review" onSubmit={save}>
         <div className="update-row">
-          <label>Estado:
+          <label>{t('update.status')}
             <select value={waterStatus} onChange={(e) => setWaterStatus(e.target.value)}>
               <option value="">—</option>
               {WATER_STATUS_OPTIONS.map((k) => (
-                <option key={k} value={k}>{WATER_STATUS[k].emoji} {WATER_STATUS[k].label}</option>
+                <option key={k} value={k}>{WATER_STATUS[k].emoji} {t(`status.${k}`)}</option>
               ))}
             </select>
           </label>
-          <label>Valoración: <StarRating value={rating} onChange={setRating} size={18} /></label>
+          <label>{t('update.rating')} <StarRating value={rating} onChange={setRating} size={18} /></label>
         </div>
         <textarea value={body} onChange={(e) => setBody(e.target.value)} required />
         {error && <p className="error">{error}</p>}
         <div className="row">
-          <button type="submit">Guardar</button>
-          <button type="button" className="link" onClick={() => setEditing(false)}>Cancelar</button>
+          <button type="submit">{t('form.save')}</button>
+          <button type="button" className="link" onClick={() => setEditing(false)}>{t('form.cancel')}</button>
         </div>
       </form>
     )
   }
 
-  const ws = waterStatusInfo(c.waterStatus)
+  const ws = c.waterStatus ? WATER_STATUS[c.waterStatus] : null
   return (
     <div className={'review' + (highlight ? ' latest' : '')}>
       <div className="review-head">
-        {ws && <span className="badge">{ws.emoji} {ws.label}</span>}
-        <span className="muted">{c.username ?? 'anónimo'} · {c.createdAt ? timeAgo(c.createdAt) : ''}</span>
+        {ws && <span className="badge">{ws.emoji} {t(`status.${ws.key}`)}</span>}
+        <span className="muted">{c.username ?? t('review.anon')} · {c.createdAt ? timeAgo(c.createdAt, t) : ''}</span>
       </div>
       {c.rating != null && <StarRating value={c.rating} size={16} />}
       <p>{c.body}</p>
@@ -103,8 +111,8 @@ function ReviewCard({
       {error && <p className="error">{error}</p>}
       {canManage && (
         <div className="row small">
-          <button className="link" onClick={() => setEditing(true)}>Editar</button>
-          <button className="link danger" onClick={remove}>Borrar</button>
+          <button className="link" onClick={() => setEditing(true)}>{t('detail.edit')}</button>
+          <button className="link danger" onClick={remove}>{t('detail.delete')}</button>
         </div>
       )}
     </div>
@@ -112,6 +120,7 @@ function ReviewCard({
 }
 
 function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void }) {
+  const { t } = useI18n()
   const [body, setBody] = useState('')
   const [rating, setRating] = useState(0)
   const [waterStatus, setWaterStatus] = useState('')
@@ -147,25 +156,26 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
   return (
     <form onSubmit={submit} className="update-form">
       <div className="update-row">
-        <label>Estado:
+        <label>{t('update.status')}
           <select value={waterStatus} onChange={(e) => setWaterStatus(e.target.value)}>
             <option value="">—</option>
             {WATER_STATUS_OPTIONS.map((k) => (
-              <option key={k} value={k}>{WATER_STATUS[k].emoji} {WATER_STATUS[k].label}</option>
+              <option key={k} value={k}>{WATER_STATUS[k].emoji} {t(`status.${k}`)}</option>
             ))}
           </select>
         </label>
-        <label>Valoración: <StarRating value={rating} onChange={setRating} size={18} /></label>
+        <label>{t('update.rating')} <StarRating value={rating} onChange={setRating} size={18} /></label>
       </div>
-      <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="¿Cómo está la fuente ahora?" required />
+      <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('update.howNow')} required />
       <ImagePicker file={file} onChange={setFile} />
       {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={saving}>{saving ? 'Enviando…' : 'Publicar actualización'}</button>
+      <button type="submit" disabled={saving}>{saving ? t('update.sending') : t('update.publish')}</button>
     </form>
   )
 }
 
 function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => void; onCancel: () => void }) {
+  const { t } = useI18n()
   const [name, setName] = useState(font.name)
   const [description, setDescription] = useState(font.description ?? '')
   const [source, setSource] = useState<WaterSource | ''>(font.source ?? '')
@@ -193,28 +203,28 @@ function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => 
 
   return (
     <form onSubmit={submit} className="col">
-      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" required />
-      <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción" />
-      <label>Tipo:
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('newFont.name')} required />
+      <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('detail.description')} />
+      <label>{t('detail.type')}
         <select value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')}>
-          <option value="">— desconocido —</option>
-          {(Object.keys(SOURCE_INFO) as WaterSource[]).map((k) => (
-            <option key={k} value={k}>{SOURCE_INFO[k].emoji} {SOURCE_INFO[k].label}</option>
+          <option value="">{t('detail.unknownType')}</option>
+          {SOURCE_OPTIONS.map((k) => (
+            <option key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</option>
           ))}
         </select>
       </label>
-      <label>Potabilidad:
+      <label>{t('detail.drinkability')}
         <select value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')}>
-          <option value="">— desconocida —</option>
-          {(Object.keys(DRINKABLE_INFO) as Drinkable[]).map((k) => (
-            <option key={k} value={k}>{DRINKABLE_INFO[k].emoji} {DRINKABLE_INFO[k].label}</option>
+          <option value="">{t('detail.unknownDrink')}</option>
+          {DRINKABLE_OPTIONS.map((k) => (
+            <option key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</option>
           ))}
         </select>
       </label>
       {error && <p className="error">{error}</p>}
       <div className="row">
-        <button type="submit">Guardar</button>
-        <button type="button" className="link" onClick={onCancel}>Cancelar</button>
+        <button type="submit">{t('form.save')}</button>
+        <button type="button" className="link" onClick={onCancel}>{t('form.cancel')}</button>
       </div>
     </form>
   )
@@ -223,6 +233,7 @@ function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => 
 export function FontDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const [font, setFont] = useState<Font | null>(null)
   const [reports, setReports] = useState<ReportResponse[]>([])
@@ -248,7 +259,7 @@ export function FontDetailPage() {
   }, [load])
 
   async function removeFont() {
-    if (!id || !confirm('¿Borrar esta fuente?')) return
+    if (!id || !confirm(t('detail.confirmDeleteFont'))) return
     try {
       await deleteFont(id)
       navigate('/')
@@ -258,7 +269,7 @@ export function FontDetailPage() {
   }
 
   async function removeReport(reportID: string) {
-    if (!id || !confirm('¿Borrar esta incidencia?')) return
+    if (!id || !confirm(t('detail.confirmDeleteIncident'))) return
     try {
       await deleteReport(id, reportID)
       load()
@@ -283,7 +294,7 @@ export function FontDetailPage() {
     }
   }
 
-  if (!font) return <p className="pad">{error || 'Cargando…'}</p>
+  if (!font) return <p className="pad">{error || t('detail.loading')}</p>
 
   const rated = comments.filter((c) => c.rating != null)
   const avg = rated.length ? rated.reduce((a, c) => a + (c.rating ?? 0), 0) / rated.length : null
@@ -292,14 +303,14 @@ export function FontDetailPage() {
 
   return (
     <div className="detail pad">
-      <Link to="/">← Mapa</Link>
+      <Link to="/">{t('detail.backMap')}</Link>
 
       <div className="detail-head">
         <h1>{font.name}</h1>
         {user && !editing && (
           <div className="row">
-            <button className="link" onClick={() => setEditing(true)}>Editar</button>
-            <button className="link danger" onClick={removeFont}>Borrar</button>
+            <button className="link" onClick={() => setEditing(true)}>{t('detail.edit')}</button>
+            <button className="link danger" onClick={removeFont}>{t('detail.delete')}</button>
           </div>
         )}
       </div>
@@ -315,8 +326,8 @@ export function FontDetailPage() {
             if (!src && !dr) return null
             return (
               <p className="badges">
-                {src && <span className="badge">{src.emoji} {src.label}</span>}
-                {dr && <span className={'badge' + (font.drinkable === 'no' ? ' danger' : '')}>{dr.emoji} {dr.label}</span>}
+                {src && <span className="badge">{src.emoji} {t(src.labelKey)}</span>}
+                {dr && <span className={'badge' + (font.drinkable === 'no' ? ' danger' : '')}>{dr.emoji} {t(dr.labelKey)}</span>}
               </p>
             )
           })()}
@@ -331,15 +342,15 @@ export function FontDetailPage() {
       {error && <p className="error">{error}</p>}
 
       <section>
-        <h2>Estado y reseñas</h2>
+        <h2>{t('detail.statusReviews')}</h2>
         {latest ? (
           <>
-            <p className="muted small">Última actualización:</p>
+            <p className="muted small">{t('detail.lastUpdate')}</p>
             {(() => {
               // Frescura = lo más reciente entre la reseña y su última confirmación.
               const freshAt = latest.lastConfirmedAt ?? latest.createdAt
               return freshAt && isStale(freshAt) ? (
-                <p className="stale-warn">⚠️ Sin actualizar {timeAgo(freshAt)} — el estado puede haber cambiado.</p>
+                <p className="stale-warn">{t('detail.stale', { when: timeAgo(freshAt, t) })}</p>
               ) : null
             })()}
             <ReviewCard c={latest} highlight canManage={user?.id === latest.userID} onChanged={load} />
@@ -350,9 +361,9 @@ export function FontDetailPage() {
                     className={'confirm-btn' + (latest.confirmedByMe ? ' active' : '')}
                     onClick={toggleConfirm}
                     disabled={confirming}
-                    title={latest.confirmedByMe ? 'Ya confirmaste que sigue igual (toca para deshacer)' : 'Confirma que el estado sigue igual'}
+                    title={latest.confirmedByMe ? t('confirm.titleActive') : t('confirm.titleInactive')}
                   >
-                    👍 {latest.confirmedByMe ? 'Confirmado' : 'Sigue igual'}
+                    👍 {latest.confirmedByMe ? t('confirm.confirmed') : t('confirm.keepSame')}
                     {latest.confirmations > 0 && <span className="confirm-count">+{latest.confirmations}</span>}
                   </button>
                 ) : (
@@ -364,18 +375,18 @@ export function FontDetailPage() {
             )}
           </>
         ) : (
-          <p className="muted">Aún no hay actualizaciones. ¡Sé el primero en informar del estado!</p>
+          <p className="muted">{t('detail.beFirst')}</p>
         )}
 
         {user ? (
           <UpdateForm fontID={font.id} onPosted={load} />
         ) : (
-          <p className="muted"><Link to="/login">Entra</Link> para actualizar el estado.</p>
+          <p className="muted"><Link to="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</p>
         )}
 
         {rest.length > 0 && (
           <>
-            <h3 className="muted small">Anteriores</h3>
+            <h3 className="muted small">{t('detail.previous')}</h3>
             {rest.map((c) => (
               <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID} onChanged={load} />
             ))}
@@ -384,14 +395,14 @@ export function FontDetailPage() {
       </section>
 
       <section>
-        <h2>Incidencias ({reports.length})</h2>
-        {reports.length === 0 && <p className="muted">Sin incidencias reportadas.</p>}
+        <h2>{t('detail.incidents', { n: reports.length })}</h2>
+        {reports.length === 0 && <p className="muted">{t('detail.noIncidents')}</p>}
         <ul className="list">
           {reports.map((r) => (
             <li key={r.id}>
-              <strong>{r.username ?? 'anónimo'}:</strong> {r.message}
+              <strong>{r.username ?? t('review.anon')}:</strong> {r.message}
               {user?.id === r.userID && (
-                <button className="link danger small" onClick={() => removeReport(r.id)}> · Borrar</button>
+                <button className="link danger small" onClick={() => removeReport(r.id)}> · {t('detail.delete')}</button>
               )}
             </li>
           ))}

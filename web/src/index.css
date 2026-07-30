@@ -54,6 +54,15 @@ a:hover { text-decoration: underline; }
 }
 .brand { font-weight: 700; font-size: 18px; }
 .nav { display: flex; align-items: center; gap: 12px; }
+.lang-switch {
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
 .main { flex: 1; }
 
 .muted { color: var(--muted); }
