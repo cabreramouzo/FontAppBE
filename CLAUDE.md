@@ -14,6 +14,8 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   keg-only; rol `vapor`, DB `fontapp` — ver `env.development`). Alternativa: `docker compose up db -d`.
 - Migrar: `swift run App migrate --yes` · revertir: `--revert --yes`.
 - Sembrar: `swift run App seed [--force] [--demo]` (fuentes reales del Moianès; `--demo` añade usuarios+reseñas).
+  Con la BD ya poblada (p. ej. tras `import-fonts`), `seed --demo` NO reinserta fuentes: solo añade
+  reseñas de ejemplo sobre las fuentes existentes de la zona del Moianès (bbox), sin tocar el resto.
 - Servidor: `swift run App serve` (`127.0.0.1:8080`). Cargar entorno: `export $(cat env.development | xargs)`.
 - Web (dev): `cd web && npm run dev` (proxy `/api` y `/uploads` → backend).
 - Imagen Docker del backend: `docker build -t fontappbe .` (probada; ver [DEPLOY.md](DEPLOY.md)).

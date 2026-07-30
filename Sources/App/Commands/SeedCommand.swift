@@ -21,7 +21,20 @@ struct SeedCommand: AsyncCommand {
 
         let existing = try await Font.query(on: db).count()
         if existing > 0 && !signature.force {
-            context.console.warning("Ya hay \(existing) fuentes. Usa --force para reemplazarlas.")
+            // Con la BD ya poblada (p. ej. tras importar toda España), --demo no reinserta
+            // fuentes: solo añade usuarios y reseñas sobre las fuentes de la zona del Moianès.
+            if signature.demo {
+                let bbox = try await Font.query(on: db)
+                    .filter(\.$latitude >= Self.moianesBBox.minLat)
+                    .filter(\.$latitude <= Self.moianesBBox.maxLat)
+                    .filter(\.$longitude >= Self.moianesBBox.minLong)
+                    .filter(\.$longitude <= Self.moianesBBox.maxLong)
+                    .all()
+                context.console.info("Añadiendo reseñas de ejemplo a \(bbox.count) fuentes de la zona del Moianès (sin tocar el resto).")
+                try await seedDemo(app: app, fonts: bbox, console: context.console)
+                return
+            }
+            context.console.warning("Ya hay \(existing) fuentes. Usa --force para reemplazarlas, o --demo para añadir reseñas de ejemplo sobre las existentes.")
             return
         }
         if signature.force {
@@ -84,6 +97,9 @@ struct SeedCommand: AsyncCommand {
         }
         console.info("Insertadas \(reviews) reseñas de ejemplo en \(fonts.count) fuentes.")
     }
+
+    /// Bounding box aproximado de la comarca del Moianès (para acotar las reseñas demo).
+    static let moianesBBox = (minLat: 41.70, maxLat: 41.90, minLong: 1.90, maxLong: 2.25)
 
     static let demoUsers: [(String, String)] = [
         ("xavi123", "Xavi Puig"),
