@@ -382,7 +382,6 @@ export function MapPage() {
 
       <div className="map-controls">
         <button className="ctrl" onClick={() => locate(true)}>{t('map.near')}</button>
-        <button className="ctrl" onClick={() => locate(false)} title={t('map.recenter')} aria-label={t('map.recenter')}>🎯</button>
         <button className={'ctrl' + (onlyWithWater ? ' active' : '')} onClick={() => setOnlyWithWater((v) => !v)}>
           {t('map.onlyWater')}
         </button>
@@ -404,10 +403,17 @@ export function MapPage() {
         <NearbyPanel pos={me} onClose={() => setShowNearby(false)} onFocus={focusFont} selectedID={selectedID} />
       )}
 
-      {user && !placing && (
-        <button className="fab" onClick={() => { setPlacing(true); setPos(null) }}>
-          {t('map.addFont')}
-        </button>
+      {!placing && (
+        <div className="map-fabs">
+          <button className="locate-btn" onClick={() => locate(false)} title={t('map.recenter')} aria-label={t('map.recenter')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 4.6 20.4c-.26.64.4 1.28 1.03.99L12 18.4l6.37 2.99c.63.29 1.29-.35 1.03-.99L12 2.2z" /></svg>
+          </button>
+          {user && (
+            <button className="fab" onClick={() => { setPlacing(true); setPos(null) }}>
+              {t('map.addFont')}
+            </button>
+          )}
+        </div>
       )}
       {placing && !pos && (
         <div className="hint">
