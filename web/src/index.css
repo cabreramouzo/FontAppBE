@@ -409,7 +409,7 @@ select {
 .hint-error { color: var(--error); }
 
 /* Pin de estado (divIcon): quitar el fondo blanco por defecto de Leaflet. */
-.status-pin { background: none; border: none; }
+.status-pin { background: none; border: none; overflow: visible; }
 
 /* Leyenda (abajo a la izquierda). */
 .legend {

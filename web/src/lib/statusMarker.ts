@@ -8,7 +8,8 @@ export function statusIcon(status: string | null, selected = false): L.DivIcon {
   const w = Math.round(26 * scale)
   const h = Math.round(38 * scale)
   const stroke = selected ? '#111827' : 'white'
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 26 38">
+  // overflow:visible evita que el trazo (que sobresale del path) se recorte por los lados.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 26 38" overflow="visible" style="overflow:visible">
     <path d="M13 0C5.8 0 0 5.8 0 13c0 9.7 13 25 13 25s13-15.3 13-25C26 5.8 20.2 0 13 0z" fill="${color}" stroke="${stroke}" stroke-width="${selected ? 2 : 1.5}"/>
     <circle cx="13" cy="13" r="4.5" fill="white"/>
   </svg>`
