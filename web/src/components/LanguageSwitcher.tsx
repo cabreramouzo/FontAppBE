@@ -1,19 +1,24 @@
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
 import { useI18n } from '../i18n/I18nContext'
 import { LANGS, type Lang } from '../i18n/dictionaries'
 
-// Selector de idioma para la barra superior.
+// Selector de idioma (Select compacto de MUI) para la barra superior.
 export function LanguageSwitcher() {
   const { lang, setLang, t } = useI18n()
   return (
-    <select
-      className="lang-switch"
+    <Select
       value={lang}
       onChange={(e) => setLang(e.target.value as Lang)}
+      size="small"
+      variant="standard"
+      disableUnderline
       aria-label={t('lang.label')}
+      sx={{ fontSize: 14, '& .MuiSelect-select': { py: 0.5 } }}
     >
       {LANGS.map((l) => (
-        <option key={l.code} value={l.code}>{l.label}</option>
+        <MenuItem key={l.code} value={l.code}>{l.label}</MenuItem>
       ))}
-    </select>
+    </Select>
   )
 }

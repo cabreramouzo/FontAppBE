@@ -1,3 +1,6 @@
+import Rating from '@mui/material/Rating'
+
+// Valoración por estrellas. Solo lectura si no hay `onChange`.
 export function StarRating({
   value,
   onChange,
@@ -8,19 +11,12 @@ export function StarRating({
   size?: number
 }) {
   return (
-    <span className="stars" style={{ fontSize: size }}>
-      {[1, 2, 3, 4, 5].map((s) => (
-        <button
-          key={s}
-          type="button"
-          className={'star' + (s <= Math.round(value) ? ' on' : '')}
-          onClick={onChange ? () => onChange(s) : undefined}
-          disabled={!onChange}
-          aria-label={`${s} estrellas`}
-        >
-          ★
-        </button>
-      ))}
-    </span>
+    <Rating
+      value={value}
+      precision={onChange ? 1 : 0.5}
+      readOnly={!onChange}
+      onChange={onChange ? (_, v) => onChange(v ?? 0) : undefined}
+      sx={{ fontSize: size, verticalAlign: 'middle' }}
+    />
   )
 }

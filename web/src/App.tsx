@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { I18nProvider } from './i18n/I18nContext'
+import { ThemeModeProvider } from './theme/ThemeModeContext'
+import { MuiProvider } from './theme/MuiProvider'
 import { ToastProvider } from './components/ToastContext'
 import { Layout } from './components/Layout'
 import { Skeleton } from './components/Skeleton'
@@ -19,7 +21,9 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ de
 export default function App() {
   return (
     <BrowserRouter>
-      <I18nProvider>
+      <ThemeModeProvider>
+       <MuiProvider>
+        <I18nProvider>
         <ToastProvider>
           <AuthProvider>
             <Layout>
@@ -37,7 +41,9 @@ export default function App() {
             </Layout>
           </AuthProvider>
         </ToastProvider>
-      </I18nProvider>
+        </I18nProvider>
+       </MuiProvider>
+      </ThemeModeProvider>
     </BrowserRouter>
   )
 }

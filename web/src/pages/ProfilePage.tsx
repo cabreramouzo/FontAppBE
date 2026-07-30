@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import Link from '@mui/material/Link'
+import Alert from '@mui/material/Alert'
+import Chip from '@mui/material/Chip'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import ListItemButton from '@mui/material/ListItemButton'
+import ListItemText from '@mui/material/ListItemText'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Font, MyComment } from '../api/types'
 import { deleteAccount, describeError, getMyComments, getMyFonts } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -40,47 +51,55 @@ export function ProfilePage() {
   if (!user) return null
 
   return (
-    <div className="pad profile">
-      <Link to="/">{t('detail.backMap')}</Link>
-      <h1>{t('nav.profile')}</h1>
+    <Box className="pad profile" sx={{ maxWidth: 720, mx: 'auto' }}>
+      <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
+      <Typography variant="h4" sx={{ my: 1, fontWeight: 800 }}>{t('nav.profile')}</Typography>
 
-      <section>
-        <h2>{t('profile.account')}</h2>
-        <p><strong>{user.name}</strong> · @{user.username}</p>
-        {user.email && <p className="muted">{t('profile.email')}: {user.email}</p>}
-        {error && <p className="error">{error}</p>}
-        <button className="link danger" onClick={removeAccount}>{t('profile.deleteAccount')}</button>
-      </section>
+      <Box component="section" sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom>{t('profile.account')}</Typography>
+        <Typography><strong>{user.name}</strong> · @{user.username}</Typography>
+        {user.email && <Typography color="text.secondary">{t('profile.email')}: {user.email}</Typography>}
+        {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
+        <Button color="error" startIcon={<DeleteOutlineIcon />} onClick={removeAccount} sx={{ mt: 1 }}>
+          {t('profile.deleteAccount')}
+        </Button>
+      </Box>
 
-      <section>
-        <h2>{t('profile.myFonts')}</h2>
+      <Box component="section" sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom>{t('profile.myFonts')}</Typography>
         {fonts === null && <Skeleton lines={2} />}
-        {fonts?.length === 0 && <p className="muted">{t('profile.noFonts')}</p>}
-        <ul className="list">
+        {fonts?.length === 0 && <Typography color="text.secondary">{t('profile.noFonts')}</Typography>}
+        <List disablePadding>
           {fonts?.map((f) => (
-            <li key={f.id}><Link to={`/fonts/${f.id}`}>{f.name}</Link></li>
+            <ListItem key={f.id} disablePadding divider>
+              <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
+                <ListItemText primary={f.name} />
+              </ListItemButton>
+            </ListItem>
           ))}
-        </ul>
-      </section>
+        </List>
+      </Box>
 
-      <section>
-        <h2>{t('profile.myReviews')}</h2>
+      <Box component="section">
+        <Typography variant="h6" gutterBottom>{t('profile.myReviews')}</Typography>
         {comments === null && <Skeleton lines={3} />}
-        {comments?.length === 0 && <p className="muted">{t('profile.noReviews')}</p>}
-        <ul className="list">
+        {comments?.length === 0 && <Typography color="text.secondary">{t('profile.noReviews')}</Typography>}
+        <List disablePadding>
           {comments?.map((c) => {
             const ws = waterStatusInfo(c.waterStatus)
             return (
-              <li key={c.id}>
-                <Link to={`/fonts/${c.fontID}`}>{c.fontName ?? '—'}</Link>
-                {ws && <span className="badge small"> {ws.emoji} {t(`status.${ws.key}`)}</span>}
-                <span className="muted"> · {c.createdAt ? timeAgo(c.createdAt, t) : ''}</span>
-                <p>{c.body}</p>
-              </li>
+              <ListItem key={c.id} divider alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Link component={RouterLink} to={`/fonts/${c.fontID}`} sx={{ fontWeight: 600 }}>{c.fontName ?? '—'}</Link>
+                  {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`} />}
+                  <Typography variant="caption" color="text.secondary">· {c.createdAt ? timeAgo(c.createdAt, t) : ''}</Typography>
+                </Box>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>{c.body}</Typography>
+              </ListItem>
             )
           })}
-        </ul>
-      </section>
-    </div>
+        </List>
+      </Box>
+    </Box>
   )
 }

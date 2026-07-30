@@ -1,8 +1,10 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
 
 type ToastKind = 'ok' | 'error'
-interface Toast {
-  id: number
+interface ToastState {
+  open: boolean
   text: string
   kind: ToastKind
 }
@@ -12,24 +14,32 @@ interface ToastApi {
 
 const Ctx = createContext<ToastApi | undefined>(undefined)
 
-// Notificaciones efímeras (toasts) apiladas abajo; se autodescartan.
+// Notificaciones efímeras con Snackbar + Alert de MUI.
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([])
+  const [toast, setToast] = useState<ToastState>({ open: false, text: '', kind: 'ok' })
 
   const show = useCallback((text: string, kind: ToastKind = 'ok') => {
-    const id = Date.now() + Math.random()
-    setToasts((prev) => [...prev, { id, text, kind }])
-    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 2600)
+    setToast({ open: true, text, kind })
   }, [])
 
   return (
     <Ctx.Provider value={{ show }}>
       {children}
-      <div className="toasts" role="status" aria-live="polite">
-        {toasts.map((tst) => (
-          <div key={tst.id} className={'toast ' + tst.kind}>{tst.text}</div>
-        ))}
-      </div>
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={2600}
+        onClose={() => setToast((t) => ({ ...t, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={toast.kind === 'error' ? 'error' : 'success'}
+          variant="filled"
+          onClose={() => setToast((t) => ({ ...t, open: false }))}
+          sx={{ borderRadius: 3 }}
+        >
+          {toast.text}
+        </Alert>
+      </Snackbar>
     </Ctx.Provider>
   )
 }

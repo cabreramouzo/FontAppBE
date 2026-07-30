@@ -1,5 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
+import Box from '@mui/material/Box'
+import TextField from '@mui/material/TextField'
+import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
+import Alert from '@mui/material/Alert'
 import { useI18n } from '../i18n/I18nContext'
 import { describeError, resetPassword } from '../api/client'
 
@@ -24,36 +29,33 @@ export function ResetPasswordPage() {
     }
   }
 
-  if (!token) {
-    return (
-      <div className="pad auth">
-        <h1>{t('reset.title')}</h1>
-        <p className="error">{t('reset.invalid')}</p>
-        <Link to="/login">← {t('login.enter')}</Link>
-      </div>
-    )
-  }
-
   return (
-    <div className="pad auth">
-      <h1>{t('reset.title')}</h1>
-      {done ? (
-        <p className="muted">✅ {t('reset.done')}</p>
+    <Box className="pad auth" sx={{ maxWidth: 360, mx: 'auto' }}>
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>{t('reset.title')}</Typography>
+      {!token ? (
+        <>
+          <Alert severity="error" sx={{ mb: 2 }}>{t('reset.invalid')}</Alert>
+          <Button component={RouterLink} to="/login">← {t('login.enter')}</Button>
+        </>
+      ) : done ? (
+        <Alert severity="success">{t('reset.done')}</Alert>
       ) : (
         <>
-          <form onSubmit={submit} className="col">
-            <input
+          <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
               type="password"
+              label={t('reset.password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={t('reset.password')}
               required
+              fullWidth
+              size="small"
             />
-            <button type="submit">{t('reset.submit')}</button>
-          </form>
-          {error && <p className="error">{error}</p>}
+            <Button type="submit" variant="contained" disableElevation>{t('reset.submit')}</Button>
+          </Box>
+          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
         </>
       )}
-    </div>
+    </Box>
   )
 }

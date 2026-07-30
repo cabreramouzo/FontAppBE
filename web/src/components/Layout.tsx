@@ -1,5 +1,10 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router-dom'
+import AppBar from '@mui/material/AppBar'
+import Toolbar from '@mui/material/Toolbar'
+import Button from '@mui/material/Button'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Footer } from './Footer'
@@ -12,23 +17,32 @@ export function Layout({ children }: { children: ReactNode }) {
   const { t } = useI18n()
   return (
     <div className="app">
-      <header className="topbar">
-        <Link to="/" className="brand">💧 FontApp</Link>
-        <nav className="nav">
+      <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
+        <Toolbar sx={{ gap: 1 }}>
+          <Typography
+            component={RouterLink}
+            to="/"
+            variant="h6"
+            sx={{ flexGrow: 1, fontWeight: 800, color: 'primary.main', textDecoration: 'none' }}
+          >
+            💧 FontApp
+          </Typography>
           <ThemeToggle />
           <LanguageSwitcher />
           {user ? (
             <>
-              <Link to="/me" className="muted" title={t('nav.profile')}>{t('nav.hello', { user: user.username })}</Link>
-              <button onClick={() => logout()}>{t('nav.logout')}</button>
+              <Button component={RouterLink} to="/me" color="inherit" size="small" sx={{ textTransform: 'none' }} title={t('nav.profile')}>
+                {t('nav.hello', { user: user.username })}
+              </Button>
+              <Button variant="contained" size="small" disableElevation onClick={() => logout()}>{t('nav.logout')}</Button>
             </>
           ) : (
-            <Link to="/login">{t('nav.enter')}</Link>
+            <Button component={RouterLink} to="/login" variant="contained" size="small" disableElevation>{t('nav.enter')}</Button>
           )}
-        </nav>
-      </header>
+        </Toolbar>
+      </AppBar>
       <OfflineBanner />
-      <main className="main">{children}</main>
+      <Box component="main" className="main">{children}</Box>
       <Footer />
     </div>
   )

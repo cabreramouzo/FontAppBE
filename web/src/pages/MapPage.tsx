@@ -1,6 +1,21 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { Link, useSearchParams } from 'react-router-dom'
+import Chip from '@mui/material/Chip'
+import Fab from '@mui/material/Fab'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import TextField from '@mui/material/TextField'
+import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
+import Alert from '@mui/material/Alert'
+import Stack from '@mui/material/Stack'
+import Box from '@mui/material/Box'
+import MyLocationIcon from '@mui/icons-material/MyLocation'
+import NavigationIcon from '@mui/icons-material/Navigation'
+import WaterDropIcon from '@mui/icons-material/WaterDrop'
+import DoNotDisturbAltIcon from '@mui/icons-material/DoNotDisturbAlt'
+import AddIcon from '@mui/icons-material/Add'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
@@ -20,6 +35,25 @@ import { timeAgo } from '../lib/time'
 
 // Centro por defecto: comarca del Moianès.
 const MOIANES: [number, number] = [41.81, 2.09]
+
+// Los labels i18n empiezan por emoji ("📍 A prop meu"); en MUI usamos iconos Material,
+// así que quitamos el emoji inicial del texto.
+const noEmoji = (s: string) => s.replace(/^[^\p{L}\d]+/u, '')
+
+// Estilo Material para los chips de control (superficie elevada; acento si activo).
+const chipSx = (active: boolean) => ({
+  height: 40,
+  borderRadius: '20px',
+  px: 0.75,
+  fontSize: 14,
+  fontWeight: 600,
+  bgcolor: active ? 'primary.main' : 'background.paper',
+  color: active ? 'primary.contrastText' : 'text.primary',
+  borderColor: 'divider',
+  boxShadow: 3,
+  '& .MuiChip-icon': { color: 'inherit' },
+  '&:hover': { boxShadow: 6, bgcolor: active ? 'primary.dark' : 'background.paper' },
+})
 
 const hasWater = (f: FontSummary) => f.lastWaterStatus === 'flowing' || f.lastWaterStatus === 'trickle'
 
@@ -219,34 +253,26 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
 
   return (
     <div className="panel">
-      <h3>{t('newFont.title')}</h3>
-      <p className="muted">Lat {pos.lat.toFixed(5)}, Long {pos.lng.toFixed(5)}</p>
-      <form onSubmit={submit} className="col">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('newFont.name')} required />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('newFont.descriptionOpt')} />
-        <label>{t('detail.type')}
-          <select value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')}>
-            <option value="">{t('detail.unknownType')}</option>
-            {SOURCE_OPTIONS.map((k) => (
-              <option key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</option>
-            ))}
-          </select>
-        </label>
-        <label>{t('detail.drinkability')}
-          <select value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')}>
-            <option value="">{t('detail.unknownDrink')}</option>
-            {DRINKABLE_OPTIONS.map((k) => (
-              <option key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</option>
-            ))}
-          </select>
-        </label>
+      <Typography variant="h6">{t('newFont.title')}</Typography>
+      <Typography variant="caption" color="text.secondary">Lat {pos.lat.toFixed(5)}, Long {pos.lng.toFixed(5)}</Typography>
+      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+        <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} required size="small" />
+        <TextField label={t('newFont.descriptionOpt')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" />
+        <TextField select label={t('detail.type')} value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')} size="small">
+          <MenuItem value="">{t('detail.unknownType')}</MenuItem>
+          {SOURCE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</MenuItem>))}
+        </TextField>
+        <TextField select label={t('detail.drinkability')} value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')} size="small">
+          <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
+          {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
+        </TextField>
         <ImagePicker file={file} onChange={setFile} />
-        {error && <p className="error">{error}</p>}
-        <div className="row">
-          <button type="submit" disabled={saving}>{saving ? t('form.saving') : t('form.create')}</button>
-          <button type="button" className="link" onClick={onCancel}>{t('form.cancel')}</button>
-        </div>
-      </form>
+        {error && <Alert severity="error">{error}</Alert>}
+        <Stack direction="row" spacing={1}>
+          <Button type="submit" variant="contained" disableElevation disabled={saving}>{saving ? t('form.saving') : t('form.create')}</Button>
+          <Button onClick={onCancel}>{t('form.cancel')}</Button>
+        </Stack>
+      </Box>
     </div>
   )
 }
@@ -394,19 +420,46 @@ export function MapPage() {
       <SearchBox onSelect={(f) => { setGoto([f.latitude, f.longitude]); setSelectedID(f.id) }} onSelectPlace={setPlace} />
 
       <div className="map-controls">
-        <button className="ctrl" onClick={() => locate(true)}>{t('map.near')}</button>
-        <button className={'ctrl' + (onlyWithWater ? ' active' : '')} onClick={() => setOnlyWithWater((v) => !v)}>
-          {t('map.onlyWater')}
-        </button>
-        <button className={'ctrl' + (showNonPotable ? ' active' : '')} onClick={() => setShowNonPotable((v) => !v)} title={t('map.includeNonPotableTitle')}>
-          {t('map.includeNonPotable')}
-        </button>
-        <select className="ctrl type-filter" value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as WaterSource | 'all')} aria-label={t('map.filterType')}>
-          <option value="all">{t('map.filterType')}: {t('map.allTypes')}</option>
+        <Chip clickable variant="outlined" icon={<MyLocationIcon />} label={noEmoji(t('map.near'))} onClick={() => locate(true)} sx={chipSx(false)} />
+        <Chip
+          clickable
+          variant={onlyWithWater ? 'filled' : 'outlined'}
+          icon={<WaterDropIcon />}
+          label={noEmoji(t('map.onlyWater'))}
+          onClick={() => setOnlyWithWater((v) => !v)}
+          sx={chipSx(onlyWithWater)}
+        />
+        <Chip
+          clickable
+          variant={showNonPotable ? 'filled' : 'outlined'}
+          icon={<DoNotDisturbAltIcon />}
+          label={noEmoji(t('map.includeNonPotable'))}
+          onClick={() => setShowNonPotable((v) => !v)}
+          title={t('map.includeNonPotableTitle')}
+          sx={chipSx(showNonPotable)}
+        />
+        <Select
+          size="small"
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value as WaterSource | 'all')}
+          aria-label={t('map.filterType')}
+          renderValue={(v) => (v === 'all' ? `${t('map.filterType')}: ${t('map.allTypes')}` : `${SOURCE_EMOJI[v as WaterSource]} ${t(`source.${v}`)}`)}
+          sx={{
+            height: 40,
+            borderRadius: '20px',
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            fontSize: 14,
+            fontWeight: 600,
+            boxShadow: 3,
+            '& .MuiOutlinedInput-notchedOutline': { border: 0 },
+          }}
+        >
+          <MenuItem value="all">{t('map.allTypes')}</MenuItem>
           {SOURCE_OPTIONS.map((k) => (
-            <option key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</option>
+            <MenuItem key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</MenuItem>
           ))}
-        </select>
+        </Select>
       </div>
       {geoError && <div className="hint hint-error">{geoError}</div>}
 
@@ -418,13 +471,13 @@ export function MapPage() {
 
       {!placing && (
         <div className="map-fabs">
-          <button className="locate-btn" onClick={() => locate(false)} title={t('map.recenter')} aria-label={t('map.recenter')}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 4.6 20.4c-.26.64.4 1.28 1.03.99L12 18.4l6.37 2.99c.63.29 1.29-.35 1.03-.99L12 2.2z" /></svg>
-          </button>
+          <Fab size="medium" onClick={() => locate(false)} title={t('map.recenter')} aria-label={t('map.recenter')} sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}>
+            <NavigationIcon />
+          </Fab>
           {user && (
-            <button className="fab" onClick={() => { setPlacing(true); setPos(null) }}>
-              {t('map.addFont')}
-            </button>
+            <Fab variant="extended" color="primary" onClick={() => { setPlacing(true); setPos(null) }}>
+              <AddIcon sx={{ mr: 1 }} /> {noEmoji(t('map.addFont'))}
+            </Fab>
           )}
         </div>
       )}

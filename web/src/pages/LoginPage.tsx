@@ -1,5 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Box from '@mui/material/Box'
+import TextField from '@mui/material/TextField'
+import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
+import Link from '@mui/material/Link'
+import Alert from '@mui/material/Alert'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { describeError, forgotPassword } from '../api/client'
@@ -46,53 +52,53 @@ export function LoginPage() {
   const title = mode === 'login' ? t('login.enter') : mode === 'register' ? t('login.createAccount') : t('forgot.title')
 
   return (
-    <div className="pad auth">
-      <h1>{title}</h1>
+    <Box className="pad auth" sx={{ maxWidth: 360, mx: 'auto' }}>
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>{title}</Typography>
 
       {mode === 'forgot' && sent ? (
         <>
-          <p className="muted">{t('forgot.sent')}</p>
+          <Alert severity="success" sx={{ mb: 2 }}>{t('forgot.sent')}</Alert>
           {sent.devLink && (
-            <p className="muted small">
-              {t('forgot.devLink')} <a href={sent.devLink}>{sent.devLink}</a>
-            </p>
+            <Typography variant="body2" color="text.secondary">
+              {t('forgot.devLink')} <Link href={sent.devLink}>{sent.devLink}</Link>
+            </Typography>
           )}
-          <p><button className="link" onClick={() => switchTo('login')}>← {t('login.enter')}</button></p>
+          <Button onClick={() => switchTo('login')} sx={{ mt: 1 }}>← {t('login.enter')}</Button>
         </>
       ) : (
         <>
-          <form onSubmit={submit} className="col">
+          <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {mode === 'register' && (
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('login.name')} required />
+              <TextField label={t('login.name')} value={name} onChange={(e) => setName(e.target.value)} required fullWidth size="small" />
             )}
             {mode !== 'forgot' && (
-              <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t('login.username')} required />
+              <TextField label={t('login.username')} value={username} onChange={(e) => setUsername(e.target.value)} required fullWidth size="small" />
             )}
             {mode !== 'login' && (
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('login.email')} required />
+              <TextField type="email" label={t('login.email')} value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth size="small" />
             )}
             {mode !== 'forgot' && (
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('login.password')} required />
+              <TextField type="password" label={t('login.password')} value={password} onChange={(e) => setPassword(e.target.value)} required fullWidth size="small" />
             )}
-            <button type="submit">
+            <Button type="submit" variant="contained" disableElevation>
               {mode === 'login' ? t('login.enter') : mode === 'register' ? t('login.register') : t('forgot.submit')}
-            </button>
-          </form>
-          {error && <p className="error">{error}</p>}
+            </Button>
+          </Box>
+          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
           {mode === 'login' && (
-            <p className="muted small">
-              <button className="link" onClick={() => switchTo('forgot')}>{t('login.forgot')}</button>
-            </p>
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              <Link component="button" type="button" onClick={() => switchTo('forgot')}>{t('login.forgot')}</Link>
+            </Typography>
           )}
-          <p className="muted">
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             {mode === 'register' ? t('login.haveAccount') : t('login.noAccount')}
-            <button className="link" onClick={() => switchTo(mode === 'register' ? 'login' : 'register')}>
+            <Link component="button" type="button" onClick={() => switchTo(mode === 'register' ? 'login' : 'register')}>
               {mode === 'register' ? t('login.enter') : t('login.signup')}
-            </button>
-          </p>
+            </Link>
+          </Typography>
         </>
       )}
-    </div>
+    </Box>
   )
 }

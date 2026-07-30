@@ -7,6 +7,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 ## Stack
 - **Backend:** Swift 6.3 · Vapor 4 · Fluent + PostgreSQL · SwiftPM (sin proyecto Xcode).
 - **Web:** Vite + React 19 + TypeScript en `web/` (Leaflet + markercluster para el mapa).
+  UI con **MUI (Material Design)** — tema en `web/src/theme/` (`ThemeModeContext` fija `data-theme` en `<html>` y alimenta el `ThemeProvider` de MUI; claro/oscuro/sistema). Los popups del mapa siguen siendo HTML imperativo.
   i18n propio sin dependencias en `web/src/i18n/` (CA por defecto + ES, selector en la barra, detecta navegador y persiste en `localStorage`).
 
 ## Comandos
