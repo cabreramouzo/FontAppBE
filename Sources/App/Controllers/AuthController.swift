@@ -7,12 +7,16 @@ struct AuthController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let auth = routes.grouped("auth")
 
-        // Login con Basic auth (usuario/contraseña).
-        auth.grouped(User.authenticator()).post("login", use: login)
+        // Rate-limit anti fuerza bruta en los endpoints sensibles (por IP).
+        let loginThrottle = RateLimitMiddleware(max: 10, window: 5 * 60)   // 10 / 5 min
+        let resetThrottle = RateLimitMiddleware(max: 5, window: 15 * 60)   // 5 / 15 min
 
-        // Recuperación de contraseña (público).
-        auth.post("forgot-password", use: forgotPassword)
-        auth.post("reset-password", use: resetPassword)
+        // Login con Basic auth (usuario/contraseña), con rate-limit ANTES de autenticar.
+        auth.grouped(loginThrottle).grouped(User.authenticator()).post("login", use: login)
+
+        // Recuperación de contraseña (público, con rate-limit para evitar spam/enumeración).
+        auth.grouped(resetThrottle).post("forgot-password", use: forgotPassword)
+        auth.grouped(resetThrottle).post("reset-password", use: resetPassword)
 
         // Rutas que requieren un token válido.
         let tokenProtected = auth.grouped(UserToken.authenticator(), User.guardMiddleware())
