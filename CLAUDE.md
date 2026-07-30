@@ -47,6 +47,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 
 ## Pendiente / deuda
 - `R2ImageStorage` (Soto) compila pero **sin probar** contra un bucket real (necesita credenciales `R2_*`); en local usa disco.
+- Correo (`MailSender`): en dev `LogMailSender` (solo loguea); en prod `ResendMailSender` si hay `RESEND_API_KEY` + `MAIL_FROM` (requiere dominio propio con SPF/DKIM/DMARC). Sin probar contra Resend real.
 - Compresión de imágenes: en el cliente (canvas). El borrado del fichero al eliminar fuente/reseña es best-effort (`try?`).
 - Sin rate-limit en `/auth/login` ni limpieza de tokens caducados.
 

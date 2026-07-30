@@ -75,6 +75,11 @@ public func configure(_ app: Application) async throws {
         app.lifecycle.use(AWSClientShutdown(client: awsClient))
     }
 
+    // Envío de correo: Resend si hay credenciales; si no, log (dev). Ver MailSender.
+    if let apiKey = Environment.get("RESEND_API_KEY"), let from = Environment.get("MAIL_FROM") {
+        app.mailSender = ResendMailSender(apiKey: apiKey, from: from)
+    }
+
     // Migraciones: una por modelo.
     app.migrations.add(CreateUser())
     app.migrations.add(CreateUserToken())

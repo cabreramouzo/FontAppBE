@@ -52,8 +52,20 @@ struct AuthController: RouteCollection {
         let base = Environment.get("WEB_ORIGIN")?.split(separator: ",").first.map(String.init)
             ?? "http://localhost:5174"
         let link = "\(base)/reset?token=\(reset.token)"
-        // TODO producción: enviar por email (Resend/SMTP). En dev lo registramos y devolvemos.
-        req.logger.info("Password reset para \(email): \(link)")
+
+        // Envía el correo (LogMailSender en dev, Resend en prod). Best-effort:
+        // si el proveedor falla, no revelamos nada al cliente (evita enumeración/oráculo).
+        let html = """
+            <p>Has demanat restablir la contrasenya de FontApp.</p>
+            <p><a href="\(link)">Restablir la contrasenya</a> (l'enllaç caduca en 1 hora).</p>
+            <p>Si no ho has demanat tu, ignora aquest correu.</p>
+            """
+        do {
+            try await req.mailSender.send(to: email, subject: "Restablir la contrasenya · FontApp", html: html, on: req.client)
+        } catch {
+            req.logger.error("No s'ha pogut enviar el correu de reset a \(email): \(error)")
+        }
+
         let isProd = req.application.environment == .production
         return ForgotResponse(ok: true, devLink: isProd ? nil : link)
     }
