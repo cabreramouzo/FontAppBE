@@ -46,6 +46,9 @@ export interface CommentResponse {
   waterStatus: string | null
   image: string | null
   createdAt: string
+  confirmations: number
+  confirmedByMe: boolean
+  lastConfirmedAt: string | null
 }
 
 export interface Page<T> {

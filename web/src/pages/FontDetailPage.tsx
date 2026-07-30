@@ -4,6 +4,7 @@ import type { CommentResponse, Font, ReportResponse } from '../api/types'
 import {
   apiFetch,
   assetUrl,
+  confirmComment,
   createComment,
   deleteComment,
   deleteFont,
@@ -14,6 +15,7 @@ import {
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { StarRating } from '../components/StarRating'
+import { ImagePicker } from '../components/ImagePicker'
 import { compressImage } from '../lib/image'
 import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
 import { DRINKABLE_INFO, SOURCE_INFO, drinkableInfo, sourceInfo } from '../lib/waterType'
@@ -156,7 +158,7 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
         <label>Valoración: <StarRating value={rating} onChange={setRating} size={18} /></label>
       </div>
       <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="¿Cómo está la fuente ahora?" required />
-      <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      <ImagePicker file={file} onChange={setFile} />
       {error && <p className="error">{error}</p>}
       <button type="submit" disabled={saving}>{saving ? 'Enviando…' : 'Publicar actualización'}</button>
     </form>
@@ -265,13 +267,14 @@ export function FontDetailPage() {
     }
   }
 
-  // Confirma que el último estado sigue vigente (refresca la frescura sin escribir reseña).
-  async function confirmStatus() {
+  // Confirma (o deshace) que el último estado sigue vigente. Es una señal ligera
+  // (👍 con contador), NO un comentario nuevo — así la lista no se llena.
+  async function toggleConfirm() {
     const current = comments[0]
-    if (!id || !current?.waterStatus) return
+    if (!id || !current) return
     setConfirming(true)
     try {
-      await createComment(id, { body: 'Sigue igual ✅', waterStatus: current.waterStatus })
+      await confirmComment(id, current.id, !current.confirmedByMe)
       await load()
     } catch (e) {
       setError((e as Error).message)
@@ -332,14 +335,32 @@ export function FontDetailPage() {
         {latest ? (
           <>
             <p className="muted small">Última actualización:</p>
-            {latest.createdAt && isStale(latest.createdAt) && (
-              <p className="stale-warn">⚠️ Sin actualizar {timeAgo(latest.createdAt)} — el estado puede haber cambiado.</p>
-            )}
+            {(() => {
+              // Frescura = lo más reciente entre la reseña y su última confirmación.
+              const freshAt = latest.lastConfirmedAt ?? latest.createdAt
+              return freshAt && isStale(freshAt) ? (
+                <p className="stale-warn">⚠️ Sin actualizar {timeAgo(freshAt)} — el estado puede haber cambiado.</p>
+              ) : null
+            })()}
             <ReviewCard c={latest} highlight canManage={user?.id === latest.userID} onChanged={load} />
-            {user && latest.waterStatus && (
-              <button className="confirm-btn" onClick={confirmStatus} disabled={confirming}>
-                {confirming ? 'Confirmando…' : '👍 Sigue igual'}
-              </button>
+            {latest.waterStatus && (
+              <div className="confirm-row">
+                {user ? (
+                  <button
+                    className={'confirm-btn' + (latest.confirmedByMe ? ' active' : '')}
+                    onClick={toggleConfirm}
+                    disabled={confirming}
+                    title={latest.confirmedByMe ? 'Ya confirmaste que sigue igual (toca para deshacer)' : 'Confirma que el estado sigue igual'}
+                  >
+                    👍 {latest.confirmedByMe ? 'Confirmado' : 'Sigue igual'}
+                    {latest.confirmations > 0 && <span className="confirm-count">+{latest.confirmations}</span>}
+                  </button>
+                ) : (
+                  latest.confirmations > 0 && (
+                    <span className="confirm-badge">👍 <span className="confirm-count">+{latest.confirmations}</span></span>
+                  )
+                )}
+              </div>
             )}
           </>
         ) : (

@@ -8,6 +8,7 @@ import type { Font, FontSummary, Page } from '../api/types'
 import { apiFetch, createFont, uploadImage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
+import { ImagePicker } from '../components/ImagePicker'
 import { WATER_STATUS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
 import { compressImage } from '../lib/image'
@@ -176,7 +177,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
       <form onSubmit={submit} className="col">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" required />
         <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción (opcional)" />
-        <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <ImagePicker file={file} onChange={setFile} />
         {error && <p className="error">{error}</p>}
         <div className="row">
           <button type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Crear'}</button>

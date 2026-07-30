@@ -46,17 +46,38 @@ extension Font {
             .all()
 
         // Primer comentario (más reciente) con estado de agua por cada fuente.
-        var latest: [UUID: (status: String, date: Date?)] = [:]
+        var latest: [UUID: (commentID: UUID?, status: String, date: Date?)] = [:]
         for c in comments {
             let fid = c.$font.id
             if latest[fid] == nil, let status = c.waterStatus {
-                latest[fid] = (status, c.createdAt)
+                latest[fid] = (c.id, status, c.createdAt)
+            }
+        }
+
+        // Frescura: una confirmación ("sigue igual") también cuenta como actualización.
+        // Tomamos la confirmación más reciente de cada comentario de estado (una query).
+        let statusCommentIDs = latest.values.compactMap { $0.commentID }
+        var lastConfirm: [UUID: Date] = [:]
+        if !statusCommentIDs.isEmpty {
+            let confs = try await FontConfirmation.query(on: db)
+                .filter(\.$comment.$id ~~ statusCommentIDs)
+                .all()
+            for c in confs {
+                let cid = c.$comment.id
+                if let d = c.createdAt, lastConfirm[cid] == nil || d > lastConfirm[cid]! {
+                    lastConfirm[cid] = d
+                }
             }
         }
 
         return fonts.map { font in
-            let l = font.id.flatMap { latest[$0] }
-            return FontSummary(font, lastWaterStatus: l?.status, lastUpdate: l?.date)
+            guard let l = font.id.flatMap({ latest[$0] }) else {
+                return FontSummary(font, lastWaterStatus: nil, lastUpdate: nil)
+            }
+            // La frescura es la fecha más reciente entre el comentario y su última confirmación.
+            let confDate = l.commentID.flatMap { lastConfirm[$0] }
+            let freshest = [l.date, confDate].compactMap { $0 }.max()
+            return FontSummary(font, lastWaterStatus: l.status, lastUpdate: freshest)
         }
     }
 }

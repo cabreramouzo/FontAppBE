@@ -113,6 +113,13 @@ export async function deleteComment(fontID: string, commentID: string): Promise<
   await apiFetch(`/fonts/${fontID}/comments/${commentID}`, { method: 'DELETE' })
 }
 
+/** 👍 "sigue igual": confirma (o deshace) que el estado del comentario sigue vigente. */
+export async function confirmComment(fontID: string, commentID: string, on: boolean): Promise<CommentResponse> {
+  return apiFetch<CommentResponse>(`/fonts/${fontID}/comments/${commentID}/confirm`, {
+    method: on ? 'POST' : 'DELETE',
+  })
+}
+
 export async function deleteReport(fontID: string, reportID: string): Promise<void> {
   await apiFetch(`/fonts/${fontID}/report/${reportID}`, { method: 'DELETE' })
 }

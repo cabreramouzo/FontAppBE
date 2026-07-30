@@ -8,12 +8,16 @@ struct FontCommentController: RouteCollection {
 
     func boot(routes: RoutesBuilder) throws {
         let comments = routes.grouped("fonts", ":fontID", "comments")
-        comments.get(use: index) // lectura pública
+        // Lectura pública, pero con auth OPCIONAL: si viene token, sabemos si el
+        // usuario ya confirmó cada estado (confirmedByMe), sin exigir login.
+        comments.grouped(UserToken.authenticator()).get(use: index)
         let auth = comments.grouped(UserToken.authenticator(), User.guardMiddleware())
         auth.post(use: create)
         auth.group(":commentID") { c in
             c.put(use: update)
             c.delete(use: destroy)
+            c.post("confirm", use: confirm)     // 👍 "sigue igual"
+            c.delete("confirm", use: unconfirm) // deshacer
         }
     }
 
@@ -25,7 +29,39 @@ struct FontCommentController: RouteCollection {
             .sort(\.$createdAt, .descending)
             .all()
         let names = try await User.usernames(for: comments.compactMap { $0.$user.id }, on: req.db)
-        return comments.map { CommentResponse($0, username: $0.$user.id.flatMap { names[$0] }) }
+        let confs = try await Self.confirmations(for: comments, viewer: req.auth.get(User.self)?.id, on: req.db)
+        return comments.map { c in
+            CommentResponse(c, username: c.$user.id.flatMap { names[$0] }, confirm: c.id.flatMap { confs[$0] })
+        }
+    }
+
+    /// POST /fonts/:fontID/comments/:commentID/confirm — 👍 "sigue igual".
+    /// Idempotente: si ya confirmaste, no duplica (constraint único). Refresca la frescura.
+    @Sendable func confirm(req: Request) async throws -> CommentResponse {
+        let user = try req.auth.require(User.self)
+        let comment = try await requireComment(req)
+        let userID = try user.requireID()
+        let commentID = try comment.requireID()
+        let already = try await FontConfirmation.query(on: req.db)
+            .filter(\.$comment.$id == commentID)
+            .filter(\.$user.$id == userID)
+            .first()
+        if already == nil {
+            try await FontConfirmation(commentID: commentID, userID: userID).save(on: req.db)
+        }
+        return try await Self.response(for: comment, viewer: userID, on: req.db)
+    }
+
+    /// DELETE /fonts/:fontID/comments/:commentID/confirm — deshace la confirmación.
+    @Sendable func unconfirm(req: Request) async throws -> CommentResponse {
+        let user = try req.auth.require(User.self)
+        let comment = try await requireComment(req)
+        let userID = try user.requireID()
+        try await FontConfirmation.query(on: req.db)
+            .filter(\.$comment.$id == comment.requireID())
+            .filter(\.$user.$id == userID)
+            .delete()
+        return try await Self.response(for: comment, viewer: userID, on: req.db)
     }
 
     /// POST /fonts/:fontID/comments — añade una actualización/reseña.
@@ -56,6 +92,41 @@ struct FontCommentController: RouteCollection {
             throw Abort(.notFound, reason: "No existe la fuente indicada")
         }
         return try font.requireID()
+    }
+
+    /// Carga el comentario indicado y comprueba que pertenece a la fuente de la ruta.
+    private func requireComment(_ req: Request) async throws -> FontComment {
+        let fontID = try await requireFontID(req)
+        guard let comment = try await FontComment.find(req.parameters.get("commentID"), on: req.db),
+              comment.$font.id == fontID else {
+            throw Abort(.notFound)
+        }
+        return comment
+    }
+
+    /// Agrega las confirmaciones (👍) de una lista de comentarios en una sola query
+    /// (evita N+1): cuántas hay, la más reciente y si el usuario que mira ya confirmó.
+    static func confirmations(for comments: [FontComment], viewer: UUID?, on db: Database) async throws -> [UUID: ConfirmAgg] {
+        let ids = comments.compactMap { $0.id }
+        guard !ids.isEmpty else { return [:] }
+        let confs = try await FontConfirmation.query(on: db).filter(\.$comment.$id ~~ ids).all()
+        var out: [UUID: ConfirmAgg] = [:]
+        for c in confs {
+            let cid = c.$comment.id
+            var agg = out[cid] ?? ConfirmAgg(count: 0, lastAt: nil, byViewer: false)
+            agg.count += 1
+            if let d = c.createdAt, agg.lastAt == nil || d > agg.lastAt! { agg.lastAt = d }
+            if let viewer, c.$user.id == viewer { agg.byViewer = true }
+            out[cid] = agg
+        }
+        return out
+    }
+
+    /// Construye la respuesta de un comentario con su recuento de confirmaciones.
+    static func response(for comment: FontComment, viewer: UUID?, on db: Database) async throws -> CommentResponse {
+        let names = try await User.usernames(for: comment.$user.id.map { [$0] } ?? [], on: db)
+        let confs = try await confirmations(for: [comment], viewer: viewer, on: db)
+        return CommentResponse(comment, username: comment.$user.id.flatMap { names[$0] }, confirm: comment.id.flatMap { confs[$0] })
     }
 
     /// PUT /fonts/:fontID/comments/:commentID — edita una reseña propia.
@@ -110,6 +181,13 @@ extension CreateCommentDTO: Validatable {
     }
 }
 
+/// Agregado de confirmaciones (👍) de un comentario.
+struct ConfirmAgg {
+    var count: Int
+    var lastAt: Date?
+    var byViewer: Bool
+}
+
 /// Representación pública de una actualización/reseña.
 struct CommentResponse: Content {
     let id: UUID?
@@ -121,8 +199,14 @@ struct CommentResponse: Content {
     let waterStatus: String?
     let image: String?
     let createdAt: Date?
+    /// Cuántos usuarios han confirmado que "sigue igual".
+    let confirmations: Int
+    /// Si el usuario autenticado ya lo confirmó (para el toggle del botón).
+    let confirmedByMe: Bool
+    /// Fecha de la confirmación más reciente (refresca la frescura del estado).
+    let lastConfirmedAt: Date?
 
-    init(_ comment: FontComment, username: String?) {
+    init(_ comment: FontComment, username: String?, confirm: ConfirmAgg? = nil) {
         self.id = comment.id
         self.fontID = comment.$font.id
         self.userID = comment.$user.id
@@ -132,5 +216,8 @@ struct CommentResponse: Content {
         self.waterStatus = comment.waterStatus
         self.image = comment.image
         self.createdAt = comment.createdAt
+        self.confirmations = confirm?.count ?? 0
+        self.confirmedByMe = confirm?.byViewer ?? false
+        self.lastConfirmedAt = confirm?.lastAt
     }
 }
