@@ -28,9 +28,10 @@ struct FontController: RouteCollection {
     }
 
     @Sendable func create(req: Request) async throws -> Response {
+        let user = try req.auth.require(User.self)
         try CreateFontDTO.validate(content: req)
         let dto = try req.content.decode(CreateFontDTO.self)
-        let font = Font(name: dto.name, latitude: dto.latitude, longitude: dto.longitude, image: dto.image, description: dto.description, source: dto.source, drinkable: dto.drinkable)
+        let font = Font(name: dto.name, latitude: dto.latitude, longitude: dto.longitude, image: dto.image, description: dto.description, source: dto.source, drinkable: dto.drinkable, creatorID: try user.requireID())
         try await font.save(on: req.db)
 
         let response = Response(status: .created)

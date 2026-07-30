@@ -29,6 +29,8 @@ final class Font: Model, Content, @unchecked Sendable {
     @OptionalField(key: "description") var description: String?
     @OptionalField(key: "source") var source: WaterSource?
     @OptionalField(key: "drinkable") var drinkable: Drinkable?
+    // Quién la creó (null para las importadas de OSM). setNull al borrar el usuario.
+    @OptionalParent(key: "created_by") var creator: User?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
@@ -41,7 +43,8 @@ final class Font: Model, Content, @unchecked Sendable {
         image: String? = nil,
         description: String? = nil,
         source: WaterSource? = nil,
-        drinkable: Drinkable? = nil
+        drinkable: Drinkable? = nil,
+        creatorID: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -51,5 +54,6 @@ final class Font: Model, Content, @unchecked Sendable {
         self.description = description
         self.source = source
         self.drinkable = drinkable
+        self.$creator.id = creatorID
     }
 }
