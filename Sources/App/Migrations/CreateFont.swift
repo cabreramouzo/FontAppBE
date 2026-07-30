@@ -10,6 +10,11 @@ struct CreateFont: AsyncMigration {
             .field("longitude", .double, .required)
             .field("image", .string)
             .field("description", .string)
+            // Tipo de punto y potabilidad (enums OSM), nullable.
+            .field("source", .string)
+            .field("drinkable", .string)
+            // Creador: null para las importadas de OSM; setNull al borrar el usuario.
+            .field("created_by", .uuid, .references("users", "id", onDelete: .setNull))
             .field("created_at", .datetime)
             .create()
 

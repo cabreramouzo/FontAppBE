@@ -29,7 +29,7 @@ final class IntegrationTests: XCTestCase {
     private func register(_ app: Application, name: String = "Test", username: String, password: String = "password123") async throws -> UUID {
         var id = UUID()
         try await app.test(.POST, "users", beforeRequest: { req in
-            try req.content.encode(CreateUserDTO(name: name, username: username, password: password))
+            try req.content.encode(CreateUserDTO(name: name, username: username, email: "\(username)@example.com", password: password))
         }, afterResponse: { res in
             XCTAssertEqual(res.status, .created)
             id = try res.content.decode(UserResponse.self).id ?? id
@@ -51,7 +51,7 @@ final class IntegrationTests: XCTestCase {
     private func createFont(_ app: Application, token: String, name: String, lat: Double, long: Double) async throws -> UUID {
         var id = UUID()
         try await app.test(.POST, "fonts", headers: bearer(token), beforeRequest: { req in
-            try req.content.encode(CreateFontDTO(name: name, latitude: lat, longitude: long, image: nil, description: nil))
+            try req.content.encode(CreateFontDTO(name: name, latitude: lat, longitude: long, image: nil, description: nil, source: nil, drinkable: nil))
         }, afterResponse: { res in
             XCTAssertEqual(res.status, .created)
             id = try res.content.decode(Font.self).id ?? id
@@ -78,7 +78,7 @@ final class IntegrationTests: XCTestCase {
         try await withApp { app in
             try await register(app, username: "bob")
             try await app.test(.POST, "users", beforeRequest: { req in
-                try req.content.encode(CreateUserDTO(name: "Bob2", username: "bob", password: "password123"))
+                try req.content.encode(CreateUserDTO(name: "Bob2", username: "bob", email: "bob2@example.com", password: "password123"))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .conflict)
             })
@@ -88,7 +88,7 @@ final class IntegrationTests: XCTestCase {
     func testValidationRejectsShortPassword() async throws {
         try await withApp { app in
             try await app.test(.POST, "users", beforeRequest: { req in
-                try req.content.encode(CreateUserDTO(name: "X", username: "xyz", password: "123"))
+                try req.content.encode(CreateUserDTO(name: "X", username: "xyz", email: "xyz@example.com", password: "123"))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .badRequest)
             })
@@ -98,7 +98,7 @@ final class IntegrationTests: XCTestCase {
     func testFontWriteRequiresAuth() async throws {
         try await withApp { app in
             try await app.test(.POST, "fonts", beforeRequest: { req in
-                try req.content.encode(CreateFontDTO(name: "F", latitude: 40, longitude: -3, image: nil, description: nil))
+                try req.content.encode(CreateFontDTO(name: "F", latitude: 40, longitude: -3, image: nil, description: nil, source: nil, drinkable: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .unauthorized)
             })
@@ -118,7 +118,7 @@ final class IntegrationTests: XCTestCase {
 
             try await app.test(.GET, "fonts/near?lat=40.4168&long=-3.7038&quantity=1") { res in
                 XCTAssertEqual(res.status, .ok)
-                let fonts = try res.content.decode([Font].self)
+                let fonts = try res.content.decode([FontSummary].self)
                 XCTAssertEqual(fonts.count, 1)
                 XCTAssertEqual(fonts.first?.name, "Sol")
             }
@@ -148,7 +148,7 @@ final class IntegrationTests: XCTestCase {
             let tokenB = try await login(app, username: "userb")
 
             try await app.test(.PUT, "users/\(aID)", headers: bearer(tokenB), beforeRequest: { req in
-                try req.content.encode(UpdateUserDTO(name: "hack", username: "usera", password: nil))
+                try req.content.encode(UpdateUserDTO(name: "hack", username: "usera", email: "hack@example.com", password: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .forbidden)
             })

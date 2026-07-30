@@ -5,6 +5,8 @@ struct CreateFontReport: AsyncMigration {
         try await database.schema("font_reports")
             .id()
             .field("font_id", .uuid, .required, .references("fonts", "id", onDelete: .cascade))
+            // Autor: opcional, setNull si se borra el usuario.
+            .field("user_id", .uuid, .references("users", "id", onDelete: .setNull))
             .field("message", .string, .required)
             .field("created_at", .datetime)
             .create()

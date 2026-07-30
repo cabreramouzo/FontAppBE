@@ -80,20 +80,14 @@ public func configure(_ app: Application) async throws {
         app.mailSender = ResendMailSender(apiKey: apiKey, from: from)
     }
 
-    // Migraciones: una por modelo.
+    // Migraciones: una por tabla (esquema consolidado; orden = dependencias de FKs).
     app.migrations.add(CreateUser())
     app.migrations.add(CreateUserToken())
-    app.migrations.add(CreateFont())
-    app.migrations.add(CreateFontReport())
-    app.migrations.add(CreateFontComment())
-    app.migrations.add(AddUserToFontReport())
-    app.migrations.add(AddUserToFontComment())
-    app.migrations.add(AddReviewFieldsToFontComment())
-    app.migrations.add(AddWaterTypeToFont())
-    app.migrations.add(CreateFontConfirmation())
-    app.migrations.add(AddCreatorToFont())
-    app.migrations.add(AddEmailToUser())
-    app.migrations.add(CreatePasswordReset())
+    app.migrations.add(CreateFont())            // referencia a users (created_by)
+    app.migrations.add(CreateFontReport())      // referencia a fonts + users
+    app.migrations.add(CreateFontComment())     // referencia a fonts + users
+    app.migrations.add(CreateFontConfirmation()) // referencia a font_comments + users
+    app.migrations.add(CreatePasswordReset())   // referencia a users
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
