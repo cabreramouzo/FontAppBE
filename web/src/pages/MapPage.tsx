@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { Link } from 'react-router-dom'
-import type { LatLng, Map as LeafletMap } from 'leaflet'
+import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
 import type { Font, FontSummary, Page } from '../api/types'
@@ -19,7 +19,17 @@ const MOIANES: [number, number] = [41.81, 2.09]
 
 const hasWater = (f: FontSummary) => f.lastWaterStatus === 'flowing' || f.lastWaterStatus === 'trickle'
 
-function FontMarkers({ nonce, onlyWithWater, showNonPotable }: { nonce: number; onlyWithWater: boolean; showNonPotable: boolean }) {
+function FontMarkers({
+  nonce,
+  onlyWithWater,
+  showNonPotable,
+  selectedID,
+}: {
+  nonce: number
+  onlyWithWater: boolean
+  showNonPotable: boolean
+  selectedID: string | null
+}) {
   const [fonts, setFonts] = useState<FontSummary[]>([])
 
   const loadBounds = useCallback(async (map: LeafletMap) => {
@@ -51,7 +61,7 @@ function FontMarkers({ nonce, onlyWithWater, showNonPotable }: { nonce: number; 
 
   let shown = showNonPotable ? fonts : fonts.filter((f) => !isNotPotable(f.drinkable))
   if (onlyWithWater) shown = shown.filter(hasWater)
-  return <ClusteredMarkers fonts={shown} />
+  return <ClusteredMarkers fonts={shown} selectedID={selectedID} />
 }
 
 // Captura el clic en el mapa para situar la nueva fuente.
@@ -65,6 +75,38 @@ function Recenter({ target }: { target: [number, number] | null }) {
   const map = useMap()
   useEffect(() => {
     if (target) map.setView(target, 16)
+  }, [target, map])
+  return null
+}
+
+// Enfoca una fuente centrándola en el área visible por ENCIMA del panel inferior
+// (bottom-sheet "cerca de ti"), para que el pin no quede tapado por la lista.
+function FocusOn({ target }: { target: [number, number] | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!target) return
+    const zoom = 16
+    const latlng = L.latLng(target[0], target[1])
+    let offsetY = 0
+    const panel = document.querySelector('.nearby') as HTMLElement | null
+    if (panel) {
+      const mapRect = map.getContainer().getBoundingClientRect()
+      const panelRect = panel.getBoundingClientRect()
+      // ¿El panel tapa la parte inferior del mapa (bottom-sheet)? Entonces centra
+      // el pin en la mitad del hueco visible que queda por encima.
+      const coversBottom = panelRect.bottom >= mapRect.bottom - 1 && panelRect.top > mapRect.top
+      if (coversBottom) {
+        const visibleH = panelRect.top - mapRect.top
+        offsetY = map.getSize().y / 2 - visibleH / 2
+      }
+    }
+    if (offsetY > 0) {
+      const p = map.project(latlng, zoom)
+      const center = map.unproject(L.point(p.x, p.y + offsetY), zoom)
+      map.setView(center, zoom)
+    } else {
+      map.setView(latlng, zoom)
+    }
   }, [target, map])
   return null
 }
@@ -256,9 +298,9 @@ export function MapPage() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} />
+        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} selectedID={selectedID} />
         <Recenter target={me} />
-        <Recenter target={goto} />
+        <FocusOn target={goto} />
         {me && <Marker position={me} />}
         {placing && <PlacePicker onPick={setPos} />}
         {pos && <Marker position={pos} />}

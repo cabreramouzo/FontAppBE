@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
 import { useNavigate } from 'react-router-dom'
 import L from 'leaflet'
@@ -19,15 +19,20 @@ function escapeHtml(s: string): string {
 
 // Marcadores agrupados (clustering) gestionados imperativamente con leaflet.markercluster,
 // para no depender de un wrapper de react-leaflet. Los popups navegan por SPA.
-export function ClusteredMarkers({ fonts }: { fonts: FontSummary[] }) {
+export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; selectedID?: string | null }) {
   const map = useMap()
   const navigate = useNavigate()
+  // Grupo y marcadores por id, para poder abrir el popup del seleccionado.
+  const groupRef = useRef<L.MarkerClusterGroup | null>(null)
+  const markersRef = useRef<Map<string, L.Marker>>(new Map())
 
   useEffect(() => {
     const group = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 })
+    const byId = new Map<string, L.Marker>()
 
     for (const f of fonts) {
       const marker = L.marker([f.latitude, f.longitude], { icon: statusIcon(f.lastWaterStatus) })
+      if (f.id) byId.set(f.id, marker)
       const ws = waterStatusInfo(f.lastWaterStatus)
       const src = sourceInfo(f.source)
       const dr = drinkableInfo(f.drinkable)
@@ -43,15 +48,39 @@ export function ClusteredMarkers({ fonts }: { fonts: FontSummary[] }) {
         e.preventDefault()
         navigate(`/fonts/${f.id}`)
       })
-      marker.bindPopup(el)
+      // autoPan off: al enfocar centramos el pin nosotros (arriba, sobre la lista);
+      // el autoPan de Leaflet lo recentraba y quedaba tapado por el bottom-sheet.
+      marker.bindPopup(el, { autoPan: false })
       group.addLayer(marker)
     }
 
     map.addLayer(group)
+    groupRef.current = group
+    markersRef.current = byId
     return () => {
       map.removeLayer(group)
+      if (groupRef.current === group) groupRef.current = null
     }
   }, [fonts, map, navigate])
+
+  // Al cambiar la fuente seleccionada (o al reconstruirse los marcadores tras
+  // recentrar), abre su popup — desclusterizándola antes si está agrupada.
+  useEffect(() => {
+    const group = groupRef.current
+    if (!selectedID || !group) return
+    const marker = markersRef.current.get(selectedID)
+    if (!marker) return
+    // Si el marcador ya está desclusterizado, abre el popup directamente
+    // (el callback de zoomToShowLayer no dispara cuando no hay zoom que hacer).
+    const visible = group.getVisibleParent(marker)
+    // Si el marcador ya está desclusterizado, abre el popup directamente
+    // (el callback de zoomToShowLayer no dispara cuando no hay zoom que hacer).
+    if (!visible || visible === marker) {
+      marker.openPopup()
+    } else {
+      group.zoomToShowLayer(marker, () => marker.openPopup())
+    }
+  }, [selectedID, fonts])
 
   return null
 }
