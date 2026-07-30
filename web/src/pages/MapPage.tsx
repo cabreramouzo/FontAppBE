@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
@@ -331,6 +331,19 @@ export function MapPage() {
   const [showNearby, setShowNearby] = useState(false)
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [place, setPlace] = useState<Place | null>(null)
+  const [params, setParams] = useSearchParams()
+
+  // Llegada desde el detalle (?lat&lng&sel): centra el mapa en esa fuente y la selecciona.
+  useEffect(() => {
+    const lat = parseFloat(params.get('lat') ?? '')
+    const lng = parseFloat(params.get('lng') ?? '')
+    const sel = params.get('sel')
+    if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+      setGoto([lat, lng])
+      if (sel) setSelectedID(sel)
+      setParams({}, { replace: true }) // limpia la URL para no re-disparar al navegar
+    }
+  }, [params, setParams])
 
   function focusFont(f: FontSummary) {
     setGoto([f.latitude, f.longitude])

@@ -109,6 +109,7 @@ const ca: Dict = {
   'reset.password': 'Nova contrasenya (mín. 8)',
   'reset.submit': 'Desa la contrasenya',
   'reset.done': 'Contrasenya actualitzada. Ja pots entrar.',
+  'detail.viewOnMap': 'Veure al mapa',
   'reset.invalid': 'Enllaç no vàlid o caducat.',
   'profile.email': 'Correu',
 
@@ -269,6 +270,7 @@ const es: Dict = {
   'reset.password': 'Nueva contraseña (mín. 8)',
   'reset.submit': 'Guardar contraseña',
   'reset.done': 'Contraseña actualizada. Ya puedes entrar.',
+  'detail.viewOnMap': 'Ver en el mapa',
   'reset.invalid': 'Enlace no válido o caducado.',
   'profile.email': 'Correo',
 
@@ -419,6 +421,7 @@ const gl: Dict = {
   'reset.password': 'Novo contrasinal (mín. 8)',
   'reset.submit': 'Gardar contrasinal',
   'reset.done': 'Contrasinal actualizado. Xa podes entrar.',
+  'detail.viewOnMap': 'Ver no mapa',
   'reset.invalid': 'Ligazón non válida ou caducada.',
   'profile.email': 'Correo',
 
@@ -569,6 +572,7 @@ const eu: Dict = {
   'reset.password': 'Pasahitz berria (gutx. 8)',
   'reset.submit': 'Gorde pasahitza',
   'reset.done': 'Pasahitza eguneratuta. Sar zaitezke jada.',
+  'detail.viewOnMap': 'Ikusi mapan',
   'reset.invalid': 'Esteka baliogabea edo iraungita.',
   'profile.email': 'Helbidea',
 
@@ -719,6 +723,7 @@ const en: Dict = {
   'reset.password': 'New password (min. 8)',
   'reset.submit': 'Save password',
   'reset.done': 'Password updated. You can log in now.',
+  'detail.viewOnMap': 'View on map',
   'reset.invalid': 'Invalid or expired link.',
   'profile.email': 'Email',
 

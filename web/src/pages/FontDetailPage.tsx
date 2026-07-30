@@ -185,6 +185,7 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
 function LocationActions({ font }: { font: Font }) {
   const { t } = useI18n()
   const toast = useToast()
+  const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
   const coords = `${font.latitude.toFixed(6)}, ${font.longitude.toFixed(6)}`
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${font.latitude},${font.longitude}`
@@ -213,8 +214,14 @@ function LocationActions({ font }: { font: Font }) {
     }
   }
 
+  // Abre el mapa centrado en esta fuente y con su pin seleccionado (popup abierto).
+  function viewOnMap() {
+    navigate(`/?lat=${font.latitude}&lng=${font.longitude}&sel=${font.id}`)
+  }
+
   return (
     <div className="loc-actions">
+      <button type="button" className="loc-btn primary" onClick={viewOnMap}>📍 {t('detail.viewOnMap')}</button>
       <a className="loc-btn" href={mapsUrl} target="_blank" rel="noreferrer">🧭 {t('detail.directions')}</a>
       <button type="button" className="loc-btn" onClick={copy}>
         📋 {copied ? t('detail.copied') : `${coords}`}

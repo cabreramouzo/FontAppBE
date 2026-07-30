@@ -195,6 +195,9 @@ a:hover { text-decoration: underline; }
   text-decoration: none;
 }
 .loc-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+/* Acción principal (Ver en el mapa): resaltada en color de acento. */
+.loc-btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+.loc-btn.primary:hover { color: var(--accent-fg); opacity: 0.9; }
 
 /* Formulario de incidencia */
 .report-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
