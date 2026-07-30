@@ -8,7 +8,7 @@ export function LegalPage() {
   return (
     <div className="pad legal">
       <Link to="/">{t('detail.backMap')}</Link>
-      {lang === 'ca' ? <LegalCA /> : <LegalES />}
+      {lang === 'ca' ? <LegalCA /> : lang === 'en' ? <LegalEN /> : <LegalES />}
     </div>
   )
 }
@@ -106,6 +106,55 @@ function LegalES() {
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>,
         © colaboradores de OpenStreetMap, bajo licencia{' '}
         <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
+      </p>
+    </>
+  )
+}
+
+function LegalEN() {
+  return (
+    <>
+      <h1>Legal notice & privacy</h1>
+      <p className="stale-warn">
+        ⚠️ Starter template — review it and fill in the fields in [brackets] before publishing. This is not legal advice.
+      </p>
+
+      <h2>Legal notice</h2>
+      <p>
+        Owner of this site: <strong>[name or entity]</strong>. Contact:{' '}
+        <strong>[contact email]</strong>. Using the service implies acceptance of these terms.
+        Content published by users (fountains, reviews, photos, issues) is the responsibility of whoever posts it.
+      </p>
+
+      <h2>Privacy (GDPR)</h2>
+      <p><strong>Data controller:</strong> [name/entity], [contact email].</p>
+      <p><strong>What data we process:</strong></p>
+      <ul>
+        <li>Your <strong>username and name</strong>, and your <strong>password</strong> (stored hashed with bcrypt, never in clear text).</li>
+        <li>The <strong>content you publish</strong>: fountains, reviews, ratings, photos and issues.</li>
+        <li>Your <strong>location</strong> is only used, if you allow it, to show you nearby fountains; it is <strong>not stored</strong> on the server.</li>
+      </ul>
+      <p>
+        <strong>Purpose and legal basis:</strong> to provide the service you request (performance) and the consent you give when signing up.
+        <strong> Retention:</strong> as long as you keep your account.
+      </p>
+      <p>
+        <strong>Your rights:</strong> access, rectification, erasure, portability, restriction and objection.
+        You can <strong>delete your account</strong> from within the app (it removes your data), or write to [contact email].
+        You may also complain to your data protection authority.
+      </p>
+      <p>
+        <strong>Storage in your browser:</strong> we only keep a <em>session token</em> in <code>localStorage</code>,
+        needed to keep you signed in. We use no tracking cookies or third-party analytics, so no consent banner is required.
+      </p>
+      <p><strong>Hosting:</strong> data is processed at [hosting provider / region].</p>
+
+      <h2>Map data</h2>
+      <p>
+        The base map and fountain data come from{' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>,
+        © OpenStreetMap contributors, under the{' '}
+        <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a> licence.
       </p>
     </>
   )

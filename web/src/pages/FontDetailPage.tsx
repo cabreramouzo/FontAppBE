@@ -174,6 +174,33 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
   )
 }
 
+// Acciones de ubicación: abrir en Google Maps ("cómo llegar") y copiar coordenadas.
+function LocationActions({ lat, long }: { lat: number; long: number }) {
+  const { t } = useI18n()
+  const [copied, setCopied] = useState(false)
+  const coords = `${lat.toFixed(6)}, ${long.toFixed(6)}`
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${long}`
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(coords)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // navegadores sin permiso de portapapeles: no hacemos nada
+    }
+  }
+
+  return (
+    <div className="loc-actions">
+      <a className="loc-btn" href={mapsUrl} target="_blank" rel="noreferrer">🧭 {t('detail.directions')}</a>
+      <button type="button" className="loc-btn" onClick={copy}>
+        📋 {copied ? t('detail.copied') : `${coords}`}
+      </button>
+    </div>
+  )
+}
+
 function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => void; onCancel: () => void }) {
   const { t } = useI18n()
   const [name, setName] = useState(font.name)
@@ -332,7 +359,7 @@ export function FontDetailPage() {
             )
           })()}
           {font.image && <img className="font-img" src={assetUrl(font.image)} alt={font.name} />}
-          <p className="muted">Lat {font.latitude.toFixed(4)}, Long {font.longitude.toFixed(4)}</p>
+          <LocationActions lat={font.latitude} long={font.longitude} />
           {avg != null && (
             <p className="avg"><StarRating value={avg} size={18} /> {avg.toFixed(1)} ({rated.length})</p>
           )}

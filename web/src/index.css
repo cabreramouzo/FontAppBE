@@ -130,6 +130,22 @@ a:hover { text-decoration: underline; }
 
 /* Detalle */
 .detail h1 { margin: 12px 0 4px; }
+/* Acciones de ubicación (cómo llegar / copiar coordenadas). */
+.loc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.loc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.loc-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 .font-img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
 .list { list-style: none; padding: 0; margin: 8px 0; }
 .list li { padding: 6px 0; border-bottom: 1px solid var(--border); }

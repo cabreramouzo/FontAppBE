@@ -2,14 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { dictionaries, type Lang } from './dictionaries'
 
 const LANG_KEY = 'fontapp_lang'
-const SUPPORTED: Lang[] = ['ca', 'es']
+const SUPPORTED: Lang[] = ['ca', 'es', 'gl', 'eu', 'en']
 
 // Idioma inicial: elección guardada → idioma del navegador → catalán por defecto.
 function detectLang(): Lang {
   const saved = localStorage.getItem(LANG_KEY) as Lang | null
   if (saved && SUPPORTED.includes(saved)) return saved
-  const nav = navigator.language?.slice(0, 2).toLowerCase()
-  return nav === 'es' ? 'es' : 'ca'
+  const nav = navigator.language?.slice(0, 2).toLowerCase() as Lang | undefined
+  return nav && SUPPORTED.includes(nav) ? nav : 'ca'
 }
 
 type TParams = Record<string, string | number>
