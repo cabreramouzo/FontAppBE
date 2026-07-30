@@ -146,7 +146,18 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
 }
 
 // Lista de fuentes cercanas, ordenadas por distancia, con estado y frescura.
-function NearbyPanel({ pos, onClose }: { pos: [number, number]; onClose: () => void }) {
+// Tocar una fila la enfoca en el mapa (pin); la flecha → abre el detalle.
+function NearbyPanel({
+  pos,
+  onClose,
+  onFocus,
+  selectedID,
+}: {
+  pos: [number, number]
+  onClose: () => void
+  onFocus: (f: FontSummary) => void
+  selectedID: string | null
+}) {
   const [items, setItems] = useState<FontSummary[] | null>(null)
 
   useEffect(() => {
@@ -167,14 +178,15 @@ function NearbyPanel({ pos, onClose }: { pos: [number, number]; onClose: () => v
           const ws = waterStatusInfo(f.lastWaterStatus)
           const dist = haversineKm(pos[0], pos[1], f.latitude, f.longitude)
           return (
-            <li key={f.id}>
-              <Link to={`/fonts/${f.id}`}>
+            <li key={f.id} className={'nearby-row' + (f.id === selectedID ? ' selected' : '')}>
+              <button className="nearby-focus" onClick={() => onFocus(f)}>
                 <span className="nearby-name">{f.name}</span>
                 <span className="nearby-meta muted">
                   {ws && <span title={ws.label}>{ws.emoji}</span>} {formatDist(dist)}
                   {f.lastUpdate && ` · ${timeAgo(f.lastUpdate)}`}
                 </span>
-              </Link>
+              </button>
+              <Link className="nearby-go" to={`/fonts/${f.id}`} aria-label={`Ver detalle de ${f.name}`}>→</Link>
             </li>
           )
         })}
@@ -207,6 +219,12 @@ export function MapPage() {
   const [onlyWithWater, setOnlyWithWater] = useState(false)
   const [showNonPotable, setShowNonPotable] = useState(false)
   const [showNearby, setShowNearby] = useState(false)
+  const [selectedID, setSelectedID] = useState<string | null>(null)
+
+  function focusFont(f: FontSummary) {
+    setGoto([f.latitude, f.longitude])
+    setSelectedID(f.id ?? null)
+  }
 
   function cancel() {
     setPlacing(false)
@@ -261,7 +279,9 @@ export function MapPage() {
 
       <MapLegend />
 
-      {showNearby && me && <NearbyPanel pos={me} onClose={() => setShowNearby(false)} />}
+      {showNearby && me && (
+        <NearbyPanel pos={me} onClose={() => setShowNearby(false)} onFocus={focusFont} selectedID={selectedID} />
+      )}
 
       {user && !placing && (
         <button className="fab" onClick={() => { setPlacing(true); setPos(null) }}>

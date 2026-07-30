@@ -301,15 +301,41 @@ select {
   border-bottom: 1px solid var(--border);
 }
 .nearby-list { list-style: none; margin: 0; padding: 4px; overflow-y: auto; }
-.nearby-list li a {
+.nearby-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  border-radius: 6px;
+}
+.nearby-row.selected { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+/* Zona principal de la fila: enfoca la fuente en el mapa. */
+.nearby-focus {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   padding: 8px;
+  background: none;
+  border: none;
   border-radius: 6px;
   color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+}
+.nearby-focus:hover { background: var(--border); }
+/* Flecha a la derecha: va al detalle. */
+.nearby-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 20px;
   text-decoration: none;
 }
-.nearby-list li a:hover { background: var(--border); }
+.nearby-go:hover { background: var(--border); text-decoration: none; }
 .nearby-name { font-weight: 600; }
 .nearby-meta { font-size: 13px; }
 
