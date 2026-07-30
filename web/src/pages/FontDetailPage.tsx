@@ -23,6 +23,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
+import HideImageIcon from '@mui/icons-material/HideImageOutlined'
 import type { CommentResponse, Drinkable, Font, ReportResponse, WaterSource } from '../api/types'
 import {
   apiFetch,
@@ -105,6 +106,17 @@ function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: Commen
     }
   }
 
+  // Quita solo la foto de la reseña (conserva texto/valoración/estado).
+  async function removePhoto() {
+    if (!confirm(t('image.confirmRemove'))) return
+    try {
+      await updateComment(c.fontID, c.id, { body: c.body, rating: c.rating ?? undefined, waterStatus: c.waterStatus ?? undefined, image: undefined })
+      onChanged()
+    } catch (e) {
+      setError(describeError(e, t))
+    }
+  }
+
   if (editing) {
     return (
       <Paper variant="outlined" component="form" onSubmit={save} sx={{ p: 2, my: 1, borderRadius: 2 }}>
@@ -131,7 +143,16 @@ function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: Commen
       </Stack>
       {c.rating != null && <StarRating value={c.rating} size={18} />}
       <Typography sx={{ my: 0.5 }}>{c.body}</Typography>
-      {c.image && <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />}
+      {c.image && (
+        <Box>
+          <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />
+          {canManage && (
+            <Box>
+              <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={removePhoto}>{t('image.remove')}</Button>
+            </Box>
+          )}
+        </Box>
+      )}
       {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
       {(canManage || canFlag) && (
         <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
@@ -340,6 +361,25 @@ export function FontDetailPage() {
     }
   }
 
+  // Quita solo la foto de la fuente (conserva el resto de datos).
+  async function removeFontPhoto() {
+    if (!font || !confirm(t('image.confirmRemove'))) return
+    try {
+      await updateFont(font.id, {
+        name: font.name,
+        latitude: font.latitude,
+        longitude: font.longitude,
+        description: font.description ?? undefined,
+        source: font.source ?? undefined,
+        drinkable: font.drinkable ?? undefined,
+        image: undefined,
+      })
+      load()
+    } catch (e) {
+      setError(describeError(e, t))
+    }
+  }
+
   async function removeReport(reportID: string) {
     if (!id || !confirm(t('detail.confirmDeleteIncident'))) return
     try {
@@ -402,7 +442,16 @@ export function FontDetailPage() {
               </Stack>
             )
           })()}
-          {font.image && <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={font.name} />}
+          {font.image && (
+            <Box>
+              <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={font.name} />
+              {user && (user.isAdmin || font.creator?.id === user.id) && (
+                <Box>
+                  <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={removeFontPhoto}>{t('image.remove')}</Button>
+                </Box>
+              )}
+            </Box>
+          )}
           <LocationActions font={font} />
           {avg != null && (
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><StarRating value={avg} size={20} /> <Typography>{avg.toFixed(1)} ({rated.length})</Typography></Stack>
