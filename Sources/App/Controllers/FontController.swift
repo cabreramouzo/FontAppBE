@@ -55,6 +55,7 @@ struct FontController: RouteCollection {
     @Sendable func update(req: Request) async throws -> Font {
         try CreateFontDTO.validate(content: req)
         let font = try await find(req)
+        try requireCanManage(req, font: font)
         let dto = try req.content.decode(CreateFontDTO.self)
         let oldImage = font.image
         font.name = dto.name
@@ -71,6 +72,7 @@ struct FontController: RouteCollection {
 
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
         let font = try await find(req)
+        try requireCanManage(req, font: font)
         // Limpia las imágenes asociadas (de la fuente y de sus reseñas) antes de borrar.
         if let image = font.image { try? await req.imageStorage.delete(image) }
         let commentImages = try await FontComment.query(on: req.db)
@@ -134,6 +136,15 @@ struct FontController: RouteCollection {
             throw Abort(.notFound)
         }
         return font
+    }
+
+    /// Editar/borrar una fuente: solo su creador o un admin. Las importadas de OSM
+    /// (sin creador) quedan protegidas: únicamente un admin puede tocarlas.
+    private func requireCanManage(_ req: Request, font: Font) throws {
+        let user = try req.auth.require(User.self)
+        guard user.isAdmin || (font.$creator.id != nil && font.$creator.id == user.id) else {
+            throw Abort(.forbidden, reason: "Solo el creador o un administrador puede modificar esta fuente")
+        }
     }
 }
 

@@ -22,12 +22,14 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
+import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
 import type { CommentResponse, Drinkable, Font, ReportResponse, WaterSource } from '../api/types'
 import {
   apiFetch,
   assetUrl,
   confirmComment,
   createComment,
+  createFlag,
   createReport,
   deleteComment,
   deleteFont,
@@ -62,8 +64,9 @@ function StatusSelect({ value, onChange, label }: { value: string; onChange: (v:
   )
 }
 
-function ReviewCard({ c, highlight, canManage, onChanged }: { c: CommentResponse; highlight?: boolean; canManage: boolean; onChanged: () => void }) {
+function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: CommentResponse; highlight?: boolean; canManage: boolean; canFlag: boolean; onChanged: () => void }) {
   const { t } = useI18n()
+  const toast = useToast()
   const [editing, setEditing] = useState(false)
   const [body, setBody] = useState(c.body)
   const [rating, setRating] = useState(c.rating ?? 0)
@@ -87,6 +90,16 @@ function ReviewCard({ c, highlight, canManage, onChanged }: { c: CommentResponse
     try {
       await deleteComment(c.fontID, c.id)
       onChanged()
+    } catch (e) {
+      setError(describeError(e, t))
+    }
+  }
+
+  async function flag() {
+    if (!confirm(t('flag.confirm'))) return
+    try {
+      await createFlag('comment', c.id)
+      toast.show(t('flag.done'))
     } catch (e) {
       setError(describeError(e, t))
     }
@@ -120,10 +133,11 @@ function ReviewCard({ c, highlight, canManage, onChanged }: { c: CommentResponse
       <Typography sx={{ my: 0.5 }}>{c.body}</Typography>
       {c.image && <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />}
       {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
-      {canManage && (
+      {(canManage || canFlag) && (
         <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
-          <Button size="small" startIcon={<EditIcon />} onClick={() => setEditing(true)}>{t('detail.edit')}</Button>
-          <Button size="small" color="error" startIcon={<DeleteOutlineIcon />} onClick={remove}>{t('detail.delete')}</Button>
+          {canManage && <Button size="small" startIcon={<EditIcon />} onClick={() => setEditing(true)}>{t('detail.edit')}</Button>}
+          {canManage && <Button size="small" color="error" startIcon={<DeleteOutlineIcon />} onClick={remove}>{t('detail.delete')}</Button>}
+          {canFlag && <Button size="small" color="inherit" startIcon={<OutlinedFlagIcon />} onClick={flag}>{t('flag.report')}</Button>}
         </Stack>
       )}
     </Paper>
@@ -364,7 +378,7 @@ export function FontDetailPage() {
 
       <Stack direction="row" sx={{ my: 1, justifyContent: "space-between", alignItems: "center", gap: 1 }}>
         <Typography variant="h4" sx={{ fontWeight: 800 }}>{font.name}</Typography>
-        {user && !editing && (
+        {user && !editing && (user.isAdmin || font.creator?.id === user.id) && (
           <Box>
             <IconButton size="small" onClick={() => setEditing(true)} aria-label={t('detail.edit')}><EditIcon /></IconButton>
             <IconButton size="small" color="error" onClick={removeFont} aria-label={t('detail.delete')}><DeleteOutlineIcon /></IconButton>
@@ -407,7 +421,7 @@ export function FontDetailPage() {
               const freshAt = latest.lastConfirmedAt ?? latest.createdAt
               return freshAt && isStale(freshAt) ? <Alert severity="warning" sx={{ my: 1 }}>{t('detail.stale', { when: timeAgo(freshAt, t) })}</Alert> : null
             })()}
-            <ReviewCard c={latest} highlight canManage={user?.id === latest.userID} onChanged={load} />
+            <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} onChanged={load} />
             {latest.waterStatus && (
               <Box sx={{ my: 1.5 }}>
                 {user ? (
@@ -443,7 +457,7 @@ export function FontDetailPage() {
           <>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
             {rest.map((c) => (
-              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID} onChanged={load} />
+              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} onChanged={load} />
             ))}
           </>
         )}
@@ -454,7 +468,7 @@ export function FontDetailPage() {
         {reports.length === 0 && <Typography color="text.secondary">{t('detail.noIncidents')}</Typography>}
         <List disablePadding>
           {reports.map((r) => (
-            <ListItem key={r.id} divider disableGutters secondaryAction={user?.id === r.userID ? (
+            <ListItem key={r.id} divider disableGutters secondaryAction={(user?.id === r.userID || user?.isAdmin) ? (
               <IconButton edge="end" size="small" color="error" onClick={() => removeReport(r.id)} aria-label={t('detail.delete')}><DeleteOutlineIcon fontSize="small" /></IconButton>
             ) : undefined}>
               <Typography variant="body2"><strong>{r.username ?? t('review.anon')}:</strong> {r.message}</Typography>

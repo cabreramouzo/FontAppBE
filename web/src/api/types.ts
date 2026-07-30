@@ -12,6 +12,7 @@ export interface Font {
   description: string | null
   source: WaterSource | null
   drinkable: Drinkable | null
+  creator?: { id: string | null }
   createdAt: string
 }
 
@@ -20,6 +21,16 @@ export interface UserResponse {
   name: string
   username: string
   email?: string | null
+  isAdmin?: boolean | null
+}
+
+export interface Flag {
+  id: string
+  flaggerName: string | null
+  targetType: 'comment' | 'font'
+  targetID: string
+  reason: string | null
+  createdAt: string
 }
 
 export interface LoginResponse {

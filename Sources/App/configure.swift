@@ -44,6 +44,10 @@ public func configure(_ app: Application) async throws {
     // Hashing de contraseñas.
     app.passwords.use(.bcrypt)
 
+    // Límite de tamaño de cuerpo por defecto (JSON pequeño). La subida de imágenes
+    // sube su propio límite a 8 MB en su ruta.
+    app.routes.defaultMaxBodySize = "256kb"
+
     // CORS. En dev se permite cualquier origen; en producción se restringe a
     // WEB_ORIGIN (uno o varios dominios separados por comas).
     let allowedOrigin: CORSMiddleware.AllowOriginSetting
@@ -88,11 +92,19 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateFontComment())     // referencia a fonts + users
     app.migrations.add(CreateFontConfirmation()) // referencia a font_comments + users
     app.migrations.add(CreatePasswordReset())   // referencia a users
+    app.migrations.add(CreateContentFlag())     // referencia a users
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
     if Environment.get("AUTO_MIGRATE") == "true" {
         try await app.autoMigrate()
+    }
+
+    // Limpieza periódica de tokens de sesión caducados (cada 6 h). En memoria/sin deps.
+    app.eventLoopGroup.next().scheduleRepeatedTask(initialDelay: .minutes(10), delay: .hours(6)) { _ in
+        Task {
+            try? await UserToken.query(on: app.db).filter(\.$expiresAt < Date()).delete()
+        }
     }
 
     // Comandos CLI.

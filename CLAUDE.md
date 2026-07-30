@@ -50,7 +50,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - `R2ImageStorage` (Soto) compila pero **sin probar** contra un bucket real (necesita credenciales `R2_*`); en local usa disco.
 - Correo (`MailSender`): en dev `LogMailSender` (solo loguea); en prod `ResendMailSender` si hay `RESEND_API_KEY` + `MAIL_FROM` (requiere dominio propio con SPF/DKIM/DMARC). Sin probar contra Resend real.
 - Compresión de imágenes: en el cliente (canvas). El borrado del fichero al eliminar fuente/reseña es best-effort (`try?`).
-- Sin rate-limit en `/auth/login` ni limpieza de tokens caducados.
+- Moderación básica: rol `is_admin` (borra contenido de cualquiera; edita/borra fuentes solo creador o admin),
+  denuncias de contenido (`content_flags`) con vista de moderación en el perfil del admin.
+- Rate-limit en `/auth/*` (en memoria, por IP) y limpieza periódica de tokens caducados (cada 6 h).
+  A escala multi-instancia el rate-limit debería ir a Redis.
 
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).

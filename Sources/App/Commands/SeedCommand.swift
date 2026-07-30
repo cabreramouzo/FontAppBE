@@ -64,12 +64,14 @@ struct SeedCommand: AsyncCommand {
             if let existing = try await User.query(on: db).filter(\.$username == username).first() {
                 users.append(existing)
             } else {
-                let user = User(name: name, username: username, passwordHash: try Bcrypt.hash("demo12345"))
+                // xavi123 es admin en la demo (para probar moderación).
+                let user = User(name: name, username: username, email: "\(username)@example.com",
+                                passwordHash: try Bcrypt.hash("demo12345"), isAdmin: username == "xavi123")
                 try await user.save(on: db)
                 users.append(user)
             }
         }
-        console.info("Usuarios demo: \(users.count) (contraseña: demo12345).")
+        console.info("Usuarios demo: \(users.count) (contraseña: demo12345; admin: xavi123).")
 
         let sql = db as? SQLDatabase
         var reviews = 0

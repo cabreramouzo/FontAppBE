@@ -12,16 +12,19 @@ final class User: Model, @unchecked Sendable {
     // Nullable: los usuarios previos (demo) no tienen; los nuevos sí (validado). Único.
     @OptionalField(key: "email") var email: String?
     @Field(key: "password_hash") var passwordHash: String
+    // Moderación: los admin pueden borrar contenido de cualquiera y ver los flags.
+    @Field(key: "is_admin") var isAdmin: Bool
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
 
-    init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String) {
+    init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, isAdmin: Bool = false) {
         self.id = id
         self.name = name
         self.username = username
         self.email = email
         self.passwordHash = passwordHash
+        self.isAdmin = isAdmin
     }
 }
 
@@ -55,11 +58,14 @@ struct UserResponse: Content {
     let name: String
     let username: String
     let email: String?
+    let isAdmin: Bool?
 
     init(_ user: User, includeEmail: Bool = false) {
         self.id = user.id
         self.name = user.name
         self.username = user.username
         self.email = includeEmail ? user.email : nil
+        // Solo se expone en respuestas propias (junto al email).
+        self.isAdmin = includeEmail ? user.isAdmin : nil
     }
 }

@@ -15,5 +15,6 @@ func routes(_ app: Application) throws {
     try app.register(collection: FontController())
     try app.register(collection: FontReportController())
     try app.register(collection: FontCommentController())
+    try app.register(collection: FlagController())
     try app.register(collection: ImageController())
 }

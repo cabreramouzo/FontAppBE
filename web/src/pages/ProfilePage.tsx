@@ -10,9 +10,10 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
+import IconButton from '@mui/material/IconButton'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
-import type { Font, MyComment } from '../api/types'
-import { deleteAccount, describeError, getMyComments, getMyFonts } from '../api/client'
+import type { Flag, Font, MyComment } from '../api/types'
+import { deleteAccount, describeError, dismissFlag, getFlags, getMyComments, getMyFonts } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -25,6 +26,7 @@ export function ProfilePage() {
   const navigate = useNavigate()
   const [fonts, setFonts] = useState<Font[] | null>(null)
   const [comments, setComments] = useState<MyComment[] | null>(null)
+  const [flags, setFlags] = useState<Flag[] | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -35,7 +37,13 @@ export function ProfilePage() {
     }
     getMyFonts().then(setFonts).catch(() => setFonts([]))
     getMyComments().then(setComments).catch(() => setComments([]))
+    if (user.isAdmin) getFlags().then(setFlags).catch(() => setFlags([]))
   }, [user, loading, navigate])
+
+  async function removeFlag(id: string) {
+    await dismissFlag(id).catch(() => {})
+    setFlags((fs) => fs?.filter((f) => f.id !== id) ?? null)
+  }
 
   async function removeAccount() {
     if (!user || !confirm(t('profile.confirmDelete'))) return
@@ -100,6 +108,40 @@ export function ProfilePage() {
           })}
         </List>
       </Box>
+
+      {user.isAdmin && (
+        <Box component="section" sx={{ mt: 3 }}>
+          <Typography variant="h6" gutterBottom>🛡️ {t('admin.flags')}</Typography>
+          {flags === null && <Skeleton lines={2} />}
+          {flags?.length === 0 && <Typography color="text.secondary">{t('admin.noFlags')}</Typography>}
+          <List disablePadding>
+            {flags?.map((fl) => (
+              <ListItem
+                key={fl.id}
+                divider
+                disableGutters
+                secondaryAction={
+                  <IconButton edge="end" size="small" onClick={() => removeFlag(fl.id)} aria-label={t('admin.dismiss')} title={t('admin.dismiss')}>
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                }
+              >
+                <ListItemText
+                  primary={
+                    <>
+                      <Chip size="small" label={fl.targetType} sx={{ mr: 1 }} />
+                      {fl.targetType === 'font'
+                        ? <Link component={RouterLink} to={`/fonts/${fl.targetID}`}>{t('admin.viewTarget')}</Link>
+                        : <Typography component="span" variant="body2" color="text.secondary">{fl.targetID}</Typography>}
+                    </>
+                  }
+                  secondary={`${fl.reason ?? ''} · ${fl.flaggerName ?? '—'} · ${fl.createdAt ? timeAgo(fl.createdAt, t) : ''}`}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
     </Box>
   )
 }

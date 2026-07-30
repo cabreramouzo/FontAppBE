@@ -1,4 +1,5 @@
 import Fluent
+import SQLKit
 
 struct CreateUser: AsyncMigration {
     func prepare(on database: Database) async throws {
@@ -11,6 +12,7 @@ struct CreateUser: AsyncMigration {
             .field("email", .string)
             .unique(on: "email")
             .field("password_hash", .string, .required)
+            .field("is_admin", .bool, .required, .sql(.default(false)))
             .field("created_at", .datetime)
             .create()
     }
