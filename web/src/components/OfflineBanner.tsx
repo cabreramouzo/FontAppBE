@@ -18,5 +18,9 @@ export function OfflineBanner() {
   }, [])
 
   if (!offline) return null
-  return <div className="offline-banner">📴 {t('offline.banner')}</div>
+  return (
+    <div className="offline-pill" role="status" aria-live="polite">
+      <span className="offline-dot" /> {t('offline.banner')}
+    </div>
+  )
 }
