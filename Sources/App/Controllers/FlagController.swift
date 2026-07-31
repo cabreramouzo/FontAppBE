@@ -26,11 +26,32 @@ struct FlagController: RouteCollection {
     }
 
     /// GET /flags — lista de denuncias abiertas (solo admins), más recientes primero.
+    /// Incluye el texto/foto del contenido denunciado para revisarlo sin salir.
     @Sendable func index(req: Request) async throws -> [FlagResponse] {
         try requireAdmin(req)
         let flags = try await ContentFlag.query(on: req.db).sort(\.$createdAt, .descending).all()
         let names = try await User.usernames(for: flags.compactMap { $0.$flagger.id }, on: req.db)
-        return flags.map { FlagResponse($0, flaggerName: $0.$flagger.id.flatMap { names[$0] }) }
+
+        // Contenido de los objetivos (una query por tipo, sin N+1).
+        let commentIDs = flags.filter { $0.targetType == "comment" }.map { $0.targetID }
+        let fontIDs = flags.filter { $0.targetType == "font" }.map { $0.targetID }
+        let comments = commentIDs.isEmpty ? [] : try await FontComment.query(on: req.db).filter(\.$id ~~ commentIDs).all()
+        let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: req.db).filter(\.$id ~~ fontIDs).all()
+        let commentByID = Dictionary(uniqueKeysWithValues: comments.compactMap { c in c.id.map { ($0, c) } })
+        let fontByID = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f) } })
+
+        return flags.map { flag in
+            let text: String?
+            let image: String?
+            if flag.targetType == "comment", let c = commentByID[flag.targetID] {
+                text = c.body; image = c.image
+            } else if flag.targetType == "font", let f = fontByID[flag.targetID] {
+                text = f.name; image = f.image
+            } else {
+                text = nil; image = nil // contenido ya borrado
+            }
+            return FlagResponse(flag, flaggerName: flag.$flagger.id.flatMap { names[$0] }, targetText: text, targetImage: image)
+        }
     }
 
     /// DELETE /flags/:flagID — descarta una denuncia ya revisada (solo admins).
@@ -71,8 +92,11 @@ struct FlagResponse: Content {
     let fontID: UUID?
     let reason: String?
     let createdAt: Date?
+    /// Texto (cuerpo de la reseña o nombre de la fuente) y foto del contenido denunciado.
+    let targetText: String?
+    let targetImage: String?
 
-    init(_ flag: ContentFlag, flaggerName: String?) {
+    init(_ flag: ContentFlag, flaggerName: String?, targetText: String? = nil, targetImage: String? = nil) {
         self.id = flag.id
         self.flaggerName = flaggerName
         self.targetType = flag.targetType
@@ -80,5 +104,7 @@ struct FlagResponse: Content {
         self.fontID = flag.fontID
         self.reason = flag.reason
         self.createdAt = flag.createdAt
+        self.targetText = targetText
+        self.targetImage = targetImage
     }
 }

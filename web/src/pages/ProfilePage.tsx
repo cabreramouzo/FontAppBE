@@ -13,7 +13,7 @@ import ListItemText from '@mui/material/ListItemText'
 import IconButton from '@mui/material/IconButton'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Flag, Font, MyComment } from '../api/types'
-import { deleteAccount, describeError, dismissFlag, getFlags, getMyComments, getMyFonts } from '../api/client'
+import { assetUrl, deleteAccount, describeError, dismissFlag, getFlags, getMyComments, getMyFonts } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -127,15 +127,21 @@ export function ProfilePage() {
                 }
               >
                 <ListItemText
+                  slotProps={{ primary: { component: 'div' } }}
                   primary={
-                    <>
-                      <Chip size="small" label={fl.targetType} sx={{ mr: 1 }} />
-                      {(fl.fontID ?? (fl.targetType === 'font' ? fl.targetID : null))
-                        ? <Link component={RouterLink} to={`/fonts/${fl.fontID ?? fl.targetID}`}>{t('admin.viewTarget')}</Link>
-                        : <Typography component="span" variant="body2" color="text.secondary">{fl.targetID}</Typography>}
-                    </>
+                    <Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip size="small" label={fl.targetType} />
+                        <Typography component="span" variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all', color: 'text.secondary' }}>{fl.targetID}</Typography>
+                        {(fl.fontID ?? (fl.targetType === 'font' ? fl.targetID : null)) && (
+                          <Link component={RouterLink} to={`/fonts/${fl.fontID ?? fl.targetID}`}>{t('admin.viewTarget')}</Link>
+                        )}
+                      </Box>
+                      {fl.targetText != null && <Typography variant="body2" sx={{ mt: 0.5 }}>“{fl.targetText}”</Typography>}
+                      {fl.targetImage && <Box component="img" src={assetUrl(fl.targetImage)} alt="" sx={{ maxHeight: 90, borderRadius: 1, mt: 0.5, display: 'block' }} />}
+                      <Typography variant="caption" color="text.secondary">{`${fl.reason ?? ''} · ${fl.flaggerName ?? '—'} · ${fl.createdAt ? timeAgo(fl.createdAt, t) : ''}`}</Typography>
+                    </Box>
                   }
-                  secondary={`${fl.reason ?? ''} · ${fl.flaggerName ?? '—'} · ${fl.createdAt ? timeAgo(fl.createdAt, t) : ''}`}
                 />
               </ListItem>
             ))}

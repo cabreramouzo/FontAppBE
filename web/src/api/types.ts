@@ -32,6 +32,8 @@ export interface Flag {
   fontID: string | null
   reason: string | null
   createdAt: string
+  targetText: string | null
+  targetImage: string | null
 }
 
 export interface LoginResponse {
