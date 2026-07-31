@@ -10,16 +10,19 @@ final class ContentFlag: Model, @unchecked Sendable {
     @OptionalParent(key: "flagger_id") var flagger: User?
     @Field(key: "target_type") var targetType: String // "comment" | "font"
     @Field(key: "target_id") var targetID: UUID
+    // Fuente a la que pertenece el contenido (para enlazar desde moderación).
+    @OptionalField(key: "font_id") var fontID: UUID?
     @OptionalField(key: "reason") var reason: String?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
 
-    init(id: UUID? = nil, flaggerID: UUID?, targetType: String, targetID: UUID, reason: String? = nil) {
+    init(id: UUID? = nil, flaggerID: UUID?, targetType: String, targetID: UUID, fontID: UUID? = nil, reason: String? = nil) {
         self.id = id
         self.$flagger.id = flaggerID
         self.targetType = targetType
         self.targetID = targetID
+        self.fontID = fontID
         self.reason = reason
     }
 }

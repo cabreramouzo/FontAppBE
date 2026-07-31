@@ -99,7 +99,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: Commen
   async function flag() {
     if (!confirm(t('flag.confirm'))) return
     try {
-      await createFlag('comment', c.id)
+      await createFlag('comment', c.id, c.fontID)
       toast.show(t('flag.done'))
     } catch (e) {
       setError(describeError(e, t))

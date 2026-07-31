@@ -130,8 +130,8 @@ export function ProfilePage() {
                   primary={
                     <>
                       <Chip size="small" label={fl.targetType} sx={{ mr: 1 }} />
-                      {fl.targetType === 'font'
-                        ? <Link component={RouterLink} to={`/fonts/${fl.targetID}`}>{t('admin.viewTarget')}</Link>
+                      {(fl.fontID ?? (fl.targetType === 'font' ? fl.targetID : null))
+                        ? <Link component={RouterLink} to={`/fonts/${fl.fontID ?? fl.targetID}`}>{t('admin.viewTarget')}</Link>
                         : <Typography component="span" variant="body2" color="text.secondary">{fl.targetID}</Typography>}
                     </>
                   }

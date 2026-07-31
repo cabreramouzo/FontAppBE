@@ -20,7 +20,7 @@ struct FlagController: RouteCollection {
         let user = try req.auth.require(User.self)
         try CreateFlagDTO.validate(content: req)
         let dto = try req.content.decode(CreateFlagDTO.self)
-        let flag = ContentFlag(flaggerID: try user.requireID(), targetType: dto.targetType, targetID: dto.targetID, reason: dto.reason)
+        let flag = ContentFlag(flaggerID: try user.requireID(), targetType: dto.targetType, targetID: dto.targetID, fontID: dto.fontID, reason: dto.reason)
         try await flag.save(on: req.db)
         return Response(status: .created)
     }
@@ -52,6 +52,7 @@ struct FlagController: RouteCollection {
 struct CreateFlagDTO: Content {
     let targetType: String
     let targetID: UUID
+    let fontID: UUID?
     let reason: String?
 }
 
@@ -67,6 +68,7 @@ struct FlagResponse: Content {
     let flaggerName: String?
     let targetType: String
     let targetID: UUID
+    let fontID: UUID?
     let reason: String?
     let createdAt: Date?
 
@@ -75,6 +77,7 @@ struct FlagResponse: Content {
         self.flaggerName = flaggerName
         self.targetType = flag.targetType
         self.targetID = flag.targetID
+        self.fontID = flag.fontID
         self.reason = flag.reason
         self.createdAt = flag.createdAt
     }

@@ -173,8 +173,8 @@ export async function resetPassword(token: string, password: string): Promise<vo
 }
 
 // Moderación: denunciar contenido; listar/descartar denuncias (admin).
-export async function createFlag(targetType: 'comment' | 'font', targetID: string, reason?: string): Promise<void> {
-  await apiFetch('/flags', { method: 'POST', body: JSON.stringify({ targetType, targetID, reason }) })
+export async function createFlag(targetType: 'comment' | 'font', targetID: string, fontID?: string, reason?: string): Promise<void> {
+  await apiFetch('/flags', { method: 'POST', body: JSON.stringify({ targetType, targetID, fontID, reason }) })
 }
 
 export async function getFlags(): Promise<Flag[]> {

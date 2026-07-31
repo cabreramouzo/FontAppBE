@@ -29,6 +29,7 @@ export interface Flag {
   flaggerName: string | null
   targetType: 'comment' | 'font'
   targetID: string
+  fontID: string | null
   reason: string | null
   createdAt: string
 }
