@@ -1,4 +1,4 @@
-import type { CommentResponse, Drinkable, Flag, Font, LoginResponse, MyComment, ReportResponse, WaterSource } from './types'
+import type { CommentResponse, Drinkable, Flag, Font, FontEdit, LoginResponse, MyComment, ReportResponse, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -183,4 +183,13 @@ export async function getFlags(): Promise<Flag[]> {
 
 export async function dismissFlag(id: string): Promise<void> {
   await apiFetch(`/flags/${id}`, { method: 'DELETE' })
+}
+
+// Historial de ediciones de información de fuentes (admin): listar y revertir.
+export async function getFontEdits(): Promise<FontEdit[]> {
+  return apiFetch<FontEdit[]>('/fonts/edits')
+}
+
+export async function revertFontEdit(editID: string): Promise<Font> {
+  return apiFetch<Font>(`/fonts/edits/${editID}/revert`, { method: 'POST' })
 }

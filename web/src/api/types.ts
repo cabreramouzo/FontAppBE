@@ -36,6 +36,23 @@ export interface Flag {
   targetImage: string | null
 }
 
+export interface FontInfoSnapshot {
+  name: string
+  description: string | null
+  source: WaterSource | null
+  drinkable: Drinkable | null
+}
+
+export interface FontEdit {
+  id: string
+  fontID: string
+  fontName: string | null
+  editorName: string | null
+  before: FontInfoSnapshot
+  after: FontInfoSnapshot
+  createdAt: string
+}
+
 export interface LoginResponse {
   token: string
   expiresAt: string | null

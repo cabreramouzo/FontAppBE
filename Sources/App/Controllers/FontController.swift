@@ -21,6 +21,10 @@ struct FontController: RouteCollection {
         // Escritura: requiere token Bearer válido.
         let protected = fonts.grouped(UserToken.authenticator(), User.guardMiddleware())
         protected.post(use: create)
+        // Historial de ediciones (moderación): solo admins. Antes de `:fontID`
+        // para que "edits" no se interprete como un id de fuente.
+        protected.get("edits", use: edits)
+        protected.post("edits", ":editID", "revert", use: revertEdit)
         protected.group(":fontID") { font in
             font.put(use: update)
             font.delete(use: destroy)
@@ -60,6 +64,7 @@ struct FontController: RouteCollection {
         // Edición abierta (estilo wiki): cualquier usuario autenticado puede corregir
         // la información descriptiva de una fuente (muchas se llaman solo "Font" o tienen
         // un nombre popular / historia local que aportar).
+        let before = FontInfoSnapshot(font)
         font.name = dto.name
         font.description = dto.description
         font.source = dto.source
@@ -76,7 +81,62 @@ struct FontController: RouteCollection {
         } else {
             try await font.save(on: req.db)
         }
+        // Deja rastro del cambio de información (historial de moderación), solo si
+        // algún campo editable cambió realmente.
+        let after = FontInfoSnapshot(font)
+        if before != after {
+            try await FontEdit(fontID: try font.requireID(), editorID: try? user.requireID(), before: before, after: after).save(on: req.db)
+        }
         return font
+    }
+
+    /// GET /fonts/edits?page=&per= — historial de ediciones de información, más
+    /// recientes primero (solo admins). Enriquecido con nombre de fuente y editor.
+    @Sendable func edits(req: Request) async throws -> [FontEditResponse] {
+        try requireAdmin(req)
+        let page = max(req.query[Int.self, at: "page"] ?? 1, 1)
+        let per = min(max(req.query[Int.self, at: "per"] ?? 50, 1), 100)
+        let edits = try await FontEdit.query(on: req.db)
+            .sort(\.$createdAt, .descending)
+            .range(((page - 1) * per)..<(page * per))
+            .all()
+        let editorNames = try await User.usernames(for: edits.compactMap { $0.$editor.id }, on: req.db)
+        let fontIDs = Array(Set(edits.map { $0.$font.id }))
+        let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: req.db).filter(\.$id ~~ fontIDs).all()
+        let fontNames = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f.name) } })
+        return edits.map { e in
+            FontEditResponse(e, editorName: e.$editor.id.flatMap { editorNames[$0] }, currentFontName: fontNames[e.$font.id])
+        }
+    }
+
+    /// POST /fonts/edits/:editID/revert — restaura la información al estado previo
+    /// a esa edición (solo admins). No borra el registro: crea uno nuevo, dejando
+    /// el propio revert en el historial.
+    @Sendable func revertEdit(req: Request) async throws -> Font {
+        let admin = try req.auth.require(User.self)
+        try requireAdmin(req)
+        guard let edit = try await FontEdit.find(req.parameters.get("editID"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        guard let font = try await Font.find(edit.$font.id, on: req.db) else {
+            throw Abort(.notFound, reason: "La fuente ya no existe")
+        }
+        let before = FontInfoSnapshot(font)
+        font.name = edit.before.name
+        font.description = edit.before.description
+        font.source = edit.before.source
+        font.drinkable = edit.before.drinkable
+        try await font.save(on: req.db)
+        let after = FontInfoSnapshot(font)
+        if before != after {
+            try await FontEdit(fontID: try font.requireID(), editorID: try? admin.requireID(), before: before, after: after).save(on: req.db)
+        }
+        return font
+    }
+
+    private func requireAdmin(_ req: Request) throws {
+        let user = try req.auth.require(User.self)
+        guard user.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
     }
 
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
@@ -177,6 +237,27 @@ extension CreateFontDTO: Validatable {
         validations.add("name", as: String.self, is: !.empty)
         validations.add("latitude", as: Double.self, is: .range(-90...90))
         validations.add("longitude", as: Double.self, is: .range(-180...180))
+    }
+}
+
+/// Una entrada del historial de ediciones para la vista de moderación.
+struct FontEditResponse: Content {
+    let id: UUID?
+    let fontID: UUID
+    let fontName: String?      // nombre actual de la fuente (para enlazar)
+    let editorName: String?    // quién editó (null si cuenta borrada)
+    let before: FontInfoSnapshot
+    let after: FontInfoSnapshot
+    let createdAt: Date?
+
+    init(_ edit: FontEdit, editorName: String?, currentFontName: String?) {
+        self.id = edit.id
+        self.fontID = edit.$font.id
+        self.fontName = currentFontName
+        self.editorName = editorName
+        self.before = edit.before
+        self.after = edit.after
+        self.createdAt = edit.createdAt
     }
 }
 
