@@ -29,6 +29,7 @@ import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import CloseIcon from '@mui/icons-material/Close'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import type { Theme } from '@mui/material/styles'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
@@ -65,7 +66,17 @@ const chipSx = (active: boolean) => ({
   borderColor: 'divider',
   boxShadow: 3,
   '& .MuiChip-icon': { color: 'inherit' },
-  '&:hover': { boxShadow: 6, bgcolor: active ? 'primary.dark' : 'background.paper' },
+  // `&&` sube la especificidad para ganar al hover translúcido por defecto del Chip;
+  // fondo OPACO (gris sólido) al pasar por encima, para que se lea bien sobre el mapa.
+  '&&:hover': {
+    boxShadow: 6,
+    backgroundColor: (theme: Theme) =>
+      active
+        ? theme.palette.primary.dark
+        : theme.palette.mode === 'dark'
+          ? theme.palette.grey[800]
+          : theme.palette.grey[200],
+  },
 })
 
 const hasWater = (f: FontSummary) => f.lastWaterStatus === 'flowing' || f.lastWaterStatus === 'trickle'
