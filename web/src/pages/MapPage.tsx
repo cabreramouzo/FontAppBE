@@ -444,6 +444,11 @@ export function MapPage() {
       setGeoError(t('map.geoUnavailable'))
       return
     }
+    // La geolocalización solo funciona en contexto seguro (HTTPS o localhost).
+    if (!window.isSecureContext) {
+      setGeoError(t('map.geoInsecure'))
+      return
+    }
     navigator.geolocation.getCurrentPosition(
       (p) => {
         const c: [number, number] = [p.coords.latitude, p.coords.longitude]
@@ -451,7 +456,12 @@ export function MapPage() {
         setGoto([...c])
         if (openList) setShowNearby(true)
       },
-      () => setGeoError(t('map.geoFailed')),
+      (err) => {
+        // 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT
+        setGeoError(err.code === err.PERMISSION_DENIED ? t('map.geoDenied') : t('map.geoFailed'))
+        console.warn('geolocation error', err.code, err.message)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     )
   }
 
