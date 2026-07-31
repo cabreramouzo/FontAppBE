@@ -33,6 +33,9 @@ import type { Theme } from '@mui/material/styles'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
+import { userLocationIcon } from '../lib/userLocationIcon'
+
+const meIcon = userLocationIcon()
 import type { Drinkable, Font, FontSummary, Page, WaterSource } from '../api/types'
 import { apiFetch, createFont, describeError, uploadImage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -476,7 +479,7 @@ export function MapPage() {
         <FocusOn target={goto} />
         <FlyToPlace place={place} />
         <ZoomControls />
-        {me && <Marker position={me} />}
+        {me && <Marker position={me} icon={meIcon} zIndexOffset={500} />}
         {placing && <PlacePicker onPick={setPos} />}
         {pos && <Marker position={pos} />}
       </MapContainer>

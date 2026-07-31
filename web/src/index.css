@@ -432,6 +432,29 @@ select:not([class*="Mui"]) {
 /* Pin de estado (divIcon): quitar el fondo blanco por defecto de Leaflet. */
 .status-pin { background: none; border: none; overflow: visible; }
 
+/* Ubicación del usuario, estilo iOS: punto azul + onda expansiva. */
+.me-loc-wrap { background: none; border: none; }
+.me-loc { position: relative; width: 22px; height: 22px; }
+.me-loc__dot {
+  position: absolute; top: 50%; left: 50%; width: 14px; height: 14px;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: #1a84ff; border: 2.5px solid #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
+}
+.me-loc__pulse {
+  position: absolute; top: 50%; left: 50%; width: 22px; height: 22px;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: rgba(26, 132, 255, 0.35);
+  animation: me-loc-pulse 2s ease-out infinite;
+}
+@keyframes me-loc-pulse {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .me-loc__pulse { animation: none; opacity: 0.35; }
+}
+
 /* Leyenda (abajo a la izquierda). */
 /* Solo posición: la superficie la pone MUI Paper. */
 .legend {
