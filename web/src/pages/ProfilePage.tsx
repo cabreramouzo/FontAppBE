@@ -14,7 +14,7 @@ import IconButton from '@mui/material/IconButton'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import UndoIcon from '@mui/icons-material/Undo'
 import type { Flag, Font, FontEdit, FontInfoSnapshot, MyComment } from '../api/types'
-import { assetUrl, deleteAccount, describeError, dismissFlag, getFlags, getFontEdits, getMyComments, getMyFonts, revertFontEdit } from '../api/client'
+import { assetUrl, deleteAccount, describeError, dismissFlag, getFlags, getFontEdits, getMyComments, getMyFonts, revertFontEdit, FONT_EDITS_PER } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -29,6 +29,9 @@ export function ProfilePage() {
   const [comments, setComments] = useState<MyComment[] | null>(null)
   const [flags, setFlags] = useState<Flag[] | null>(null)
   const [edits, setEdits] = useState<FontEdit[] | null>(null)
+  const [editsPage, setEditsPage] = useState(1)
+  const [editsHasMore, setEditsHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -41,9 +44,24 @@ export function ProfilePage() {
     getMyComments().then(setComments).catch(() => setComments([]))
     if (user.isAdmin) {
       getFlags().then(setFlags).catch(() => setFlags([]))
-      getFontEdits().then(setEdits).catch(() => setEdits([]))
+      getFontEdits(1).then((e) => { setEdits(e); setEditsPage(1); setEditsHasMore(e.length === FONT_EDITS_PER) }).catch(() => setEdits([]))
     }
   }, [user, loading, navigate])
+
+  async function loadMoreEdits() {
+    setLoadingMore(true)
+    try {
+      const next = editsPage + 1
+      const more = await getFontEdits(next)
+      setEdits((cur) => [...(cur ?? []), ...more])
+      setEditsPage(next)
+      setEditsHasMore(more.length === FONT_EDITS_PER)
+    } catch (e) {
+      setError(describeError(e, t))
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   async function removeFlag(id: string) {
     await dismissFlag(id).catch(() => {})
@@ -54,7 +72,8 @@ export function ProfilePage() {
     if (!confirm(t('admin.confirmRevert'))) return
     try {
       await revertFontEdit(editID)
-      getFontEdits().then(setEdits).catch(() => {}) // recarga (el revert añade una entrada)
+      // Recarga desde la primera página (el revert añade una entrada nueva).
+      getFontEdits(1).then((e) => { setEdits(e); setEditsPage(1); setEditsHasMore(e.length === FONT_EDITS_PER) }).catch(() => {})
     } catch (e) {
       setError(describeError(e, t))
     }
@@ -198,6 +217,11 @@ export function ProfilePage() {
               </ListItem>
             ))}
           </List>
+          {editsHasMore && (
+            <Button onClick={loadMoreEdits} disabled={loadingMore} sx={{ mt: 1 }}>
+              {loadingMore ? t('admin.loading') : t('admin.loadMore')}
+            </Button>
+          )}
         </Box>
       )}
     </Box>

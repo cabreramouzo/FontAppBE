@@ -186,8 +186,10 @@ export async function dismissFlag(id: string): Promise<void> {
 }
 
 // Historial de ediciones de información de fuentes (admin): listar y revertir.
-export async function getFontEdits(): Promise<FontEdit[]> {
-  return apiFetch<FontEdit[]>('/fonts/edits')
+export const FONT_EDITS_PER = 50
+
+export async function getFontEdits(page = 1): Promise<FontEdit[]> {
+  return apiFetch<FontEdit[]>(`/fonts/edits?page=${page}&per=${FONT_EDITS_PER}`)
 }
 
 export async function revertFontEdit(editID: string): Promise<Font> {
