@@ -120,7 +120,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: Commen
   if (editing) {
     return (
       <Paper variant="outlined" component="form" onSubmit={save} sx={{ p: 2, my: 1, borderRadius: 2 }}>
-        <Stack direction="row" spacing={2} sx={{ mb: 1, alignItems: "center", flexWrap: "wrap" }}>
+        <Stack direction="row" sx={{ mb: 1, alignItems: "center", flexWrap: "wrap", gap: 2 }}>
           <StatusSelect value={waterStatus} onChange={setWaterStatus} label={t('update.status')} />
           <Box><Typography variant="caption" color="text.secondary">{t('update.rating')}</Typography><StarRating value={rating} onChange={setRating} size={22} /></Box>
         </Stack>
@@ -137,7 +137,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: Commen
   const ws = c.waterStatus ? WATER_STATUS[c.waterStatus] : null
   return (
     <Paper variant="outlined" sx={{ p: 2, my: 1, borderRadius: 2, ...(highlight && { borderColor: 'primary.main', bgcolor: 'action.hover' }) }}>
-      <Stack direction="row" sx={{ mb: 0.5, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+      <Stack direction="row" sx={{ mb: 0.5, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
         {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`} />}
         <Typography variant="caption" color="text.secondary">{c.username ?? t('review.anon')} · {c.createdAt ? timeAgo(c.createdAt, t) : ''}</Typography>
       </Stack>
@@ -155,7 +155,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: Commen
       )}
       {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
       {(canManage || canFlag) && (
-        <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+        <Stack direction="row" sx={{ mt: 0.5, flexWrap: 'wrap', gap: 1 }}>
           {canManage && <Button size="small" startIcon={<EditIcon />} onClick={() => setEditing(true)}>{t('detail.edit')}</Button>}
           {canManage && <Button size="small" color="error" startIcon={<DeleteOutlineIcon />} onClick={remove}>{t('detail.delete')}</Button>}
           {canFlag && <Button size="small" color="inherit" startIcon={<OutlinedFlagIcon />} onClick={flag}>{t('flag.report')}</Button>}
@@ -198,7 +198,7 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
 
   return (
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, my: 2 }}>
-      <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+      <Stack direction="row" sx={{ alignItems: "center", flexWrap: "wrap", gap: 2 }}>
         <StatusSelect value={waterStatus} onChange={setWaterStatus} label={t('update.status')} />
         <Box><Typography variant="caption" color="text.secondary">{t('update.rating')}</Typography><StarRating value={rating} onChange={setRating} size={22} /></Box>
       </Stack>
@@ -238,7 +238,7 @@ function LocationActions({ font }: { font: Font }) {
   }
 
   return (
-    <Stack direction="row" spacing={1} sx={{ my: 1.5, flexWrap: "wrap", '& .MuiButton-root': { whiteSpace: 'nowrap', flexShrink: 0 } }}>
+    <Stack direction="row" sx={{ my: 1.5, flexWrap: "wrap", gap: 1, '& .MuiButton-root': { whiteSpace: 'nowrap', flexShrink: 0 } }}>
       <Button variant="contained" disableElevation startIcon={<PlaceIcon />} onClick={() => navigate(`/?lat=${font.latitude}&lng=${font.longitude}&sel=${font.id}`)}>
         {t('detail.viewOnMap')}
       </Button>
@@ -436,7 +436,7 @@ export function FontDetailPage() {
             const dr = drinkableInfo(font.drinkable)
             if (!src && !dr) return null
             return (
-              <Stack direction="row" spacing={1} sx={{ my: 1, flexWrap: "wrap" }}>
+              <Stack direction="row" sx={{ my: 1, flexWrap: "wrap", gap: 1 }}>
                 {src && <Chip size="small" label={`${src.emoji} ${t(src.labelKey)}`} />}
                 {dr && <Chip size="small" color={font.drinkable === 'no' ? 'error' : 'default'} label={`${dr.emoji} ${t(dr.labelKey)}`} />}
               </Stack>

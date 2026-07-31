@@ -216,7 +216,9 @@ a:hover { text-decoration: underline; }
 /* Formularios */
 .row { display: flex; gap: 8px; margin-top: 8px; }
 .col { display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
-input {
+/* Estilos base SOLO para controles no-MUI (la UI es MUI; excluimos sus clases
+   para no pintarles bordes/fondos por encima — causaba la barra "de dos colores"). */
+input:not([class*="Mui"]) {
   flex: 1;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -224,7 +226,7 @@ input {
   background: var(--bg);
   color: var(--fg);
 }
-button {
+button:not([class*="Mui"]) {
   padding: 8px 14px;
   border: none;
   border-radius: 6px;
@@ -233,7 +235,7 @@ button {
   cursor: pointer;
   font-size: 15px;
 }
-button:hover { opacity: 0.9; }
+button:not([class*="Mui"]):hover { opacity: 0.9; }
 button.link {
   background: none;
   color: var(--accent);
@@ -242,7 +244,7 @@ button.link {
 }
 .auth { max-width: 360px; }
 
-textarea {
+textarea:not([class*="Mui"]) {
   width: 100%;
   min-height: 64px;
   padding: 8px 10px;
@@ -253,7 +255,7 @@ textarea {
   font: inherit;
   resize: vertical;
 }
-select {
+select:not([class*="Mui"]) {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -396,7 +398,7 @@ select {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   align-items: flex-end;
 }
 /* Chips de control estilo Material: pastilla, cristal esmerilado y elevación sutil. */
@@ -513,26 +515,6 @@ select {
   width: 240px;
   max-width: calc(100% - 210px);
 }
-.search input { width: 100%;}
-.search-list {
-  list-style: none;
-  margin: 4px 0 0;
-  padding: 4px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
-.search-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: none;
-  color: var(--fg);
-  padding: 6px 8px;
-  border-radius: 6px;
-}
-.search-item:hover { background: var(--border); }
 
 .stale-warn { color: #b45309; font-weight: 600; font-size: 14px; margin: 4px 0; }
 @media (prefers-color-scheme: dark) { .stale-warn { color: #fbbf24; } }
@@ -624,19 +606,6 @@ select {
 .notfound-icon { font-size: 56px; }
 .notfound h1 { font-size: 64px; margin: 8px 0 0; }
 
-/* Buscador: grupos y lugares */
-.search-group {
-  padding: 6px 8px 2px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.search-item.place { white-space: normal; font-size: 13px; line-height: 1.3; }
-
-/* Filtro por tipo (select en la barra de controles del mapa) */
-.type-filter { font-size: 14px; max-width: 200px; }
 
 /* Pin seleccionado: sombra para que resalte sobre el resto. */
 .status-pin.selected { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); z-index: 1000 !important; }
@@ -651,11 +620,8 @@ select {
     top: 12px;
   }
   /* Con el buscador ocupando arriba, los controles bajan bajo él. */
-  .map-controls { top: 90px; right: max(12px, env(safe-area-inset-right)); gap: 8px; }
-  /* Áreas de toque cómodas (~44px) tipo app nativa. */
-  .ctrl { font-size: 14px; padding: 10px 12px; min-height: 44px; }
+  .map-controls { top: 90px; right: max(12px, env(safe-area-inset-right)); gap: 10px; }
   .fab { font-size: 15px; padding: 12px 16px; min-height: 48px; border-radius: 999px; }
-  .search input { padding: 11px 12px; font-size: 16px; } /* 16px evita el auto-zoom de iOS al enfocar */
   .nearby {
     top: auto;
     bottom: 0;
