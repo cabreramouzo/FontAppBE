@@ -189,7 +189,7 @@ function FlyToPlace({ place }: { place: Place | null }) {
 function ZoomControls() {
   const map = useMap()
   return (
-    <Paper className="zoom-ctrl" elevation={3} sx={{ display: 'flex', flexDirection: 'column', borderRadius: 3, overflow: 'hidden' }}>
+    <Paper className="zoom-ctrl" elevation={3} sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', borderRadius: 3, overflow: 'hidden' }}>
       <IconButton size="small" onClick={() => map.zoomIn()} aria-label="zoom in"><AddIcon fontSize="small" /></IconButton>
       <Divider />
       <IconButton size="small" onClick={() => map.zoomOut()} aria-label="zoom out"><RemoveIcon fontSize="small" /></IconButton>
