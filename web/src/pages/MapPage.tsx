@@ -22,7 +22,7 @@ import ListItemText from '@mui/material/ListItemText'
 import ListSubheader from '@mui/material/ListSubheader'
 import SearchIcon from '@mui/icons-material/Search'
 import MyLocationIcon from '@mui/icons-material/MyLocation'
-import NavigationIcon from '@mui/icons-material/Navigation'
+import NearMeIcon from '@mui/icons-material/NearMe'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import DoNotDisturbAltIcon from '@mui/icons-material/DoNotDisturbAlt'
 import AddIcon from '@mui/icons-material/Add'
@@ -526,7 +526,7 @@ export function MapPage() {
       {!placing && (
         <div className="map-fabs">
           <Fab size="medium" onClick={() => locate(false)} title={t('map.recenter')} aria-label={t('map.recenter')} sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}>
-            <NavigationIcon />
+            <NearMeIcon />
           </Fab>
           {user && (
             <Fab variant="extended" color="primary" onClick={() => { setPlacing(true); setPos(null) }}>
