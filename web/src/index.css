@@ -651,7 +651,7 @@ select {
     top: 12px;
   }
   /* Con el buscador ocupando arriba, los controles bajan bajo él. */
-  .map-controls { top: 60px; right: max(12px, env(safe-area-inset-right)); gap: 8px; }
+  .map-controls { top: 90px; right: max(12px, env(safe-area-inset-right)); gap: 8px; }
   /* Áreas de toque cómodas (~44px) tipo app nativa. */
   .ctrl { font-size: 14px; padding: 10px 12px; min-height: 44px; }
   .fab { font-size: 15px; padding: 12px 16px; min-height: 48px; border-radius: 999px; }
