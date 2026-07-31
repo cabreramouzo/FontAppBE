@@ -11,7 +11,13 @@ struct SeedCommand: AsyncCommand {
         var force: Bool
         @Flag(name: "demo", help: "Además crea usuarios y reseñas de ejemplo (contraseña: demo12345)")
         var demo: Bool
+        @Option(name: "sample", help: "Con --demo y BD poblada: reseñas sobre N fuentes ALEATORIAS de toda España (en vez de solo el Moianès)")
+        var sample: Int?
     }
+
+    /// Imágenes demo incrustadas en la imagen Docker (Public/demo/), permanentes sin R2.
+    static let demoImages = ["/demo/fountain-1.svg", "/demo/fountain-2.svg", "/demo/fountain-3.svg"]
+    static let demoDrinkable: [Drinkable?] = [.yes, .yes, .yes, .no, .conditional, nil]
 
     var help: String { "Inserta fuentes reales del Moianès (datos de OpenStreetMap, ODbL)" }
 
@@ -24,14 +30,23 @@ struct SeedCommand: AsyncCommand {
             // Con la BD ya poblada (p. ej. tras importar toda España), --demo no reinserta
             // fuentes: solo añade usuarios y reseñas sobre las fuentes de la zona del Moianès.
             if signature.demo {
-                let bbox = try await Font.query(on: db)
-                    .filter(\.$latitude >= Self.moianesBBox.minLat)
-                    .filter(\.$latitude <= Self.moianesBBox.maxLat)
-                    .filter(\.$longitude >= Self.moianesBBox.minLong)
-                    .filter(\.$longitude <= Self.moianesBBox.maxLong)
-                    .all()
-                context.console.info("Añadiendo reseñas de ejemplo a \(bbox.count) fuentes de la zona del Moianès (sin tocar el resto).")
-                try await seedDemo(app: app, fonts: bbox, console: context.console)
+                let targets: [Font]
+                if let n = signature.sample, let sql = db as? SQLDatabase {
+                    // Muestra aleatoria por toda España (para que la demo no se concentre).
+                    let rows = try await sql.raw("SELECT id FROM fonts ORDER BY RANDOM() LIMIT \(bind: n)").all()
+                    let ids = try rows.map { try $0.decode(column: "id", as: UUID.self) }
+                    targets = try await Font.query(on: db).filter(\.$id ~~ ids).all()
+                    context.console.info("Añadiendo reseñas de ejemplo a \(targets.count) fuentes aleatorias de toda España.")
+                } else {
+                    targets = try await Font.query(on: db)
+                        .filter(\.$latitude >= Self.moianesBBox.minLat)
+                        .filter(\.$latitude <= Self.moianesBBox.maxLat)
+                        .filter(\.$longitude >= Self.moianesBBox.minLong)
+                        .filter(\.$longitude <= Self.moianesBBox.maxLong)
+                        .all()
+                    context.console.info("Añadiendo reseñas de ejemplo a \(targets.count) fuentes de la zona del Moianès (sin tocar el resto).")
+                }
+                try await seedDemo(app: app, fonts: targets, console: context.console)
                 return
             }
             context.console.warning("Ya hay \(existing) fuentes. Usa --force para reemplazarlas, o --demo para añadir reseñas de ejemplo sobre las existentes.")
@@ -75,18 +90,29 @@ struct SeedCommand: AsyncCommand {
 
         let sql = db as? SQLDatabase
         var reviews = 0
+        var withPhoto = 0
         for font in fonts {
             let fontID = try font.requireID()
+            // ~15% de las fuentes: foto propia; ~30%: potabilidad marcada (para los filtros).
+            var fontChanged = false
+            if Int.random(in: 0..<100) < 15 { font.image = Self.demoImages.randomElement(); fontChanged = true }
+            if Int.random(in: 0..<100) < 30 { font.drinkable = Self.demoDrinkable.randomElement() ?? nil; fontChanged = true }
+            if fontChanged { try await font.save(on: db) }
+
             for _ in 0..<Int.random(in: 1...3) {
                 guard let user = users.randomElement() else { continue }
                 let status = Self.weightedStatus()
                 let (text, rating) = Self.reviewText(for: status)
+                // ~25% de las reseñas llevan foto.
+                let image = Int.random(in: 0..<100) < 25 ? Self.demoImages.randomElement() ?? nil : nil
+                if image != nil { withPhoto += 1 }
                 let comment = FontComment(
                     fontID: fontID,
                     userID: try user.requireID(),
                     body: text,
                     rating: rating,
-                    waterStatus: status
+                    waterStatus: status,
+                    image: image
                 )
                 try await comment.save(on: db)
                 // Repartimos la fecha en los últimos 14 días (para el "última actualización").
@@ -97,7 +123,7 @@ struct SeedCommand: AsyncCommand {
                 reviews += 1
             }
         }
-        console.info("Insertadas \(reviews) reseñas de ejemplo en \(fonts.count) fuentes.")
+        console.info("Insertadas \(reviews) reseñas de ejemplo (\(withPhoto) con foto) en \(fonts.count) fuentes.")
     }
 
     /// Bounding box aproximado de la comarca del Moianès (para acotar las reseñas demo).
