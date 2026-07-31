@@ -55,18 +55,27 @@ struct FontController: RouteCollection {
     @Sendable func update(req: Request) async throws -> Font {
         try CreateFontDTO.validate(content: req)
         let font = try await find(req)
-        try requireCanManage(req, font: font)
+        let user = try req.auth.require(User.self)
         let dto = try req.content.decode(CreateFontDTO.self)
-        let oldImage = font.image
+        // Edición abierta (estilo wiki): cualquier usuario autenticado puede corregir
+        // la información descriptiva de una fuente (muchas se llaman solo "Font" o tienen
+        // un nombre popular / historia local que aportar).
         font.name = dto.name
-        font.latitude = dto.latitude
-        font.longitude = dto.longitude
-        font.image = dto.image
         font.description = dto.description
         font.source = dto.source
         font.drinkable = dto.drinkable
-        try await font.save(on: req.db)
-        if let oldImage, oldImage != dto.image { try? await req.imageStorage.delete(oldImage) }
+        // La ubicación y la imagen son más sensibles (mover el pin, cambiar la foto):
+        // se reservan al creador o a un admin. Para el resto se conservan tal cual.
+        if canManage(user: user, font: font) {
+            let oldImage = font.image
+            font.latitude = dto.latitude
+            font.longitude = dto.longitude
+            font.image = dto.image
+            try await font.save(on: req.db)
+            if let oldImage, oldImage != dto.image { try? await req.imageStorage.delete(oldImage) }
+        } else {
+            try await font.save(on: req.db)
+        }
         return font
     }
 
@@ -138,13 +147,18 @@ struct FontController: RouteCollection {
         return font
     }
 
-    /// Editar/borrar una fuente: solo su creador o un admin. Las importadas de OSM
-    /// (sin creador) quedan protegidas: únicamente un admin puede tocarlas.
+    /// Borrar una fuente, o tocar su ubicación/imagen: solo su creador o un admin.
+    /// Las importadas de OSM (sin creador) quedan protegidas: solo un admin.
     private func requireCanManage(_ req: Request, font: Font) throws {
         let user = try req.auth.require(User.self)
-        guard user.isAdmin || (font.$creator.id != nil && font.$creator.id == user.id) else {
-            throw Abort(.forbidden, reason: "Solo el creador o un administrador puede modificar esta fuente")
+        guard canManage(user: user, font: font) else {
+            throw Abort(.forbidden, reason: "Solo el creador o un administrador puede borrar o reubicar esta fuente")
         }
+    }
+
+    /// ¿`user` es el creador de la fuente o un admin?
+    private func canManage(user: User, font: Font) -> Bool {
+        user.isAdmin || (font.$creator.id != nil && font.$creator.id == user.id)
     }
 }
 

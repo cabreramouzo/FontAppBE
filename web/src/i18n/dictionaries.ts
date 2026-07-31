@@ -50,6 +50,8 @@ const ca: Dict = {
   // Detalle
   'detail.backMap': '← Mapa',
   'detail.edit': 'Edita',
+  'detail.editInfoHint': 'Edita el nom o la informació (visible per a tothom)',
+  'detail.editInfoNote': 'Estàs millorant la informació d\'aquesta font per a tothom. Els canvis són públics.',
   'detail.delete': 'Esborra',
   'detail.type': 'Tipus:',
   'detail.drinkability': 'Potabilitat:',
@@ -128,6 +130,7 @@ const ca: Dict = {
   'confirm.confirmed': 'Confirmat',
   'confirm.titleActive': 'Ja has confirmat que segueix igual (toca per desfer)',
   'confirm.titleInactive': 'Confirma que l\'estat segueix igual',
+  'confirm.lastConfirmed': 'Última confirmació {when}',
 
   // Formulario de actualización / reseña
   'update.status': 'Estat:',
@@ -221,6 +224,8 @@ const es: Dict = {
 
   'detail.backMap': '← Mapa',
   'detail.edit': 'Editar',
+  'detail.editInfoHint': 'Edita el nombre o la información (visible para todos)',
+  'detail.editInfoNote': 'Estás mejorando la información de esta fuente para todos. Los cambios son públicos.',
   'detail.delete': 'Borrar',
   'detail.type': 'Tipo:',
   'detail.drinkability': 'Potabilidad:',
@@ -298,6 +303,7 @@ const es: Dict = {
   'confirm.confirmed': 'Confirmado',
   'confirm.titleActive': 'Ya confirmaste que sigue igual (toca para deshacer)',
   'confirm.titleInactive': 'Confirma que el estado sigue igual',
+  'confirm.lastConfirmed': 'Última confirmación {when}',
 
   'update.status': 'Estado:',
   'update.rating': 'Valoración:',
@@ -382,6 +388,8 @@ const gl: Dict = {
 
   'detail.backMap': '← Mapa',
   'detail.edit': 'Editar',
+  'detail.editInfoHint': 'Edita o nome ou a información (visible para todos)',
+  'detail.editInfoNote': 'Estás mellorando a información desta fonte para todos. Os cambios son públicos.',
   'detail.delete': 'Borrar',
   'detail.type': 'Tipo:',
   'detail.drinkability': 'Potabilidade:',
@@ -459,6 +467,7 @@ const gl: Dict = {
   'confirm.confirmed': 'Confirmado',
   'confirm.titleActive': 'Xa confirmaches que segue igual (toca para desfacer)',
   'confirm.titleInactive': 'Confirma que o estado segue igual',
+  'confirm.lastConfirmed': 'Última confirmación {when}',
 
   'update.status': 'Estado:',
   'update.rating': 'Valoración:',
@@ -543,6 +552,8 @@ const eu: Dict = {
 
   'detail.backMap': '← Mapa',
   'detail.edit': 'Editatu',
+  'detail.editInfoHint': 'Editatu izena edo informazioa (denontzat ikusgai)',
+  'detail.editInfoNote': 'Iturri honen informazioa denontzat hobetzen ari zara. Aldaketak publikoak dira.',
   'detail.delete': 'Ezabatu',
   'detail.type': 'Mota:',
   'detail.drinkability': 'Edangarritasuna:',
@@ -620,6 +631,7 @@ const eu: Dict = {
   'confirm.confirmed': 'Baieztatuta',
   'confirm.titleActive': 'Dagoeneko baieztatu duzu berdin jarraitzen duela (ukitu desegiteko)',
   'confirm.titleInactive': 'Baieztatu egoerak berdin jarraitzen duela',
+  'confirm.lastConfirmed': 'Azken baieztapena {when}',
 
   'update.status': 'Egoera:',
   'update.rating': 'Balorazioa:',
@@ -704,6 +716,8 @@ const en: Dict = {
 
   'detail.backMap': '← Map',
   'detail.edit': 'Edit',
+  'detail.editInfoHint': 'Edit the name or info (visible to everyone)',
+  'detail.editInfoNote': 'You are improving this fountain\'s info for everyone. Changes are public.',
   'detail.delete': 'Delete',
   'detail.type': 'Type:',
   'detail.drinkability': 'Drinkability:',
@@ -781,6 +795,7 @@ const en: Dict = {
   'confirm.confirmed': 'Confirmed',
   'confirm.titleActive': 'You already confirmed it\'s the same (tap to undo)',
   'confirm.titleInactive': 'Confirm the status is still the same',
+  'confirm.lastConfirmed': 'Last confirmed {when}',
 
   'update.status': 'Status:',
   'update.rating': 'Rating:',

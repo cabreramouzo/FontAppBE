@@ -304,6 +304,7 @@ function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => 
 
   return (
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 360, my: 2 }}>
+      <Typography variant="caption" color="text.secondary">{t('detail.editInfoNote')}</Typography>
       <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} required size="small" />
       <TextField label={t('detail.description')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" />
       <TextField select label={t('detail.type')} value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')} size="small">
@@ -418,10 +419,14 @@ export function FontDetailPage() {
 
       <Stack direction="row" sx={{ my: 1, justifyContent: "space-between", alignItems: "center", gap: 1 }}>
         <Typography variant="h4" sx={{ fontWeight: 800 }}>{font.name}</Typography>
-        {user && !editing && (user.isAdmin || font.creator?.id === user.id) && (
+        {user && !editing && (
           <Box>
-            <IconButton size="small" onClick={() => setEditing(true)} aria-label={t('detail.edit')}><EditIcon /></IconButton>
-            <IconButton size="small" color="error" onClick={removeFont} aria-label={t('detail.delete')}><DeleteOutlineIcon /></IconButton>
+            {/* Edición abierta: cualquiera puede corregir el nombre/info (estilo wiki). */}
+            <IconButton size="small" onClick={() => setEditing(true)} aria-label={t('detail.edit')} title={t('detail.editInfoHint')}><EditIcon /></IconButton>
+            {/* Borrar (y reubicar) queda reservado al creador o a un admin. */}
+            {(user.isAdmin || font.creator?.id === user.id) && (
+              <IconButton size="small" color="error" onClick={removeFont} aria-label={t('detail.delete')}><DeleteOutlineIcon /></IconButton>
+            )}
           </Box>
         )}
       </Stack>
@@ -472,7 +477,7 @@ export function FontDetailPage() {
             })()}
             <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} onChanged={load} />
             {latest.waterStatus && (
-              <Box sx={{ my: 1.5 }}>
+              <Box sx={{ my: 1.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                 {user ? (
                   <Button
                     variant={latest.confirmedByMe ? 'contained' : 'outlined'}
@@ -488,6 +493,11 @@ export function FontDetailPage() {
                   </Button>
                 ) : (
                   latest.confirmations > 0 && <Chip icon={<ThumbUpIcon />} label={`+${latest.confirmations}`} variant="outlined" />
+                )}
+                {latest.lastConfirmedAt && (
+                  <Typography variant="caption" color="text.secondary">
+                    {t('confirm.lastConfirmed', { when: timeAgo(latest.lastConfirmedAt, t) })}
+                  </Typography>
                 )}
               </Box>
             )}
