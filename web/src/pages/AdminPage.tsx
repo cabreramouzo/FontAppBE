@@ -178,9 +178,9 @@ export function AdminPage() {
                       )}
                       {idx === 0 && (
                         <TableCell rowSpan={rows.length}>
-                          {e.editorID
-                            ? <Link component={RouterLink} to={`/users/${e.editorID}`}>@{e.editorName ?? '—'}</Link>
-                            : <Typography variant="body2" color="text.secondary">{e.editorName ?? '—'}</Typography>}
+                          {(e.editorName || e.editorID)
+                            ? <Link component={RouterLink} to={`/users/${encodeURIComponent(e.editorName ?? e.editorID!)}`}>@{e.editorName ?? '—'}</Link>
+                            : <Typography variant="body2" color="text.secondary">—</Typography>}
                         </TableCell>
                       )}
                       <TableCell sx={{ fontWeight: 600 }}>{c.label}</TableCell>

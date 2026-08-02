@@ -269,6 +269,26 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// El perfil público se resuelve tanto por username como por UUID.
+    func testUserLookupByUsernameOrID() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "publicuser")
+            try await app.test(.GET, "users/publicuser") { res in
+                XCTAssertEqual(res.status, .ok)
+                let u = try res.content.decode(UserResponse.self)
+                XCTAssertEqual(u.username, "publicuser")
+                XCTAssertNil(u.email) // el perfil público nunca expone el email
+            }
+            try await app.test(.GET, "users/\(id)") { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode(UserResponse.self).username, "publicuser")
+            }
+            try await app.test(.GET, "users/noexiste") { res in
+                XCTAssertEqual(res.status, .notFound)
+            }
+        }
+    }
+
     // MARK: - Ubicación de registro (geo-IP) y estadística
 
     /// El GeoLocator configurado rellena país/región/ciudad al registrarse.

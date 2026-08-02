@@ -127,10 +127,18 @@ struct UserController: RouteCollection {
         return .noContent
     }
 
+    /// Resuelve `:userID` por UUID o por username. Así las URLs pueden ser
+    /// legibles (/users/miguel) sin romperse: el UUID sigue siendo un fallback
+    /// estable si alguien se renombra.
     private func find(_ req: Request) async throws -> User {
-        guard let user = try await User.find(req.parameters.get("userID"), on: req.db) else {
-            throw Abort(.notFound)
+        guard let param = req.parameters.get("userID") else { throw Abort(.notFound) }
+        let user: User?
+        if let id = UUID(uuidString: param) {
+            user = try await User.find(id, on: req.db)
+        } else {
+            user = try await User.query(on: req.db).filter(\.$username == param).first()
         }
+        guard let user else { throw Abort(.notFound) }
         return user
     }
 
