@@ -47,8 +47,8 @@ export function Layout({ children }: { children: ReactNode }) {
           {user ? (
             <>
               {user.isAdmin && (
-                <Tooltip title={t('admin.flags')}>
-                  <IconButton component={RouterLink} to="/me" color="inherit" size="small" aria-label={t('admin.flags')}>
+                <Tooltip title={t('admin.title')}>
+                  <IconButton component={RouterLink} to="/admin" color="inherit" size="small" aria-label={t('admin.title')}>
                     <Badge badgeContent={flagCount} color="error">
                       <GppMaybeIcon />
                     </Badge>
