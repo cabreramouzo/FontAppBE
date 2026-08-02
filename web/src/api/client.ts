@@ -1,4 +1,4 @@
-import type { CommentResponse, Drinkable, Flag, Font, FontEdit, LoginResponse, MyComment, ReportResponse, WaterSource } from './types'
+import type { CommentResponse, Drinkable, Flag, Font, FontEdit, LoginResponse, MyComment, RegionStat, ReportResponse, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -194,4 +194,9 @@ export async function getFontEdits(page = 1): Promise<FontEdit[]> {
 
 export async function revertFontEdit(editID: string): Promise<Font> {
   return apiFetch<Font>(`/fonts/edits/${editID}/revert`, { method: 'POST' })
+}
+
+// Estadística de usuarios por región de registro (admin).
+export async function getRegionStats(): Promise<RegionStat[]> {
+  return apiFetch<RegionStat[]>('/users/stats/regions')
 }

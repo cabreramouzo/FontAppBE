@@ -1,4 +1,5 @@
 import Fluent
+import SQLKit
 import Vapor
 
 // CRUD de usuarios — ver definitions.md (Users management).
@@ -11,10 +12,25 @@ struct UserController: RouteCollection {
 
         // Editar/borrar requiere token y solo sobre la propia cuenta (self-only).
         let protected = users.grouped(UserToken.authenticator(), User.guardMiddleware())
+        protected.get("stats", "regions", use: regionStats)  // admin
         protected.group(":userID") { user in
             user.put(use: update)
             user.delete(use: destroy)
         }
+    }
+
+    /// GET /users/stats/regions — nº de usuarios por región de registro (solo admins).
+    /// Los usuarios sin ubicación (dev/demo o IP no resuelta) salen con region nula.
+    @Sendable func regionStats(req: Request) async throws -> [RegionCount] {
+        let user = try req.auth.require(User.self)
+        guard user.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
+        guard let sql = req.db as? SQLDatabase else { throw Abort(.internalServerError) }
+        return try await sql.raw("""
+            SELECT signup_country AS country, signup_region AS region, COUNT(*)::int AS count
+            FROM users
+            GROUP BY signup_country, signup_region
+            ORDER BY count DESC, region ASC
+            """).all(decoding: RegionCount.self)
     }
 
     @Sendable func create(req: Request) async throws -> Response {
@@ -30,11 +46,17 @@ struct UserController: RouteCollection {
             throw Abort(.conflict, reason: "El correo '\(email)' ya está registrado")
         }
 
+        // Ubicación aproximada del registro (best-effort; nunca bloquea ni guarda la IP).
+        let geo = await req.geoLocator.locate(ip: req.clientIP, on: req.client)
+
         let user = User(
             name: dto.name,
             username: dto.username,
             email: email,
-            passwordHash: try req.password.hash(dto.password)
+            passwordHash: try req.password.hash(dto.password),
+            signupCountry: geo?.country,
+            signupRegion: geo?.region,
+            signupCity: geo?.city
         )
         try await user.save(on: req.db)
 
@@ -102,6 +124,13 @@ struct CreateUserDTO: Content {
     let username: String
     let email: String
     let password: String
+}
+
+/// Fila de la estadística de registros por región.
+struct RegionCount: Content {
+    let country: String?
+    let region: String?
+    let count: Int
 }
 
 extension CreateUserDTO: Validatable {

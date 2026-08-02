@@ -53,6 +53,12 @@ export interface FontEdit {
   createdAt: string
 }
 
+export interface RegionStat {
+  country: string | null
+  region: string | null
+  count: number
+}
+
 export interface LoginResponse {
   token: string
   expiresAt: string | null

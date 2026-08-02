@@ -13,8 +13,8 @@ import ListItemText from '@mui/material/ListItemText'
 import IconButton from '@mui/material/IconButton'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import UndoIcon from '@mui/icons-material/Undo'
-import type { Flag, Font, FontEdit, FontInfoSnapshot, MyComment } from '../api/types'
-import { assetUrl, deleteAccount, describeError, dismissFlag, getFlags, getFontEdits, getMyComments, getMyFonts, revertFontEdit, FONT_EDITS_PER } from '../api/client'
+import type { Flag, Font, FontEdit, FontInfoSnapshot, MyComment, RegionStat } from '../api/types'
+import { assetUrl, deleteAccount, describeError, dismissFlag, getFlags, getFontEdits, getMyComments, getMyFonts, getRegionStats, revertFontEdit, FONT_EDITS_PER } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -29,6 +29,7 @@ export function ProfilePage() {
   const [comments, setComments] = useState<MyComment[] | null>(null)
   const [flags, setFlags] = useState<Flag[] | null>(null)
   const [edits, setEdits] = useState<FontEdit[] | null>(null)
+  const [regions, setRegions] = useState<RegionStat[] | null>(null)
   const [editsPage, setEditsPage] = useState(1)
   const [editsHasMore, setEditsHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -45,6 +46,7 @@ export function ProfilePage() {
     if (user.isAdmin) {
       getFlags().then(setFlags).catch(() => setFlags([]))
       getFontEdits(1).then((e) => { setEdits(e); setEditsPage(1); setEditsHasMore(e.length === FONT_EDITS_PER) }).catch(() => setEdits([]))
+      getRegionStats().then(setRegions).catch(() => setRegions([]))
     }
   }, [user, loading, navigate])
 
@@ -176,6 +178,24 @@ export function ProfilePage() {
                       <Typography variant="caption" color="text.secondary">{`${fl.reason ?? ''} · ${fl.flaggerName ?? '—'} · ${fl.createdAt ? timeAgo(fl.createdAt, t) : ''}`}</Typography>
                     </Box>
                   }
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
+
+      {user.isAdmin && (
+        <Box component="section" sx={{ mt: 3 }}>
+          <Typography variant="h6" gutterBottom>🌍 {t('admin.regions')}</Typography>
+          {regions === null && <Skeleton lines={2} />}
+          {regions?.length === 0 && <Typography color="text.secondary">{t('admin.noRegions')}</Typography>}
+          <List disablePadding>
+            {regions?.map((r, i) => (
+              <ListItem key={i} divider disableGutters secondaryAction={<Typography variant="body2" sx={{ fontWeight: 700 }}>{r.count}</Typography>}>
+                <ListItemText
+                  primary={r.region ?? t('admin.regionUnknown')}
+                  secondary={r.country ?? undefined}
                 />
               </ListItem>
             ))}

@@ -84,6 +84,12 @@ public func configure(_ app: Application) async throws {
         app.mailSender = ResendMailSender(apiKey: apiKey, from: from)
     }
 
+    // Geo-IP para estadística de registro: activo con GEOIP_ENABLED=true (prod);
+    // en dev queda noop (no hay IP pública). Ver GeoLocator.
+    if Environment.get("GEOIP_ENABLED") == "true" {
+        app.geoLocator = IPAPIGeoLocator()
+    }
+
     // Migraciones: una por tabla (esquema consolidado; orden = dependencias de FKs).
     app.migrations.add(CreateUser())
     app.migrations.add(CreateUserToken())
@@ -95,6 +101,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateContentFlag())     // referencia a users
     app.migrations.add(AddFontToContentFlag())
     app.migrations.add(CreateFontEdit())        // referencia a fonts + users
+    app.migrations.add(AddSignupLocationToUser())
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

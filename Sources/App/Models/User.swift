@@ -14,17 +14,26 @@ final class User: Model, @unchecked Sendable {
     @Field(key: "password_hash") var passwordHash: String
     // Moderación: los admin pueden borrar contenido de cualquiera y ver los flags.
     @Field(key: "is_admin") var isAdmin: Bool
+    // Ubicación aproximada al crear la cuenta (deducida de la IP), solo para
+    // estadística regional. No guardamos la IP en claro. Nullable (dev / IP no resuelta).
+    @OptionalField(key: "signup_country") var signupCountry: String?
+    @OptionalField(key: "signup_region") var signupRegion: String?
+    @OptionalField(key: "signup_city") var signupCity: String?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
 
-    init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, isAdmin: Bool = false) {
+    init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, isAdmin: Bool = false,
+         signupCountry: String? = nil, signupRegion: String? = nil, signupCity: String? = nil) {
         self.id = id
         self.name = name
         self.username = username
         self.email = email
         self.passwordHash = passwordHash
         self.isAdmin = isAdmin
+        self.signupCountry = signupCountry
+        self.signupRegion = signupRegion
+        self.signupCity = signupCity
     }
 }
 

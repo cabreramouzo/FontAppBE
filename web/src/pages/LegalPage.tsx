@@ -49,7 +49,8 @@ function LegalCA() {
       <ul>
         <li>El teu <strong>nom d'usuari i nom</strong>, i la teva <strong>contrasenya</strong> (desada xifrada amb bcrypt, mai en clar).</li>
         <li>El <strong>contingut que publiques</strong>: fonts, ressenyes, valoracions, fotos i incidències.</li>
-        <li>La teva <strong>ubicació</strong> només s'utilitza, si l'autoritzes, per mostrar-te fonts properes; <strong>no es desa</strong> al servidor.</li>
+        <li>La teva <strong>ubicació precisa</strong> només s'utilitza, si l'autoritzes, per mostrar-te fonts properes; <strong>no es desa</strong> al servidor.</li>
+        <li>En <strong>registrar-te</strong> desem la teva <strong>regió aproximada</strong> (país/regió deduïts de la IP, <strong>no la IP</strong>) només per a estadística d'ús.</li>
       </ul>
       <p>
         <strong>Finalitat i base legal:</strong> prestar el servei que sol·licites (execució) i el consentiment que atorgues en registrar-te.
@@ -98,7 +99,8 @@ function LegalES() {
       <ul>
         <li>Tu <strong>nombre de usuario y nombre</strong>, y tu <strong>contraseña</strong> (almacenada cifrada con bcrypt, nunca en claro).</li>
         <li>El <strong>contenido que publicas</strong>: fuentes, reseñas, valoraciones, fotos e incidencias.</li>
-        <li>Tu <strong>ubicación</strong> solo se usa, si tú lo autorizas, para mostrarte fuentes cercanas; <strong>no se almacena</strong> en el servidor.</li>
+        <li>Tu <strong>ubicación precisa</strong> solo se usa, si tú lo autorizas, para mostrarte fuentes cercanas; <strong>no se almacena</strong> en el servidor.</li>
+        <li>Al <strong>registrarte</strong> guardamos tu <strong>región aproximada</strong> (país/región deducidos de la IP, <strong>no la IP</strong>) solo para estadística de uso.</li>
       </ul>
       <p>
         <strong>Finalidad y base legal:</strong> prestar el servicio que solicitas (ejecución) y el consentimiento que otorgas al registrarte.

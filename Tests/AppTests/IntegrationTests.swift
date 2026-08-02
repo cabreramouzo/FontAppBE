@@ -61,6 +61,12 @@ final class IntegrationTests: XCTestCase {
 
     private func bearer(_ token: String) -> HTTPHeaders { ["Authorization": "Bearer \(token)"] }
 
+    /// GeoLocator de prueba: devuelve siempre una ubicación fija.
+    private struct StubGeoLocator: GeoLocator {
+        let location: GeoLocation
+        func locate(ip: String?, on client: any Client) async -> GeoLocation? { location }
+    }
+
     /// Promociona a admin directamente en BD (no hay endpoint para ello).
     private func makeAdmin(_ app: Application, userID: UUID) async throws {
         guard let u = try await User.find(userID, on: app.db) else { return XCTFail("usuario no encontrado") }
@@ -259,6 +265,44 @@ final class IntegrationTests: XCTestCase {
             }
             try await app.test(.GET, "fonts/\(fontID)") { res in
                 XCTAssertEqual(try res.content.decode(Font.self).name, "Original")
+            }
+        }
+    }
+
+    // MARK: - Ubicación de registro (geo-IP) y estadística
+
+    /// El GeoLocator configurado rellena país/región/ciudad al registrarse.
+    func testSignupLocationStored() async throws {
+        try await withApp { app in
+            app.geoLocator = StubGeoLocator(location: GeoLocation(country: "Spain", region: "Galicia", city: "A Coruña"))
+            let id = try await register(app, username: "galego")
+            let u = try await User.find(id, on: app.db)
+            XCTAssertEqual(u?.signupRegion, "Galicia")
+            XCTAssertEqual(u?.signupCountry, "Spain")
+            XCTAssertEqual(u?.signupCity, "A Coruña")
+        }
+    }
+
+    /// La estadística por región es solo para admins y agrupa correctamente.
+    func testRegionStatsAdminOnly() async throws {
+        try await withApp { app in
+            app.geoLocator = StubGeoLocator(location: GeoLocation(country: "Spain", region: "Extremadura", city: "Cáceres"))
+            try await register(app, username: "ex1")
+            try await register(app, username: "ex2")
+
+            let normalTok = try await login(app, username: "ex1")
+            try await app.test(.GET, "users/stats/regions", headers: bearer(normalTok)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+
+            let adminID = try await register(app, username: "statsadmin")
+            try await makeAdmin(app, userID: adminID)
+            let adminTok = try await login(app, username: "statsadmin")
+            try await app.test(.GET, "users/stats/regions", headers: bearer(adminTok)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let rows = try res.content.decode([RegionCount].self)
+                let extremadura = rows.first { $0.region == "Extremadura" }
+                XCTAssertEqual(extremadura?.count, 3) // ex1, ex2 y el propio admin
             }
         }
     }
