@@ -52,6 +52,9 @@ import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { DRINKABLE_EMOJI, DRINKABLE_OPTIONS, SOURCE_EMOJI, SOURCE_OPTIONS, drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 
+// Reseñas "Anteriores" que se muestran por tanda (el resto, tras "mostrar más").
+const REVIEWS_PAGE = 5
+
 // Selector de estado del agua (reutilizado en varias formas).
 function StatusSelect({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const { t } = useI18n()
@@ -335,6 +338,8 @@ export function FontDetailPage() {
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  // Cuántas reseñas "Anteriores" se muestran (se amplía con "mostrar más").
+  const [shownRest, setShownRest] = useState(REVIEWS_PAGE)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -515,9 +520,14 @@ export function FontDetailPage() {
         {rest.length > 0 && (
           <>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
-            {rest.map((c) => (
+            {rest.slice(0, shownRest).map((c) => (
               <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} onChanged={load} />
             ))}
+            {rest.length > shownRest && (
+              <Button onClick={() => setShownRest((n) => n + REVIEWS_PAGE)} sx={{ mt: 1 }}>
+                {t('detail.showMoreReviews', { n: rest.length - shownRest })}
+              </Button>
+            )}
           </>
         )}
       </Box>

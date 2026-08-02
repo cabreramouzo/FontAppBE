@@ -9,6 +9,8 @@ import IconButton from '@mui/material/IconButton'
 import Badge from '@mui/material/Badge'
 import Tooltip from '@mui/material/Tooltip'
 import GppMaybeIcon from '@mui/icons-material/GppMaybeOutlined'
+import AccountCircleIcon from '@mui/icons-material/AccountCircle'
+import LogoutIcon from '@mui/icons-material/Logout'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { getFlags } from '../api/client'
@@ -53,10 +55,36 @@ export function Layout({ children }: { children: ReactNode }) {
                   </IconButton>
                 </Tooltip>
               )}
-              <Button component={RouterLink} to="/me" color="inherit" size="small" sx={{ textTransform: 'none' }} title={t('nav.profile')}>
+              {/* Perfil: texto con saludo en pantallas anchas; solo icono en móvil para que quepa. */}
+              <Button
+                component={RouterLink}
+                to="/me"
+                color="inherit"
+                size="small"
+                sx={{ textTransform: 'none', display: { xs: 'none', sm: 'inline-flex' } }}
+                title={t('nav.profile')}
+              >
                 {t('nav.hello', { user: user.username })}
               </Button>
-              <Button variant="contained" size="small" disableElevation onClick={() => logout()}>{t('nav.logout')}</Button>
+              <IconButton
+                component={RouterLink}
+                to="/me"
+                color="inherit"
+                size="small"
+                aria-label={t('nav.profile')}
+                sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+              >
+                <AccountCircleIcon />
+              </IconButton>
+              {/* Salir: botón con texto en anchas; icono en móvil. */}
+              <Button variant="contained" size="small" disableElevation onClick={() => logout()} sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
+                {t('nav.logout')}
+              </Button>
+              <Tooltip title={t('nav.logout')}>
+                <IconButton color="inherit" size="small" onClick={() => logout()} aria-label={t('nav.logout')} sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>
+                  <LogoutIcon />
+                </IconButton>
+              </Tooltip>
             </>
           ) : (
             <Button component={RouterLink} to="/login" variant="contained" size="small" disableElevation>{t('nav.enter')}</Button>

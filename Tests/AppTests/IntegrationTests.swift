@@ -61,6 +61,13 @@ final class IntegrationTests: XCTestCase {
 
     private func bearer(_ token: String) -> HTTPHeaders { ["Authorization": "Bearer \(token)"] }
 
+    /// Promociona a admin directamente en BD (no hay endpoint para ello).
+    private func makeAdmin(_ app: Application, userID: UUID) async throws {
+        guard let u = try await User.find(userID, on: app.db) else { return XCTFail("usuario no encontrado") }
+        u.isAdmin = true
+        try await u.save(on: app.db)
+    }
+
     // MARK: - Tests
 
     func testRegisterLoginMe() async throws {
@@ -152,6 +159,107 @@ final class IntegrationTests: XCTestCase {
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .forbidden)
             })
+        }
+    }
+
+    // MARK: - Edición abierta (wiki), historial y revert
+
+    /// Cualquier usuario autenticado puede corregir la info (nombre/descripción),
+    /// pero la ubicación NO cambia si no es el creador ni admin.
+    func testNonOwnerEditsInfoButNotLocation() async throws {
+        try await withApp { app in
+            try await register(app, username: "owner")
+            let ownerTok = try await login(app, username: "owner")
+            let fontID = try await createFont(app, token: ownerTok, name: "Font", lat: 40, long: -3)
+
+            try await register(app, username: "stranger")
+            let strangerTok = try await login(app, username: "stranger")
+
+            // El extraño cambia el nombre/descr y ADEMÁS intenta mover el pin.
+            try await app.test(.PUT, "fonts/\(fontID)", headers: bearer(strangerTok), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Font Vella", latitude: 0, longitude: 0, image: nil, description: "Històrica", source: nil, drinkable: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                // Struct local: `Font.description` colisiona con CustomStringConvertible.
+                struct FontOut: Content { let name: String; let description: String?; let latitude: Double; let longitude: Double }
+                let f = try res.content.decode(FontOut.self)
+                XCTAssertEqual(f.name, "Font Vella")          // info sí cambia
+                XCTAssertEqual(f.description, "Històrica")
+                XCTAssertEqual(f.latitude, 40, accuracy: 0.0001)   // ubicación NO cambia
+                XCTAssertEqual(f.longitude, -3, accuracy: 0.0001)
+            })
+        }
+    }
+
+    /// Borrar una fuente ajena está prohibido para quien no es creador ni admin.
+    func testNonOwnerCannotDeleteFont() async throws {
+        try await withApp { app in
+            try await register(app, username: "owner2")
+            let ownerTok = try await login(app, username: "owner2")
+            let fontID = try await createFont(app, token: ownerTok, name: "F", lat: 40, long: -3)
+
+            try await register(app, username: "stranger2")
+            let strangerTok = try await login(app, username: "stranger2")
+            try await app.test(.DELETE, "fonts/\(fontID)", headers: bearer(strangerTok)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+            // El creador sí puede.
+            try await app.test(.DELETE, "fonts/\(fontID)", headers: bearer(ownerTok)) { res in
+                XCTAssertEqual(res.status, .noContent)
+            }
+        }
+    }
+
+    /// Una edición de info deja registro; listar y revertir es solo para admins;
+    /// el revert restaura el estado previo.
+    func testEditHistoryLoggedAndRevertAdminOnly() async throws {
+        try await withApp { app in
+            try await register(app, username: "owner3")
+            let ownerTok = try await login(app, username: "owner3")
+            let fontID = try await createFont(app, token: ownerTok, name: "Original", lat: 40, long: -3)
+
+            try await register(app, username: "editor3")
+            let editorTok = try await login(app, username: "editor3")
+            try await app.test(.PUT, "fonts/\(fontID)", headers: bearer(editorTok), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Cambiado", latitude: 40, longitude: -3, image: nil, description: nil, source: nil, drinkable: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+
+            // Un no-admin no puede listar el historial.
+            try await app.test(.GET, "fonts/edits", headers: bearer(editorTok)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+
+            // Promocionamos a un admin.
+            let adminID = try await register(app, username: "admin3")
+            try await makeAdmin(app, userID: adminID)
+            let adminTok = try await login(app, username: "admin3")
+
+            var editID = UUID()
+            try await app.test(.GET, "fonts/edits", headers: bearer(adminTok)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let edits = try res.content.decode([FontEditResponse].self)
+                XCTAssertEqual(edits.count, 1)
+                XCTAssertEqual(edits.first?.before.name, "Original")
+                XCTAssertEqual(edits.first?.after.name, "Cambiado")
+                XCTAssertEqual(edits.first?.editorName, "editor3")
+                editID = try XCTUnwrap(edits.first?.id)
+            }
+
+            // Un no-admin no puede revertir.
+            try await app.test(.POST, "fonts/edits/\(editID)/revert", headers: bearer(editorTok)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+
+            // El admin revierte y la fuente vuelve a su nombre original.
+            try await app.test(.POST, "fonts/edits/\(editID)/revert", headers: bearer(adminTok)) { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode(Font.self).name, "Original")
+            }
+            try await app.test(.GET, "fonts/\(fontID)") { res in
+                XCTAssertEqual(try res.content.decode(Font.self).name, "Original")
+            }
         }
     }
 }
