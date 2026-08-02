@@ -9,6 +9,8 @@ struct UserController: RouteCollection {
         let users = routes.grouped("users")
         users.post(use: create)             // registro: público
         users.get(":userID", use: show)     // lectura: pública
+        users.get(":userID", "fonts", use: userFonts)       // fuentes creadas: público
+        users.get(":userID", "comments", use: userComments) // reseñas: público
 
         // Editar/borrar requiere token y solo sobre la propia cuenta (self-only).
         let protected = users.grouped(UserToken.authenticator(), User.guardMiddleware())
@@ -67,6 +69,28 @@ struct UserController: RouteCollection {
 
     @Sendable func show(req: Request) async throws -> UserResponse {
         UserResponse(try await find(req))
+    }
+
+    /// GET /users/:userID/fonts — fuentes creadas por ese usuario (público, solo lectura).
+    @Sendable func userFonts(req: Request) async throws -> [Font] {
+        let user = try await find(req)
+        return try await Font.query(on: req.db)
+            .filter(\.$creator.$id == user.requireID())
+            .sort(\.$createdAt, .descending)
+            .all()
+    }
+
+    /// GET /users/:userID/comments — reseñas de ese usuario, con el nombre de la fuente (público).
+    @Sendable func userComments(req: Request) async throws -> [MyCommentResponse] {
+        let user = try await find(req)
+        let comments = try await FontComment.query(on: req.db)
+            .filter(\.$user.$id == user.requireID())
+            .sort(\.$createdAt, .descending)
+            .all()
+        let fontIDs = Array(Set(comments.map { $0.$font.id }))
+        let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: req.db).filter(\.$id ~~ fontIDs).all()
+        let names = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f.name) } })
+        return comments.map { MyCommentResponse($0, fontName: names[$0.$font.id]) }
     }
 
     @Sendable func update(req: Request) async throws -> UserResponse {

@@ -10,6 +10,13 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import IconButton from '@mui/material/IconButton'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import Paper from '@mui/material/Paper'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import UndoIcon from '@mui/icons-material/Undo'
 import type { Flag, FontEdit, FontInfoSnapshot, RegionStat } from '../api/types'
@@ -139,35 +146,60 @@ export function AdminPage() {
         <Typography variant="h6" gutterBottom>✏️ {t('admin.edits')}</Typography>
         {edits === null && <Skeleton lines={2} />}
         {edits?.length === 0 && <Typography color="text.secondary">{t('admin.noEdits')}</Typography>}
-        <List disablePadding>
-          {edits?.map((e) => (
-            <ListItem
-              key={e.id}
-              divider
-              disableGutters
-              secondaryAction={
-                <IconButton edge="end" size="small" onClick={() => revert(e.id)} aria-label={t('admin.revert')} title={t('admin.revert')}>
-                  <UndoIcon fontSize="small" />
-                </IconButton>
-              }
-            >
-              <ListItemText
-                slotProps={{ primary: { component: 'div' } }}
-                primary={
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                      <Link component={RouterLink} to={`/fonts/${e.fontID}`}>{e.fontName ?? e.after.name}</Link>
-                      <Typography component="span" variant="caption" color="text.secondary">
-                        {`${e.editorName ?? '—'} · ${e.createdAt ? timeAgo(e.createdAt, t) : ''}`}
-                      </Typography>
-                    </Box>
-                    <EditDiff before={e.before} after={e.after} t={t} />
-                  </Box>
-                }
-              />
-            </ListItem>
-          ))}
-        </List>
+        {edits && edits.length > 0 && (
+          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 640, '& td, & th': { verticalAlign: 'top' } }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('admin.colWhen')}</TableCell>
+                  <TableCell>{t('admin.colFont')}</TableCell>
+                  <TableCell>{t('admin.colEditor')}</TableCell>
+                  <TableCell>{t('admin.colField')}</TableCell>
+                  <TableCell>{t('admin.colBefore')}</TableCell>
+                  <TableCell>{t('admin.colAfter')}</TableCell>
+                  <TableCell align="right">{t('admin.revert')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {edits.map((e) => {
+                  const changes = changedFields(e.before, e.after, t)
+                  const rows = changes.length > 0 ? changes : [{ label: '—', before: '', after: '' }]
+                  return rows.map((c, idx) => (
+                    <TableRow key={`${e.id}-${idx}`} sx={idx === rows.length - 1 ? undefined : { '& td': { borderBottom: 0 } }}>
+                      {idx === 0 && (
+                        <TableCell rowSpan={rows.length}>
+                          <Typography variant="caption" color="text.secondary">{e.createdAt ? timeAgo(e.createdAt, t) : ''}</Typography>
+                        </TableCell>
+                      )}
+                      {idx === 0 && (
+                        <TableCell rowSpan={rows.length}>
+                          <Link component={RouterLink} to={`/fonts/${e.fontID}`}>{e.fontName ?? e.after.name}</Link>
+                        </TableCell>
+                      )}
+                      {idx === 0 && (
+                        <TableCell rowSpan={rows.length}>
+                          {e.editorID
+                            ? <Link component={RouterLink} to={`/users/${e.editorID}`}>@{e.editorName ?? '—'}</Link>
+                            : <Typography variant="body2" color="text.secondary">{e.editorName ?? '—'}</Typography>}
+                        </TableCell>
+                      )}
+                      <TableCell sx={{ fontWeight: 600 }}>{c.label}</TableCell>
+                      <TableCell sx={{ color: 'text.secondary', textDecoration: 'line-through' }}>{c.before}</TableCell>
+                      <TableCell>{c.after}</TableCell>
+                      {idx === 0 && (
+                        <TableCell rowSpan={rows.length} align="right">
+                          <IconButton size="small" onClick={() => revert(e.id)} aria-label={t('admin.revert')} title={t('admin.revert')}>
+                            <UndoIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
         {editsHasMore && (
           <Button onClick={loadMoreEdits} disabled={loadingMore} sx={{ mt: 1 }}>
             {loadingMore ? t('admin.loading') : t('admin.loadMore')}
@@ -178,8 +210,8 @@ export function AdminPage() {
   )
 }
 
-/** Muestra los campos que cambiaron entre dos instantáneas: "antes → después". */
-function EditDiff({ before, after, t }: { before: FontInfoSnapshot; after: FontInfoSnapshot; t: (k: string, p?: Record<string, string | number>) => string }) {
+/** Campos que cambiaron entre dos instantáneas, ya formateados para la tabla. */
+function changedFields(before: FontInfoSnapshot, after: FontInfoSnapshot, t: (k: string, p?: Record<string, string | number>) => string): { label: string; before: string; after: string }[] {
   const fmt = (field: 'name' | 'description' | 'source' | 'drinkable', v: string | null): string => {
     if (v == null || v === '') return t('admin.editEmpty')
     if (field === 'source') return t(`source.${v}`)
@@ -192,18 +224,7 @@ function EditDiff({ before, after, t }: { before: FontInfoSnapshot; after: FontI
     { key: 'source', label: t('detail.type') },
     { key: 'drinkable', label: t('detail.drinkability') },
   ]
-  const changed = fields.filter((f) => (before[f.key] ?? null) !== (after[f.key] ?? null))
-  if (changed.length === 0) return null
-  return (
-    <Box sx={{ mt: 0.5 }}>
-      {changed.map((f) => (
-        <Typography key={f.key} variant="body2" sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          <Box component="span" sx={{ fontWeight: 600 }}>{f.label}</Box>
-          <Box component="span" sx={{ color: 'text.secondary', textDecoration: 'line-through' }}>{fmt(f.key, before[f.key] as string | null)}</Box>
-          <Box component="span">→</Box>
-          <Box component="span">{fmt(f.key, after[f.key] as string | null)}</Box>
-        </Typography>
-      ))}
-    </Box>
-  )
+  return fields
+    .filter((f) => (before[f.key] ?? null) !== (after[f.key] ?? null))
+    .map((f) => ({ label: f.label, before: fmt(f.key, before[f.key] as string | null), after: fmt(f.key, after[f.key] as string | null) }))
 }

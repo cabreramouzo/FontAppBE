@@ -245,6 +245,7 @@ struct FontEditResponse: Content {
     let id: UUID?
     let fontID: UUID
     let fontName: String?      // nombre actual de la fuente (para enlazar)
+    let editorID: UUID?        // para enlazar al perfil del editor
     let editorName: String?    // quién editó (null si cuenta borrada)
     let before: FontInfoSnapshot
     let after: FontInfoSnapshot
@@ -254,6 +255,7 @@ struct FontEditResponse: Content {
         self.id = edit.id
         self.fontID = edit.$font.id
         self.fontName = currentFontName
+        self.editorID = edit.$editor.id
         self.editorName = editorName
         self.before = edit.before
         self.after = edit.after

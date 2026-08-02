@@ -22,6 +22,7 @@ export interface UserResponse {
   username: string
   email?: string | null
   isAdmin?: boolean | null
+  createdAt?: string | null
 }
 
 export interface Flag {
@@ -47,6 +48,7 @@ export interface FontEdit {
   id: string
   fontID: string
   fontName: string | null
+  editorID: string | null
   editorName: string | null
   before: FontInfoSnapshot
   after: FontInfoSnapshot

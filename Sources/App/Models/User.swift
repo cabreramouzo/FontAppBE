@@ -68,6 +68,7 @@ struct UserResponse: Content {
     let username: String
     let email: String?
     let isAdmin: Bool?
+    let createdAt: Date?
 
     init(_ user: User, includeEmail: Bool = false) {
         self.id = user.id
@@ -76,5 +77,6 @@ struct UserResponse: Content {
         self.email = includeEmail ? user.email : nil
         // Solo se expone en respuestas propias (junto al email).
         self.isAdmin = includeEmail ? user.isAdmin : nil
+        self.createdAt = user.createdAt
     }
 }
