@@ -3,6 +3,8 @@ import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-lea
 import { Link, useSearchParams } from 'react-router-dom'
 import Chip from '@mui/material/Chip'
 import Fab from '@mui/material/Fab'
+import Badge from '@mui/material/Badge'
+import Collapse from '@mui/material/Collapse'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
@@ -28,6 +30,7 @@ import DoNotDisturbAltIcon from '@mui/icons-material/DoNotDisturbAlt'
 import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import CloseIcon from '@mui/icons-material/Close'
+import TuneIcon from '@mui/icons-material/Tune'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import type { Theme } from '@mui/material/styles'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
@@ -410,6 +413,9 @@ export function MapPage() {
   const [onlyWithWater, setOnlyWithWater] = useState(false)
   const [showNonPotable, setShowNonPotable] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>('all')
+  const [controlsOpen, setControlsOpen] = useState(false)
+  // Nº de filtros activos (para el aviso cuando las herramientas están plegadas).
+  const activeFilters = (onlyWithWater ? 1 : 0) + (showNonPotable ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
   const [showNearby, setShowNearby] = useState(false)
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [place, setPlace] = useState<Place | null>(null)
@@ -487,6 +493,20 @@ export function MapPage() {
       <SearchBox onSelect={(f) => { setGoto([f.latitude, f.longitude]); setSelectedID(f.id) }} onSelectPlace={setPlace} />
 
       <div className="map-controls">
+        {/* Botón que despliega/esconde las herramientas. El puntito avisa si hay
+            filtros activos mientras están plegadas, para no ocultarlo en silencio. */}
+        <Badge color="primary" variant="dot" invisible={controlsOpen || activeFilters === 0} overlap="circular">
+          <Fab
+            size="medium"
+            onClick={() => setControlsOpen((v) => !v)}
+            aria-label={t(controlsOpen ? 'map.hideTools' : 'map.showTools')}
+            title={t(controlsOpen ? 'map.hideTools' : 'map.showTools')}
+            sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
+          >
+            {controlsOpen ? <CloseIcon /> : <TuneIcon />}
+          </Fab>
+        </Badge>
+        <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
         <Chip clickable variant="outlined" icon={<MyLocationIcon />} label={noEmoji(t('map.near'))} onClick={() => locate(true)} sx={chipSx(false)} />
         <Chip
           clickable
@@ -527,6 +547,7 @@ export function MapPage() {
             <MenuItem key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</MenuItem>
           ))}
         </Select>
+        </Collapse>
       </div>
       {geoError && <div className="hint hint-error">{geoError}</div>}
 
