@@ -11,6 +11,8 @@ primary_region = 'fra'
 
 [env]
   AUTO_MIGRATE = 'true'
+  # Geo-IP para estadística regional de registro (no es secreto: solo un interruptor).
+  GEOIP_ENABLED = 'true'
 
 [http_service]
   internal_port = 8080
