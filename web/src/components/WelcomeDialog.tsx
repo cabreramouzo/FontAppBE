@@ -24,15 +24,24 @@ export function WelcomeDialog() {
   ]
 
   return (
-    <Dialog open={justRegistered} onClose={dismissWelcome} maxWidth="xs" fullWidth>
-      <DialogContent sx={{ textAlign: 'center', pt: 3 }}>
+    <Dialog open={justRegistered} onClose={dismissWelcome} maxWidth="xs" fullWidth
+      slotProps={{ paper: { sx: { overflow: 'hidden' } } }}>
+      {/* Cabecera: la ilustración a ancho completo, con degradado hacia el
+          fondo del popup por abajo para que no tape el texto. */}
+      <Box sx={{ position: 'relative', height: 260 }}>
         <Box
           component="img"
           src="/welcome.jpg"
           alt="FontApp"
-          sx={{ width: 180, height: 'auto', borderRadius: 2, mx: 'auto', display: 'block' }}
+          sx={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%', display: 'block' }}
         />
-        <Typography variant="h5" sx={{ fontWeight: 800, mt: 2 }}>
+        <Box sx={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: (theme) => `linear-gradient(to bottom, transparent 45%, ${theme.palette.background.paper} 100%)`,
+        }} />
+      </Box>
+      <DialogContent sx={{ textAlign: 'center', pt: 0, mt: -1 }}>
+        <Typography variant="h5" sx={{ fontWeight: 800 }}>
           {user?.name ? t('welcome.greeting', { name: user.name }) : t('welcome.title')}
         </Typography>
         <Typography color="text.secondary" sx={{ mt: 1 }}>
