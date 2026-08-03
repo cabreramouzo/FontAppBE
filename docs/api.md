@@ -50,8 +50,10 @@ Login con credenciales inválidas → **401**.
   "lastUpdate": "iso8601|null" }
 
 // UserResponse  (nunca incluye passwordHash; `email` solo en respuestas propias
-//                — login/me/registro/edición —, nunca en `GET /users/:id`)
-{ "id": "uuid", "name": "string", "username": "string", "email": "string|null" }
+//                — login/me/registro/edición —, nunca en `GET /users/:id`.
+//                La ubicación de registro NO se expone aquí; es solo para estadística.)
+{ "id": "uuid", "name": "string", "username": "string", "email": "string|null",
+  "isAdmin": "bool|null", "createdAt": "iso8601" }
 
 // ReportResponse
 { "id": "uuid", "fontID": "uuid", "userID": "uuid|null", "username": "string|null",
@@ -72,10 +74,29 @@ Login con credenciales inválidas → **401**.
 |--------|------|----|--------|-------|---------|
 | POST | `/users` | — | `{name, username≥3, email, password≥8}` | 201 `UserResponse` | 400, 409 (username/email en uso) |
 | GET | `/users/:id` | — | — | 200 `UserResponse` (sin email) | 404 |
+| GET | `/users/:id/fonts` | — | — | 200 `[Font]` (creadas por ese usuario) | 404 |
+| GET | `/users/:id/comments` | — | — | 200 `[reseña]` (con `fontName`) | 404 |
+| GET | `/users/stats/regions` | Bearer (admin) | — | 200 `[{country, region, count}]` | 401, 403 |
 | PUT | `/users/:id` | Bearer | `{name, username, email, password?}` | 200 `UserResponse` | 400, 401, 403 (no eres tú), 404, 409 |
 | DELETE | `/users/:id` | Bearer | — | 204 | 401, 403, 404 |
 
 `PUT`/`DELETE` son **self-only**: solo sobre tu propia cuenta (si no, 403).
+`:id` acepta **UUID o username** (`/users/miguel` equivale a `/users/<uuid>`; el UUID es
+el fallback estable si el usuario se renombra).
+
+### Ubicación de registro (geo-IP) — estadística
+
+Al hacer `POST /users`, el backend deduce la **ubicación aproximada** (país / región /
+ciudad) a partir de la **IP del cliente** y la guarda en el usuario
+(`signup_country`, `signup_region`, `signup_city`). Solo sirve para **estadística
+regional** (p. ej. cuántos usuarios hay en Galicia); **nunca se guarda la IP** en claro
+ni se expone la ubicación en las respuestas de usuario.
+
+- Es **best-effort**: si el geo-IP falla, el registro no se bloquea (los campos quedan `null`).
+- Se resuelve vía la abstracción `GeoLocator`: **noop en dev** (en local no hay IP pública) y
+  un servicio HTTP en prod (ip-api.com), activado con la variable de entorno **`GEOIP_ENABLED=true`**.
+  Con el flag apagado, los campos quedan siempre `null` ("región desconocida").
+- El agregado se consulta en `GET /users/stats/regions` (solo admin).
 
 ## Fonts (fuentes de agua)
 

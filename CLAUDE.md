@@ -54,6 +54,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   denuncias de contenido (`content_flags`) con vista de moderación en el perfil del admin.
 - Rate-limit en `/auth/*` (en memoria, por IP) y limpieza periódica de tokens caducados (cada 6 h).
   A escala multi-instancia el rate-limit debería ir a Redis.
+- Ubicación de registro (`GeoLocator`): al crear cuenta se deduce país/región/ciudad de la IP
+  (solo estadística; nunca se guarda la IP). Noop en dev; en prod `IPAPIGeoLocator` (ip-api.com,
+  **tercero**, uso no comercial) con `GEOIP_ENABLED=true`. Alternativa futura: BD local MaxMind
+  GeoLite2 (`.mmdb`) → sin llamada externa por registro y la IP no sale del servidor. Ver `docs/api.md`.
 
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).
