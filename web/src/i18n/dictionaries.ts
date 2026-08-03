@@ -215,6 +215,10 @@ const ca: Dict = {
   'welcome.b3': 'Afegeix fonts noves i comparteix-ne fotos.',
   'welcome.b4': 'Deixa ressenyes i confirma l\'estat perquè tothom ho sàpiga.',
   'welcome.cta': 'Comença a explorar',
+  'geoPrompt.title': 'On ets?',
+  'geoPrompt.body': 'Necessitem la teva ubicació per mostrar-te les fonts que tens a prop. No la desem enlloc.',
+  'geoPrompt.allow': 'Activa la ubicació',
+  'geoPrompt.later': 'Ara no',
 
   // Estado del agua
   'status.flowing': 'Surt aigua',
@@ -444,6 +448,10 @@ const es: Dict = {
   'welcome.b3': 'Añade fuentes nuevas y comparte fotos.',
   'welcome.b4': 'Deja reseñas y confirma el estado para que todos lo sepan.',
   'welcome.cta': 'Empezar a explorar',
+  'geoPrompt.title': '¿Dónde estás?',
+  'geoPrompt.body': 'Necesitamos tu ubicación para mostrarte las fuentes que tienes cerca. No la guardamos en ningún sitio.',
+  'geoPrompt.allow': 'Activar ubicación',
+  'geoPrompt.later': 'Ahora no',
 
   'status.flowing': 'Sale agua',
   'status.trickle': 'Poca agua',
@@ -667,6 +675,10 @@ const gl: Dict = {
   'welcome.b3': 'Engade fontes novas e comparte fotos.',
   'welcome.b4': 'Deixa reseñas e confirma o estado para que todos o saiban.',
   'welcome.cta': 'Comezar a explorar',
+  'geoPrompt.title': 'Onde estás?',
+  'geoPrompt.body': 'Necesitamos a túa localización para amosarche as fontes que tes preto. Non a gardamos en ningún sitio.',
+  'geoPrompt.allow': 'Activar localización',
+  'geoPrompt.later': 'Agora non',
 
   'status.flowing': 'Sae auga',
   'status.trickle': 'Pouca auga',
@@ -890,6 +902,10 @@ const eu: Dict = {
   'welcome.b3': 'Gehitu iturri berriak eta partekatu argazkiak.',
   'welcome.b4': 'Utzi iritziak eta berretsi egoera denek jakin dezaten.',
   'welcome.cta': 'Hasi arakatzen',
+  'geoPrompt.title': 'Non zaude?',
+  'geoPrompt.body': 'Zure kokapena behar dugu inguruan dituzun iturriak erakusteko. Ez dugu inon gordetzen.',
+  'geoPrompt.allow': 'Aktibatu kokapena',
+  'geoPrompt.later': 'Orain ez',
 
   'status.flowing': 'Ura dario',
   'status.trickle': 'Ur gutxi',
@@ -1113,6 +1129,10 @@ const en: Dict = {
   'welcome.b3': 'Add new fountains and share photos.',
   'welcome.b4': 'Leave reviews and confirm the status so everyone knows.',
   'welcome.cta': 'Start exploring',
+  'geoPrompt.title': 'Where are you?',
+  'geoPrompt.body': 'We need your location to show you the fountains near you. We don\'t store it anywhere.',
+  'geoPrompt.allow': 'Enable location',
+  'geoPrompt.later': 'Not now',
 
   'status.flowing': 'Water flowing',
   'status.trickle': 'Little water',

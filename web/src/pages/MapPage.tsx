@@ -11,6 +11,9 @@ import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
+import Dialog from '@mui/material/Dialog'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
 import Stack from '@mui/material/Stack'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
@@ -402,7 +405,7 @@ function MapLegend() {
 }
 
 export function MapPage() {
-  const { user } = useAuth()
+  const { user, promptLocation, dismissLocationPrompt } = useAuth()
   const { t } = useI18n()
   const [placing, setPlacing] = useState(false)
   const [pos, setPos] = useState<LatLng | null>(null)
@@ -476,6 +479,28 @@ export function MapPage() {
 
   return (
     <div className="map-wrap">
+      {/* Priming de ubicación tras la bienvenida: explica por qué la pedimos
+          antes de disparar el permiso nativo del navegador. */}
+      <Dialog open={promptLocation} onClose={dismissLocationPrompt} maxWidth="xs" fullWidth>
+        <DialogContent sx={{ textAlign: 'center', pt: 3 }}>
+          <MyLocationIcon color="primary" sx={{ fontSize: 48 }} />
+          <Typography variant="h6" sx={{ fontWeight: 800, mt: 1 }}>{t('geoPrompt.title')}</Typography>
+          <Typography color="text.secondary" sx={{ mt: 1 }}>{t('geoPrompt.body')}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, flexDirection: 'column', gap: 1 }}>
+          <Button
+            variant="contained"
+            disableElevation
+            fullWidth
+            startIcon={<MyLocationIcon />}
+            onClick={() => { dismissLocationPrompt(); locate(true) }}
+          >
+            {t('geoPrompt.allow')}
+          </Button>
+          <Button fullWidth onClick={dismissLocationPrompt}>{t('geoPrompt.later')}</Button>
+        </DialogActions>
+      </Dialog>
+
       <MapContainer center={MOIANES} zoom={12} className="map" scrollWheelZoom zoomControl={false}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

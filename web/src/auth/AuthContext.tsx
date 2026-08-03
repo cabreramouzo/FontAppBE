@@ -12,6 +12,9 @@ interface AuthState {
   // True justo tras registrarse (para mostrar el pop-up de bienvenida una vez).
   justRegistered: boolean
   dismissWelcome: () => void
+  // Tras cerrar la bienvenida, ofrecemos activar la ubicación (priming).
+  promptLocation: boolean
+  dismissLocationPrompt: () => void
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
@@ -20,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [justRegistered, setJustRegistered] = useState(false)
+  const [promptLocation, setPromptLocation] = useState(false)
 
   useEffect(() => {
     async function restore() {
@@ -70,7 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh, justRegistered, dismissWelcome: () => setJustRegistered(false) }}>
+    <AuthContext.Provider value={{
+      user, loading, login, register, logout, refresh,
+      justRegistered,
+      dismissWelcome: () => { setJustRegistered(false); setPromptLocation(true) },
+      promptLocation,
+      dismissLocationPrompt: () => setPromptLocation(false),
+    }}>
       {children}
     </AuthContext.Provider>
   )
