@@ -174,8 +174,9 @@ export async function deleteAccount(userID: string): Promise<void> {
 }
 
 // Recuperación de contraseña. forgot devuelve devLink solo fuera de producción.
-export async function forgotPassword(email: string): Promise<{ ok: boolean; devLink: string | null }> {
-  return apiFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) })
+// `lang` localiza el correo (idioma de la interfaz).
+export async function forgotPassword(email: string, lang?: string): Promise<{ ok: boolean; devLink: string | null }> {
+  return apiFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email, lang }) })
 }
 
 export async function resetPassword(token: string, password: string): Promise<void> {

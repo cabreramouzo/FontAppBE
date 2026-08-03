@@ -5,6 +5,10 @@ import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
+import IconButton from '@mui/material/IconButton'
+import InputAdornment from '@mui/material/InputAdornment'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { useI18n } from '../i18n/I18nContext'
 import { describeError, resetPassword } from '../api/client'
 
@@ -14,6 +18,7 @@ export function ResetPasswordPage() {
   const [params] = useSearchParams()
   const token = params.get('token') ?? ''
   const [password, setPassword] = useState('')
+  const [show, setShow] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
@@ -43,13 +48,31 @@ export function ResetPasswordPage() {
         <>
           <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
-              type="password"
+              type={show ? 'text' : 'password'}
               label={t('reset.password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               fullWidth
               size="small"
+              slotProps={{
+                htmlInput: { autoComplete: 'new-password', minLength: 8 },
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShow((s) => !s)}
+                        edge="end"
+                        size="small"
+                        aria-label={t(show ? 'form.hidePassword' : 'form.showPassword')}
+                        title={t(show ? 'form.hidePassword' : 'form.showPassword')}
+                      >
+                        {show ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
             <Button type="submit" variant="contained" disableElevation>{t('reset.submit')}</Button>
           </Box>

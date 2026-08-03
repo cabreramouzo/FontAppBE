@@ -59,13 +59,10 @@ struct AuthController: RouteCollection {
 
         // Envía el correo (LogMailSender en dev, Resend en prod). Best-effort:
         // si el proveedor falla, no revelamos nada al cliente (evita enumeración/oráculo).
-        let html = """
-            <p>Has demanat restablir la contrasenya de FontApp.</p>
-            <p><a href="\(link)">Restablir la contrasenya</a> (l'enllaç caduca en 1 hora).</p>
-            <p>Si no ho has demanat tu, ignora aquest correu.</p>
-            """
+        // El contenido va en el idioma de la interfaz que indique el cliente.
+        let mail = ResetEmail.build(lang: dto.lang, link: link)
         do {
-            try await req.mailSender.send(to: email, subject: "Restablir la contrasenya · FontApp", html: html, on: req.client)
+            try await req.mailSender.send(to: email, subject: mail.subject, html: mail.html, text: mail.text, on: req.client)
         } catch {
             req.logger.error("No s'ha pogut enviar el correu de reset a \(email): \(error)")
         }
@@ -138,6 +135,67 @@ struct LoginResponse: Content {
 
 struct ForgotDTO: Content {
     let email: String
+    /// Idioma de la interfaz para localizar el correo (ca/es/gl/eu/en). Opcional.
+    let lang: String?
+}
+
+/// Plantilla del correo de restablecimiento, localizada. Devuelve asunto, HTML y
+/// texto plano (alternativa multipart, mejor para la entregabilidad).
+enum ResetEmail {
+    static func build(lang: String?, link: String) -> (subject: String, html: String, text: String) {
+        switch lang {
+        case "es":
+            return (
+                "Restablecer la contraseña · FontApp",
+                """
+                <p>Has solicitado restablecer la contraseña de FontApp.</p>
+                <p><a href="\(link)">Restablecer la contraseña</a> (el enlace caduca en 1 hora).</p>
+                <p>Si no lo has solicitado tú, ignora este correo.</p>
+                """,
+                "Has solicitado restablecer la contraseña de FontApp.\nAbre este enlace (caduca en 1 hora): \(link)\nSi no lo has solicitado tú, ignora este correo."
+            )
+        case "gl":
+            return (
+                "Restablecer o contrasinal · FontApp",
+                """
+                <p>Solicitaches restablecer o contrasinal de FontApp.</p>
+                <p><a href="\(link)">Restablecer o contrasinal</a> (a ligazón caduca en 1 hora).</p>
+                <p>Se non o solicitaches ti, ignora este correo.</p>
+                """,
+                "Solicitaches restablecer o contrasinal de FontApp.\nAbre esta ligazón (caduca en 1 hora): \(link)\nSe non o solicitaches ti, ignora este correo."
+            )
+        case "eu":
+            return (
+                "Pasahitza berrezarri · FontApp",
+                """
+                <p>FontApp-eko pasahitza berrezartzeko eskaera egin duzu.</p>
+                <p><a href="\(link)">Pasahitza berrezarri</a> (esteka ordubetean iraungiko da).</p>
+                <p>Zuk eskatu ez baduzu, ez ikusi mezu honi.</p>
+                """,
+                "FontApp-eko pasahitza berrezartzeko eskaera egin duzu.\nIreki esteka hau (ordubetean iraungiko da): \(link)\nZuk eskatu ez baduzu, ez ikusi mezu honi."
+            )
+        case "en":
+            return (
+                "Reset your password · FontApp",
+                """
+                <p>You requested to reset your FontApp password.</p>
+                <p><a href="\(link)">Reset your password</a> (the link expires in 1 hour).</p>
+                <p>If you didn't request this, ignore this email.</p>
+                """,
+                "You requested to reset your FontApp password.\nOpen this link (expires in 1 hour): \(link)\nIf you didn't request this, ignore this email."
+            )
+        default: // ca (idioma por defecto de la app)
+            return (
+                "Restablir la contrasenya · FontApp",
+                """
+                <p>Has demanat restablir la contrasenya de FontApp.</p>
+                <p><a href="\(link)">Restablir la contrasenya</a> (l'enllaç caduca en 1 hora).</p>
+                <p>Si no ho has demanat tu, ignora aquest correu.</p>
+                """,
+                "Has demanat restablir la contrasenya de FontApp.\nObre aquest enllaç (caduca en 1 hora): \(link)\nSi no ho has demanat tu, ignora aquest correu."
+            )
+        }
+    }
 }
 
 /// Respuesta de forgot-password. `devLink` solo se rellena fuera de producción.

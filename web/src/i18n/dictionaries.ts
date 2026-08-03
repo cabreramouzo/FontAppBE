@@ -58,6 +58,8 @@ const ca: Dict = {
   'form.saving': 'Desant…',
   'form.save': 'Desa',
   'form.cancel': 'Cancel·la',
+  'form.showPassword': 'Mostra la contrasenya',
+  'form.hidePassword': 'Amaga la contrasenya',
 
   // Detalle
   'detail.backMap': '← Mapa',
@@ -315,6 +317,8 @@ const es: Dict = {
   'form.saving': 'Guardando…',
   'form.save': 'Guardar',
   'form.cancel': 'Cancelar',
+  'form.showPassword': 'Mostrar la contraseña',
+  'form.hidePassword': 'Ocultar la contraseña',
 
   'detail.backMap': '← Mapa',
   'detail.edit': 'Editar',
@@ -561,6 +565,8 @@ const gl: Dict = {
   'form.saving': 'Gardando…',
   'form.save': 'Gardar',
   'form.cancel': 'Cancelar',
+  'form.showPassword': 'Amosar o contrasinal',
+  'form.hidePassword': 'Agochar o contrasinal',
 
   'detail.backMap': '← Mapa',
   'detail.edit': 'Editar',
@@ -807,6 +813,8 @@ const eu: Dict = {
   'form.saving': 'Gordetzen…',
   'form.save': 'Gorde',
   'form.cancel': 'Utzi',
+  'form.showPassword': 'Erakutsi pasahitza',
+  'form.hidePassword': 'Ezkutatu pasahitza',
 
   'detail.backMap': '← Mapa',
   'detail.edit': 'Editatu',
@@ -1053,6 +1061,8 @@ const en: Dict = {
   'form.saving': 'Saving…',
   'form.save': 'Save',
   'form.cancel': 'Cancel',
+  'form.showPassword': 'Show password',
+  'form.hidePassword': 'Hide password',
 
   'detail.backMap': '← Map',
   'detail.edit': 'Edit',

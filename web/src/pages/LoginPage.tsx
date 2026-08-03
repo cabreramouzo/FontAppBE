@@ -14,7 +14,7 @@ type Mode = 'login' | 'register' | 'forgot'
 
 export function LoginPage() {
   const { login, register } = useAuth()
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('login')
   const [name, setName] = useState('')
@@ -35,7 +35,7 @@ export function LoginPage() {
         await register(name, username, email, password)
         navigate('/')
       } else {
-        const res = await forgotPassword(email)
+        const res = await forgotPassword(email, lang)
         setSent({ devLink: res.devLink })
       }
     } catch (e) {

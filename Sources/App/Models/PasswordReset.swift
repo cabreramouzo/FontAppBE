@@ -21,7 +21,13 @@ final class PasswordReset: Model, @unchecked Sendable {
     }
 
     /// Genera un token aleatorio válido durante `ttl` segundos (por defecto 1 h).
+    /// URL-safe: el token viaja en el query string del enlace del correo, así que
+    /// evitamos los caracteres de base64 que la URL altera (`+` → espacio, `/`, `=`).
     static func generate(for userID: UUID, ttl: TimeInterval = 3600) -> PasswordReset {
-        PasswordReset(userID: userID, token: [UInt8].random(count: 32).base64, expiresAt: Date().addingTimeInterval(ttl))
+        let token = [UInt8].random(count: 32).base64
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        return PasswordReset(userID: userID, token: token, expiresAt: Date().addingTimeInterval(ttl))
     }
 }
