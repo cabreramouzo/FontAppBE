@@ -7,6 +7,7 @@ import { MuiProvider } from './theme/MuiProvider'
 import { ToastProvider } from './components/ToastContext'
 import { Layout } from './components/Layout'
 import { Skeleton } from './components/Skeleton'
+import { WelcomeDialog } from './components/WelcomeDialog'
 
 // Code-splitting por ruta: cada página es su propio chunk (Leaflet solo se carga
 // con el mapa). Las páginas son exports con nombre, de ahí el mapeo a `default`.
@@ -43,6 +44,7 @@ export default function App() {
                 </Routes>
               </Suspense>
             </Layout>
+            <WelcomeDialog />
           </AuthProvider>
         </ToastProvider>
         </I18nProvider>

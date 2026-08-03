@@ -9,6 +9,9 @@ interface AuthState {
   register: (name: string, username: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   refresh: () => Promise<void>
+  // True justo tras registrarse (para mostrar el pop-up de bienvenida una vez).
+  justRegistered: boolean
+  dismissWelcome: () => void
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
@@ -16,6 +19,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [justRegistered, setJustRegistered] = useState(false)
 
   useEffect(() => {
     async function restore() {
@@ -43,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ name, username, email, password }),
     })
     await login(username, password)
+    setJustRegistered(true) // dispara el pop-up de bienvenida
   }
 
   async function refresh() {
@@ -65,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh, justRegistered, dismissWelcome: () => setJustRegistered(false) }}>
       {children}
     </AuthContext.Provider>
   )
