@@ -27,6 +27,7 @@ import ListItemText from '@mui/material/ListItemText'
 import ListSubheader from '@mui/material/ListSubheader'
 import SearchIcon from '@mui/icons-material/Search'
 import MyLocationIcon from '@mui/icons-material/MyLocation'
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import NearMeIcon from '@mui/icons-material/NearMe'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import DoNotDisturbAltIcon from '@mui/icons-material/DoNotDisturbAlt'
@@ -53,6 +54,7 @@ import { WATER_STATUS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
 import { searchPlaces, type Place } from '../lib/geocode'
 import { compressImage } from '../lib/image'
+import { readGpsFromImage, type GpsCoords } from '../lib/exifGps'
 import { DRINKABLE_OPTIONS, SOURCE_OPTIONS, DRINKABLE_EMOJI, SOURCE_EMOJI, isNotPotable } from '../lib/waterType'
 import { timeAgo } from '../lib/time'
 
@@ -281,6 +283,21 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  // Ubicación efectiva: el clic del usuario, que la foto puede sugerir cambiar.
+  const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: pos.lat, lng: pos.lng })
+  const [gpsHint, setGpsHint] = useState<GpsCoords | null>(null)
+
+  // Al elegir foto: si su EXIF lleva GPS y difiere > ~15 m del punto actual,
+  // ofrecemos usar esas coordenadas (leídas del File ORIGINAL, antes de comprimir).
+  async function pickFile(f: File | null) {
+    setFile(f)
+    setGpsHint(null)
+    if (!f) return
+    const gps = await readGpsFromImage(f)
+    if (gps && haversineKm(coords.lat, coords.lng, gps.lat, gps.lon) > 0.015) {
+      setGpsHint(gps)
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -291,8 +308,8 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
       if (file) image = await uploadImage(await compressImage(file))
       await createFont({
         name,
-        latitude: pos.lat,
-        longitude: pos.lng,
+        latitude: coords.lat,
+        longitude: coords.lng,
         image,
         description: description || undefined,
         source: source || undefined,
@@ -310,7 +327,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
   return (
     <div className="panel">
       <Typography variant="h6">{t('newFont.title')}</Typography>
-      <Typography variant="caption" color="text.secondary">Lat {pos.lat.toFixed(5)}, Long {pos.lng.toFixed(5)}</Typography>
+      <Typography variant="caption" color="text.secondary">Lat {coords.lat.toFixed(5)}, Long {coords.lng.toFixed(5)}</Typography>
       <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
         <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} required size="small" />
         <TextField label={t('newFont.descriptionOpt')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" />
@@ -322,7 +339,20 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
           <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
           {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
         </TextField>
-        <ImagePicker file={file} onChange={setFile} />
+        <ImagePicker file={file} onChange={pickFile} />
+        {gpsHint && (
+          <Alert
+            severity="info"
+            icon={<PhotoCameraIcon fontSize="inherit" />}
+            action={
+              <Button color="inherit" size="small" onClick={() => { setCoords({ lat: gpsHint.lat, lng: gpsHint.lon }); setGpsHint(null) }}>
+                {t('newFont.usePhotoGps')}
+              </Button>
+            }
+          >
+            {t('newFont.photoHasGps')}
+          </Alert>
+        )}
         {error && <Alert severity="error">{error}</Alert>}
         <Stack direction="row" spacing={1}>
           <Button type="submit" variant="contained" disableElevation disabled={saving}>{saving ? t('form.saving') : t('form.create')}</Button>
