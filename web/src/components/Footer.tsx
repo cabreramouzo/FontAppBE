@@ -15,10 +15,11 @@ import LocalCafeIcon from '@mui/icons-material/LocalCafe'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from './ToastContext'
 
-// TODO(donaciones): valores de EJEMPLO / placeholder — NO son reales ni operativos.
-// Sustituir por el usuario de Ko-fi y la dirección Bitcoin propios (y quitar el
-// aviso de placeholder) antes de aceptar donaciones reales en producción.
-const PLACEHOLDER_KOFI_URL = 'https://ko-fi.com/' // → https://ko-fi.com/tuusuario
+// Ko-fi real (ID G5G724DC37). El enlace directo equivale al widget embed, sin
+// cargar el script de terceros de Ko-fi.
+const KOFI_URL = 'https://ko-fi.com/G5G724DC37'
+// TODO(donaciones): dirección Bitcoin de EJEMPLO / placeholder — NO es real.
+// Sustituir por la propia (y quitar el aviso de placeholder) antes de usarla.
 const PLACEHOLDER_BTC_ADDRESS = 'bc1qDEMOexampleplaceholder0notreal0replaceme00'
 
 export function Footer() {
@@ -62,7 +63,7 @@ export function Footer() {
             disableElevation
             startIcon={<LocalCafeIcon />}
             component="a"
-            href={PLACEHOLDER_KOFI_URL}
+            href={KOFI_URL}
             target="_blank"
             rel="noreferrer"
             sx={{ textTransform: 'none' }}

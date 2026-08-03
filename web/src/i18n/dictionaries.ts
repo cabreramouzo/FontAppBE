@@ -28,7 +28,7 @@ const ca: Dict = {
   'donate.orBtc': 'o amb Bitcoin',
   'donate.copy': 'Copia',
   'donate.copied': 'Adreça copiada',
-  'donate.placeholderNote': 'Mètodes d\'exemple (placeholder): encara no són operatius.',
+  'donate.placeholderNote': 'Adreça Bitcoin de prova (placeholder).',
 
   // Mapa
   'map.searchPlaceholder': '🔎 Cerca font o lloc…',
@@ -240,7 +240,7 @@ const es: Dict = {
   'donate.orBtc': 'o con Bitcoin',
   'donate.copy': 'Copiar',
   'donate.copied': 'Dirección copiada',
-  'donate.placeholderNote': 'Métodos de ejemplo (placeholder): aún no están operativos.',
+  'donate.placeholderNote': 'Dirección Bitcoin de prueba (placeholder).',
 
   'map.searchPlaceholder': '🔎 Buscar fuente o lugar…',
   'map.near': '📍 Cerca de mí',
@@ -439,7 +439,7 @@ const gl: Dict = {
   'donate.orBtc': 'ou con Bitcoin',
   'donate.copy': 'Copiar',
   'donate.copied': 'Enderezo copiado',
-  'donate.placeholderNote': 'Métodos de exemplo (placeholder): aínda non están operativos.',
+  'donate.placeholderNote': 'Enderezo Bitcoin de proba (placeholder).',
 
   'map.searchPlaceholder': '🔎 Buscar fonte ou lugar…',
   'map.near': '📍 Preto de min',
@@ -638,7 +638,7 @@ const eu: Dict = {
   'donate.orBtc': 'edo Bitcoin-ekin',
   'donate.copy': 'Kopiatu',
   'donate.copied': 'Helbidea kopiatu da',
-  'donate.placeholderNote': 'Adibidezko metodoak (placeholder): oraindik ez daude aktibo.',
+  'donate.placeholderNote': 'Probako Bitcoin helbidea (placeholder).',
 
   'map.searchPlaceholder': '🔎 Bilatu iturria edo lekua…',
   'map.near': '📍 Nire ondoan',
@@ -837,7 +837,7 @@ const en: Dict = {
   'donate.orBtc': 'or with Bitcoin',
   'donate.copy': 'Copy',
   'donate.copied': 'Address copied',
-  'donate.placeholderNote': 'Placeholder methods: not active yet.',
+  'donate.placeholderNote': 'Placeholder Bitcoin address.',
 
   'map.searchPlaceholder': '🔎 Search fountain or place…',
   'map.near': '📍 Near me',
