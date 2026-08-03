@@ -10,10 +10,12 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Switch from '@mui/material/Switch'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ShieldIcon from '@mui/icons-material/GppMaybeOutlined'
 import type { Font, MyComment } from '../api/types'
-import { deleteAccount, describeError, getMyComments, getMyFonts } from '../api/client'
+import { deleteAccount, describeError, getMyComments, getMyFonts, updateProfile } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -21,11 +23,12 @@ import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 
 export function ProfilePage() {
-  const { user, loading, logout } = useAuth()
+  const { user, loading, logout, refresh } = useAuth()
   const { t } = useI18n()
   const navigate = useNavigate()
   const [fonts, setFonts] = useState<Font[] | null>(null)
   const [comments, setComments] = useState<MyComment[] | null>(null)
+  const [savingPrivacy, setSavingPrivacy] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -37,6 +40,19 @@ export function ProfilePage() {
     getMyFonts().then(setFonts).catch(() => setFonts([]))
     getMyComments().then(setComments).catch(() => setComments([]))
   }, [user, loading, navigate])
+
+  async function toggleEmailPublic(next: boolean) {
+    if (!user) return
+    setSavingPrivacy(true)
+    try {
+      await updateProfile(user.id, { name: user.name, username: user.username, email: user.email ?? '', emailPublic: next })
+      await refresh() // refresca el usuario para reflejar el nuevo estado
+    } catch (e) {
+      setError(describeError(e, t))
+    } finally {
+      setSavingPrivacy(false)
+    }
+  }
 
   async function removeAccount() {
     if (!user || !confirm(t('profile.confirmDelete'))) return
@@ -76,6 +92,20 @@ export function ProfilePage() {
         <Button color="error" startIcon={<DeleteOutlineIcon />} onClick={removeAccount} sx={{ mt: 1 }}>
           {t('profile.deleteAccount')}
         </Button>
+      </Box>
+
+      <Box component="section" sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom>{t('privacy.title')}</Typography>
+        <FormControlLabel
+          control={<Switch checked={!!user.emailPublic} disabled={savingPrivacy} onChange={(e) => toggleEmailPublic(e.target.checked)} />}
+          label={t('privacy.emailPublic')}
+        />
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          {t('privacy.emailPublicHint')}
+        </Typography>
+        <Link component={RouterLink} to={`/users/${encodeURIComponent(user.username)}`} sx={{ display: 'inline-block', mt: 1 }}>
+          {t('privacy.viewPublic')}
+        </Link>
       </Box>
 
       <Box component="section" sx={{ mb: 3 }}>

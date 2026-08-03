@@ -8,6 +8,7 @@ interface AuthState {
   login: (username: string, password: string) => Promise<void>
   register: (name: string, username: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  refresh: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
@@ -44,6 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await login(username, password)
   }
 
+  async function refresh() {
+    if (!getToken()) return
+    try {
+      setUser(await apiFetch<UserResponse>('/auth/me'))
+    } catch {
+      // si falla, dejamos el usuario como está
+    }
+  }
+
   async function logout() {
     try {
       await apiFetch('/auth/logout', { method: 'POST' })
@@ -55,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   )

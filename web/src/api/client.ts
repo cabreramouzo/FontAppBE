@@ -107,6 +107,16 @@ export async function deleteFont(id: string): Promise<void> {
   await apiFetch(`/fonts/${id}`, { method: 'DELETE' })
 }
 
+// Promueve la foto de una reseña a foto principal de la fuente (creador/admin).
+export async function setFontPhotoFromComment(fontID: string, commentID: string): Promise<Font> {
+  return apiFetch<Font>(`/fonts/${fontID}/photo/from-comment/${commentID}`, { method: 'POST' })
+}
+
+// Actualiza el perfil propio (self-only). Manda los campos actuales + los cambios.
+export async function updateProfile(id: string, data: { name: string; username: string; email: string; emailPublic?: boolean }): Promise<UserResponse> {
+  return apiFetch<UserResponse>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+}
+
 export interface NewComment {
   body: string
   rating?: number

@@ -53,6 +53,11 @@ export function UserProfilePage() {
               @{user.username}
               {user.createdAt && ` · ${t('user.memberSince', { when: timeAgo(user.createdAt, t) })}`}
             </Typography>
+            {user.email && (
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                {t('user.contact')}: <Link href={`mailto:${user.email}`}>{user.email}</Link>
+              </Typography>
+            )}
           </>
         )}
       </Box>

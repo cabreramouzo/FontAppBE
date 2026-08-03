@@ -1,3 +1,4 @@
+import Foundation
 import SotoCore
 import SotoS3
 import Vapor
@@ -27,6 +28,17 @@ struct R2ImageStorage: ImageStorage {
         guard reference.hasPrefix(prefix) else { return }
         let key = String(reference.dropFirst(prefix.count))
         _ = try await s3.deleteObject(.init(bucket: bucket, key: key))
+    }
+
+    func copy(_ reference: String) async throws -> String {
+        let prefix = publicBase + "/"
+        guard reference.hasPrefix(prefix) else { throw Abort(.badRequest, reason: "Referencia de imagen no válida") }
+        let sourceKey = String(reference.dropFirst(prefix.count))
+        let ext = (sourceKey as NSString).pathExtension
+        let newKey = "uploads/\(UUID().uuidString).\(ext.isEmpty ? "jpg" : ext)"
+        // `copySource` en Soto: "/<bucket>/<key>".
+        _ = try await s3.copyObject(.init(bucket: bucket, copySource: "\(bucket)/\(sourceKey)", key: newKey))
+        return "\(publicBase)/\(newKey)"
     }
 
     private static func contentType(for ext: String) -> String {

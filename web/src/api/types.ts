@@ -22,6 +22,7 @@ export interface UserResponse {
   username: string
   email?: string | null
   isAdmin?: boolean | null
+  emailPublic?: boolean | null
   createdAt?: string | null
 }
 

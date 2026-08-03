@@ -24,6 +24,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
 import HideImageIcon from '@mui/icons-material/HideImageOutlined'
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import type { CommentResponse, Drinkable, Font, ReportResponse, WaterSource } from '../api/types'
 import {
   apiFetch,
@@ -36,6 +37,8 @@ import {
   deleteFont,
   deleteReport,
   describeError,
+  getUser,
+  setFontPhotoFromComment,
   updateComment,
   updateFont,
   uploadImage,
@@ -68,7 +71,7 @@ function StatusSelect({ value, onChange, label }: { value: string; onChange: (v:
   )
 }
 
-function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: CommentResponse; highlight?: boolean; canManage: boolean; canFlag: boolean; onChanged: () => void }) {
+function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage, onChanged }: { c: CommentResponse; highlight?: boolean; canManage: boolean; canFlag: boolean; canManageFont?: boolean; fontImage?: string | null; onChanged: () => void }) {
   const { t } = useI18n()
   const toast = useToast()
   const [editing, setEditing] = useState(false)
@@ -104,6 +107,17 @@ function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: Commen
     try {
       await createFlag('comment', c.id, c.fontID)
       toast.show(t('flag.done'))
+    } catch (e) {
+      setError(describeError(e, t))
+    }
+  }
+
+  // El creador/admin promueve esta foto a foto principal de la fuente.
+  async function setAsMain() {
+    try {
+      await setFontPhotoFromComment(c.fontID, c.id)
+      toast.show(t('detail.photoSetAsMain'))
+      onChanged()
     } catch (e) {
       setError(describeError(e, t))
     }
@@ -149,11 +163,14 @@ function ReviewCard({ c, highlight, canManage, canFlag, onChanged }: { c: Commen
       {c.image && (
         <Box>
           <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />
-          {canManage && (
-            <Box>
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+            {canManageFont && c.image !== fontImage && (
+              <Button size="small" startIcon={<PhotoCameraIcon />} onClick={setAsMain}>{t('detail.useAsMainPhoto')}</Button>
+            )}
+            {canManage && (
               <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={removePhoto}>{t('image.remove')}</Button>
-            </Box>
-          )}
+            )}
+          </Stack>
         </Box>
       )}
       {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
@@ -355,6 +372,7 @@ export function FontDetailPage() {
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [creatorName, setCreatorName] = useState<string | null>(null)
   // Cuántas reseñas "Anteriores" se muestran (se amplía con "mostrar más").
   const [shownRest, setShownRest] = useState(REVIEWS_PAGE)
 
@@ -368,6 +386,9 @@ export function FontDetailPage() {
     setFont(f)
     setReports(r)
     setComments(c)
+    // Nombre del creador (las importadas de OSM no tienen), para enlazar a su perfil.
+    if (f.creator?.id) getUser(f.creator.id).then((u) => setCreatorName(u.username)).catch(() => setCreatorName(null))
+    else setCreatorName(null)
   }, [id])
 
   useEffect(() => {
@@ -434,6 +455,7 @@ export function FontDetailPage() {
   const avg = rated.length ? rated.reduce((a, c) => a + (c.rating ?? 0), 0) / rated.length : null
   const latest = comments[0] ?? null
   const rest = comments.slice(1)
+  const canManageFont = !!user && (!!user.isAdmin || font.creator?.id === user.id)
 
   return (
     <Box className="detail pad" sx={{ maxWidth: 720, mx: 'auto' }}>
@@ -452,6 +474,13 @@ export function FontDetailPage() {
           </Box>
         )}
       </Stack>
+
+      {creatorName && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          {t('detail.createdBy')}{' '}
+          <Link component={RouterLink} to={`/users/${encodeURIComponent(creatorName)}`}>@{creatorName}</Link>
+        </Typography>
+      )}
 
       {editing ? (
         <EditFontForm font={font} canManage={!!user && (user.isAdmin || font.creator?.id === user.id)} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load() }} />
@@ -497,7 +526,7 @@ export function FontDetailPage() {
               const freshAt = latest.lastConfirmedAt ?? latest.createdAt
               return freshAt && isStale(freshAt) ? <Alert severity="warning" sx={{ my: 1 }}>{t('detail.stale', { when: timeAgo(freshAt, t) })}</Alert> : null
             })()}
-            <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} onChanged={load} />
+            <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={canManageFont} fontImage={font.image} onChanged={load} />
             {latest.waterStatus && (
               <Box sx={{ my: 1.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                 {user ? (
@@ -538,7 +567,7 @@ export function FontDetailPage() {
           <>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
             {rest.slice(0, shownRest).map((c) => (
-              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} onChanged={load} />
+              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={canManageFont} fontImage={font.image} onChanged={load} />
             ))}
             {rest.length > shownRest && (
               <Button onClick={() => setShownRest((n) => n + REVIEWS_PAGE)} sx={{ mt: 1 }}>

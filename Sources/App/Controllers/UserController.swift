@@ -113,6 +113,7 @@ struct UserController: RouteCollection {
         user.name = dto.name
         user.username = dto.username
         user.email = email
+        if let emailPublic = dto.emailPublic { user.emailPublic = emailPublic }
         if let password = dto.password {
             user.passwordHash = try req.password.hash(password)
         }
@@ -179,6 +180,7 @@ struct UpdateUserDTO: Content {
     let username: String
     let email: String
     let password: String?
+    let emailPublic: Bool?
 }
 
 extension UpdateUserDTO: Validatable {

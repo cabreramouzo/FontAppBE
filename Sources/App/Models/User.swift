@@ -14,6 +14,8 @@ final class User: Model, @unchecked Sendable {
     @Field(key: "password_hash") var passwordHash: String
     // Moderación: los admin pueden borrar contenido de cualquiera y ver los flags.
     @Field(key: "is_admin") var isAdmin: Bool
+    // Privacidad: si el usuario decide mostrar su email en su perfil público.
+    @Field(key: "email_public") var emailPublic: Bool
     // Ubicación aproximada al crear la cuenta (deducida de la IP), solo para
     // estadística regional. No guardamos la IP en claro. Nullable (dev / IP no resuelta).
     @OptionalField(key: "signup_country") var signupCountry: String?
@@ -24,6 +26,7 @@ final class User: Model, @unchecked Sendable {
     init() {}
 
     init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, isAdmin: Bool = false,
+         emailPublic: Bool = false,
          signupCountry: String? = nil, signupRegion: String? = nil, signupCity: String? = nil) {
         self.id = id
         self.name = name
@@ -31,6 +34,7 @@ final class User: Model, @unchecked Sendable {
         self.email = email
         self.passwordHash = passwordHash
         self.isAdmin = isAdmin
+        self.emailPublic = emailPublic
         self.signupCountry = signupCountry
         self.signupRegion = signupRegion
         self.signupCity = signupCity
@@ -68,15 +72,19 @@ struct UserResponse: Content {
     let username: String
     let email: String?
     let isAdmin: Bool?
+    let emailPublic: Bool?
     let createdAt: Date?
 
+    /// `includeEmail`: respuestas propias (login/me/edición) — email + flags siempre.
+    /// En el perfil público el email solo aparece si el usuario lo ha hecho público.
     init(_ user: User, includeEmail: Bool = false) {
         self.id = user.id
         self.name = user.name
         self.username = user.username
-        self.email = includeEmail ? user.email : nil
-        // Solo se expone en respuestas propias (junto al email).
+        self.email = (includeEmail || user.emailPublic) ? user.email : nil
+        // isAdmin y el flag de privacidad solo se exponen al propio usuario.
         self.isAdmin = includeEmail ? user.isAdmin : nil
+        self.emailPublic = includeEmail ? user.emailPublic : nil
         self.createdAt = user.createdAt
     }
 }

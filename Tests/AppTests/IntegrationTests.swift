@@ -67,6 +67,13 @@ final class IntegrationTests: XCTestCase {
         func locate(ip: String?, on client: any Client) async -> GeoLocation? { location }
     }
 
+    /// ImageStorage de prueba: no toca disco; `copy` devuelve una referencia nueva.
+    private struct StubImageStorage: ImageStorage {
+        func save(_ data: ByteBuffer, ext: String) async throws -> String { "/uploads/stub.\(ext)" }
+        func delete(_ reference: String) async throws {}
+        func copy(_ reference: String) async throws -> String { "/uploads/copy-\(UUID().uuidString).jpg" }
+    }
+
     /// Promociona a admin directamente en BD (no hay endpoint para ello).
     private func makeAdmin(_ app: Application, userID: UUID) async throws {
         guard let u = try await User.find(userID, on: app.db) else { return XCTFail("usuario no encontrado") }
@@ -161,7 +168,7 @@ final class IntegrationTests: XCTestCase {
             let tokenB = try await login(app, username: "userb")
 
             try await app.test(.PUT, "users/\(aID)", headers: bearer(tokenB), beforeRequest: { req in
-                try req.content.encode(UpdateUserDTO(name: "hack", username: "usera", email: "hack@example.com", password: nil))
+                try req.content.encode(UpdateUserDTO(name: "hack", username: "usera", email: "hack@example.com", password: nil, emailPublic: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .forbidden)
             })
@@ -285,6 +292,61 @@ final class IntegrationTests: XCTestCase {
             }
             try await app.test(.GET, "users/noexiste") { res in
                 XCTAssertEqual(res.status, .notFound)
+            }
+        }
+    }
+
+    /// Promover la foto de una reseña a foto principal: solo creador/admin, y la
+    /// referencia resultante es una copia independiente (no la misma de la reseña).
+    func testPromoteCommentPhotoToMain() async throws {
+        try await withApp { app in
+            app.imageStorage = StubImageStorage()
+            try await register(app, username: "photoowner")
+            let ownerTok = try await login(app, username: "photoowner")
+            let fontID = try await createFont(app, token: ownerTok, name: "F", lat: 40, long: -3)
+
+            struct NewComment: Content { let body: String; let image: String? }
+            var commentID = UUID()
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(ownerTok), beforeRequest: { req in
+                try req.content.encode(NewComment(body: "con foto", image: "/uploads/orig.jpg"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+                commentID = try XCTUnwrap(res.content.decode(CommentResponse.self).id)
+            })
+
+            // Un extraño no puede promover.
+            try await register(app, username: "photostranger")
+            let strangerTok = try await login(app, username: "photostranger")
+            try await app.test(.POST, "fonts/\(fontID)/photo/from-comment/\(commentID)", headers: bearer(strangerTok)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+
+            // El creador sí; la imagen resultante es una copia (distinta de la de la reseña).
+            struct FontOut: Content { let image: String? }
+            try await app.test(.POST, "fonts/\(fontID)/photo/from-comment/\(commentID)", headers: bearer(ownerTok)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let f = try res.content.decode(FontOut.self)
+                XCTAssertNotNil(f.image)
+                XCTAssertNotEqual(f.image, "/uploads/orig.jpg")
+            }
+        }
+    }
+
+    /// El email solo aparece en el perfil público si el usuario lo activa.
+    func testEmailPrivacyToggle() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "priv")
+            try await app.test(.GET, "users/priv") { res in
+                XCTAssertNil(try res.content.decode(UserResponse.self).email) // oculto por defecto
+            }
+            let tok = try await login(app, username: "priv")
+            try await app.test(.PUT, "users/\(id)", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(UpdateUserDTO(name: "Test", username: "priv", email: "priv@example.com", password: nil, emailPublic: true))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+            try await app.test(.GET, "users/priv") { res in
+                XCTAssertEqual(try res.content.decode(UserResponse.self).email, "priv@example.com") // ahora visible
             }
         }
     }

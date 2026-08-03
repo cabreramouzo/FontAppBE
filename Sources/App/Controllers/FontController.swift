@@ -28,7 +28,31 @@ struct FontController: RouteCollection {
         protected.group(":fontID") { font in
             font.put(use: update)
             font.delete(use: destroy)
+            // Promover la foto de una reseña a foto principal (creador/admin).
+            font.post("photo", "from-comment", ":commentID", use: setPhotoFromComment)
         }
+    }
+
+    /// POST /fonts/:fontID/photo/from-comment/:commentID
+    /// El creador/admin elige la foto de una reseña como foto principal de la fuente.
+    /// Se copia el objeto (referencia independiente) para no compartir fichero con la reseña.
+    @Sendable func setPhotoFromComment(req: Request) async throws -> Font {
+        let font = try await find(req)
+        try requireCanManage(req, font: font)
+        let fontID = try font.requireID()
+        guard let comment = try await FontComment.find(req.parameters.get("commentID"), on: req.db),
+              comment.$font.id == fontID else {
+            throw Abort(.notFound, reason: "La reseña no existe o no es de esta fuente")
+        }
+        guard let sourceImage = comment.image else {
+            throw Abort(.badRequest, reason: "La reseña no tiene foto")
+        }
+        let oldImage = font.image
+        font.image = try await req.imageStorage.copy(sourceImage)
+        try await font.save(on: req.db)
+        // El objeto anterior ya no lo comparte nadie (la reseña sigue con el suyo): se puede borrar.
+        if let oldImage { try? await req.imageStorage.delete(oldImage) }
+        return font
     }
 
     @Sendable func create(req: Request) async throws -> Response {
