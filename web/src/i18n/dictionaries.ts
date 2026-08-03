@@ -17,6 +17,8 @@ const ca: Dict = {
   // Navegación / layout
   'nav.hello': 'Hola, {user}',
   'nav.logout': 'Surt',
+  'logout.confirmTitle': 'Tancar la sessió',
+  'logout.confirmBody': 'Segur que vols tancar la sessió?',
   'nav.enter': 'Entra',
   'footer.legal': 'Legal i privacitat',
   'footer.dataPrefix': 'Dades ©',
@@ -257,6 +259,8 @@ const ca: Dict = {
 const es: Dict = {
   'nav.hello': 'Hola, {user}',
   'nav.logout': 'Salir',
+  'logout.confirmTitle': 'Cerrar sesión',
+  'logout.confirmBody': '¿Seguro que quieres cerrar sesión?',
   'nav.enter': 'Entrar',
   'footer.legal': 'Legal y privacidad',
   'footer.dataPrefix': 'Datos ©',
@@ -484,6 +488,8 @@ const es: Dict = {
 const gl: Dict = {
   'nav.hello': 'Ola, {user}',
   'nav.logout': 'Saír',
+  'logout.confirmTitle': 'Pechar sesión',
+  'logout.confirmBody': 'Seguro que queres pechar sesión?',
   'nav.enter': 'Entrar',
   'footer.legal': 'Legal e privacidade',
   'footer.dataPrefix': 'Datos ©',
@@ -711,6 +717,8 @@ const gl: Dict = {
 const eu: Dict = {
   'nav.hello': 'Kaixo, {user}',
   'nav.logout': 'Irten',
+  'logout.confirmTitle': 'Saioa itxi',
+  'logout.confirmBody': 'Ziur saioa itxi nahi duzula?',
   'nav.enter': 'Sartu',
   'footer.legal': 'Legezko oharra eta pribatutasuna',
   'footer.dataPrefix': 'Datuak ©',
@@ -938,6 +946,8 @@ const eu: Dict = {
 const en: Dict = {
   'nav.hello': 'Hi, {user}',
   'nav.logout': 'Log out',
+  'logout.confirmTitle': 'Log out',
+  'logout.confirmBody': 'Are you sure you want to log out?',
   'nav.enter': 'Log in',
   'footer.legal': 'Legal & privacy',
   'footer.dataPrefix': 'Data ©',

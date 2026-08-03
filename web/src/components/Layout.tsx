@@ -8,6 +8,11 @@ import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import Badge from '@mui/material/Badge'
 import Tooltip from '@mui/material/Tooltip'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogActions from '@mui/material/DialogActions'
 import GppMaybeIcon from '@mui/icons-material/GppMaybeOutlined'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -23,6 +28,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
   const { t } = useI18n()
   const [flagCount, setFlagCount] = useState(0)
+  const [confirmLogout, setConfirmLogout] = useState(false)
 
   // Nº de denuncias pendientes (solo admins), para el badge de moderación.
   useEffect(() => {
@@ -77,11 +83,11 @@ export function Layout({ children }: { children: ReactNode }) {
                 <AccountCircleIcon />
               </IconButton>
               {/* Salir: botón con texto en anchas; icono en móvil. */}
-              <Button variant="contained" size="small" disableElevation onClick={() => logout()} sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
+              <Button variant="contained" size="small" disableElevation onClick={() => setConfirmLogout(true)} sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
                 {t('nav.logout')}
               </Button>
               <Tooltip title={t('nav.logout')}>
-                <IconButton color="inherit" size="small" onClick={() => logout()} aria-label={t('nav.logout')} sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>
+                <IconButton color="inherit" size="small" onClick={() => setConfirmLogout(true)} aria-label={t('nav.logout')} sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>
                   <LogoutIcon />
                 </IconButton>
               </Tooltip>
@@ -93,6 +99,20 @@ export function Layout({ children }: { children: ReactNode }) {
       </AppBar>
       <OfflineBanner />
       <Box component="main" className="main">{children}</Box>
+
+      <Dialog open={confirmLogout} onClose={() => setConfirmLogout(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>{t('logout.confirmTitle')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{t('logout.confirmBody')}</DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setConfirmLogout(false)}>{t('form.cancel')}</Button>
+          <Button variant="contained" color="error" disableElevation onClick={() => { setConfirmLogout(false); logout() }}>
+            {t('nav.logout')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Footer />
     </div>
   )
