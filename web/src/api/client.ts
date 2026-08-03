@@ -1,4 +1,4 @@
-import type { CommentResponse, Drinkable, Flag, Font, FontEdit, LoginResponse, MyComment, RegionStat, ReportResponse, UserResponse, WaterSource } from './types'
+import type { AppPlatform, CommentResponse, Drinkable, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, RegionStat, ReportResponse, UserResponse, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -209,6 +209,16 @@ export async function revertFontEdit(editID: string): Promise<Font> {
 // Estadística de usuarios por región de registro (admin).
 export async function getRegionStats(): Promise<RegionStat[]> {
   return apiFetch<RegionStat[]>('/users/stats/regions')
+}
+
+// Interés por una app móvil nativa (banner). Voto público; si hay token se liga al usuario.
+export async function submitAppInterest(wants: boolean, platform?: AppPlatform): Promise<void> {
+  await apiFetch('/interest', { method: 'POST', body: JSON.stringify({ wants, platform }) })
+}
+
+// Estadística de interés por app móvil (admin).
+export async function getInterestStats(): Promise<InterestStats> {
+  return apiFetch<InterestStats>('/interest/stats')
 }
 
 // Perfil público de un usuario: identidad + su actividad (fuentes y reseñas).

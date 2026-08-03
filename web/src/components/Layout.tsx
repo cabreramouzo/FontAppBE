@@ -23,6 +23,8 @@ import { Footer } from './Footer'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 import { OfflineBanner } from './OfflineBanner'
+import { AppInterestBanner } from './AppInterestBanner'
+import { InstallPrompt } from './InstallPrompt'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -98,6 +100,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </Toolbar>
       </AppBar>
       <OfflineBanner />
+      <InstallPrompt />
       <Box component="main" className="main">{children}</Box>
 
       <Dialog open={confirmLogout} onClose={() => setConfirmLogout(false)} maxWidth="xs" fullWidth>
@@ -114,6 +117,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </Dialog>
 
       <Footer />
+      <AppInterestBanner />
     </div>
   )
 }

@@ -19,8 +19,8 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import UndoIcon from '@mui/icons-material/Undo'
-import type { Flag, FontEdit, FontInfoSnapshot, RegionStat } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFlags, getFontEdits, getRegionStats, revertFontEdit, FONT_EDITS_PER } from '../api/client'
+import type { Flag, FontEdit, FontInfoSnapshot, InterestStats, RegionStat } from '../api/types'
+import { assetUrl, describeError, dismissFlag, getFlags, getFontEdits, getInterestStats, getRegionStats, revertFontEdit, FONT_EDITS_PER } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -33,6 +33,7 @@ export function AdminPage() {
   const [flags, setFlags] = useState<Flag[] | null>(null)
   const [edits, setEdits] = useState<FontEdit[] | null>(null)
   const [regions, setRegions] = useState<RegionStat[] | null>(null)
+  const [interest, setInterest] = useState<InterestStats | null>(null)
   const [editsPage, setEditsPage] = useState(1)
   const [editsHasMore, setEditsHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -47,6 +48,7 @@ export function AdminPage() {
     getFlags().then(setFlags).catch(() => setFlags([]))
     getFontEdits(1).then((e) => { setEdits(e); setEditsPage(1); setEditsHasMore(e.length === FONT_EDITS_PER) }).catch(() => setEdits([]))
     getRegionStats().then(setRegions).catch(() => setRegions([]))
+    getInterestStats().then(setInterest).catch(() => setInterest(null))
   }, [user, loading, navigate])
 
   async function loadMoreEdits() {
@@ -140,6 +142,35 @@ export function AdminPage() {
             </ListItem>
           ))}
         </List>
+      </Box>
+
+      <Box component="section" sx={{ mt: 3 }}>
+        <Typography variant="h6" gutterBottom>📱 {t('admin.appWish')}</Typography>
+        {interest === null && <Skeleton lines={2} />}
+        {interest && interest.total === 0 && <Typography color="text.secondary">{t('admin.appWishNone')}</Typography>}
+        {interest && interest.total > 0 && (
+          <>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+              <Chip color="success" label={`👍 ${t('appWish.yes')}: ${interest.yes}`} />
+              <Chip label={`👎 ${t('appWish.no')}: ${interest.no}`} />
+              <Chip variant="outlined" label={`${t('admin.appWishTotal')}: ${interest.total}`} />
+            </Box>
+            {interest.voters.length > 0 && (
+              <List disablePadding>
+                {interest.voters.map((v, i) => (
+                  <ListItem key={i} divider disableGutters
+                    secondaryAction={<Chip size="small" color={v.wants ? 'success' : 'default'} label={v.wants ? t('appWish.yes') : t('appWish.no')} />}>
+                    <ListItemText
+                      primary={<Link component={RouterLink} to={`/users/${encodeURIComponent(v.username)}`}>@{v.username}</Link>}
+                      secondary={`${v.platform ?? '—'}${v.at ? ' · ' + timeAgo(v.at, t) : ''}`}
+                      slotProps={{ primary: { component: 'div' } }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </>
+        )}
       </Box>
 
       <Box component="section" sx={{ mt: 3 }}>

@@ -115,3 +115,21 @@ export interface FontSummary extends Font {
   lastWaterStatus: string | null
   lastUpdate: string | null
 }
+
+export type AppPlatform = 'ios' | 'android' | 'other'
+
+/** Un votante identificado del interés por app móvil (vista admin). */
+export interface InterestVoter {
+  username: string
+  wants: boolean
+  platform: AppPlatform | null
+  at: string | null
+}
+
+/** Recuento de interés por app móvil (vista admin). */
+export interface InterestStats {
+  yes: number
+  no: number
+  total: number
+  voters: InterestVoter[]
+}
