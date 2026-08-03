@@ -16,17 +16,23 @@ final class User: Model, @unchecked Sendable {
     @Field(key: "is_admin") var isAdmin: Bool
     // Privacidad: si el usuario decide mostrar su email en su perfil público.
     @Field(key: "email_public") var emailPublic: Bool
+    // Privacidad: si el nombre real se muestra en el perfil público (si no, solo @username).
+    @Field(key: "name_public") var namePublic: Bool
     // Ubicación aproximada al crear la cuenta (deducida de la IP), solo para
     // estadística regional. No guardamos la IP en claro. Nullable (dev / IP no resuelta).
     @OptionalField(key: "signup_country") var signupCountry: String?
     @OptionalField(key: "signup_region") var signupRegion: String?
     @OptionalField(key: "signup_city") var signupCity: String?
+    // Si la cuenta se ha anonimizado (el usuario la "borró"): sus aportaciones
+    // (fuentes, reseñas) se conservan desligadas de su identidad; los datos
+    // personales se eliminan y el login queda inutilizado.
+    @OptionalField(key: "anonymized_at") var anonymizedAt: Date?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
 
     init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, isAdmin: Bool = false,
-         emailPublic: Bool = false,
+         emailPublic: Bool = false, namePublic: Bool = true,
          signupCountry: String? = nil, signupRegion: String? = nil, signupCity: String? = nil) {
         self.id = id
         self.name = name
@@ -35,6 +41,7 @@ final class User: Model, @unchecked Sendable {
         self.passwordHash = passwordHash
         self.isAdmin = isAdmin
         self.emailPublic = emailPublic
+        self.namePublic = namePublic
         self.signupCountry = signupCountry
         self.signupRegion = signupRegion
         self.signupCity = signupCity
@@ -73,18 +80,23 @@ struct UserResponse: Content {
     let email: String?
     let isAdmin: Bool?
     let emailPublic: Bool?
+    let namePublic: Bool?
+    let anonymized: Bool
     let createdAt: Date?
 
     /// `includeEmail`: respuestas propias (login/me/edición) — email + flags siempre.
-    /// En el perfil público el email solo aparece si el usuario lo ha hecho público.
+    /// En el perfil público el email solo aparece si el usuario lo ha hecho público,
+    /// y el nombre real solo si `namePublic` (si no, se devuelve el @username como nombre).
     init(_ user: User, includeEmail: Bool = false) {
         self.id = user.id
-        self.name = user.name
+        self.name = (includeEmail || user.namePublic) ? user.name : user.username
         self.username = user.username
         self.email = (includeEmail || user.emailPublic) ? user.email : nil
-        // isAdmin y el flag de privacidad solo se exponen al propio usuario.
+        // isAdmin y los flags de privacidad solo se exponen al propio usuario.
         self.isAdmin = includeEmail ? user.isAdmin : nil
         self.emailPublic = includeEmail ? user.emailPublic : nil
+        self.namePublic = includeEmail ? user.namePublic : nil
+        self.anonymized = user.anonymizedAt != nil
         self.createdAt = user.createdAt
     }
 }

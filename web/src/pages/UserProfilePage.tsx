@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Link from '@mui/material/Link'
 import Chip from '@mui/material/Chip'
+import Avatar from '@mui/material/Avatar'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
@@ -47,18 +48,24 @@ export function UserProfilePage() {
         {user === null ? (
           <Skeleton lines={2} />
         ) : (
-          <>
-            <Typography variant="h4" sx={{ fontWeight: 800 }}>{user.name}</Typography>
-            <Typography color="text.secondary">
-              @{user.username}
-              {user.createdAt && ` · ${t('user.memberSince', { when: timeAgo(user.createdAt, t) })}`}
-            </Typography>
-            {user.email && (
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {t('user.contact')}: <Link href={`mailto:${user.email}`}>{user.email}</Link>
-              </Typography>
-            )}
-          </>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'primary.main', width: 64, height: 64, fontSize: 24 }}>{initials(user.name)}</Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.15 }}>{user.name}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Typography color="text.secondary">
+                  @{user.username}
+                  {user.createdAt && ` · ${t('user.memberSince', { when: timeAgo(user.createdAt, t) })}`}
+                </Typography>
+                {user.anonymized && <Chip size="small" label={t('user.deleted')} />}
+              </Box>
+              {user.email && (
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  {t('user.contact')}: <Link href={`mailto:${user.email}`}>{user.email}</Link>
+                </Typography>
+              )}
+            </Box>
+          </Box>
         )}
       </Box>
 
@@ -99,4 +106,11 @@ export function UserProfilePage() {
       </Box>
     </Box>
   )
+}
+
+/// Iniciales para el avatar: primeras letras de las dos primeras palabras.
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
 }

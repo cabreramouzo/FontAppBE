@@ -168,7 +168,7 @@ final class IntegrationTests: XCTestCase {
             let tokenB = try await login(app, username: "userb")
 
             try await app.test(.PUT, "users/\(aID)", headers: bearer(tokenB), beforeRequest: { req in
-                try req.content.encode(UpdateUserDTO(name: "hack", username: "usera", email: "hack@example.com", password: nil, emailPublic: nil))
+                try req.content.encode(UpdateUserDTO(name: "hack", username: "usera", email: "hack@example.com", password: nil, emailPublic: nil, namePublic: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .forbidden)
             })
@@ -341,13 +341,50 @@ final class IntegrationTests: XCTestCase {
             }
             let tok = try await login(app, username: "priv")
             try await app.test(.PUT, "users/\(id)", headers: bearer(tok), beforeRequest: { req in
-                try req.content.encode(UpdateUserDTO(name: "Test", username: "priv", email: "priv@example.com", password: nil, emailPublic: true))
+                try req.content.encode(UpdateUserDTO(name: "Test", username: "priv", email: "priv@example.com", password: nil, emailPublic: true, namePublic: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)
             })
             try await app.test(.GET, "users/priv") { res in
                 XCTAssertEqual(try res.content.decode(UserResponse.self).email, "priv@example.com") // ahora visible
             }
+        }
+    }
+
+    /// "Borrar" la cuenta la anonimiza: las fuentes se conservan, los datos
+    /// personales se eliminan y el login deja de funcionar.
+    func testDeleteAccountAnonymizes() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "quitter")
+            let tok = try await login(app, username: "quitter")
+            let fontID = try await createFont(app, token: tok, name: "Su fuente", lat: 41, long: -2)
+
+            try await app.test(.DELETE, "users/\(id)", headers: bearer(tok)) { res in
+                XCTAssertEqual(res.status, .noContent)
+            }
+
+            // La fuente sigue existiendo.
+            struct FontOut: Content { let id: UUID }
+            try await app.test(.GET, "fonts/\(fontID)") { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode(FontOut.self).id, fontID)
+            }
+
+            // El perfil queda anonimizado: sin el nombre real ni el email.
+            try await app.test(.GET, "users/\(id)") { res in
+                XCTAssertEqual(res.status, .ok)
+                let u = try res.content.decode(UserResponse.self)
+                XCTAssertTrue(u.anonymized)
+                XCTAssertNil(u.email)
+                XCTAssertNotEqual(u.name, "quitter")
+            }
+
+            // El login ya no funciona.
+            try await app.test(.POST, "auth/login", beforeRequest: { req in
+                req.headers.basicAuthorization = .init(username: "quitter", password: "password123")
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            })
         }
     }
 

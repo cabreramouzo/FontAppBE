@@ -114,6 +114,7 @@ struct UserController: RouteCollection {
         user.username = dto.username
         user.email = email
         if let emailPublic = dto.emailPublic { user.emailPublic = emailPublic }
+        if let namePublic = dto.namePublic { user.namePublic = namePublic }
         if let password = dto.password {
             user.passwordHash = try req.password.hash(password)
         }
@@ -121,10 +122,38 @@ struct UserController: RouteCollection {
         return UserResponse(user, includeEmail: true)
     }
 
+    /// "Borrado" de cuenta = anonimización. Las aportaciones (fuentes, reseñas,
+    /// confirmaciones) NO son datos personales sino información sobre fuentes de
+    /// uso común, así que se conservan pero se desligan de la identidad del
+    /// usuario. Los datos personales (nombre, email, ubicación de registro) se
+    /// eliminan y el login queda inutilizado.
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
         let user = try await find(req)
         try requireSelf(req, target: user)
-        try await user.delete(on: req.db)
+        let userID = try user.requireID()
+
+        // Ya anonimizada: nada más que hacer (idempotente).
+        guard user.anonymizedAt == nil else { return .noContent }
+
+        let shortID = userID.uuidString.prefix(8).lowercased()
+        user.name = "Compte eliminat"
+        user.username = "eliminat-\(shortID)"
+        user.email = nil
+        user.emailPublic = false
+        user.namePublic = false
+        user.isAdmin = false
+        user.signupCountry = nil
+        user.signupRegion = nil
+        user.signupCity = nil
+        // Contraseña aleatoria e inrecuperable: el login queda inutilizado.
+        user.passwordHash = try req.password.hash([UInt8].random(count: 32).base64)
+        user.anonymizedAt = Date()
+        try await user.save(on: req.db)
+
+        // Revoca sesiones y peticiones de reseteo pendientes.
+        try await UserToken.query(on: req.db).filter(\.$user.$id == userID).delete()
+        try await PasswordReset.query(on: req.db).filter(\.$user.$id == userID).delete()
+
         return .noContent
     }
 
@@ -181,6 +210,7 @@ struct UpdateUserDTO: Content {
     let email: String
     let password: String?
     let emailPublic: Bool?
+    let namePublic: Bool?
 }
 
 extension UpdateUserDTO: Validatable {

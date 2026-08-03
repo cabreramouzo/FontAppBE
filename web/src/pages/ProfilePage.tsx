@@ -6,6 +6,11 @@ import Button from '@mui/material/Button'
 import Link from '@mui/material/Link'
 import Alert from '@mui/material/Alert'
 import Chip from '@mui/material/Chip'
+import Avatar from '@mui/material/Avatar'
+import Divider from '@mui/material/Divider'
+import Collapse from '@mui/material/Collapse'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
@@ -29,6 +34,7 @@ export function ProfilePage() {
   const [fonts, setFonts] = useState<Font[] | null>(null)
   const [comments, setComments] = useState<MyComment[] | null>(null)
   const [savingPrivacy, setSavingPrivacy] = useState(false)
+  const [dangerOpen, setDangerOpen] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -41,11 +47,18 @@ export function ProfilePage() {
     getMyComments().then(setComments).catch(() => setComments([]))
   }, [user, loading, navigate])
 
-  async function toggleEmailPublic(next: boolean) {
+  async function savePrivacy(patch: { emailPublic?: boolean; namePublic?: boolean }) {
     if (!user) return
     setSavingPrivacy(true)
     try {
-      await updateProfile(user.id, { name: user.name, username: user.username, email: user.email ?? '', emailPublic: next })
+      await updateProfile(user.id, {
+        name: user.name,
+        username: user.username,
+        email: user.email ?? '',
+        emailPublic: user.emailPublic ?? false,
+        namePublic: user.namePublic ?? true,
+        ...patch,
+      })
       await refresh() // refresca el usuario para reflejar el nuevo estado
     } catch (e) {
       setError(describeError(e, t))
@@ -84,29 +97,47 @@ export function ProfilePage() {
         </Button>
       )}
 
-      <Box component="section" sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>{t('profile.account')}</Typography>
-        <Typography><strong>{user.name}</strong> · @{user.username}</Typography>
-        {user.email && <Typography color="text.secondary">{t('profile.email')}: {user.email}</Typography>}
-        {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
-        <Button color="error" startIcon={<DeleteOutlineIcon />} onClick={removeAccount} sx={{ mt: 1 }}>
-          {t('profile.deleteAccount')}
-        </Button>
+      <Box
+        component="section"
+        sx={{ mb: 3, p: 2, border: 1, borderColor: 'divider', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}
+      >
+        <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, fontSize: 22 }}>{initials(user.name)}</Avatar>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{user.name}</Typography>
+          <Typography color="text.secondary">@{user.username}</Typography>
+          {user.email && <Typography variant="body2" color="text.secondary" noWrap>{user.email}</Typography>}
+        </Box>
       </Box>
+
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Box component="section" sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{t('privacy.title')}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          {t('privacy.intro')}
+        </Typography>
         <FormControlLabel
-          control={<Switch checked={!!user.emailPublic} disabled={savingPrivacy} onChange={(e) => toggleEmailPublic(e.target.checked)} />}
+          control={<Switch checked={user.namePublic ?? true} disabled={savingPrivacy} onChange={(e) => savePrivacy({ namePublic: e.target.checked })} />}
+          label={t('privacy.namePublic')}
+        />
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          {t('privacy.namePublicHint')}
+        </Typography>
+        <FormControlLabel
+          control={<Switch checked={!!user.emailPublic} disabled={savingPrivacy} onChange={(e) => savePrivacy({ emailPublic: e.target.checked })} />}
           label={t('privacy.emailPublic')}
         />
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
           {t('privacy.emailPublicHint')}
         </Typography>
-        <Link component={RouterLink} to={`/users/${encodeURIComponent(user.username)}`} sx={{ display: 'inline-block', mt: 1 }}>
-          {t('privacy.viewPublic')}
-        </Link>
+        <Box sx={{ mt: 1 }}>
+          <Link component={RouterLink} to={`/users/${encodeURIComponent(user.username)}`}>
+            {t('privacy.viewPublic')}
+          </Link>
+        </Box>
       </Box>
+
+      <Divider sx={{ mb: 3 }} />
 
       <Box component="section" sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{t('profile.myFonts')}</Typography>
@@ -143,6 +174,37 @@ export function ProfilePage() {
           })}
         </List>
       </Box>
+
+      <Divider sx={{ my: 3 }} />
+      <Box component="section" sx={{ mb: 2, border: 1, borderColor: 'error.main', borderRadius: 2, overflow: 'hidden' }}>
+        <Button
+          fullWidth
+          color="error"
+          onClick={() => setDangerOpen((o) => !o)}
+          startIcon={<WarningAmberIcon />}
+          endIcon={<ExpandMoreIcon sx={{ transform: dangerOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />}
+          sx={{ justifyContent: 'space-between', px: 2, py: 1.25, textTransform: 'none', fontWeight: 700 }}
+        >
+          {t('profile.dangerZone')}
+        </Button>
+        <Collapse in={dangerOpen}>
+          <Box sx={{ px: 2, pb: 2, pt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              {t('profile.dangerZoneHint')}
+            </Typography>
+            <Button variant="outlined" color="error" startIcon={<DeleteOutlineIcon />} onClick={removeAccount}>
+              {t('profile.deleteAccount')}
+            </Button>
+          </Box>
+        </Collapse>
+      </Box>
     </Box>
   )
+}
+
+/// Iniciales para el avatar: primeras letras de las dos primeras palabras.
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
 }
