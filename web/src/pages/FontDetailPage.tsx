@@ -286,22 +286,31 @@ function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
   )
 }
 
-function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => void; onCancel: () => void }) {
+function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canManage: boolean; onSaved: () => void; onCancel: () => void }) {
   const { t } = useI18n()
   const [name, setName] = useState(font.name)
   const [description, setDescription] = useState(font.description ?? '')
   const [source, setSource] = useState<WaterSource | ''>(font.source ?? '')
   const [drinkable, setDrinkable] = useState<Drinkable | ''>(font.drinkable ?? '')
+  const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError('')
+    setSaving(true)
     try {
-      await updateFont(font.id, { name, latitude: font.latitude, longitude: font.longitude, image: font.image ?? undefined, description: description || undefined, source: source || undefined, drinkable: drinkable || undefined })
+      // La imagen solo la puede cambiar el creador/admin; si hay archivo nuevo se sube,
+      // si no, se conserva la actual.
+      let image = font.image ?? undefined
+      if (canManage && file) image = await uploadImage(await compressImage(file))
+      await updateFont(font.id, { name, latitude: font.latitude, longitude: font.longitude, image, description: description || undefined, source: source || undefined, drinkable: drinkable || undefined })
       onSaved()
     } catch (e) {
       setError(describeError(e, t))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -318,10 +327,18 @@ function EditFontForm({ font, onSaved, onCancel }: { font: Font; onSaved: () => 
         <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
         {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
       </TextField>
+      {canManage && (
+        <Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+            {font.image ? t('detail.replacePhoto') : t('detail.addPhoto')}
+          </Typography>
+          <ImagePicker file={file} onChange={setFile} />
+        </Box>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
       <Stack direction="row" spacing={1}>
-        <Button type="submit" variant="contained" disableElevation>{t('form.save')}</Button>
-        <Button onClick={onCancel}>{t('form.cancel')}</Button>
+        <Button type="submit" variant="contained" disableElevation disabled={saving}>{saving ? t('form.saving') : t('form.save')}</Button>
+        <Button onClick={onCancel} disabled={saving}>{t('form.cancel')}</Button>
       </Stack>
     </Box>
   )
@@ -437,7 +454,7 @@ export function FontDetailPage() {
       </Stack>
 
       {editing ? (
-        <EditFontForm font={font} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load() }} />
+        <EditFontForm font={font} canManage={!!user && (user.isAdmin || font.creator?.id === user.id)} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load() }} />
       ) : (
         <>
           {font.description && <Typography color="text.secondary">{font.description}</Typography>}
