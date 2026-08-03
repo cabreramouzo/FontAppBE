@@ -30,7 +30,6 @@ const ca: Dict = {
   'donate.orBtc': 'o amb Bitcoin',
   'donate.copy': 'Copia',
   'donate.copied': 'Adreça copiada',
-  'donate.placeholderNote': 'Adreça Bitcoin de prova (placeholder).',
 
   // Mapa
   'map.searchPlaceholder': '🔎 Cerca font o lloc…',
@@ -272,7 +271,6 @@ const es: Dict = {
   'donate.orBtc': 'o con Bitcoin',
   'donate.copy': 'Copiar',
   'donate.copied': 'Dirección copiada',
-  'donate.placeholderNote': 'Dirección Bitcoin de prueba (placeholder).',
 
   'map.searchPlaceholder': '🔎 Buscar fuente o lugar…',
   'map.near': '📍 Cerca de mí',
@@ -501,7 +499,6 @@ const gl: Dict = {
   'donate.orBtc': 'ou con Bitcoin',
   'donate.copy': 'Copiar',
   'donate.copied': 'Enderezo copiado',
-  'donate.placeholderNote': 'Enderezo Bitcoin de proba (placeholder).',
 
   'map.searchPlaceholder': '🔎 Buscar fonte ou lugar…',
   'map.near': '📍 Preto de min',
@@ -730,7 +727,6 @@ const eu: Dict = {
   'donate.orBtc': 'edo Bitcoin-ekin',
   'donate.copy': 'Kopiatu',
   'donate.copied': 'Helbidea kopiatu da',
-  'donate.placeholderNote': 'Probako Bitcoin helbidea (placeholder).',
 
   'map.searchPlaceholder': '🔎 Bilatu iturria edo lekua…',
   'map.near': '📍 Nire ondoan',
@@ -959,7 +955,6 @@ const en: Dict = {
   'donate.orBtc': 'or with Bitcoin',
   'donate.copy': 'Copy',
   'donate.copied': 'Address copied',
-  'donate.placeholderNote': 'Placeholder Bitcoin address.',
 
   'map.searchPlaceholder': '🔎 Search fountain or place…',
   'map.near': '📍 Near me',
