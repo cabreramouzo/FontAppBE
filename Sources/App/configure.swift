@@ -81,7 +81,7 @@ public func configure(_ app: Application) async throws {
 
     // Envío de correo: Resend si hay credenciales; si no, log (dev). Ver MailSender.
     if let apiKey = Environment.get("RESEND_API_KEY"), let from = Environment.get("MAIL_FROM") {
-        app.mailSender = ResendMailSender(apiKey: apiKey, from: from)
+        app.mailSender = ResendMailSender(apiKey: apiKey, from: from, replyTo: Environment.get("MAIL_REPLY_TO"))
     }
 
     // Geo-IP para estadística de registro: activo con GEOIP_ENABLED=true (prod);
