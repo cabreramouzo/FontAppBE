@@ -12,6 +12,7 @@ import Alert from '@mui/material/Alert'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
+import Collapse from '@mui/material/Collapse'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import PlaceIcon from '@mui/icons-material/Place'
@@ -84,7 +85,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
     e.preventDefault()
     setError('')
     try {
-      await updateComment(c.fontID, c.id, { body, rating: rating || undefined, waterStatus: waterStatus || undefined, image: c.image ?? undefined })
+      await updateComment(c.fontID, c.id, { body: body.trim() || undefined, rating: rating || undefined, waterStatus: waterStatus || undefined, image: c.image ?? undefined })
       setEditing(false)
       onChanged()
     } catch (e) {
@@ -141,7 +142,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
           <StatusSelect value={waterStatus} onChange={setWaterStatus} label={t('update.status')} />
           <Box><Typography variant="caption" color="text.secondary">{t('update.rating')}</Typography><StarRating value={rating} onChange={setRating} size={22} /></Box>
         </Stack>
-        <TextField value={body} onChange={(e) => setBody(e.target.value)} required fullWidth multiline minRows={2} size="small" />
+        <TextField value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('update.howNowOpt')} fullWidth multiline minRows={2} size="small" />
         {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
         <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
           <Button type="submit" variant="contained" disableElevation size="small">{t('form.save')}</Button>
@@ -159,7 +160,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
         <Typography variant="caption" color="text.secondary">{c.username ?? t('review.anon')} · {c.createdAt ? timeAgo(c.createdAt, t) : ''}</Typography>
       </Stack>
       {c.rating != null && <StarRating value={c.rating} size={18} />}
-      <Typography sx={{ my: 0.5 }}>{c.body}</Typography>
+      {c.body && <Typography sx={{ my: 0.5 }}>{c.body}</Typography>}
       {c.image && (
         <Box>
           <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />
@@ -185,7 +186,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
   )
 }
 
-function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void }) {
+function UpdateForm({ fontID, onPosted, onCancel }: { fontID: string; onPosted: () => void; onCancel?: () => void }) {
   const { t } = useI18n()
   const toast = useToast()
   const [body, setBody] = useState('')
@@ -195,6 +196,9 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Hay que aportar algo: estado, comentario, valoración o foto.
+  const empty = !waterStatus && !body.trim() && !rating && !file
+
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError('')
@@ -202,7 +206,7 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
     try {
       let image: string | undefined
       if (file) image = await uploadImage(await compressImage(file))
-      await createComment(fontID, { body, rating: rating || undefined, waterStatus: waterStatus || undefined, image })
+      await createComment(fontID, { body: body.trim() || undefined, rating: rating || undefined, waterStatus: waterStatus || undefined, image })
       setBody('')
       setRating(0)
       setWaterStatus('')
@@ -217,17 +221,20 @@ function UpdateForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
   }
 
   return (
-    <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, my: 2 }}>
+    <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
       <Stack direction="row" sx={{ alignItems: "center", flexWrap: "wrap", gap: 2 }}>
         <StatusSelect value={waterStatus} onChange={setWaterStatus} label={t('update.status')} />
         <Box><Typography variant="caption" color="text.secondary">{t('update.rating')}</Typography><StarRating value={rating} onChange={setRating} size={22} /></Box>
       </Stack>
-      <TextField value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('update.howNow')} required fullWidth multiline minRows={2} size="small" />
+      <TextField value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('update.howNowOpt')} fullWidth multiline minRows={2} size="small" />
       <ImagePicker file={file} onChange={setFile} />
       {error && <Alert severity="error">{error}</Alert>}
-      <Button type="submit" variant="contained" disableElevation disabled={saving} sx={{ alignSelf: 'flex-start' }}>
-        {saving ? t('update.sending') : t('update.publish')}
-      </Button>
+      <Stack direction="row" spacing={1}>
+        <Button type="submit" variant="contained" disableElevation disabled={saving || empty}>
+          {saving ? t('update.sending') : t('update.publish')}
+        </Button>
+        {onCancel && <Button onClick={onCancel} disabled={saving}>{t('form.cancel')}</Button>}
+      </Stack>
     </Box>
   )
 }
@@ -372,6 +379,7 @@ export function FontDetailPage() {
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [updating, setUpdating] = useState(false) // formulario de nueva actualización desplegado
   const [creatorName, setCreatorName] = useState<string | null>(null)
   // Cuántas reseñas "Anteriores" se muestran (se amplía con "mostrar más").
   const [shownRest, setShownRest] = useState(REVIEWS_PAGE)
@@ -521,50 +529,79 @@ export function FontDetailPage() {
         <Typography variant="h6" gutterBottom>{t('detail.statusReviews')}</Typography>
         {latest ? (
           <>
-            <Typography variant="body2" color="text.secondary">{t('detail.lastUpdate')}</Typography>
-            {(() => {
-              const freshAt = latest.lastConfirmedAt ?? latest.createdAt
-              return freshAt && isStale(freshAt) ? <Alert severity="warning" sx={{ my: 1 }}>{t('detail.stale', { when: timeAgo(freshAt, t) })}</Alert> : null
-            })()}
-            <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={canManageFont} fontImage={font.image} onChanged={load} />
-            {latest.waterStatus && (
-              <Box sx={{ my: 1.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                {user ? (
-                  <Button
-                    variant={latest.confirmedByMe ? 'contained' : 'outlined'}
-                    color="success"
-                    disableElevation
-                    startIcon={<ThumbUpIcon />}
-                    onClick={toggleConfirm}
-                    disabled={confirming}
-                    title={latest.confirmedByMe ? t('confirm.titleActive') : t('confirm.titleInactive')}
-                    endIcon={latest.confirmations > 0 ? <Chip size="small" label={`+${latest.confirmations}`} sx={{ height: 20 }} /> : undefined}
-                  >
-                    {latest.confirmedByMe ? t('confirm.confirmed') : t('confirm.keepSame')}
-                  </Button>
-                ) : (
-                  latest.confirmations > 0 && <Chip icon={<ThumbUpIcon />} label={`+${latest.confirmations}`} variant="outlined" />
+            {/* Tarjeta con el ESTADO ACTUAL, separada visualmente del formulario. */}
+            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 2 }}>
+              <Typography variant="overline" color="text.secondary" sx={{ display: 'block', lineHeight: 1.6 }}>
+                {t('detail.currentStatus')}
+              </Typography>
+              {(() => {
+                const freshAt = latest.lastConfirmedAt ?? latest.createdAt
+                return freshAt && isStale(freshAt) ? <Alert severity="warning" sx={{ my: 1 }}>{t('detail.stale', { when: timeAgo(freshAt, t) })}</Alert> : null
+              })()}
+              <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={canManageFont} fontImage={font.image} onChanged={load} />
+              {latest.waterStatus && latest.lastConfirmedAt && (
+                <Typography variant="caption" color="text.secondary">
+                  {t('confirm.lastConfirmed', { when: timeAgo(latest.lastConfirmedAt, t) })}
+                </Typography>
+              )}
+            </Box>
+
+            {/* Acciones: sigue igual (1 clic) o ha cambiado (abre el formulario). */}
+            {user ? (
+              <>
+                {!updating && (
+                  <Stack direction="row" sx={{ my: 1.5, gap: 1, flexWrap: 'wrap' }}>
+                    {latest.waterStatus && (
+                      <Button
+                        variant={latest.confirmedByMe ? 'contained' : 'outlined'}
+                        color="success"
+                        disableElevation
+                        startIcon={<ThumbUpIcon />}
+                        onClick={toggleConfirm}
+                        disabled={confirming}
+                        title={latest.confirmedByMe ? t('confirm.titleActive') : t('confirm.titleInactive')}
+                        endIcon={latest.confirmations > 0 ? <Chip size="small" label={`+${latest.confirmations}`} sx={{ height: 20 }} /> : undefined}
+                      >
+                        {latest.confirmedByMe ? t('confirm.confirmed') : t('confirm.keepSame')}
+                      </Button>
+                    )}
+                    <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setUpdating(true)}>
+                      {t('detail.changed')}
+                    </Button>
+                  </Stack>
                 )}
-                {latest.lastConfirmedAt && (
-                  <Typography variant="caption" color="text.secondary">
-                    {t('confirm.lastConfirmed', { when: timeAgo(latest.lastConfirmedAt, t) })}
-                  </Typography>
-                )}
-              </Box>
+                <Collapse in={updating} unmountOnExit>
+                  <Box sx={{ my: 1.5 }}>
+                    <Typography variant="subtitle2">{t('detail.newUpdate')}</Typography>
+                    <UpdateForm fontID={font.id} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+                  </Box>
+                </Collapse>
+              </>
+            ) : (
+              <Typography color="text.secondary" sx={{ my: 1.5 }}><Link component={RouterLink} to="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
             )}
           </>
         ) : (
-          <Typography color="text.secondary">{t('detail.beFirst')}</Typography>
-        )}
-
-        {user ? (
-          <UpdateForm fontID={font.id} onPosted={load} />
-        ) : (
-          <Typography color="text.secondary" sx={{ my: 1 }}><Link component={RouterLink} to="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+          /* Sin actualizaciones aún: invita a informar. */
+          <>
+            <Typography color="text.secondary">{t('detail.beFirst')}</Typography>
+            {user ? (
+              !updating ? (
+                <Button variant="contained" disableElevation startIcon={<EditIcon />} onClick={() => setUpdating(true)} sx={{ mt: 1 }}>
+                  {t('detail.reportStatus')}
+                </Button>
+              ) : (
+                <UpdateForm fontID={font.id} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+              )
+            ) : (
+              <Typography color="text.secondary" sx={{ my: 1 }}><Link component={RouterLink} to="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+            )}
+          </>
         )}
 
         {rest.length > 0 && (
           <>
+            <Divider sx={{ mt: 2 }} />
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
             {rest.slice(0, shownRest).map((c) => (
               <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={canManageFont} fontImage={font.image} onChanged={load} />

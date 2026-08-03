@@ -118,7 +118,7 @@ export async function updateProfile(id: string, data: { name: string; username: 
 }
 
 export interface NewComment {
-  body: string
+  body?: string
   rating?: number
   waterStatus?: string
   image?: string

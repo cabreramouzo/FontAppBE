@@ -71,10 +71,17 @@ struct FontCommentController: RouteCollection {
         try CreateCommentDTO.validate(content: req)
         let dto = try req.content.decode(CreateCommentDTO.self)
 
+        // El comentario es opcional: se puede publicar solo un cambio de estado.
+        // Pero algo hay que aportar (texto o estado); si no, no tiene sentido.
+        let body = dto.body?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !body.isEmpty || dto.waterStatus != nil else {
+            throw Abort(.badRequest, reason: "Indica el estado o escribe un comentario")
+        }
+
         let comment = FontComment(
             fontID: fontID,
             userID: try user.requireID(),
-            body: dto.body,
+            body: body,
             rating: dto.rating,
             waterStatus: dto.waterStatus,
             image: dto.image
@@ -136,7 +143,7 @@ struct FontCommentController: RouteCollection {
         try CreateCommentDTO.validate(content: req)
         let dto = try req.content.decode(CreateCommentDTO.self)
         let oldImage = comment.image
-        comment.body = dto.body
+        comment.body = dto.body?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         comment.rating = dto.rating
         comment.waterStatus = dto.waterStatus
         comment.image = dto.image
@@ -167,7 +174,7 @@ struct FontCommentController: RouteCollection {
 }
 
 struct CreateCommentDTO: Content {
-    let body: String
+    let body: String?
     let rating: Int?
     let waterStatus: String?
     let image: String?
@@ -175,7 +182,8 @@ struct CreateCommentDTO: Content {
 
 extension CreateCommentDTO: Validatable {
     static func validations(_ validations: inout Validations) {
-        validations.add("body", as: String.self, is: .count(1...2000))
+        // Opcional: se puede publicar solo un estado. Si viene, máx 2000 chars.
+        validations.add("body", as: String.self, is: .count(1...2000), required: false)
         validations.add("rating", as: Int.self, is: .range(1...5), required: false)
         validations.add("waterStatus", as: String.self, is: .in("flowing", "trickle", "dry", "unknown"), required: false)
     }
