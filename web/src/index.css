@@ -103,7 +103,7 @@ a:hover { text-decoration: underline; }
   align-items: center;
   justify-content: space-between;
   min-height: 40px;
-  padding: 0 16px;
+  padding: 0 max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
   border-top: 1px solid var(--border);
   font-size: 13px;
 }
@@ -115,7 +115,7 @@ a:hover { text-decoration: underline; }
 
 /* Mapa: ocupa el alto de la ventana menos la barra (56) y el footer (40). */
 .map-wrap { position: relative; touch-action: none; }
-.map-wrap, .map { height: calc(100vh - 96px); height: calc(100dvh - 96px); width: 100%; }
+.map-wrap, .map { height: calc(100vh - 96px); height: calc(100dvh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); width: 100%; }
 
 /* Overlays sobre el mapa (Leaflet usa z-index hasta ~700). */
 /* Botones flotantes abajo a la derecha (ubicación + añadir), apilados. */

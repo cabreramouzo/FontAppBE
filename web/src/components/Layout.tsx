@@ -40,8 +40,8 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app">
-      <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
-        <Toolbar sx={{ gap: 1 }}>
+      <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default', pt: 'env(safe-area-inset-top)' }}>
+        <Toolbar sx={{ gap: 1, pl: 'max(16px, env(safe-area-inset-left))', pr: 'max(16px, env(safe-area-inset-right))' }}>
           <Typography
             component={RouterLink}
             to="/"
