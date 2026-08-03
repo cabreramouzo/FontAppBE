@@ -113,12 +113,41 @@ Cuando tengas la URL de la web, ciérrale el CORS al backend:
 fly secrets set WEB_ORIGIN="https://xxx.pages.dev"
 ```
 
+## Backups de la base de datos
+
+La BD es lo irreemplazable (fuentes, reseñas, cuentas aportadas por los usuarios). Estrategia:
+
+1. **PITR del proveedor (Neon):** recuperación a un punto en el tiempo dentro de la ventana de
+   retención (en el plan gratuito es corta, ~24 h; ver *Settings → History retention* y subirla
+   si el plan lo permite). Cubre "ups" recientes, pero **vive en el mismo proveedor**.
+2. **Copia independiente (off-provider):** `pg_dump` periódico a un bucket **privado** (R2/B2).
+   Regla 3-2-1. Recomendado **diario**; retención p. ej. 7 diarios + 4 semanales.
+
+> ⚠️ **Versión del cliente `pg_dump`.** `pg_dump` solo vuelca servidores de versión **≤ la suya**.
+> Neon corre Postgres **18**, así que el cliente debe ser **≥ 18**. Con el de Homebrew 16 falla con
+> `server version mismatch`. Instala el 18 (es *keg-only*, no pisa el 16 de dev) y úsalo por ruta:
+>
+> ```bash
+> brew install postgresql@18
+> /opt/homebrew/opt/postgresql@18/bin/pg_dump "$NEON_URL" -Fc -f fontapp-$(date +%Y%m%d).dump
+> # restaurar:
+> /opt/homebrew/opt/postgresql@18/bin/pg_restore -d "$URL_DESTINO" fontapp-YYYYMMDD.dump
+> ```
+>
+> Alternativa sin instalar nada: `docker run --rm postgres:18 pg_dump "$NEON_URL" -Fc > backup.dump`.
+> El `.dump` lleva **emails y hashes** → guárdalo en sitio **privado**, nunca en git ni bucket público.
+> La URL de Neon suele necesitar `?sslmode=require`.
+
+**Automatización (pendiente):** montar un **GitHub Action** con cron (`schedule`) que corra el
+`pg_dump` (con cliente Postgres **18** en el runner) y lo suba a R2. Se hará más adelante, junto con
+la activación de R2 para las imágenes, cuando el proyecto tenga usuarios reales.
+
 ## Checklist antes de abrir al público
 
 - [ ] `WEB_ORIGIN` restringido al dominio real del web.
 - [ ] HTTPS + dominio (lo suele dar la plataforma).
 - [ ] Imágenes: R2 configurado (`R2_*`) **y probado**, o volumen persistente para `/uploads`.
-- [ ] Backups automáticos de la BD.
+- [ ] Backups de la BD (ver *Backups*; manual con `pg_dump` v18 por ahora, Action automático pendiente).
 - [ ] Rate-limit en `/auth/login` *(pendiente)*.
 - [ ] Limpieza de tokens caducados *(pendiente)*.
 - [ ] Aviso legal / privacidad (GDPR) y atribución de datos OSM (ODbL).
