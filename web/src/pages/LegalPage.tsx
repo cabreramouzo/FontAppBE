@@ -73,6 +73,8 @@ function LegalCA() {
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>,
         © col·laboradors d'OpenStreetMap, sota llicència{' '}
         <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
+        {' '}Part de les fonts provenen de l'<a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> i
+        l'ACA, sota llicència <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
       </p>
     </>
   )
@@ -123,6 +125,8 @@ function LegalES() {
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>,
         © colaboradores de OpenStreetMap, bajo licencia{' '}
         <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
+        {' '}Parte de las fuentes provienen del <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> y
+        la ACA, bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
       </p>
     </>
   )
@@ -172,6 +176,8 @@ function LegalEN() {
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>,
         © OpenStreetMap contributors, under the{' '}
         <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a> licence.
+        {' '}Some fountains come from the <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> and
+        ACA, under the <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> licence.
       </p>
     </>
   )

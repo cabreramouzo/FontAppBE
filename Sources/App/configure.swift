@@ -122,6 +122,7 @@ public func configure(_ app: Application) async throws {
     // Comandos CLI.
     app.asyncCommands.use(SeedCommand(), as: "seed")
     app.asyncCommands.use(ImportCommand(), as: "import-fonts")
+    app.asyncCommands.use(ImportGeoJSONCommand(), as: "import-geojson")
 
     // Rutas.
     try routes(app)

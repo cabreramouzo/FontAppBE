@@ -44,7 +44,11 @@ export function Footer() {
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
           OpenStreetMap
         </a>{' '}
-        (ODbL)
+        (ODbL) ·{' '}
+        <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">
+          ICGC
+        </a>
+        /ACA (CC BY 4.0)
       </span>
       <Button size="small" startIcon={<FavoriteBorderIcon />} onClick={() => setOpen(true)} sx={{ textTransform: 'none' }}>
         {t('donate.button')}
