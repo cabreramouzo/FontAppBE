@@ -1,4 +1,3 @@
-import { alpha } from '@mui/material/styles'
 import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
@@ -27,25 +26,19 @@ export function WelcomeDialog() {
   return (
     <Dialog open={justRegistered} onClose={dismissWelcome} maxWidth="xs" fullWidth
       slotProps={{ paper: { sx: { overflow: 'hidden' } } }}>
-      {/* Cabecera: la ilustración a ancho completo, con degradado hacia el
-          fondo del popup por abajo para que no tape el texto. */}
-      <Box sx={{ position: 'relative', height: 260 }}>
-        <Box
-          component="img"
-          src="/welcome.jpg"
-          alt="FontApp"
-          sx={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 22%', display: 'block' }}
-        />
-        <Box sx={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          // Fundido usando el propio color del fondo con alfa (no `transparent`,
-          // que es negro transparente y ensucia el degradado en modo oscuro).
-          background: (theme) => {
-            const p = theme.palette.background.paper
-            return `linear-gradient(to bottom, ${alpha(p, 0)} 0%, ${alpha(p, 0)} 30%, ${alpha(p, 0.75)} 78%, ${p} 100%)`
-          },
-        }} />
-      </Box>
+      {/* Cabecera: la ilustración a ancho completo. En vez de superponer color,
+          desvanecemos la PROPIA imagen a transparente por abajo con una máscara,
+          dejando ver el fondo del popup → fundido real y tema-aware. */}
+      <Box
+        component="img"
+        src="/welcome.jpg"
+        alt="FontApp"
+        sx={{
+          width: '100%', height: 260, objectFit: 'cover', objectPosition: 'center 22%', display: 'block',
+          maskImage: 'linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)',
+        }}
+      />
       <DialogContent sx={{ textAlign: 'center', pt: 0, mt: -1 }}>
         <Typography variant="h5" sx={{ fontWeight: 800 }}>
           {user?.name ? t('welcome.greeting', { name: user.name }) : t('welcome.title')}
