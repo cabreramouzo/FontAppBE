@@ -35,6 +35,9 @@ export function Footer() {
 
   return (
     <footer className="footer">
+      <Button size="small" startIcon={<FavoriteBorderIcon />} onClick={() => setOpen(true)} sx={{ textTransform: 'none' }}>
+        {t('donate.button')}
+      </Button>
       <RouterLink to="/legal">{t('footer.legal')}</RouterLink>
       <span className="muted">
         {t('footer.dataPrefix')}{' '}
@@ -47,9 +50,6 @@ export function Footer() {
         </a>
         /ACA (CC BY 4.0)
       </span>
-      <Button size="small" startIcon={<FavoriteBorderIcon />} onClick={() => setOpen(true)} sx={{ textTransform: 'none' }}>
-        {t('donate.button')}
-      </Button>
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>❤️ {t('donate.title')}</DialogTitle>
