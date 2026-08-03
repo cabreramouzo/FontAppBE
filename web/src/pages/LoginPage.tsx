@@ -72,13 +72,21 @@ export function LoginPage() {
               <TextField label={t('login.name')} value={name} onChange={(e) => setName(e.target.value)} required fullWidth size="small" />
             )}
             {mode !== 'forgot' && (
-              <TextField label={t('login.username')} value={username} onChange={(e) => setUsername(e.target.value)} required fullWidth size="small" />
+              <TextField
+                label={mode === 'login' ? t('login.userOrEmail') : t('login.username')}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                fullWidth
+                size="small"
+                slotProps={{ htmlInput: { autoComplete: 'username' } }}
+              />
             )}
             {mode !== 'login' && (
-              <TextField type="email" label={t('login.email')} value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth size="small" />
+              <TextField type="email" label={t('login.email')} value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: 'email' } }} />
             )}
             {mode !== 'forgot' && (
-              <TextField type="password" label={t('login.password')} value={password} onChange={(e) => setPassword(e.target.value)} required fullWidth size="small" />
+              <TextField type="password" label={t('login.password')} value={password} onChange={(e) => setPassword(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: mode === 'login' ? 'current-password' : 'new-password' } }} />
             )}
             <Button type="submit" variant="contained" disableElevation>
               {mode === 'login' ? t('login.enter') : mode === 'register' ? t('login.register') : t('forgot.submit')}

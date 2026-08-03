@@ -11,8 +11,9 @@ struct AuthController: RouteCollection {
         let loginThrottle = RateLimitMiddleware(max: 10, window: 5 * 60)   // 10 / 5 min
         let resetThrottle = RateLimitMiddleware(max: 5, window: 15 * 60)   // 5 / 15 min
 
-        // Login con Basic auth (usuario/contraseña), con rate-limit ANTES de autenticar.
-        auth.grouped(loginThrottle).grouped(User.authenticator()).post("login", use: login)
+        // Login con Basic auth, con rate-limit ANTES de autenticar. El identificador
+        // puede ser el nombre de usuario O el email (ver UserCredentialsAuthenticator).
+        auth.grouped(loginThrottle).grouped(UserCredentialsAuthenticator()).post("login", use: login)
 
         // Recuperación de contraseña (público, con rate-limit para evitar spam/enumeración).
         auth.grouped(resetThrottle).post("forgot-password", use: forgotPassword)
@@ -60,7 +61,7 @@ struct AuthController: RouteCollection {
         // Envía el correo (LogMailSender en dev, Resend en prod). Best-effort:
         // si el proveedor falla, no revelamos nada al cliente (evita enumeración/oráculo).
         // El contenido va en el idioma de la interfaz que indique el cliente.
-        let mail = ResetEmail.build(lang: dto.lang, link: link)
+        let mail = ResetEmail.build(lang: dto.lang, username: user.username, link: link)
         do {
             try await req.mailSender.send(to: email, subject: mail.subject, html: mail.html, text: mail.text, on: req.client)
         } catch {
@@ -127,6 +128,22 @@ struct AuthController: RouteCollection {
     }
 }
 
+/// Autenticador Basic que acepta el **nombre de usuario o el email** como
+/// identificador (el de ModelAuthenticatable solo mira username). Así, si alguien
+/// olvida su usuario, puede entrar con el correo. La contraseña se verifica con bcrypt.
+struct UserCredentialsAuthenticator: AsyncBasicAuthenticator {
+    func authenticate(basic: BasicAuthorization, for request: Request) async throws {
+        let id = basic.username.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty else { return }
+        let user = try await User.query(on: request.db).group(.or) { group in
+            group.filter(\.$username == id).filter(\.$email == id.lowercased())
+        }.first()
+        // Contraseña incorrecta o usuario inexistente: no autenticamos (401 aguas abajo).
+        guard let user, try user.verify(password: basic.password) else { return }
+        request.auth.login(user)
+    }
+}
+
 struct LoginResponse: Content {
     let token: String
     let expiresAt: Date?
@@ -142,57 +159,67 @@ struct ForgotDTO: Content {
 /// Plantilla del correo de restablecimiento, localizada. Devuelve asunto, HTML y
 /// texto plano (alternativa multipart, mejor para la entregabilidad).
 enum ResetEmail {
-    static func build(lang: String?, link: String) -> (subject: String, html: String, text: String) {
+    static func build(lang: String?, username: String, link: String) -> (subject: String, html: String, text: String) {
+        // Escapamos el username por si llevara caracteres HTML (se muestra en el <p>).
+        let userHTML = username
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
         switch lang {
         case "es":
             return (
                 "Restablecer la contraseña · FontApp",
                 """
                 <p>Has solicitado restablecer la contraseña de FontApp.</p>
+                <p>Tu nombre de usuario es: <strong>\(userHTML)</strong></p>
                 <p><a href="\(link)">Restablecer la contraseña</a> (el enlace caduca en 1 hora).</p>
                 <p>Si no lo has solicitado tú, ignora este correo.</p>
                 """,
-                "Has solicitado restablecer la contraseña de FontApp.\nAbre este enlace (caduca en 1 hora): \(link)\nSi no lo has solicitado tú, ignora este correo."
+                "Has solicitado restablecer la contraseña de FontApp.\nTu nombre de usuario es: \(username)\nAbre este enlace (caduca en 1 hora): \(link)\nSi no lo has solicitado tú, ignora este correo."
             )
         case "gl":
             return (
                 "Restablecer o contrasinal · FontApp",
                 """
                 <p>Solicitaches restablecer o contrasinal de FontApp.</p>
+                <p>O teu nome de usuario é: <strong>\(userHTML)</strong></p>
                 <p><a href="\(link)">Restablecer o contrasinal</a> (a ligazón caduca en 1 hora).</p>
                 <p>Se non o solicitaches ti, ignora este correo.</p>
                 """,
-                "Solicitaches restablecer o contrasinal de FontApp.\nAbre esta ligazón (caduca en 1 hora): \(link)\nSe non o solicitaches ti, ignora este correo."
+                "Solicitaches restablecer o contrasinal de FontApp.\nO teu nome de usuario é: \(username)\nAbre esta ligazón (caduca en 1 hora): \(link)\nSe non o solicitaches ti, ignora este correo."
             )
         case "eu":
             return (
                 "Pasahitza berrezarri · FontApp",
                 """
                 <p>FontApp-eko pasahitza berrezartzeko eskaera egin duzu.</p>
+                <p>Zure erabiltzaile-izena: <strong>\(userHTML)</strong></p>
                 <p><a href="\(link)">Pasahitza berrezarri</a> (esteka ordubetean iraungiko da).</p>
                 <p>Zuk eskatu ez baduzu, ez ikusi mezu honi.</p>
                 """,
-                "FontApp-eko pasahitza berrezartzeko eskaera egin duzu.\nIreki esteka hau (ordubetean iraungiko da): \(link)\nZuk eskatu ez baduzu, ez ikusi mezu honi."
+                "FontApp-eko pasahitza berrezartzeko eskaera egin duzu.\nZure erabiltzaile-izena: \(username)\nIreki esteka hau (ordubetean iraungiko da): \(link)\nZuk eskatu ez baduzu, ez ikusi mezu honi."
             )
         case "en":
             return (
                 "Reset your password · FontApp",
                 """
                 <p>You requested to reset your FontApp password.</p>
+                <p>Your username is: <strong>\(userHTML)</strong></p>
                 <p><a href="\(link)">Reset your password</a> (the link expires in 1 hour).</p>
                 <p>If you didn't request this, ignore this email.</p>
                 """,
-                "You requested to reset your FontApp password.\nOpen this link (expires in 1 hour): \(link)\nIf you didn't request this, ignore this email."
+                "You requested to reset your FontApp password.\nYour username is: \(username)\nOpen this link (expires in 1 hour): \(link)\nIf you didn't request this, ignore this email."
             )
         default: // ca (idioma por defecto de la app)
             return (
                 "Restablir la contrasenya · FontApp",
                 """
                 <p>Has demanat restablir la contrasenya de FontApp.</p>
+                <p>El teu nom d'usuari és: <strong>\(userHTML)</strong></p>
                 <p><a href="\(link)">Restablir la contrasenya</a> (l'enllaç caduca en 1 hora).</p>
                 <p>Si no ho has demanat tu, ignora aquest correu.</p>
                 """,
-                "Has demanat restablir la contrasenya de FontApp.\nObre aquest enllaç (caduca en 1 hora): \(link)\nSi no ho has demanat tu, ignora aquest correu."
+                "Has demanat restablir la contrasenya de FontApp.\nEl teu nom d'usuari és: \(username)\nObre aquest enllaç (caduca en 1 hora): \(link)\nSi no ho has demanat tu, ignora aquest correu."
             )
         }
     }
