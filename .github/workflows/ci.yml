@@ -7,7 +7,7 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
-    container: swift:6.0-noble
+    container: swift:6.3-noble
     services:
       postgres:
         image: postgres:16
@@ -42,3 +42,15 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run build
+
+  deploy-backend:
+    needs: [backend, web]        # solo si tests + build pasan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    concurrency: deploy-backend  # evita despliegues solapados
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
