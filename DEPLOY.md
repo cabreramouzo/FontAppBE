@@ -113,6 +113,21 @@ Cuando tengas la URL de la web, ciérrale el CORS al backend:
 fly secrets set WEB_ORIGIN="https://xxx.pages.dev"
 ```
 
+#### Dominio propio (`fontapp.net`)
+1. Cloudflare Pages → proyecto `fontapp-web` → **Custom domains** → añade `fontapp.net`
+   (y opcionalmente `www.fontapp.net`). Como el dominio está en la misma cuenta de
+   Cloudflare, crea los registros DNS y provisiona el TLS automáticamente.
+2. Actualiza el CORS del backend con el dominio real, **canónico primero** (ese primer
+   valor es también la base del enlace del email de reset):
+   ```bash
+   fly secrets set WEB_ORIGIN="https://fontapp.net,https://www.fontapp.net"
+   ```
+3. `VITE_API_URL` **no cambia** (`https://fontapp.fly.dev`); el backend sigue en fly.dev.
+   (Opcional futuro: `api.fontapp.net` como dominio del backend.)
+
+No requiere cambios de código: el frontend no hardcodea su dominio y `WEB_ORIGIN` admite
+varios orígenes separados por comas.
+
 ## Backups de la base de datos
 
 La BD es lo irreemplazable (fuentes, reseñas, cuentas aportadas por los usuarios). Estrategia:
