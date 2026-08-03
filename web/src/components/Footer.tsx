@@ -8,14 +8,17 @@ import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import Alert from '@mui/material/Alert'
 import IconButton from '@mui/material/IconButton'
+import Divider from '@mui/material/Divider'
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import LocalCafeIcon from '@mui/icons-material/LocalCafe'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from './ToastContext'
 
-// TODO(donaciones): dirección de EJEMPLO / placeholder — NO es real ni operativa.
-// Sustituir por la dirección Bitcoin propia (y quitar el aviso de placeholder)
-// antes de aceptar donaciones reales en producción.
+// TODO(donaciones): valores de EJEMPLO / placeholder — NO son reales ni operativos.
+// Sustituir por el usuario de Ko-fi y la dirección Bitcoin propios (y quitar el
+// aviso de placeholder) antes de aceptar donaciones reales en producción.
+const PLACEHOLDER_KOFI_URL = 'https://ko-fi.com/' // → https://ko-fi.com/tuusuario
 const PLACEHOLDER_BTC_ADDRESS = 'bc1qDEMOexampleplaceholder0notreal0replaceme00'
 
 export function Footer() {
@@ -52,6 +55,22 @@ export function Footer() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t('donate.intro')}
           </Typography>
+
+          <Button
+            fullWidth
+            variant="contained"
+            disableElevation
+            startIcon={<LocalCafeIcon />}
+            component="a"
+            href={PLACEHOLDER_KOFI_URL}
+            target="_blank"
+            rel="noreferrer"
+            sx={{ textTransform: 'none' }}
+          >
+            {t('donate.kofi')}
+          </Button>
+
+          <Divider sx={{ my: 2 }}>{t('donate.orBtc')}</Divider>
 
           <Typography variant="caption" sx={{ fontWeight: 700 }}>{t('donate.btcLabel')}</Typography>
           <Box
