@@ -23,6 +23,10 @@ docker build -t fontappbe .
 | `WEB_ORIGIN` | recomendada | Origen(es) del web permitidos por CORS, separados por comas (p. ej. `https://fontapp.com`). Si no se define, CORS permite todo (solo dev). |
 | `AUTO_MIGRATE` | opcional | `true` → migra la BD al arrancar. Útil en un solo contenedor. |
 | `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | opcional | Si están **las cinco**, las imágenes se suben a Cloudflare R2; si no, a disco local. `R2_PUBLIC_URL` es la base pública del bucket (p. ej. `https://pub-xxxx.r2.dev`). |
+| `RESEND_API_KEY` | opcional | API key de [Resend](https://resend.com). Junto con `MAIL_FROM` activa el envío real de correo (reset de contraseña); si falta, en dev solo se loguea (`LogMailSender`). |
+| `MAIL_FROM` | opcional | Remitente de los correos, p. ej. `FontApp <no-reply@send.fontapp.net>`. Obligatoria junto con `RESEND_API_KEY`. |
+| `MAIL_REPLY_TO` | opcional | Dirección de respuesta (p. ej. `admin@fontapp.net`), para enviar desde un no-reply pero recibir las respuestas en un buzón real. |
+| `GEOIP_ENABLED` | opcional | `true` → deduce país/región de la IP al registrarse (solo estadística; nunca se guarda la IP). Noop si no se define. |
 
 \* Usa **o** `DATABASE_URL` **o** las variables sueltas. En `--env production` las credenciales son obligatorias (la app falla al arrancar si faltan).
 
@@ -39,6 +43,18 @@ El contenedor arranca con `serve --env production` (ver `CMD` del `Dockerfile`).
 `./App seed --env production` inserta las 67 fuentes reales del Moianès (OSM, ODbL).
 **No** ejecutes `seed --demo` en producción (crea usuarios y reseñas de ejemplo).
 
+Para cargar el dataset de fuentes del **ICGC/ACA** (GeoJSON exportado), usa `import-geojson`
+con dedupe por distancia (fusiona topónimos y evita duplicados de lo ya sembrado):
+
+```bash
+# En local, contra la BD de PROD (no uses env.development, que apunta a la BD local):
+DATABASE_URL='postgresql://USER:PASSWORD@HOST/neondb?sslmode=require' \
+  swift run App import-geojson fonts_icgc.geojson --name-field Toponim --dedupe 50
+```
+
+Verifica el recuento con el cliente psql **v18** (Neon corre Postgres 18):
+`SELECT count(*) FROM fonts WHERE description = '© ICGC/ACA';`
+
 ### Imágenes subidas
 
 El almacenamiento es **pluggable** (`ImageStorage`): si defines las variables `R2_*`,
@@ -52,6 +68,42 @@ si no, se guardan en **disco local** (`/app/Public/uploads`).
 
 Las imágenes se **comprimen en el cliente** (redimensionado + JPEG) antes de subir, y se
 **borran del almacén** al eliminar la fuente/reseña.
+
+## Correo
+
+Dos caras separadas (no confundir):
+
+- **Enviar** (transaccional, desde la app: reset de contraseña) → **Resend**.
+- **Recibir** contacto humano en `admin@fontapp.net` → **iCloud+** (Custom Email Domain).
+
+El envío es **pluggable** (`MailSender`): en dev, `LogMailSender` solo loguea el enlace;
+en prod, `ResendMailSender` si están `RESEND_API_KEY` + `MAIL_FROM` (opcional `MAIL_REPLY_TO`).
+
+### Envío con Resend (subdominio `send.fontapp.net`)
+
+Se usa un **subdominio de envío** para no chocar con los registros de correo de iCloud en el
+dominio raíz (SPF solo admite una política por dominio) y aislar la reputación.
+
+1. Resend → **Add Domain** = `send.fontapp.net`.
+2. Añade en Cloudflare (DNS **only**, nube gris) los registros que da Resend: **MX** (return-path),
+   **TXT SPF** (`v=spf1 include:_spf.resend.com ~all`), **DKIM** y opcional **DMARC**.
+3. Crea una **API key** (Sending) y ponla como secret:
+   ```bash
+   fly secrets set \
+     RESEND_API_KEY='re_...' \
+     MAIL_FROM='FontApp <no-reply@send.fontapp.net>' \
+     MAIL_REPLY_TO='admin@fontapp.net' -a fontapp
+   ```
+4. Entregabilidad: el correo lleva versión **texto plano** (multipart). Añade un **DMARC**
+   (`_dmarc.send.fontapp.net` → `v=DMARC1; p=none; rua=mailto:admin@fontapp.net`). Un dominio de
+   envío nuevo no tiene reputación → algún spam inicial es normal y mejora con el tiempo.
+
+### Buzón humano con iCloud+ (`admin@fontapp.net`)
+
+iCloud+ incluye **Custom Email Domain** (buzón real: recibir y enviar). Ojo: un dominio solo puede
+tener **un** juego de MX, así que **no** actives a la vez el Email Routing de Cloudflare sobre el raíz.
+Configura el dominio en iCloud, y añade en Cloudflare los **MX/SPF/DKIM de iCloud** (DNS only).
+Como iCloud va en el raíz y Resend en `send.`, **no hay conflicto de SPF**.
 
 ## Web
 
@@ -77,10 +129,17 @@ fly launch --no-deploy            # detecta Dockerfile + fly.toml; nombre único
 fly postgres create               # Postgres gestionado (o durante el launch)
 fly postgres attach <nombre-pg>   # inyecta DATABASE_URL como secret automáticamente
 ```
-Si el arranque falla por TLS (BD interna de Fly), fuerza sin TLS:
+Si el arranque falla por TLS (BD **interna** de Fly), fuerza sin TLS:
 ```bash
 fly secrets set DATABASE_URL="postgres://usuario:pass@host:5432/db?sslmode=disable"
 ```
+
+> **En producción se usa Neon** (Postgres gestionado, externo a Fly), no la BD interna de Fly.
+> En ese caso **sí** hace falta TLS: el `DATABASE_URL` de Neon lleva **`?sslmode=require`**
+> (`SQLPostgresConfiguration(url:)` lo respeta). Ponlo como secret y **no** lo pegues en claro:
+> ```bash
+> fly secrets set DATABASE_URL='postgresql://USER:PASSWORD@HOST/neondb?sslmode=require' -a fontapp
+> ```
 
 ### 2. R2 + secrets
 En Cloudflare: crea un **bucket R2**, hazlo **público** (URL `pub-xxxx.r2.dev`) y un **token de API**
@@ -128,6 +187,24 @@ fly secrets set WEB_ORIGIN="https://xxx.pages.dev"
 No requiere cambios de código: el frontend no hardcodea su dominio y `WEB_ORIGIN` admite
 varios orígenes separados por comas.
 
+## Despliegue automático (CI/CD) — push a `main`
+
+Configurado en `.github/workflows/ci.yml`. Al hacer **push a `main`**:
+
+1. Job **`backend`** — corre `swift test` (contenedor `swift:6.3-noble` + Postgres de servicio).
+   Debe ir alineado con el `Dockerfile` (`FROM swift:6.3-noble`): si sube la versión de Swift,
+   **actualiza los dos sitios a la vez**.
+2. Job **`web`** — `npm ci` + `npm run build`.
+3. Job **`deploy-backend`** — si `backend` y `web` pasan, ejecuta `flyctl deploy --remote-only`.
+   Necesita el secret **`FLY_API_TOKEN`** en GitHub (Settings → Secrets → Actions). El token de Fly
+   incluye el prefijo literal `FlyV1 ` (con el espacio) — guárdalo entero. Genéralo con
+   `fly tokens create deploy -a fontapp`; si se filtra, revócalo con `fly tokens revoke`.
+4. **Web (Cloudflare Pages)** se redespliega solo por su **integración con GitHub** (no va por el
+   Action): cada push a `main` dispara un build de Pages con `VITE_API_URL` ya configurada.
+
+Así, un `git push` a `main` despliega **backend (Fly) + web (Pages)**. Las migraciones nuevas se
+aplican solas en el arranque gracias a `AUTO_MIGRATE=true`.
+
 ## Backups de la base de datos
 
 La BD es lo irreemplazable (fuentes, reseñas, cuentas aportadas por los usuarios). Estrategia:
@@ -159,11 +236,12 @@ la activación de R2 para las imágenes, cuando el proyecto tenga usuarios reale
 
 ## Checklist antes de abrir al público
 
-- [ ] `WEB_ORIGIN` restringido al dominio real del web.
-- [ ] HTTPS + dominio (lo suele dar la plataforma).
-- [ ] Imágenes: R2 configurado (`R2_*`) **y probado**, o volumen persistente para `/uploads`.
+- [x] `WEB_ORIGIN` restringido al dominio real del web.
+- [x] HTTPS + dominio (lo suele dar la plataforma).
+- [x] Imágenes: R2 configurado (`R2_*`) **y probado**, o volumen persistente para `/uploads`.
 - [ ] Backups de la BD (ver *Backups*; manual con `pg_dump` v18 por ahora, Action automático pendiente).
-- [ ] Rate-limit en `/auth/login` *(pendiente)*.
-- [ ] Limpieza de tokens caducados *(pendiente)*.
-- [ ] Aviso legal / privacidad (GDPR) y atribución de datos OSM (ODbL).
-- [ ] CI que corra `swift test` y `npm run build`.
+- [x] Rate-limit en `/auth/login` y `/auth/*` (en memoria, por IP; `RateLimitMiddleware`).
+- [x] Limpieza de tokens caducados (tarea periódica cada 6 h en `configure.swift`).
+- [x] Aviso legal / privacidad (GDPR) y atribución de datos OSM (ODbL) e ICGC/ACA.
+- [x] CI que corra `swift test` y `npm run build` (`.github/workflows/ci.yml`).
+- [x] Correo de reset con dominio propio (Resend + SPF/DKIM); **pendiente** el DMARC y vigilar el spam.
