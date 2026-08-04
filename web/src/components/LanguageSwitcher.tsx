@@ -14,7 +14,10 @@ export function LanguageSwitcher() {
       variant="standard"
       disableUnderline
       aria-label={t('lang.label')}
-      sx={{ fontSize: 14, '& .MuiSelect-select': { py: 0.5 } }}
+      // Cerrado: solo el código (ES/CA/EN…) para no saturar la barra en móvil.
+      // Abierto: el nombre completo del idioma.
+      renderValue={(value) => String(value).toUpperCase()}
+      sx={{ fontSize: 14, fontWeight: 600, '& .MuiSelect-select': { py: 0.5 } }}
     >
       {LANGS.map((l) => (
         <MenuItem key={l.code} value={l.code}>{l.label}</MenuItem>

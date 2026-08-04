@@ -48,7 +48,7 @@ export function Layout({ children }: { children: ReactNode }) {
               component={RouterLink}
               to="/"
               variant="h6"
-              sx={{ fontWeight: 800, color: 'primary.main', textDecoration: 'none' }}
+              sx={{ fontWeight: 800, color: 'primary.main', textDecoration: 'none', whiteSpace: 'nowrap' }}
             >
               💧 FontApp
             </Typography>
