@@ -5,6 +5,7 @@ import Toolbar from '@mui/material/Toolbar'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Badge from '@mui/material/Badge'
 import Tooltip from '@mui/material/Tooltip'
@@ -42,14 +43,23 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="app">
       <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default', pt: 'env(safe-area-inset-top)' }}>
         <Toolbar sx={{ gap: 1, pl: 'max(16px, env(safe-area-inset-left))', pr: 'max(16px, env(safe-area-inset-right))' }}>
-          <Typography
-            component={RouterLink}
-            to="/"
-            variant="h6"
-            sx={{ flexGrow: 1, fontWeight: 800, color: 'primary.main', textDecoration: 'none' }}
-          >
-            💧 FontApp
-          </Typography>
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Typography
+              component={RouterLink}
+              to="/"
+              variant="h6"
+              sx={{ fontWeight: 800, color: 'primary.main', textDecoration: 'none' }}
+            >
+              💧 FontApp
+            </Typography>
+            <Chip
+              label="beta"
+              size="small"
+              color="warning"
+              variant="outlined"
+              sx={{ height: 20, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', '& .MuiChip-label': { px: 0.75 } }}
+            />
+          </Box>
           <ThemeToggle />
           <LanguageSwitcher />
           {user ? (
