@@ -17,10 +17,22 @@ primary_region = 'fra'
 [http_service]
   internal_port = 8080
   force_https = true
+  # Beta sin tráfico: apaga la máquina cuando está ociosa para minimizar coste.
+  # Contrapartida: la primera petición tras un rato tiene un arranque en frío de
+  # ~un par de segundos. Cuando haya tráfico real, subir min_machines_running a 1
+  # (y opcionalmente auto_stop='suspend') lo elimina.
   auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
+
+  # Health check: Fly vigila /health y no enruta tráfico a una instancia caída.
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
 
 [[vm]]
   memory = '512mb'
