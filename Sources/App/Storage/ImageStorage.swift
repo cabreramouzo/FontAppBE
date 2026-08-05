@@ -27,20 +27,30 @@ struct LocalImageStorage: ImageStorage {
     }
 
     func delete(_ reference: String) async throws {
-        guard reference.hasPrefix("/uploads/") else { return }
-        let filename = String(reference.dropFirst("/uploads/".count))
+        guard let filename = Self.safeFilename(reference) else { return }
         try? FileManager.default.removeItem(atPath: directory + "uploads/" + filename)
     }
 
     func copy(_ reference: String) async throws -> String {
-        guard reference.hasPrefix("/uploads/") else { throw Abort(.badRequest, reason: "Referencia de imagen no válida") }
-        let ext = (reference as NSString).pathExtension
+        guard let source = Self.safeFilename(reference) else {
+            throw Abort(.badRequest, reason: "Referencia de imagen no válida")
+        }
+        let ext = (source as NSString).pathExtension
         let filename = "\(UUID().uuidString).\(ext.isEmpty ? "jpg" : ext)"
         let dir = directory + "uploads/"
-        let src = directory + "uploads/" + String(reference.dropFirst("/uploads/".count))
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-        try FileManager.default.copyItem(atPath: src, toPath: dir + filename)
+        try FileManager.default.copyItem(atPath: dir + source, toPath: dir + filename)
         return "/uploads/\(filename)"
+    }
+
+    /// La referencia `image` la guarda el cliente, así que puede ser hostil.
+    /// Aceptamos solo `/uploads/<archivo>` con un único componente (sin separadores
+    /// ni `..`), para que nunca se resuelva fuera del directorio de subidas.
+    static func safeFilename(_ reference: String) -> String? {
+        guard reference.hasPrefix("/uploads/") else { return nil }
+        let filename = String(reference.dropFirst("/uploads/".count))
+        guard !filename.isEmpty, !filename.contains("/"), !filename.contains("..") else { return nil }
+        return filename
     }
 }
 
