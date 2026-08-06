@@ -205,6 +205,38 @@ Configurado en `.github/workflows/ci.yml`. Al hacer **push a `main`**:
 Así, un `git push` a `main` despliega **backend (Fly) + web (Pages)**. Las migraciones nuevas se
 aplican solas en el arranque gracias a `AUTO_MIGRATE=true`.
 
+### Cuánto tarda (push → cambios visibles)
+
+El ciclo completo son **~15-30 min**, y casi todo es el **build de la imagen Swift**, no la migración:
+
+| Fase | Qué pasa | Tiempo aprox. |
+|------|----------|---------------|
+| Jobs `backend` + `web` | `swift test` (compila Swift en contenedor) + `npm build` | ~3-8 min |
+| `deploy-backend` → `flyctl deploy` | **Build remoto de la imagen Docker (Swift)** — el cuello de botella | **~10-20 min** |
+| Release + boot | Arranca la máquina; `AUTO_MIGRATE` aplica las migraciones pendientes | **segundos** |
+
+> Ojo: "los tests están verdes" **no** significa "ya está desplegado". Los tests son los jobs
+> `backend`/`web`; el `deploy-backend` (con el build de la imagen) corre **después** y es lo lento.
+> La **migración en sí es instantánea**; si una tabla nueva "no existe" justo tras el push, es que
+> el build aún no ha terminado, no que la migración tarde.
+
+### Cómo saber que ya está en vivo
+
+Dos señales fiables (no adivines por el reloj):
+
+1. **GitHub → Actions**: espera a que el job **`deploy-backend`** se ponga **verde** (no solo los tests).
+2. **`curl` a un endpoint del cambio nuevo.** Devuelve el código HTTP sin cuerpo:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" https://fontapp.fly.dev/health
+   # o, para verificar una ruta nueva concreta (ejemplo: feedback):
+   curl -s -o /dev/null -w "%{http_code}\n" -X POST https://fontapp.fly.dev/feedback \
+     -H 'Content-Type: application/json' -d '{"message":"deploy check"}'
+   ```
+   - **404** → sigue el **código viejo** (el deploy aún no ha aplicado).
+   - **500 / error de BD** → código nuevo pero **falta la migración** (fuérzala:
+     `fly ssh console -a fontapp -C "/app/App migrate --yes"`).
+   - **2xx** (p. ej. `204`) → desplegado **y** migrado. ✅
+
 ## Backups de la base de datos
 
 La BD es lo irreemplazable (fuentes, reseñas, cuentas aportadas por los usuarios). Estrategia:
