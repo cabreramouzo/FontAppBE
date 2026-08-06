@@ -13,6 +13,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import LocalCafeIcon from '@mui/icons-material/LocalCafe'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from './ToastContext'
+import { FeedbackButton } from './FeedbackButton'
 
 // Ko-fi real (ID G5G724DC37). El enlace directo equivale al widget embed, sin
 // cargar el script de terceros de Ko-fi.
@@ -38,6 +39,7 @@ export function Footer() {
       <Button size="small" startIcon={<FavoriteBorderIcon />} onClick={() => setOpen(true)} sx={{ textTransform: 'none' }}>
         {t('donate.button')}
       </Button>
+      <FeedbackButton />
       <RouterLink to="/legal">{t('footer.legal')}</RouterLink>
       <span className="muted">
         {t('footer.dataPrefix')}{' '}

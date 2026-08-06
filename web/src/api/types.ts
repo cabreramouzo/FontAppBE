@@ -133,3 +133,13 @@ export interface InterestStats {
   total: number
   voters: InterestVoter[]
 }
+
+/** Sugerencia / feedback de un usuario (vista admin). */
+export interface Feedback {
+  id: string
+  username: string | null
+  message: string
+  country: string | null
+  email: string | null
+  createdAt: string | null
+}

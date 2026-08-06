@@ -19,8 +19,8 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import UndoIcon from '@mui/icons-material/Undo'
-import type { Flag, FontEdit, FontInfoSnapshot, InterestStats, RegionStat } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFlags, getFontEdits, getInterestStats, getRegionStats, revertFontEdit, FONT_EDITS_PER } from '../api/client'
+import type { Feedback, Flag, FontEdit, FontInfoSnapshot, InterestStats, RegionStat } from '../api/types'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getRegionStats, revertFontEdit, FONT_EDITS_PER } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -34,6 +34,7 @@ export function AdminPage() {
   const [edits, setEdits] = useState<FontEdit[] | null>(null)
   const [regions, setRegions] = useState<RegionStat[] | null>(null)
   const [interest, setInterest] = useState<InterestStats | null>(null)
+  const [feedback, setFeedback] = useState<Feedback[] | null>(null)
   const [editsPage, setEditsPage] = useState(1)
   const [editsHasMore, setEditsHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -49,6 +50,7 @@ export function AdminPage() {
     getFontEdits(1).then((e) => { setEdits(e); setEditsPage(1); setEditsHasMore(e.length === FONT_EDITS_PER) }).catch(() => setEdits([]))
     getRegionStats().then(setRegions).catch(() => setRegions([]))
     getInterestStats().then(setInterest).catch(() => setInterest(null))
+    getFeedback().then(setFeedback).catch(() => setFeedback([]))
   }, [user, loading, navigate])
 
   async function loadMoreEdits() {
@@ -171,6 +173,31 @@ export function AdminPage() {
             )}
           </>
         )}
+      </Box>
+
+      <Box component="section" sx={{ mt: 3 }}>
+        <Typography variant="h6" gutterBottom>💬 {t('admin.feedback')}</Typography>
+        {feedback === null && <Skeleton lines={2} />}
+        {feedback?.length === 0 && <Typography color="text.secondary">{t('admin.feedbackNone')}</Typography>}
+        <List disablePadding>
+          {feedback?.map((f) => (
+            <ListItem key={f.id} divider disableGutters alignItems="flex-start">
+              <ListItemText
+                slotProps={{ primary: { component: 'div' } }}
+                primary={<Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{f.message}</Typography>}
+                secondary={
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
+                    {f.country && <Chip size="small" label={`🌍 ${f.country}`} />}
+                    {f.email && <Chip size="small" variant="outlined" label={f.email} />}
+                    <Typography component="span" variant="caption" color="text.secondary">
+                      {(f.username ? `@${f.username}` : t('admin.feedbackAnon'))}{f.createdAt ? ` · ${timeAgo(f.createdAt, t)}` : ''}
+                    </Typography>
+                  </Box>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
       </Box>
 
       <Box component="section" sx={{ mt: 3 }}>

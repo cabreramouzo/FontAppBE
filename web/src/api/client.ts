@@ -1,4 +1,4 @@
-import type { AppPlatform, CommentResponse, Drinkable, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, RegionStat, ReportResponse, UserResponse, WaterSource } from './types'
+import type { AppPlatform, CommentResponse, Drinkable, Feedback, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, RegionStat, ReportResponse, UserResponse, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -220,6 +220,16 @@ export async function submitAppInterest(wants: boolean, platform?: AppPlatform):
 // Estadística de interés por app móvil (admin).
 export async function getInterestStats(): Promise<InterestStats> {
   return apiFetch<InterestStats>('/interest/stats')
+}
+
+// Sugerencia / feedback libre (mensaje + país/email opcionales). Auth opcional.
+export async function submitFeedback(data: { message: string; country?: string; email?: string }): Promise<void> {
+  await apiFetch('/feedback', { method: 'POST', body: JSON.stringify(data) })
+}
+
+// Lista de sugerencias (admin).
+export async function getFeedback(): Promise<Feedback[]> {
+  return apiFetch<Feedback[]>('/feedback')
 }
 
 // Perfil público de un usuario: identidad + su actividad (fuentes y reseñas).
