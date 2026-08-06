@@ -33,6 +33,18 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   })
 }
 
+// Analítica web (Cloudflare Web Analytics): sin cookies, no rastrea entre sitios ni
+// guarda datos personales. Solo en producción y solo si hay token configurado
+// (VITE_CF_ANALYTICS_TOKEN). Si no está, no se carga ningún script de terceros.
+const cfAnalyticsToken = import.meta.env.VITE_CF_ANALYTICS_TOKEN
+if (import.meta.env.PROD && cfAnalyticsToken) {
+  const beacon = document.createElement('script')
+  beacon.defer = true
+  beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js'
+  beacon.setAttribute('data-cf-beacon', JSON.stringify({ token: cfAnalyticsToken }))
+  document.head.appendChild(beacon)
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

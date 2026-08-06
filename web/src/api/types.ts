@@ -116,6 +116,12 @@ export interface FontSummary extends Font {
   lastUpdate: string | null
 }
 
+/** Estado de favoritos de una fuente (guardada por el usuario + recuento total). */
+export interface FavoriteStatus {
+  favorited: boolean
+  count: number
+}
+
 export type AppPlatform = 'ios' | 'android' | 'other'
 
 /** Un votante identificado del interés por app móvil (vista admin). */

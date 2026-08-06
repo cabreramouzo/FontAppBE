@@ -425,4 +425,62 @@ final class IntegrationTests: XCTestCase {
             }
         }
     }
+
+    /// Guardar/quitar favorito: toggle idempotente, recuento y aparición en /me/favorites.
+    func testFavoriteToggleAndList() async throws {
+        try await withApp { app in
+            try await register(app, username: "faver")
+            let token = try await login(app, username: "faver")
+            let fontID = try await createFont(app, token: token, name: "Font", lat: 40, long: -3)
+
+            // Sin token: recuento 0 y favorited=false.
+            try await app.test(.GET, "fonts/\(fontID)/favorite") { res in
+                XCTAssertEqual(res.status, .ok)
+                let s = try res.content.decode(FavoriteStatus.self)
+                XCTAssertFalse(s.favorited)
+                XCTAssertEqual(s.count, 0)
+            }
+
+            // Guardar (dos veces: idempotente, sigue en 1).
+            for _ in 0..<2 {
+                try await app.test(.POST, "fonts/\(fontID)/favorite", headers: bearer(token)) { res in
+                    XCTAssertEqual(res.status, .ok)
+                    let s = try res.content.decode(FavoriteStatus.self)
+                    XCTAssertTrue(s.favorited)
+                    XCTAssertEqual(s.count, 1)
+                }
+            }
+
+            // Aparece en la lista del usuario.
+            try await app.test(.GET, "auth/me/favorites", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let fonts = try res.content.decode([Font].self)
+                XCTAssertEqual(fonts.map { $0.id }, [fontID])
+            }
+
+            // Quitar: vuelve a 0 y desaparece de la lista.
+            try await app.test(.DELETE, "fonts/\(fontID)/favorite", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let s = try res.content.decode(FavoriteStatus.self)
+                XCTAssertFalse(s.favorited)
+                XCTAssertEqual(s.count, 0)
+            }
+            try await app.test(.GET, "auth/me/favorites", headers: bearer(token)) { res in
+                let fonts = try res.content.decode([Font].self)
+                XCTAssertTrue(fonts.isEmpty)
+            }
+        }
+    }
+
+    /// Guardar favorito requiere sesión.
+    func testFavoriteRequiresAuth() async throws {
+        try await withApp { app in
+            try await register(app, username: "anon-fav")
+            let token = try await login(app, username: "anon-fav")
+            let fontID = try await createFont(app, token: token, name: "F", lat: 40, long: -3)
+            try await app.test(.POST, "fonts/\(fontID)/favorite") { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            }
+        }
+    }
 }

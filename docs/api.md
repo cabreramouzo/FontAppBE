@@ -23,6 +23,7 @@ Token **Bearer** respaldado en BD.
 | `GET /auth/me` | Bearer | Usuario autenticado (incluye `email`) |
 | `GET /auth/me/fonts` | Bearer | Fuentes creadas por el usuario |
 | `GET /auth/me/comments` | Bearer | Reseñas del usuario (con `fontName`) |
+| `GET /auth/me/favorites` | Bearer | Fuentes guardadas por el usuario (más recientes primero) |
 | `POST /auth/logout` | Bearer | Revoca el token usado |
 | `POST /auth/forgot-password` | — | `{email}` → siempre 200 `{ok, devLink}` (no enumera; `devLink` solo fuera de producción) |
 | `POST /auth/reset-password` | — | `{token, password≥8}` → 200; invalida el token y cierra sesiones. 400 si no es válido/caducó |
@@ -144,6 +145,20 @@ opcionalmente, `rating` (1-5), `waterStatus` y `image`. El más reciente es el e
 (un usuario, una vez por comentario) y **no crea un comentario**: solo suma al contador
 y refresca la frescura del estado. El `GET /comments` acepta Bearer opcional para
 rellenar `confirmedByMe`.
+
+## Favorites (fuentes guardadas)
+
+Un usuario puede **guardar** una fuente para tenerla a mano en su perfil
+(`GET /auth/me/favorites`). Es idempotente (un usuario guarda una fuente una sola vez).
+
+| Método | Ruta | 🔒 | Cuerpo | Éxito | Errores |
+|--------|------|----|--------|-------|---------|
+| GET | `/fonts/:id/favorite` | Bearer opcional | — | 200 `FavoriteStatus` | 404 (fuente) |
+| POST | `/fonts/:id/favorite` | Bearer | — | 200 `FavoriteStatus` | 401, 404 |
+| DELETE | `/fonts/:id/favorite` | Bearer | — | 200 `FavoriteStatus` | 401, 404 |
+
+`FavoriteStatus` = `{ "favorited": bool, "count": int }`. `favorited` es si el usuario
+autenticado la tiene guardada (false sin token); `count` es el total de usuarios que la guardaron.
 
 ## Images
 

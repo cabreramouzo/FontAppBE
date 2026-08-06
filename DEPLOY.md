@@ -55,6 +55,33 @@ DATABASE_URL='postgresql://USER:PASSWORD@HOST/neondb?sslmode=require' \
 Verifica el recuento con el cliente psql **v18** (Neon corre Postgres 18):
 `SELECT count(*) FROM fonts WHERE description = '© ICGC/ACA';`
 
+#### Importar un país nuevo desde OpenStreetMap (p. ej. Portugal)
+
+Las fuentes de OSM (`amenity=drinking_water`, `natural=spring`, etc.) se importan con
+`import-fonts` (JSON de Overpass, ODbL). Para un país **nuevo** (que no solape con lo ya
+cargado) no hace falta dedupe; junto a España conviene `--dedupe` para no duplicar en la frontera.
+
+1. Descarga los puntos de agua del país desde [Overpass Turbo](https://overpass-turbo.eu)
+   (o la API). Query para **Portugal**:
+   ```overpassql
+   [out:json][timeout:120];
+   area["ISO3166-1"="PT"][admin_level=2]->.pt;
+   (
+     node["amenity"="drinking_water"](area.pt);
+     node["natural"="spring"]["drinking_water"](area.pt);
+     node["man_made"="water_tap"](area.pt);
+   );
+   out body;
+   ```
+   Exporta el resultado como `portugal-osm.json` (Export → data → raw OSM data / JSON).
+2. Importa contra la BD de PROD (cliente/servidor via `DATABASE_URL`, **no** `env.development`):
+   ```bash
+   DATABASE_URL='postgresql://USER:PASSWORD@HOST/neondb?sslmode=require' \
+     swift run App import-fonts portugal-osm.json
+   ```
+   `import-fonts` no borra nada salvo que pases `--replace`; inserta en lotes de 500.
+3. Comprueba el recuento tras importar (psql v18): `SELECT count(*) FROM fonts;`.
+
 ### Imágenes subidas
 
 El almacenamiento es **pluggable** (`ImageStorage`): si defines las variables `R2_*`,
@@ -116,6 +143,21 @@ VITE_API_URL=https://api.tu-dominio.com npm run build   # genera web/dist
 
 Sube `web/dist` al hosting estático. En Cloudflare Pages / Netlify define `VITE_API_URL`
 como variable de entorno de build (ver `web/.env.example`).
+
+### Analítica web (Cloudflare Web Analytics)
+
+Analítica **sin cookies** y sin datos personales (encaja con la página legal, no exige banner
+de consentimiento). El beacon solo se carga en producción y **solo si** existe el token:
+
+1. Cloudflare → **Web Analytics** → *Add a site* (`fontapp.net`). Copia el **token** del snippet
+   (una cadena hex; no es un secreto).
+2. En Cloudflare Pages → *Settings → Environment variables* (build), añade
+   `VITE_CF_ANALYTICS_TOKEN = <token>` y vuelve a desplegar.
+3. Sin esa variable no se carga ningún script de terceros (útil para dev/preview).
+
+> Alternativa cero-código: como el sitio está tras Cloudflare, se puede activar Web Analytics
+> con **auto-inyección** desde el panel, sin variable ni redeploy. Se usa la variable para tener
+> control explícito en el build.
 
 ## Despliegue en Fly.io (paso a paso)
 

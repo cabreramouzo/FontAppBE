@@ -1,4 +1,4 @@
-import type { AppPlatform, CommentResponse, Drinkable, Feedback, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, RegionStat, ReportResponse, UserResponse, WaterSource } from './types'
+import type { AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, RegionStat, ReportResponse, UserResponse, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -167,6 +167,21 @@ export async function getMyFonts(): Promise<Font[]> {
 
 export async function getMyComments(): Promise<MyComment[]> {
   return apiFetch<MyComment[]>('/auth/me/comments')
+}
+
+// Fuentes guardadas por el usuario autenticado (más recientes primero).
+export async function getMyFavorites(): Promise<Font[]> {
+  return apiFetch<Font[]>('/auth/me/favorites')
+}
+
+// Estado de favorito de una fuente. Auth opcional: sin token solo trae el recuento.
+export async function getFavoriteStatus(fontID: string): Promise<FavoriteStatus> {
+  return apiFetch<FavoriteStatus>(`/fonts/${fontID}/favorite`)
+}
+
+// Guarda (on=true) o deja de guardar (on=false) una fuente como favorita.
+export async function setFavorite(fontID: string, on: boolean): Promise<FavoriteStatus> {
+  return apiFetch<FavoriteStatus>(`/fonts/${fontID}/favorite`, { method: on ? 'POST' : 'DELETE' })
 }
 
 export async function deleteAccount(userID: string): Promise<void> {

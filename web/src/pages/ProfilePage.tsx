@@ -20,7 +20,7 @@ import Switch from '@mui/material/Switch'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ShieldIcon from '@mui/icons-material/GppMaybeOutlined'
 import type { Font, MyComment } from '../api/types'
-import { deleteAccount, describeError, getMyComments, getMyFonts, updateProfile } from '../api/client'
+import { deleteAccount, describeError, getMyComments, getMyFavorites, getMyFonts, updateProfile } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -32,6 +32,7 @@ export function ProfilePage() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const [fonts, setFonts] = useState<Font[] | null>(null)
+  const [favorites, setFavorites] = useState<Font[] | null>(null)
   const [comments, setComments] = useState<MyComment[] | null>(null)
   const [savingPrivacy, setSavingPrivacy] = useState(false)
   const [dangerOpen, setDangerOpen] = useState(false)
@@ -44,6 +45,7 @@ export function ProfilePage() {
       return
     }
     getMyFonts().then(setFonts).catch(() => setFonts([]))
+    getMyFavorites().then(setFavorites).catch(() => setFavorites([]))
     getMyComments().then(setComments).catch(() => setComments([]))
   }, [user, loading, navigate])
 
@@ -138,6 +140,21 @@ export function ProfilePage() {
       </Box>
 
       <Divider sx={{ mb: 3 }} />
+
+      <Box component="section" sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom>{t('profile.myFavorites')}</Typography>
+        {favorites === null && <Skeleton lines={2} />}
+        {favorites?.length === 0 && <Typography color="text.secondary">{t('profile.noFavorites')}</Typography>}
+        <List disablePadding>
+          {favorites?.map((f) => (
+            <ListItem key={f.id} disablePadding divider>
+              <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
+                <ListItemText primary={f.name} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      </Box>
 
       <Box component="section" sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{t('profile.myFonts')}</Typography>

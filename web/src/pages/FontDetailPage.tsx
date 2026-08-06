@@ -20,13 +20,15 @@ import DirectionsIcon from '@mui/icons-material/Directions'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ShareIcon from '@mui/icons-material/Share'
 import ThumbUpIcon from '@mui/icons-material/ThumbUp'
+import BookmarkIcon from '@mui/icons-material/Bookmark'
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
 import HideImageIcon from '@mui/icons-material/HideImageOutlined'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
-import type { CommentResponse, Drinkable, Font, ReportResponse, WaterSource } from '../api/types'
+import type { CommentResponse, Drinkable, FavoriteStatus, Font, ReportResponse, WaterSource } from '../api/types'
 import {
   apiFetch,
   assetUrl,
@@ -38,7 +40,9 @@ import {
   deleteFont,
   deleteReport,
   describeError,
+  getFavoriteStatus,
   getUser,
+  setFavorite,
   setFontPhotoFromComment,
   updateComment,
   updateFont,
@@ -381,6 +385,8 @@ export function FontDetailPage() {
   const [confirming, setConfirming] = useState(false)
   const [updating, setUpdating] = useState(false) // formulario de nueva actualización desplegado
   const [creatorName, setCreatorName] = useState<string | null>(null)
+  const [favorite, setFavState] = useState<FavoriteStatus | null>(null)
+  const [savingFavorite, setSavingFavorite] = useState(false)
   // Cuántas reseñas "Anteriores" se muestran (se amplía con "mostrar más").
   const [shownRest, setShownRest] = useState(REVIEWS_PAGE)
 
@@ -394,6 +400,8 @@ export function FontDetailPage() {
     setFont(f)
     setReports(r)
     setComments(c)
+    // Estado de favorito (recuento público; "guardada por mí" si hay sesión).
+    getFavoriteStatus(id).then(setFavState).catch(() => setFavState(null))
     // Nombre del creador (las importadas de OSM no tienen), para enlazar a su perfil.
     if (f.creator?.id) getUser(f.creator.id).then((u) => setCreatorName(u.username)).catch(() => setCreatorName(null))
     else setCreatorName(null)
@@ -457,6 +465,21 @@ export function FontDetailPage() {
     }
   }
 
+  // Guarda / deja de guardar la fuente en favoritos (requiere sesión).
+  async function toggleFavorite() {
+    if (!id) return
+    if (!user) { navigate('/login'); return }
+    setSavingFavorite(true)
+    try {
+      const next = await setFavorite(id, !favorite?.favorited)
+      setFavState(next)
+    } catch (e) {
+      setError(describeError(e, t))
+    } finally {
+      setSavingFavorite(false)
+    }
+  }
+
   if (!font) return <Box className="pad" sx={{ maxWidth: 720, mx: 'auto' }}>{error ? <Alert severity="error">{error}</Alert> : <Skeleton lines={5} />}</Box>
 
   const rated = comments.filter((c) => c.rating != null)
@@ -471,16 +494,32 @@ export function FontDetailPage() {
 
       <Stack direction="row" sx={{ my: 1, justifyContent: "space-between", alignItems: "center", gap: 1 }}>
         <Typography variant="h4" sx={{ fontWeight: 800 }}>{font.name}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          {/* Guardar en favoritos: visible siempre; sin sesión lleva a login. */}
+          <IconButton
+            size="small"
+            color={favorite?.favorited ? 'primary' : 'default'}
+            onClick={toggleFavorite}
+            disabled={savingFavorite}
+            aria-label={favorite?.favorited ? t('favorite.saved') : t('favorite.save')}
+            title={favorite?.favorited ? t('favorite.saved') : t('favorite.save')}
+          >
+            {favorite?.favorited ? <BookmarkIcon /> : <BookmarkBorderIcon />}
+          </IconButton>
+          {favorite && favorite.count > 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>{favorite.count}</Typography>
+          )}
         {user && !editing && (
-          <Box>
+          <>
             {/* Edición abierta: cualquiera puede corregir el nombre/info (estilo wiki). */}
             <IconButton size="small" onClick={() => setEditing(true)} aria-label={t('detail.edit')} title={t('detail.editInfoHint')}><EditIcon /></IconButton>
             {/* Borrar (y reubicar) queda reservado al creador o a un admin. */}
             {(user.isAdmin || font.creator?.id === user.id) && (
               <IconButton size="small" color="error" onClick={removeFont} aria-label={t('detail.delete')}><DeleteOutlineIcon /></IconButton>
             )}
-          </Box>
+          </>
         )}
+        </Box>
       </Stack>
 
       {creatorName && (

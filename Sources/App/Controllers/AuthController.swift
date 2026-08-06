@@ -24,6 +24,7 @@ struct AuthController: RouteCollection {
         tokenProtected.get("me", use: me)
         tokenProtected.get("me", "fonts", use: myFonts)
         tokenProtected.get("me", "comments", use: myComments)
+        tokenProtected.get("me", "favorites", use: myFavorites)
         tokenProtected.post("logout", use: logout)
     }
 
@@ -116,6 +117,21 @@ struct AuthController: RouteCollection {
         let fonts = try await Font.query(on: req.db).filter(\.$id ~~ fontIDs).all()
         let names = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f.name) } })
         return comments.map { MyCommentResponse($0, fontName: names[$0.$font.id]) }
+    }
+
+    /// GET /auth/me/favorites — fuentes guardadas por el usuario, las últimas primero.
+    @Sendable func myFavorites(req: Request) async throws -> [Font] {
+        let user = try req.auth.require(User.self)
+        let favorites = try await FontFavorite.query(on: req.db)
+            .filter(\.$user.$id == user.requireID())
+            .sort(\.$createdAt, .descending)
+            .all()
+        let fontIDs = favorites.map { $0.$font.id }
+        guard !fontIDs.isEmpty else { return [] }
+        // Carga las fuentes y las reordena según el orden de guardado (más recientes primero).
+        let fonts = try await Font.query(on: req.db).filter(\.$id ~~ fontIDs).all()
+        let byID = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f) } })
+        return fontIDs.compactMap { byID[$0] }
     }
 
     /// POST /auth/logout — revoca el token usado en la petición.

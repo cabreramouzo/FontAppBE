@@ -25,7 +25,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 ## Estructura
 - `Sources/App/configure.swift` — DB (soporta `DATABASE_URL`), CORS, migraciones, arranque.
 - `Sources/App/routes.swift` — registro de `RouteCollection`s.
-- `Sources/App/Models/` — modelos Fluent (`User`, `UserToken`, `Font`, `FontReport`, `FontComment`).
+- `Sources/App/Models/` — modelos Fluent (`User`, `UserToken`, `Font`, `FontReport`, `FontComment`, `FontFavorite`).
 - `Sources/App/Migrations/` — una migración por cambio de esquema.
 - `Sources/App/Controllers/` — un `RouteCollection` por recurso (User, Font, Report, Comment, Auth, Image).
 - `Sources/App/Commands/SeedCommand.swift` · `Sources/App/Utils/Geo.swift` (haversine).
