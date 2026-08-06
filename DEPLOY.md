@@ -262,16 +262,67 @@ La BD es lo irreemplazable (fuentes, reseñas, cuentas aportadas por los usuario
 > El `.dump` lleva **emails y hashes** → guárdalo en sitio **privado**, nunca en git ni bucket público.
 > La URL de Neon suele necesitar `?sslmode=require`.
 
-**Automatización (pendiente):** montar un **GitHub Action** con cron (`schedule`) que corra el
-`pg_dump` (con cliente Postgres **18** en el runner) y lo suba a R2. Se hará más adelante, junto con
-la activación de R2 para las imágenes, cuando el proyecto tenga usuarios reales.
+### Backup automático a disco local (`scripts/backup-db.sh`)
+
+Script versionado que vuelca la BD de Neon al disco, con rotación. **No** guarda la cadena de
+conexión (la lee de env o de un fichero privado). Elige pg_dump 18 local o, si no está, la imagen
+Docker `postgres:18`.
+
+**1. Configura la URL de la BD** (una vez), en un fichero privado fuera del repo:
+```bash
+mkdir -p ~/.config/fontapp
+printf '%s' 'postgresql://USER:PASSWORD@HOST/neondb?sslmode=require' > ~/.config/fontapp/neon_url
+chmod 600 ~/.config/fontapp/neon_url
+```
+(Alternativa: exportar `FONTAPP_DB_URL` en tu shell.) Variables opcionales: `FONTAPP_BACKUP_DIR`
+(por defecto `~/Backups/fontapp`) y `FONTAPP_BACKUP_KEEP` (por defecto 8).
+
+**2. Pruébalo a mano:**
+```bash
+./scripts/backup-db.sh
+```
+
+**3. Prográmalo semanal con launchd** (macOS; se recupera si el Mac estaba dormido, a diferencia de
+cron). Crea `~/Library/LaunchAgents/net.fontapp.backup.plist` (usa **rutas absolutas**, launchd no
+expande `~`; cambia `USER` y `RUTA_AL_REPO`):
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>net.fontapp.backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/USER/RUTA_AL_REPO/scripts/backup-db.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>10</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>/Users/USER/Backups/fontapp/backup.log</string>
+  <key>StandardErrorPath</key><string>/Users/USER/Backups/fontapp/backup.log</string>
+</dict></plist>
+```
+Cárgalo (y para actualizarlo, `unload` antes):
+```bash
+launchctl load ~/Library/LaunchAgents/net.fontapp.backup.plist
+launchctl start net.fontapp.backup   # ejecución inmediata de prueba
+```
+`Weekday 0` = domingo, a las 10:00. Revisa el log en `~/Backups/fontapp/backup.log`.
+
+**Restaurar** un dump:
+```bash
+/opt/homebrew/opt/postgresql@18/bin/pg_restore -d "$URL_DESTINO" ~/Backups/fontapp/fontapp-YYYYMMDD-HHMMSS.dump
+```
+
+> Esto es **una** copia en tu disco (empezar). Para 3-2-1 real, más adelante añade una **off-site**
+> (subir el `.dump` a un bucket **privado** R2/B2, o un Action programado). El `.dump` lleva emails y
+> hashes → mantenlo en sitio privado, **nunca** en git ni carpeta sincronizada/pública.
 
 ## Checklist antes de abrir al público
 
 - [x] `WEB_ORIGIN` restringido al dominio real del web.
 - [x] HTTPS + dominio (lo suele dar la plataforma).
 - [x] Imágenes: R2 configurado (`R2_*`) **y probado**, o volumen persistente para `/uploads`.
-- [ ] Backups de la BD (ver *Backups*; manual con `pg_dump` v18 por ahora, Action automático pendiente).
+- [ ] Backups de la BD (script `scripts/backup-db.sh` + launchd semanal; ver *Backups*. Off-site 3-2-1 pendiente).
 - [x] Rate-limit en `/auth/login` y `/auth/*` (en memoria, por IP; `RateLimitMiddleware`).
 - [x] Limpieza de tokens caducados (tarea periódica cada 6 h en `configure.swift`).
 - [x] Aviso legal / privacidad (GDPR) y atribución de datos OSM (ODbL) e ICGC/ACA.
