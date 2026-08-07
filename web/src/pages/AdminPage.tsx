@@ -160,16 +160,20 @@ export function AdminPage() {
             {staff?.map((m) => (
               <ListItem key={m.id} divider disableGutters
                 secondaryAction={
-                  <Select
-                    size="small"
-                    value={m.role}
-                    onChange={(e) => changeRole(m.id, e.target.value as UserRole)}
-                    sx={{ minWidth: 140 }}
-                  >
-                    <MenuItem value="user">{t('role.user')}</MenuItem>
-                    <MenuItem value="moderator">{t('role.moderator')}</MenuItem>
-                    <MenuItem value="admin">{t('role.admin')}</MenuItem>
-                  </Select>
+                  m.role === 'owner' ? (
+                    <Chip size="small" label={t('role.owner')} color={m.id === user?.id ? 'primary' : 'default'} />
+                  ) : (
+                    <Select
+                      size="small"
+                      value={m.role}
+                      onChange={(e) => changeRole(m.id, e.target.value as UserRole)}
+                      sx={{ minWidth: 140 }}
+                    >
+                      <MenuItem value="user">{t('role.user')}</MenuItem>
+                      <MenuItem value="moderator">{t('role.moderator')}</MenuItem>
+                      <MenuItem value="admin">{t('role.admin')}</MenuItem>
+                    </Select>
+                  )
                 }
               >
                 <ListItemText
