@@ -211,15 +211,23 @@ export async function dismissFlag(id: string): Promise<void> {
   await apiFetch(`/flags/${id}`, { method: 'DELETE' })
 }
 
-// Historial de ediciones de información de fuentes (admin): listar y revertir.
+// Historial de ediciones de información de fuentes (admin): listar, revertir, revisar.
 export const FONT_EDITS_PER = 50
 
-export async function getFontEdits(page = 1): Promise<FontEdit[]> {
-  return apiFetch<FontEdit[]>(`/fonts/edits?page=${page}&per=${FONT_EDITS_PER}`)
+// `unreviewed`: solo la cola pendiente (panel). `per`: tamaño de página.
+export async function getFontEdits(page = 1, opts: { unreviewed?: boolean; per?: number } = {}): Promise<FontEdit[]> {
+  const q = new URLSearchParams({ page: String(page), per: String(opts.per ?? FONT_EDITS_PER) })
+  if (opts.unreviewed) q.set('unreviewed', 'true')
+  return apiFetch<FontEdit[]>(`/fonts/edits?${q}`)
 }
 
 export async function revertFontEdit(editID: string): Promise<Font> {
   return apiFetch<Font>(`/fonts/edits/${editID}/revert`, { method: 'POST' })
+}
+
+// ✓ Marca una edición como revisada (la saca de la cola del panel). No cambia la fuente.
+export async function reviewFontEdit(editID: string): Promise<void> {
+  await apiFetch(`/fonts/edits/${editID}/review`, { method: 'POST' })
 }
 
 // Estadística de usuarios por región de registro (admin).

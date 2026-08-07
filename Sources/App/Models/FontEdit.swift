@@ -30,6 +30,9 @@ final class FontEdit: Model, @unchecked Sendable {
     @OptionalParent(key: "editor_id") var editor: User?
     @Field(key: "before") var before: FontInfoSnapshot
     @Field(key: "after") var after: FontInfoSnapshot
+    // Cuándo un admin marcó esta edición como "revisada" (✓). null = pendiente en el
+    // panel. Es solo triaje: no cambia la fuente (los cambios ya están aplicados).
+    @OptionalField(key: "reviewed_at") var reviewedAt: Date?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}

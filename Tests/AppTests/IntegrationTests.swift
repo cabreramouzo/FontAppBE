@@ -585,6 +585,49 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Triaje de ediciones: aceptar (✓) marca revisada y la saca de la cola pendiente.
+    func testEditReviewInboxFlow() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "creator")
+            let creatorTok = try await login(app, username: "creator")
+            let fontID = try await createFont(app, token: creatorTok, name: "Original", lat: 40, long: -3)
+
+            // Una edición de info (cambia el nombre) crea un FontEdit pendiente.
+            try await app.test(.PUT, "fonts/\(fontID)", headers: bearer(creatorTok), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Nuevo", latitude: 40, longitude: -3, image: nil, description: nil, source: nil, drinkable: nil))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .ok) })
+
+            let adminID = try await register(app, username: "adm")
+            try await setRole(app, userID: adminID, role: .admin)
+            let adminTok = try await login(app, username: "adm")
+
+            // Cola pendiente: 1.
+            var editID = UUID()
+            try await app.test(.GET, "fonts/edits?unreviewed=true", headers: bearer(adminTok), afterResponse: { res in
+                let edits = try res.content.decode([FontEditResponse].self)
+                XCTAssertEqual(edits.count, 1)
+                editID = try XCTUnwrap(edits.first?.id)
+                XCTAssertNil(edits.first?.reviewedAt)
+            })
+
+            // Aceptar (✓).
+            try await app.test(.POST, "fonts/edits/\(editID)/review", headers: bearer(adminTok)) { res in
+                XCTAssertEqual(res.status, .noContent)
+            }
+
+            // Ya no está en la cola…
+            try await app.test(.GET, "fonts/edits?unreviewed=true", headers: bearer(adminTok), afterResponse: { res in
+                XCTAssertEqual(try res.content.decode([FontEditResponse].self).count, 0)
+            })
+            // …pero sí en el historial completo, marcada como revisada.
+            try await app.test(.GET, "fonts/edits", headers: bearer(adminTok), afterResponse: { res in
+                let all = try res.content.decode([FontEditResponse].self)
+                XCTAssertEqual(all.count, 1)
+                XCTAssertNotNil(all.first?.reviewedAt)
+            })
+        }
+    }
+
     /// Guardar favorito requiere sesión.
     func testFavoriteRequiresAuth() async throws {
         try await withApp { app in

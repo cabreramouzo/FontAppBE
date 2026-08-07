@@ -10,24 +10,20 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import IconButton from '@mui/material/IconButton'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import Paper from '@mui/material/Paper'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
-import UndoIcon from '@mui/icons-material/Undo'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
-import type { Feedback, Flag, FontEdit, FontInfoSnapshot, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getRegionStats, getStaff, revertFontEdit, setUserRole, FONT_EDITS_PER } from '../api/client'
+import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getRegionStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
+import { EditsTable } from '../components/EditsTable'
 import { timeAgo } from '../lib/time'
 import { canModerate, isAdminRole, isOwner } from '../lib/roles'
+
+// Cuántas ediciones pendientes se muestran en el panel (la cola). El resto, en /admin/edits.
+const EDITS_INBOX = 15
 
 export function AdminPage() {
   const { user, loading } = useAuth()
@@ -39,9 +35,6 @@ export function AdminPage() {
   const [interest, setInterest] = useState<InterestStats | null>(null)
   const [feedback, setFeedback] = useState<Feedback[] | null>(null)
   const [staff, setStaff] = useState<StaffMember[] | null>(null)
-  const [editsPage, setEditsPage] = useState(1)
-  const [editsHasMore, setEditsHasMore] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -54,7 +47,7 @@ export function AdminPage() {
     getFlags().then(setFlags).catch(() => setFlags([]))
     // Estadísticas y gestión de fuentes (admin+).
     if (isAdminRole(user)) {
-      getFontEdits(1).then((e) => { setEdits(e); setEditsPage(1); setEditsHasMore(e.length === FONT_EDITS_PER) }).catch(() => setEdits([]))
+      getFontEdits(1, { unreviewed: true, per: EDITS_INBOX }).then(setEdits).catch(() => setEdits([]))
       getRegionStats().then(setRegions).catch(() => setRegions([]))
       getInterestStats().then(setInterest).catch(() => setInterest(null))
       getFeedback().then(setFeedback).catch(() => setFeedback([]))
@@ -73,32 +66,27 @@ export function AdminPage() {
   }
 
 
-  async function loadMoreEdits() {
-    setLoadingMore(true)
-    try {
-      const next = editsPage + 1
-      const more = await getFontEdits(next)
-      setEdits((cur) => [...(cur ?? []), ...more])
-      setEditsPage(next)
-      setEditsHasMore(more.length === FONT_EDITS_PER)
-    } catch (e) {
-      setError(describeError(e, t))
-    } finally {
-      setLoadingMore(false)
-    }
-  }
-
   async function removeFlag(id: string) {
     await dismissFlag(id).catch(() => {})
     setFlags((fs) => fs?.filter((f) => f.id !== id) ?? null)
+  }
+
+  // ✓ Aceptar: marca la edición como revisada y la saca de la cola (solo triaje).
+  async function accept(editID: string) {
+    try {
+      await reviewFontEdit(editID)
+      setEdits((es) => es?.filter((e) => e.id !== editID) ?? null)
+    } catch (e) {
+      setError(describeError(e, t))
+    }
   }
 
   async function revert(editID: string) {
     if (!confirm(t('admin.confirmRevert'))) return
     try {
       await revertFontEdit(editID)
-      // Recarga desde la primera página (el revert añade una entrada nueva).
-      getFontEdits(1).then((e) => { setEdits(e); setEditsPage(1); setEditsHasMore(e.length === FONT_EDITS_PER) }).catch(() => {})
+      // Recarga la cola pendiente (el revert añade una entrada nueva).
+      getFontEdits(1, { unreviewed: true, per: EDITS_INBOX }).then(setEdits).catch(() => {})
     } catch (e) {
       setError(describeError(e, t))
     }
@@ -260,89 +248,20 @@ export function AdminPage() {
       </Box>
 
       <Box component="section" sx={{ mt: 3 }}>
-        <Typography variant="h6" gutterBottom>✏️ {t('admin.edits')}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+          <Typography variant="h6" gutterBottom>✏️ {t('admin.edits')}</Typography>
+          <Link component={RouterLink} to="/admin/edits">{t('admin.editsAll')}</Link>
+        </Box>
         {edits === null && <Skeleton lines={2} />}
-        {edits?.length === 0 && <Typography color="text.secondary">{t('admin.noEdits')}</Typography>}
+        {edits?.length === 0 && <Typography color="text.secondary">{t('admin.editsInboxEmpty')}</Typography>}
         {edits && edits.length > 0 && (
-          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
-            <Table size="small" sx={{ minWidth: 640, '& td, & th': { verticalAlign: 'top' } }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t('admin.colWhen')}</TableCell>
-                  <TableCell>{t('admin.colFont')}</TableCell>
-                  <TableCell>{t('admin.colEditor')}</TableCell>
-                  <TableCell>{t('admin.colField')}</TableCell>
-                  <TableCell>{t('admin.colBefore')}</TableCell>
-                  <TableCell>{t('admin.colAfter')}</TableCell>
-                  <TableCell align="right">{t('admin.revert')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {edits.map((e) => {
-                  const changes = changedFields(e.before, e.after, t)
-                  const rows = changes.length > 0 ? changes : [{ label: '—', before: '', after: '' }]
-                  return rows.map((c, idx) => (
-                    <TableRow key={`${e.id}-${idx}`} sx={idx === rows.length - 1 ? undefined : { '& td': { borderBottom: 0 } }}>
-                      {idx === 0 && (
-                        <TableCell rowSpan={rows.length}>
-                          <Typography variant="caption" color="text.secondary">{e.createdAt ? timeAgo(e.createdAt, t) : ''}</Typography>
-                        </TableCell>
-                      )}
-                      {idx === 0 && (
-                        <TableCell rowSpan={rows.length}>
-                          <Link component={RouterLink} to={`/fonts/${e.fontID}`}>{e.fontName ?? e.after.name}</Link>
-                        </TableCell>
-                      )}
-                      {idx === 0 && (
-                        <TableCell rowSpan={rows.length}>
-                          {(e.editorName || e.editorID)
-                            ? <Link component={RouterLink} to={`/users/${encodeURIComponent(e.editorName ?? e.editorID!)}`}>@{e.editorName ?? '—'}</Link>
-                            : <Typography variant="body2" color="text.secondary">—</Typography>}
-                        </TableCell>
-                      )}
-                      <TableCell sx={{ fontWeight: 600 }}>{c.label}</TableCell>
-                      <TableCell sx={{ color: 'text.secondary', textDecoration: 'line-through' }}>{c.before}</TableCell>
-                      <TableCell>{c.after}</TableCell>
-                      {idx === 0 && (
-                        <TableCell rowSpan={rows.length} align="right">
-                          <IconButton size="small" onClick={() => revert(e.id)} aria-label={t('admin.revert')} title={t('admin.revert')}>
-                            <UndoIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-        {editsHasMore && (
-          <Button onClick={loadMoreEdits} disabled={loadingMore} sx={{ mt: 1 }}>
-            {loadingMore ? t('admin.loading') : t('admin.loadMore')}
-          </Button>
+          <>
+            <EditsTable edits={edits} onRevert={revert} onAccept={accept} />
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{t('admin.editsInboxHint')}</Typography>
+          </>
         )}
       </Box>
       </>)}
     </Box>
   )
-}
-
-/** Campos que cambiaron entre dos instantáneas, ya formateados para la tabla. */
-function changedFields(before: FontInfoSnapshot, after: FontInfoSnapshot, t: (k: string, p?: Record<string, string | number>) => string): { label: string; before: string; after: string }[] {
-  const fmt = (field: 'name' | 'description' | 'source' | 'drinkable', v: string | null): string => {
-    if (v == null || v === '') return t('admin.editEmpty')
-    if (field === 'source') return t(`source.${v}`)
-    if (field === 'drinkable') return t(`drink.${v}`)
-    return v
-  }
-  const fields: { key: 'name' | 'description' | 'source' | 'drinkable'; label: string }[] = [
-    { key: 'name', label: t('newFont.name') },
-    { key: 'description', label: t('detail.description') },
-    { key: 'source', label: t('detail.type') },
-    { key: 'drinkable', label: t('detail.drinkability') },
-  ]
-  return fields
-    .filter((f) => (before[f.key] ?? null) !== (after[f.key] ?? null))
-    .map((f) => ({ label: f.label, before: fmt(f.key, before[f.key] as string | null), after: fmt(f.key, after[f.key] as string | null) }))
 }

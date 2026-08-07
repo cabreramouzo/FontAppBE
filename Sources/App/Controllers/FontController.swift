@@ -26,6 +26,7 @@ struct FontController: RouteCollection {
         // para que "edits" no se interprete como un id de fuente.
         protected.get("edits", use: edits)
         protected.post("edits", ":editID", "revert", use: revertEdit)
+        protected.post("edits", ":editID", "review", use: reviewEdit)
         protected.group(":fontID") { font in
             font.put(use: update)
             font.delete(use: destroy)
@@ -121,8 +122,12 @@ struct FontController: RouteCollection {
         try requireAdmin(req)
         let page = max(req.query[Int.self, at: "page"] ?? 1, 1)
         let per = min(max(req.query[Int.self, at: "per"] ?? 50, 1), 100)
-        let edits = try await FontEdit.query(on: req.db)
-            .sort(\.$createdAt, .descending)
+        let query = FontEdit.query(on: req.db).sort(\.$createdAt, .descending)
+        // `?unreviewed=true` → solo la cola pendiente (para el panel).
+        if req.query[Bool.self, at: "unreviewed"] == true {
+            query.filter(\.$reviewedAt == nil)
+        }
+        let edits = try await query
             .range(((page - 1) * per)..<(page * per))
             .all()
         let editorNames = try await User.usernames(for: edits.compactMap { $0.$editor.id }, on: req.db)
@@ -157,6 +162,18 @@ struct FontController: RouteCollection {
             try await FontEdit(fontID: try font.requireID(), editorID: try? admin.requireID(), before: before, after: after).save(on: req.db)
         }
         return font
+    }
+
+    /// POST /fonts/edits/:editID/review — marca una edición como revisada (✓), para
+    /// sacarla de la cola del panel. Solo triaje: NO cambia la fuente. Solo admins.
+    @Sendable func reviewEdit(req: Request) async throws -> HTTPStatus {
+        try requireAdmin(req)
+        guard let edit = try await FontEdit.find(req.parameters.get("editID"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        edit.reviewedAt = Date()
+        try await edit.save(on: req.db)
+        return .noContent
     }
 
     private func requireAdmin(_ req: Request) throws {
@@ -297,6 +314,7 @@ struct FontEditResponse: Content {
     let editorName: String?    // quién editó (null si cuenta borrada)
     let before: FontInfoSnapshot
     let after: FontInfoSnapshot
+    let reviewedAt: Date?       // ✓ marcada como revisada (fuera de la cola del panel)
     let createdAt: Date?
 
     init(_ edit: FontEdit, editorName: String?, currentFontName: String?) {
@@ -307,6 +325,7 @@ struct FontEditResponse: Content {
         self.editorName = editorName
         self.before = edit.before
         self.after = edit.after
+        self.reviewedAt = edit.reviewedAt
         self.createdAt = edit.createdAt
     }
 }

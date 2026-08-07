@@ -79,6 +79,7 @@ export interface FontEdit {
   editorName: string | null
   before: FontInfoSnapshot
   after: FontInfoSnapshot
+  reviewedAt: string | null
   createdAt: string
 }
 
