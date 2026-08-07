@@ -141,8 +141,8 @@ export function AdminPage() {
 
       {isOwner(user) && (
         <Box component="section" sx={{ mt: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography variant="h6" gutterBottom>👑 {t('admin.roles')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+            <Typography variant="h6">👑 {t('admin.roles')}</Typography>
             <RolesHelpButton />
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('admin.rolesIntro')}</Typography>
