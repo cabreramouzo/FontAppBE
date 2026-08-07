@@ -30,6 +30,8 @@ struct PopulateRegionsCommand: AsyncCommand {
         var countryField: String?
         @Option(name: "region-field", help: "Propiedad con el nombre de la región (por defecto autodetecta name/NAME_1)")
         var regionField: String?
+        @Option(name: "fallback-nearest", help: "Para las fuentes fuera de todo polígono, asigna la región más cercana si está a menos de N km (p. ej. costa). Por defecto desactivado")
+        var fallbackNearestKm: Double?
     }
 
     var help: String { "Rellena país/región de las fuentes por point-in-polygon contra un GeoJSON offline de fronteras" }
@@ -77,15 +79,39 @@ struct PopulateRegionsCommand: AsyncCommand {
         // --- Point-in-polygon: agrupamos por (país, región) para actualizar en bloque. ---
         var groups: [BoundaryKey: [UUID]] = [:]
         var matched = 0
-        var unmatched = 0
+        var unmatchedFonts: [Font] = [] // fuera de todo polígono (posible fallback por cercanía)
         for font in fonts {
             guard let id = font.id else { continue }
             if let hit = regions.first(where: { $0.contains(lon: font.longitude, lat: font.latitude) }) {
                 groups[BoundaryKey(country: hit.country, region: hit.region), default: []].append(id)
                 matched += 1
             } else {
-                unmatched += 1
+                unmatchedFonts.append(font)
             }
+        }
+
+        // --- Fallback opcional: puntos fuera de todo polígono (típicamente costa, por
+        // la generalización del contorno) → región más cercana si está a < N km. ---
+        var fallbackAssigned = 0
+        var stillNull: [Font] = []
+        if let maxKm = signature.fallbackNearestKm {
+            for font in unmatchedFonts {
+                var best: (key: BoundaryKey, km: Double)?
+                for b in regions {
+                    let km = b.minDistanceKm(lon: font.longitude, lat: font.latitude, maxKm: maxKm)
+                    if km <= maxKm, best == nil || km < best!.km {
+                        best = (BoundaryKey(country: b.country, region: b.region), km)
+                    }
+                }
+                if let best {
+                    groups[best.key, default: []].append(font.id!)
+                    fallbackAssigned += 1
+                } else {
+                    stillNull.append(font)
+                }
+            }
+        } else {
+            stillNull = unmatchedFonts
         }
 
         // --- Persistir: un UPDATE por grupo (WHERE id = ANY(...)), o Fluent si no hay SQL. ---
@@ -107,7 +133,19 @@ struct PopulateRegionsCommand: AsyncCommand {
             }
         }
 
-        context.console.info("Actualizadas \(matched) fuentes · \(unmatched) sin región (fuera de cualquier polígono).")
+        context.console.info("Dentro de polígono: \(matched)"
+            + (signature.fallbackNearestKm != nil ? " · por cercanía: \(fallbackAssigned)" : "")
+            + " · sin región: \(stillNull.count).")
+        // Muestra algunas de las que quedan sin región (coords) por si son datos erróneos.
+        if !stillNull.isEmpty {
+            context.console.info("Sin región (primeras \(min(stillNull.count, 15)), lat,lon):")
+            for f in stillNull.prefix(15) {
+                context.console.info("  \(f.name) @ \(f.latitude),\(f.longitude)")
+            }
+            if signature.fallbackNearestKm == nil {
+                context.console.info("Sugerencia: reejecuta con --fallback-nearest 25 para asignar las de costa a la provincia más cercana.")
+            }
+        }
         // Resumen por zona, para verificar la granularidad de un vistazo.
         let summary = groups.map { ($0.key, $0.value.count) }.sorted { $0.1 > $1.1 }
         context.console.info("Regiones encontradas (\(summary.count)):")
@@ -188,6 +226,44 @@ private struct Boundary {
             }
         }
         return false
+    }
+
+    /// Distancia mínima (km) del punto al borde de esta región. Prefiltro por bbox
+    /// expandido `maxKm`: si el punto queda más lejos que eso de la caja, no calcula
+    /// (devuelve > maxKm). Proyección equirectangular local (buena a distancias cortas).
+    func minDistanceKm(lon: Double, lat: Double, maxKm: Double) -> Double {
+        // Grados aprox. que abarca maxKm a esta latitud (para expandir la bbox).
+        let dLat = maxKm / 110.57
+        let cosLat = cos(lat * .pi / 180)
+        let dLon = maxKm / (111.32 * max(cosLat, 0.01))
+        guard lon >= minLon - dLon, lon <= maxLon + dLon,
+              lat >= minLat - dLat, lat <= maxLat + dLat else { return .greatestFiniteMagnitude }
+
+        // Proyecta a km con origen en el punto (equirectangular).
+        func proj(_ p: Point) -> (x: Double, y: Double) {
+            ((p.lon - lon) * 111.32 * cosLat, (p.lat - lat) * 110.57)
+        }
+        var best = Double.greatestFiniteMagnitude
+        for poly in polygons {
+            for ring in poly where ring.count > 1 {
+                var prev = proj(ring[ring.count - 1])
+                for i in 0..<ring.count {
+                    let cur = proj(ring[i])
+                    best = min(best, Self.pointSegDistKm(0, 0, prev.x, prev.y, cur.x, cur.y))
+                    prev = cur
+                }
+            }
+        }
+        return best
+    }
+
+    /// Distancia del punto (px,py) al segmento (ax,ay)-(bx,by) en un plano (km).
+    private static func pointSegDistKm(_ px: Double, _ py: Double, _ ax: Double, _ ay: Double, _ bx: Double, _ by: Double) -> Double {
+        let dx = bx - ax, dy = by - ay
+        let len2 = dx * dx + dy * dy
+        let t = len2 == 0 ? 0 : max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / len2))
+        let cx = ax + t * dx, cy = ay + t * dy
+        return ((px - cx) * (px - cx) + (py - cy) * (py - cy)).squareRoot()
     }
 
     /// Ray casting estándar sobre un anillo (x = lon, y = lat).
