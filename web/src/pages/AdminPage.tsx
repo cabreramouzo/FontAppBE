@@ -19,6 +19,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { EditsTable } from '../components/EditsTable'
+import { RolesHelpButton } from '../components/RolesHelp'
 import { timeAgo } from '../lib/time'
 import { canModerate, isAdminRole, isOwner } from '../lib/roles'
 
@@ -140,7 +141,10 @@ export function AdminPage() {
 
       {isOwner(user) && (
         <Box component="section" sx={{ mt: 3 }}>
-          <Typography variant="h6" gutterBottom>👑 {t('admin.roles')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography variant="h6" gutterBottom>👑 {t('admin.roles')}</Typography>
+            <RolesHelpButton />
+          </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('admin.rolesIntro')}</Typography>
           {staff === null && <Skeleton lines={2} />}
           {staff?.length === 0 && <Typography color="text.secondary">{t('admin.rolesEmpty')}</Typography>}

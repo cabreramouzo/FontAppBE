@@ -26,6 +26,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { isOwner } from '../lib/roles'
 import { timeAgo } from '../lib/time'
+import { RolesHelpButton } from '../components/RolesHelp'
 
 export function AdminUsersPage() {
   const { user, loading } = useAuth()
@@ -81,7 +82,10 @@ export function AdminUsersPage() {
   return (
     <Box className="pad" sx={{ maxWidth: 1000, mx: 'auto' }}>
       <Link component={RouterLink} to="/admin">{t('admin.backPanel')}</Link>
-      <Typography variant="h4" sx={{ my: 1, fontWeight: 800 }}>👥 {t('admin.users')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, my: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 800 }}>👥 {t('admin.users')}</Typography>
+        <RolesHelpButton />
+      </Box>
       {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
 
       <TextField
