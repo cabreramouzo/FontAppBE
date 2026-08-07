@@ -58,6 +58,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   (solo estadística; nunca se guarda la IP). Noop en dev; en prod `IPAPIGeoLocator` (ip-api.com,
   **tercero**, uso no comercial) con `GEOIP_ENABLED=true`. Alternativa futura: BD local MaxMind
   GeoLite2 (`.mmdb`) → sin llamada externa por registro y la IP no sale del servidor. Ver `docs/api.md`.
+- Zona de la fuente: `fonts.country` y `fonts.region` (admin-1) existen (migración `AddRegionToFont`,
+  nullable) para futuras funciones por zona (admins por región, filtros). **Aún sin poblar**: se
+  derivarán de lat/lon (p. ej. point-in-polygon offline con fronteras admin-1) al importar. Distinto
+  del `GeoLocator`, que es país por IP del registro, no por coordenadas del punto.
 
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).

@@ -109,6 +109,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddForeignKeyIndexes())  // índices en FKs de rutas calientes
     app.migrations.add(CreateFeedback())        // referencia a users (opcional)
     app.migrations.add(CreateFontFavorite())    // referencia a fonts + users
+    app.migrations.add(AddRegionToFont())       // país/región (nullable, sin poblar aún)
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

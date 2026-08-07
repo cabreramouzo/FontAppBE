@@ -43,7 +43,9 @@ Login con credenciales inválidas → **401**.
 ```jsonc
 // Font
 { "id": "uuid", "name": "string", "latitude": 40.4, "longitude": -3.7,
-  "image": "url|null", "description": "string|null", "createdAt": "iso8601" }
+  "image": "url|null", "description": "string|null",
+  "country": "string|null", "region": "string|null",  // por zona; aún sin poblar
+  "createdAt": "iso8601" }
 
 // FontSummary  (Font + último estado; lo devuelven los listados del mapa)
 { ...campos de Font,
