@@ -8,6 +8,7 @@ import { ToastProvider } from './components/ToastContext'
 import { Layout } from './components/Layout'
 import { Skeleton } from './components/Skeleton'
 import { WelcomeDialog } from './components/WelcomeDialog'
+import { IntroDialog } from './components/IntroDialog'
 
 // Code-splitting por ruta: cada página es su propio chunk (Leaflet solo se carga
 // con el mapa). Las páginas son exports con nombre, de ahí el mapeo a `default`.
@@ -49,6 +50,7 @@ export default function App() {
               </Suspense>
             </Layout>
             <WelcomeDialog />
+            <IntroDialog />
           </AuthProvider>
         </ToastProvider>
         </I18nProvider>
