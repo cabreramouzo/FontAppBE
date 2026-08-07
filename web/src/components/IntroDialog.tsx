@@ -39,7 +39,7 @@ export function IntroDialog() {
         src="/welcome.jpg"
         alt="FontApp"
         sx={{
-          width: '100%', height: 220, objectFit: 'cover', objectPosition: 'center 22%', display: 'block',
+          width: '100%', height: 220, objectFit: 'cover', objectPosition: 'center 10%', display: 'block',
           maskImage: 'linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)',
           WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)',
         }}
