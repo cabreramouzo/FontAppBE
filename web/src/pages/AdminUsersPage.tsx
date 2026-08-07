@@ -83,7 +83,7 @@ export function AdminUsersPage() {
     <Box className="pad" sx={{ maxWidth: 1000, mx: 'auto' }}>
       <Link component={RouterLink} to="/admin">{t('admin.backPanel')}</Link>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, my: 1 }}>
-        <Typography variant="h4" sx={{ fontWeight: 800 }}>👥 {t('admin.users')}</Typography>
+        <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1 }}>👥 {t('admin.users')}</Typography>
         <RolesHelpButton />
       </Box>
       {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
