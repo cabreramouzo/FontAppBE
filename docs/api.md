@@ -81,6 +81,7 @@ Login con credenciales inválidas → **401**.
 | GET | `/users/:id/comments` | — | — | 200 `[reseña]` (con `fontName`) | 404 |
 | GET | `/users/stats/regions` | Bearer (admin) | — | 200 `[{country, region, count}]` | 401, 403 |
 | GET | `/users/staff` | Bearer (owner) | — | 200 `[{id, username, role}]` (rol > user) | 401, 403 |
+| GET | `/users/admin` | Bearer (owner) | `?page=&per=&search=` | 200 `Page<AdminUser>` (todas las columnas menos el hash; PII) | 401, 403 |
 | PUT | `/users/:id/role` | Bearer (owner) | `{role: user\|moderator\|admin}` | 200 `UserResponse` | 400, 401, 403, 404 |
 | PUT | `/users/:id` | Bearer | `{name, username, email, password?}` | 200 `UserResponse` | 400, 401, 403 (no eres tú), 404, 409 |
 | DELETE | `/users/:id` | Bearer | — | 204 | 401, 403, 404 |

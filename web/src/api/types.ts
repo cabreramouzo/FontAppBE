@@ -38,6 +38,20 @@ export interface StaffMember {
   role: UserRole
 }
 
+/** Fila del listado completo de usuarios (solo owner). Sin hash de contraseña. */
+export interface AdminUser {
+  id: string
+  username: string
+  name: string
+  email: string | null
+  role: UserRole
+  signupCountry: string | null
+  signupRegion: string | null
+  signupCity: string | null
+  anonymized: boolean
+  createdAt: string | null
+}
+
 export interface Flag {
   id: string
   flaggerName: string | null

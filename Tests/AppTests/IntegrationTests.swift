@@ -1,3 +1,4 @@
+import Fluent
 import Foundation
 import XCTVapor
 @testable import App
@@ -554,6 +555,32 @@ final class IntegrationTests: XCTestCase {
                 try req.content.encode(SetRoleDTO(role: "admin"))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .badRequest)
+            })
+        }
+    }
+
+    /// El listado completo de usuarios es solo del owner, paginado y con búsqueda.
+    func testAdminUsersListOwnerOnly() async throws {
+        try await withApp { app in
+            let ownerID = try await register(app, username: "owner")
+            try await setRole(app, userID: ownerID, role: .owner)
+            let ownerTok = try await login(app, username: "owner")
+            try await register(app, username: "alice")
+            try await register(app, username: "bob")
+
+            try await app.test(.GET, "users/admin", headers: bearer(ownerTok), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let page = try res.content.decode(Page<AdminUser>.self)
+                XCTAssertEqual(page.metadata.total, 3)
+            })
+            try await app.test(.GET, "users/admin?search=alic", headers: bearer(ownerTok), afterResponse: { res in
+                let page = try res.content.decode(Page<AdminUser>.self)
+                XCTAssertEqual(page.items.map { $0.username }, ["alice"])
+            })
+            // Un usuario normal (no owner): 403.
+            let aliceTok = try await login(app, username: "alice")
+            try await app.test(.GET, "users/admin", headers: bearer(aliceTok), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
             })
         }
     }

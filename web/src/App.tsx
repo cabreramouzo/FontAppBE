@@ -17,6 +17,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default:
 const LegalPage = lazy(() => import('./pages/LegalPage').then((m) => ({ default: m.LegalPage })))
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })))
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
@@ -38,6 +39,7 @@ export default function App() {
                   <Route path="/reset" element={<ResetPasswordPage />} />
                   <Route path="/me" element={<ProfilePage />} />
                   <Route path="/admin" element={<AdminPage />} />
+                  <Route path="/admin/users" element={<AdminUsersPage />} />
                   <Route path="/users/:id" element={<UserProfilePage />} />
                   <Route path="/legal" element={<LegalPage />} />
                   <Route path="*" element={<NotFoundPage />} />

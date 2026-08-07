@@ -1,4 +1,4 @@
-import type { AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource } from './types'
+import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -254,6 +254,15 @@ export async function getStaff(): Promise<StaffMember[]> {
 
 export async function setUserRole(userID: string, role: UserRole): Promise<UserResponse> {
   return apiFetch<UserResponse>(`/users/${userID}/role`, { method: 'PUT', body: JSON.stringify({ role }) })
+}
+
+// Listado completo de usuarios, paginado y con búsqueda (solo owner).
+export const USERS_ADMIN_PER = 25
+
+export async function getUsersAdmin(page = 1, search = ''): Promise<Page<AdminUser>> {
+  const q = new URLSearchParams({ page: String(page), per: String(USERS_ADMIN_PER) })
+  if (search.trim()) q.set('search', search.trim())
+  return apiFetch<Page<AdminUser>>(`/users/admin?${q}`)
 }
 
 // Perfil público de un usuario: identidad + su actividad (fuentes y reseñas).

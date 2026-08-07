@@ -16,6 +16,7 @@ struct UserController: RouteCollection {
         let protected = users.grouped(UserToken.authenticator(), User.guardMiddleware())
         protected.get("stats", "regions", use: regionStats)  // admin
         protected.get("staff", use: staff)                   // owner: moderadores/admins
+        protected.get("admin", use: adminList)               // owner: listado completo paginado
         protected.group(":userID") { user in
             user.put(use: update)
             user.delete(use: destroy)
@@ -33,6 +34,25 @@ struct UserController: RouteCollection {
         return users
             .sorted { $0.role.rank > $1.role.rank }
             .map { StaffMember(id: $0.id, username: $0.username, role: $0.role.rawValue) }
+    }
+
+    /// GET /users/admin?page=&per=&search= — listado completo de usuarios, paginado
+    /// y con búsqueda (por username/nombre/email). Solo owner: expone email y ubicación
+    /// de registro (PII), nunca el hash de contraseña.
+    @Sendable func adminList(req: Request) async throws -> Page<AdminUser> {
+        let me = try req.auth.require(User.self)
+        guard me.isOwner else { throw Abort(.forbidden, reason: "Solo el propietario") }
+        let query = User.query(on: req.db).sort(\.$createdAt, .descending)
+        if let search = req.query[String.self, at: "search"]?.trimmingCharacters(in: .whitespaces), !search.isEmpty {
+            let like = "%\(search)%"
+            query.group(.or) { or in
+                or.filter(\.$username, .custom("ILIKE"), like)
+                or.filter(\.$name, .custom("ILIKE"), like)
+                or.filter(\.$email, .custom("ILIKE"), like)
+            }
+        }
+        let page = try await query.paginate(for: req)
+        return Page(items: page.items.map(AdminUser.init), metadata: page.metadata)
     }
 
     /// PUT /users/:userID/role — cambia el rol de un usuario (solo owner).
@@ -238,6 +258,34 @@ struct StaffMember: Content {
     let id: UUID?
     let username: String
     let role: String
+}
+
+/// Fila del listado completo de usuarios (solo owner). Todas las columnas útiles,
+/// sin el hash de contraseña. Incluye PII (email, ubicación de registro).
+struct AdminUser: Content {
+    let id: UUID?
+    let username: String
+    let name: String
+    let email: String?
+    let role: String
+    let signupCountry: String?
+    let signupRegion: String?
+    let signupCity: String?
+    let anonymized: Bool
+    let createdAt: Date?
+
+    init(_ u: User) {
+        self.id = u.id
+        self.username = u.username
+        self.name = u.name
+        self.email = u.email
+        self.role = u.role.rawValue
+        self.signupCountry = u.signupCountry
+        self.signupRegion = u.signupRegion
+        self.signupCity = u.signupCity
+        self.anonymized = u.anonymizedAt != nil
+        self.createdAt = u.createdAt
+    }
 }
 
 struct SetRoleDTO: Content {
