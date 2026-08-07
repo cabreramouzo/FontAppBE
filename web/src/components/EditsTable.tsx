@@ -9,6 +9,7 @@ import IconButton from '@mui/material/IconButton'
 import Link from '@mui/material/Link'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
+import { alpha } from '@mui/material/styles'
 import { Link as RouterLink } from 'react-router-dom'
 import UndoIcon from '@mui/icons-material/Undo'
 import CheckIcon from '@mui/icons-material/Check'
@@ -42,7 +43,14 @@ export function EditsTable({ edits, onRevert, onAccept }: {
             const changes = changedFields(e.before, e.after, t)
             const rows = changes.length > 0 ? changes : [{ label: '—', before: '', after: '' }]
             return rows.map((c, idx) => (
-              <TableRow key={`${e.id}-${idx}`} sx={idx === rows.length - 1 ? undefined : { '& td': { borderBottom: 0 } }}>
+              <TableRow
+                key={`${e.id}-${idx}`}
+                sx={(theme) => ({
+                  // Las revisadas se tiñen de verde claro (tenue, adaptado a claro/oscuro).
+                  ...(e.reviewedAt ? { backgroundColor: alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.16 : 0.1) } : {}),
+                  ...(idx !== rows.length - 1 ? { '& td': { borderBottom: 0 } } : {}),
+                })}
+              >
                 {idx === 0 && (
                   <TableCell rowSpan={rows.length}>
                     <Typography variant="caption" color="text.secondary">{e.createdAt ? timeAgo(e.createdAt, t) : ''}</Typography>
