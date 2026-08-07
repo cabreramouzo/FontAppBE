@@ -39,12 +39,14 @@ export function IntroDialog() {
         src="/welcome.jpg"
         alt="FontApp"
         sx={{
-          width: '100%', height: 220, objectFit: 'cover', objectPosition: 'center 10%', display: 'block',
-          maskImage: 'linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)',
+          width: '100%', height: 240, objectFit: 'cover', objectPosition: 'center 10%', display: 'block',
+          maskImage: 'linear-gradient(to bottom, #000 0%, #000 28%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 28%, transparent 100%)',
         }}
       />
-      <DialogContent sx={{ textAlign: 'center', pt: 0, mt: -1 }}>
+      {/* Solapamos el contenido sobre la cola desvanecida de la imagen: el degradado
+          continúa por detrás del título en vez de cortarse justo encima. */}
+      <DialogContent sx={{ textAlign: 'center', pt: 0, mt: -6 }}>
         <Typography variant="h5" sx={{ fontWeight: 800 }}>{t('intro.title')}</Typography>
         <Typography color="text.secondary" sx={{ mt: 1 }}>{t('intro.lead')}</Typography>
 
