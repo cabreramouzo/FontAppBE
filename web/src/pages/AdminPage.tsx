@@ -107,7 +107,7 @@ export function AdminPage() {
   if (!canModerate(user)) return null
 
   return (
-    <Box className="pad" sx={{ maxWidth: 720, mx: 'auto' }}>
+    <Box className="pad" sx={{ maxWidth: 1040, mx: 'auto' }}>
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
       <Typography variant="h4" sx={{ my: 1, fontWeight: 800 }}>🛠️ {t('admin.title')}</Typography>
       {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
