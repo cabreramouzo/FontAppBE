@@ -534,11 +534,12 @@ final class IntegrationTests: XCTestCase {
                 XCTAssertEqual(res.status, .forbidden)
             })
 
-            // El owner sí: promueve a moderador.
-            try await app.test(.PUT, "users/\(targetID)/role", headers: bearer(ownerTok), beforeRequest: { req in
+            // El owner sí: promueve a moderador (además, por USERNAME, no por id).
+            try await app.test(.PUT, "users/target/role", headers: bearer(ownerTok), beforeRequest: { req in
                 try req.content.encode(SetRoleDTO(role: "moderator"))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode(UserResponse.self).role, "moderator")
             })
 
             // No puede asignar el rol owner desde la web.

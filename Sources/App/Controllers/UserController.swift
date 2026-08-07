@@ -45,9 +45,9 @@ struct UserController: RouteCollection {
         guard let role = UserRole(rawValue: dto.role), role != .owner else {
             throw Abort(.badRequest, reason: "Rol no válido (user/moderator/admin)")
         }
-        guard let target = try await User.find(req.parameters.get("userID"), on: req.db) else {
-            throw Abort(.notFound)
-        }
+        // `find` resuelve el parámetro por UUID o por username (para promover a alguien
+        // que aún es `user` escribiendo su nombre, sin conocer su id).
+        let target = try await find(req)
         guard target.id != me.id else {
             throw Abort(.badRequest, reason: "No puedes cambiar tu propio rol")
         }

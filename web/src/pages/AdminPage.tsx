@@ -21,6 +21,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import UndoIcon from '@mui/icons-material/Undo'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import TextField from '@mui/material/TextField'
+import Stack from '@mui/material/Stack'
 import type { Feedback, Flag, FontEdit, FontInfoSnapshot, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
 import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getRegionStats, getStaff, revertFontEdit, setUserRole, FONT_EDITS_PER } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -39,6 +41,8 @@ export function AdminPage() {
   const [interest, setInterest] = useState<InterestStats | null>(null)
   const [feedback, setFeedback] = useState<Feedback[] | null>(null)
   const [staff, setStaff] = useState<StaffMember[] | null>(null)
+  const [newStaffUser, setNewStaffUser] = useState('')
+  const [newStaffRole, setNewStaffRole] = useState<UserRole>('moderator')
   const [editsPage, setEditsPage] = useState(1)
   const [editsHasMore, setEditsHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -67,6 +71,22 @@ export function AdminPage() {
     try {
       await setUserRole(id, role)
       setStaff((s) => (s ?? []).map((m) => (m.id === id ? { ...m, role } : m)).filter((m) => m.role !== 'user'))
+    } catch (e) {
+      setError(describeError(e, t))
+    }
+  }
+
+  // Promueve a un usuario normal por su nombre de usuario (el endpoint resuelve
+  // username o id). Al terminar, recarga el equipo para que aparezca.
+  async function promoteByUsername() {
+    const username = newStaffUser.trim().replace(/^@/, '')
+    if (!username) return
+    setError('')
+    try {
+      await setUserRole(username, newStaffRole)
+      setNewStaffUser('')
+      const s = await getStaff()
+      setStaff(s)
     } catch (e) {
       setError(describeError(e, t))
     }
@@ -178,6 +198,21 @@ export function AdminPage() {
               </ListItem>
             ))}
           </List>
+          <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 1 }}>
+            <TextField
+              size="small"
+              label={t('admin.rolesAddUser')}
+              value={newStaffUser}
+              onChange={(e) => setNewStaffUser(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') promoteByUsername() }}
+              sx={{ flexGrow: 1, minWidth: 160 }}
+            />
+            <Select size="small" value={newStaffRole} onChange={(e) => setNewStaffRole(e.target.value as UserRole)} sx={{ minWidth: 140 }}>
+              <MenuItem value="moderator">{t('role.moderator')}</MenuItem>
+              <MenuItem value="admin">{t('role.admin')}</MenuItem>
+            </Select>
+            <Button variant="contained" disableElevation onClick={promoteByUsername} disabled={!newStaffUser.trim()}>{t('admin.rolesAdd')}</Button>
+          </Stack>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{t('admin.rolesHint')}</Typography>
         </Box>
       )}
