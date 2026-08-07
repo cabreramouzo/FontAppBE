@@ -18,6 +18,8 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Sembrar: `swift run App seed [--force] [--demo]` (fuentes reales del Moianès; `--demo` añade usuarios+reseñas).
   Con la BD ya poblada (p. ej. tras `import-fonts`), `seed --demo` NO reinserta fuentes: solo añade
   reseñas de ejemplo sobre las fuentes existentes de la zona del Moianès (bbox), sin tocar el resto.
+- Importar/zonas: `import-fonts` (Overpass/OSM) · `import-geojson` (ICGC/ACA) ·
+  `populate-regions <fronteras.geojson>` (rellena país/región offline por point-in-polygon).
 - Servidor: `swift run App serve` (`127.0.0.1:8080`). Cargar entorno: `export $(cat env.development | xargs)`.
 - Web (dev): `cd web && npm run dev` (proxy `/api` y `/uploads` → backend).
 - Imagen Docker del backend: `docker build -t fontappbe .` (probada; ver [DEPLOY.md](DEPLOY.md)).
@@ -58,10 +60,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   (solo estadística; nunca se guarda la IP). Noop en dev; en prod `IPAPIGeoLocator` (ip-api.com,
   **tercero**, uso no comercial) con `GEOIP_ENABLED=true`. Alternativa futura: BD local MaxMind
   GeoLite2 (`.mmdb`) → sin llamada externa por registro y la IP no sale del servidor. Ver `docs/api.md`.
-- Zona de la fuente: `fonts.country` y `fonts.region` (admin-1) existen (migración `AddRegionToFont`,
-  nullable) para futuras funciones por zona (admins por región, filtros). **Aún sin poblar**: se
-  derivarán de lat/lon (p. ej. point-in-polygon offline con fronteras admin-1) al importar. Distinto
-  del `GeoLocator`, que es país por IP del registro, no por coordenadas del punto.
+- Zona de la fuente: `fonts.country` y `fonts.region` (migración `AddRegionToFont`, nullable) para
+  funciones por zona (admins por región, filtros). `region` = **primera división administrativa**
+  del país (comunidad autónoma en ES, région en FR, distrito en PT…), consistente en todo el mundo.
+  Se pueblan **offline** con `populate-regions <fronteras.geojson>` (point-in-polygon contra Natural
+  Earth admin-1 o GADM nivel 1; sin terceros). Distinto del `GeoLocator`, que es país por IP del
+  registro, no por coordenadas del punto. **Pendiente:** poblarlas en producción y, más adelante,
+  el modelo de permisos de "admins por región".
 
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).

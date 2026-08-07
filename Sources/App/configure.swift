@@ -128,6 +128,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(SeedCommand(), as: "seed")
     app.asyncCommands.use(ImportCommand(), as: "import-fonts")
     app.asyncCommands.use(ImportGeoJSONCommand(), as: "import-geojson")
+    app.asyncCommands.use(PopulateRegionsCommand(), as: "populate-regions")
 
     // Rutas.
     try routes(app)

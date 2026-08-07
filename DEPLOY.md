@@ -82,6 +82,27 @@ cargado) no hace falta dedupe; junto a España conviene `--dedupe` para no dupli
    `import-fonts` no borra nada salvo que pases `--replace`; inserta en lotes de 500.
 3. Comprueba el recuento tras importar (psql v18): `SELECT count(*) FROM fonts;`.
 
+#### Poblar país/región de las fuentes (`populate-regions`)
+
+`fonts.country` y `fonts.region` se rellenan **offline** por *point-in-polygon* contra un
+GeoJSON de fronteras (sin llamadas a terceros). `region` = **primera división administrativa**
+del país (comunidad autónoma en España, région en Francia, distrito en Portugal…), una
+semántica consistente en todo el mundo.
+
+1. Descarga el dataset global (una sola vez): **Natural Earth 1:10m Admin 1 – States, Provinces**
+   en GeoJSON (`ne_10m_admin_1_states_provinces`, [naturalearthdata.com](https://www.naturalearthdata.com/downloads/10m-cultural-vectors/)).
+   Propiedades usadas: `admin` (país) y `name` (región). Con GADM nivel 1, pasa
+   `--country-field NAME_0 --region-field NAME_1`.
+2. Ejecuta el comando (tras importar las fuentes). Por defecto solo toca las que aún no tienen
+   región; `--all` reprocesa todas:
+   ```bash
+   DATABASE_URL='postgresql://USER:PASSWORD@HOST/neondb?sslmode=require' \
+     swift run App populate-regions ne_10m_admin_1_states_provinces.geojson
+   ```
+   Al terminar imprime un **resumen por zona** (país / región : nº de fuentes) para verificar
+   la granularidad de un vistazo. Es idempotente: puedes reimportar fuentes y volver a correrlo.
+3. Sanity check: `SELECT region, count(*) FROM fonts GROUP BY region ORDER BY 2 DESC;`.
+
 ### Imágenes subidas
 
 El almacenamiento es **pluggable** (`ImageStorage`): si defines las variables `R2_*`,
