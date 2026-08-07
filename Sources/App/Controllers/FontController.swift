@@ -1,4 +1,5 @@
 import Fluent
+import SQLKit
 import Vapor
 
 // CRUD de fuentes + búsqueda por cercanía — ver definitions.md (Fonts management).
@@ -214,6 +215,29 @@ struct FontController: RouteCollection {
     @Sendable func inBounds(req: Request) async throws -> [FontSummary] {
         try BoundsQuery.validate(query: req)
         let b = try req.query.decode(BoundsQuery.self)
+
+        // Cuando dentro del bbox hay más fuentes que el tope, hay que recortar. NO
+        // recortamos por orden físico (≈ inserción): dejaría fuera lo importado
+        // después (p. ej. Portugal, cargado tras España). En su lugar tomamos una
+        // muestra **espacialmente uniforme y determinista**: `ORDER BY md5(id)` es
+        // una baraja estable que reparte el recorte por toda el área, así todas las
+        // zonas salen proporcionalmente. Con markercluster la densidad se conserva.
+        // Estable entre peticiones → sin parpadeo y cacheable.
+        if let sql = req.db as? SQLDatabase {
+            let rows = try await sql.raw("""
+                SELECT id FROM fonts
+                WHERE latitude >= \(bind: b.minLat) AND latitude <= \(bind: b.maxLat)
+                  AND longitude >= \(bind: b.minLong) AND longitude <= \(bind: b.maxLong)
+                ORDER BY md5(id::text)
+                LIMIT \(bind: Self.maxInBoundsResults)
+                """).all()
+            let ids = try rows.map { try $0.decode(column: "id", as: UUID.self) }
+            guard !ids.isEmpty else { return [] }
+            let fonts = try await Font.query(on: req.db).filter(\.$id ~~ ids).all()
+            return try await Font.summaries(for: fonts, on: req.db)
+        }
+
+        // Fallback (bases de datos sin SQL crudo): recorte simple por bbox.
         let fonts = try await Font.query(on: req.db)
             .filter(\.$latitude >= b.minLat)
             .filter(\.$latitude <= b.maxLat)
