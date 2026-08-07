@@ -26,6 +26,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
+import { canModerate } from '../lib/roles'
 
 export function ProfilePage() {
   const { user, loading, logout, refresh } = useAuth()
@@ -87,7 +88,7 @@ export function ProfilePage() {
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
       <Typography variant="h4" sx={{ my: 1, fontWeight: 800 }}>{t('nav.profile')}</Typography>
 
-      {user.isAdmin && (
+      {canModerate(user) && (
         <Button
           component={RouterLink}
           to="/admin"

@@ -77,8 +77,26 @@ final class IntegrationTests: XCTestCase {
     /// Promociona a admin directamente en BD (no hay endpoint para ello).
     private func makeAdmin(_ app: Application, userID: UUID) async throws {
         guard let u = try await User.find(userID, on: app.db) else { return XCTFail("usuario no encontrado") }
-        u.isAdmin = true
+        u.role = .admin
         try await u.save(on: app.db)
+    }
+
+    private func setRole(_ app: Application, userID: UUID, role: UserRole) async throws {
+        guard let u = try await User.find(userID, on: app.db) else { return XCTFail("usuario no encontrado") }
+        u.role = role
+        try await u.save(on: app.db)
+    }
+
+    /// Deja una reseña en una fuente y devuelve su id.
+    private func addComment(_ app: Application, token: String, fontID: UUID, body: String) async throws -> UUID {
+        var id = UUID()
+        try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(token), beforeRequest: { req in
+            try req.content.encode(CreateCommentDTO(body: body, rating: nil, waterStatus: nil, image: nil))
+        }, afterResponse: { res in
+            XCTAssertEqual(res.status, .created)
+            id = try res.content.decode(CommentResponse.self).id ?? id
+        })
+        return id
     }
 
     // MARK: - Tests
@@ -469,6 +487,73 @@ final class IntegrationTests: XCTestCase {
                 let fonts = try res.content.decode([Font].self)
                 XCTAssertTrue(fonts.isEmpty)
             }
+        }
+    }
+
+    /// Un moderador puede borrar la reseña de otro; un usuario normal, no.
+    func testModeratorCanDeleteOthersComment() async throws {
+        try await withApp { app in
+            let authorID = try await register(app, username: "author")
+            let authorTok = try await login(app, username: "author")
+            let fontID = try await createFont(app, token: authorTok, name: "F", lat: 40, long: -3)
+            let commentID = try await addComment(app, token: authorTok, fontID: fontID, body: "hola")
+            _ = authorID
+
+            // Usuario normal ajeno: 403.
+            try await register(app, username: "rando")
+            let randoTok = try await login(app, username: "rando")
+            try await app.test(.DELETE, "fonts/\(fontID)/comments/\(commentID)", headers: bearer(randoTok)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+
+            // Moderador: 204.
+            let modID = try await register(app, username: "mod")
+            try await setRole(app, userID: modID, role: .moderator)
+            let modTok = try await login(app, username: "mod")
+            try await app.test(.DELETE, "fonts/\(fontID)/comments/\(commentID)", headers: bearer(modTok)) { res in
+                XCTAssertEqual(res.status, .noContent)
+            }
+        }
+    }
+
+    /// Solo el owner asigna roles; no puede crear otro owner ni cambiar el suyo.
+    func testOnlyOwnerCanSetRole() async throws {
+        try await withApp { app in
+            let ownerID = try await register(app, username: "owner")
+            try await setRole(app, userID: ownerID, role: .owner)
+            let ownerTok = try await login(app, username: "owner")
+            let targetID = try await register(app, username: "target")
+
+            // Un admin (no owner) no puede asignar roles.
+            let adminID = try await register(app, username: "adm")
+            try await setRole(app, userID: adminID, role: .admin)
+            let adminTok = try await login(app, username: "adm")
+            try await app.test(.PUT, "users/\(targetID)/role", headers: bearer(adminTok), beforeRequest: { req in
+                try req.content.encode(SetRoleDTO(role: "moderator"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+
+            // El owner sí: promueve a moderador.
+            try await app.test(.PUT, "users/\(targetID)/role", headers: bearer(ownerTok), beforeRequest: { req in
+                try req.content.encode(SetRoleDTO(role: "moderator"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+
+            // No puede asignar el rol owner desde la web.
+            try await app.test(.PUT, "users/\(targetID)/role", headers: bearer(ownerTok), beforeRequest: { req in
+                try req.content.encode(SetRoleDTO(role: "owner"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+
+            // No puede cambiar su propio rol.
+            try await app.test(.PUT, "users/\(ownerID)/role", headers: bearer(ownerTok), beforeRequest: { req in
+                try req.content.encode(SetRoleDTO(role: "admin"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest)
+            })
         }
     }
 

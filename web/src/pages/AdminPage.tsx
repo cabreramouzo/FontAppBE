@@ -19,12 +19,15 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import UndoIcon from '@mui/icons-material/Undo'
-import type { Feedback, Flag, FontEdit, FontInfoSnapshot, InterestStats, RegionStat } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getRegionStats, revertFontEdit, FONT_EDITS_PER } from '../api/client'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import type { Feedback, Flag, FontEdit, FontInfoSnapshot, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getRegionStats, getStaff, revertFontEdit, setUserRole, FONT_EDITS_PER } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { timeAgo } from '../lib/time'
+import { canModerate, isAdminRole, isOwner } from '../lib/roles'
 
 export function AdminPage() {
   const { user, loading } = useAuth()
@@ -35,6 +38,7 @@ export function AdminPage() {
   const [regions, setRegions] = useState<RegionStat[] | null>(null)
   const [interest, setInterest] = useState<InterestStats | null>(null)
   const [feedback, setFeedback] = useState<Feedback[] | null>(null)
+  const [staff, setStaff] = useState<StaffMember[] | null>(null)
   const [editsPage, setEditsPage] = useState(1)
   const [editsHasMore, setEditsHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -42,16 +46,31 @@ export function AdminPage() {
 
   useEffect(() => {
     if (loading) return // esperamos a que se restaure la sesión antes de decidir
-    if (!user || !user.isAdmin) {
-      navigate('/') // solo admins; el resto fuera
+    if (!canModerate(user)) {
+      navigate('/') // moderador o superior; el resto fuera
       return
     }
+    // Moderación (moderador+): denuncias.
     getFlags().then(setFlags).catch(() => setFlags([]))
-    getFontEdits(1).then((e) => { setEdits(e); setEditsPage(1); setEditsHasMore(e.length === FONT_EDITS_PER) }).catch(() => setEdits([]))
-    getRegionStats().then(setRegions).catch(() => setRegions([]))
-    getInterestStats().then(setInterest).catch(() => setInterest(null))
-    getFeedback().then(setFeedback).catch(() => setFeedback([]))
+    // Estadísticas y gestión de fuentes (admin+).
+    if (isAdminRole(user)) {
+      getFontEdits(1).then((e) => { setEdits(e); setEditsPage(1); setEditsHasMore(e.length === FONT_EDITS_PER) }).catch(() => setEdits([]))
+      getRegionStats().then(setRegions).catch(() => setRegions([]))
+      getInterestStats().then(setInterest).catch(() => setInterest(null))
+      getFeedback().then(setFeedback).catch(() => setFeedback([]))
+    }
+    // Gestión de roles (solo owner).
+    if (isOwner(user)) getStaff().then(setStaff).catch(() => setStaff([]))
   }, [user, loading, navigate])
+
+  async function changeRole(id: string, role: UserRole) {
+    try {
+      await setUserRole(id, role)
+      setStaff((s) => (s ?? []).map((m) => (m.id === id ? { ...m, role } : m)).filter((m) => m.role !== 'user'))
+    } catch (e) {
+      setError(describeError(e, t))
+    }
+  }
 
   async function loadMoreEdits() {
     setLoadingMore(true)
@@ -84,7 +103,7 @@ export function AdminPage() {
     }
   }
 
-  if (!user || !user.isAdmin) return null
+  if (!canModerate(user)) return null
 
   return (
     <Box className="pad" sx={{ maxWidth: 720, mx: 'auto' }}>
@@ -130,6 +149,40 @@ export function AdminPage() {
         </List>
       </Box>
 
+      {isOwner(user) && (
+        <Box component="section" sx={{ mt: 3 }}>
+          <Typography variant="h6" gutterBottom>👑 {t('admin.roles')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('admin.rolesIntro')}</Typography>
+          {staff === null && <Skeleton lines={2} />}
+          {staff?.length === 0 && <Typography color="text.secondary">{t('admin.rolesEmpty')}</Typography>}
+          <List disablePadding>
+            {staff?.map((m) => (
+              <ListItem key={m.id} divider disableGutters
+                secondaryAction={
+                  <Select
+                    size="small"
+                    value={m.role}
+                    onChange={(e) => changeRole(m.id, e.target.value as UserRole)}
+                    sx={{ minWidth: 140 }}
+                  >
+                    <MenuItem value="user">{t('role.user')}</MenuItem>
+                    <MenuItem value="moderator">{t('role.moderator')}</MenuItem>
+                    <MenuItem value="admin">{t('role.admin')}</MenuItem>
+                  </Select>
+                }
+              >
+                <ListItemText
+                  primary={<Link component={RouterLink} to={`/users/${encodeURIComponent(m.username)}`}>@{m.username}</Link>}
+                  slotProps={{ primary: { component: 'div' } }}
+                />
+              </ListItem>
+            ))}
+          </List>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{t('admin.rolesHint')}</Typography>
+        </Box>
+      )}
+
+      {isAdminRole(user) && (<>
       <Box component="section" sx={{ mt: 3 }}>
         <Typography variant="h6" gutterBottom>🌍 {t('admin.regions')}</Typography>
         {regions === null && <Skeleton lines={2} />}
@@ -264,6 +317,7 @@ export function AdminPage() {
           </Button>
         )}
       </Box>
+      </>)}
     </Box>
   )
 }

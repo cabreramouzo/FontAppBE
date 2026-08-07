@@ -80,8 +80,18 @@ Login con credenciales inválidas → **401**.
 | GET | `/users/:id/fonts` | — | — | 200 `[Font]` (creadas por ese usuario) | 404 |
 | GET | `/users/:id/comments` | — | — | 200 `[reseña]` (con `fontName`) | 404 |
 | GET | `/users/stats/regions` | Bearer (admin) | — | 200 `[{country, region, count}]` | 401, 403 |
+| GET | `/users/staff` | Bearer (owner) | — | 200 `[{id, username, role}]` (rol > user) | 401, 403 |
+| PUT | `/users/:id/role` | Bearer (owner) | `{role: user\|moderator\|admin}` | 200 `UserResponse` | 400, 401, 403, 404 |
 | PUT | `/users/:id` | Bearer | `{name, username, email, password?}` | 200 `UserResponse` | 400, 401, 403 (no eres tú), 404, 409 |
 | DELETE | `/users/:id` | Bearer | — | 204 | 401, 403, 404 |
+
+**Roles y permisos.** Cada usuario tiene un rol jerárquico `role` (solo visible en
+respuestas propias): `user` < `moderator` < `admin` < `owner`, comprobado por umbral.
+- `moderator`+: modera contenido ajeno (borra/edita reseñas e incidencias, resuelve denuncias `/flags`).
+- `admin`+: gestiona fuentes (borrar/reubicar/revertir) y ve estadísticas (`/users/stats/regions`, `/interest/stats`, `/feedback`).
+- `owner`: asigna roles (`/users/staff`, `PUT /users/:id/role`). No se puede asignar el rol `owner`
+  desde la API (se fija por CLI: `swift run App set-role <username> owner`), ni cambiar el rol propio o el de otro owner.
+`UserResponse` incluye `isAdmin` (derivado: true si `role` ≥ admin) y `role`, solo en respuestas propias.
 
 `PUT`/`DELETE` son **self-only**: solo sobre tu propia cuenta (si no, 403).
 `:id` acepta **UUID o username** (`/users/miguel` equivale a `/users/<uuid>`; el UUID es

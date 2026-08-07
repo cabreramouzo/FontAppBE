@@ -166,7 +166,7 @@ struct FontCommentController: RouteCollection {
         guard let comment = try await FontComment.find(req.parameters.get("commentID"), on: req.db) else {
             throw Abort(.notFound)
         }
-        guard user.isAdmin || comment.$user.id == user.id else {
+        guard user.canModerate || comment.$user.id == user.id else {
             throw Abort(.forbidden, reason: "Solo puedes modificar tus propias reseñas")
         }
         return comment

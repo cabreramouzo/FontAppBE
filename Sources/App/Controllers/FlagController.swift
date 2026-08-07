@@ -66,7 +66,7 @@ struct FlagController: RouteCollection {
 
     private func requireAdmin(_ req: Request) throws {
         let user = try req.auth.require(User.self)
-        guard user.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
+        guard user.canModerate else { throw Abort(.forbidden, reason: "Solo para moderadores") }
     }
 }
 

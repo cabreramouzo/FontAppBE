@@ -16,16 +16,26 @@ export interface Font {
   createdAt: string
 }
 
+export type UserRole = 'user' | 'moderator' | 'admin' | 'owner'
+
 export interface UserResponse {
   id: string
   name: string
   username: string
   email?: string | null
   isAdmin?: boolean | null
+  role?: UserRole | null
   emailPublic?: boolean | null
   namePublic?: boolean | null
   anonymized?: boolean
   createdAt?: string | null
+}
+
+/** Miembro del equipo (rol > user) para la gestión de roles del owner. */
+export interface StaffMember {
+  id: string
+  username: string
+  role: UserRole
 }
 
 export interface Flag {

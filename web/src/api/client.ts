@@ -1,4 +1,4 @@
-import type { AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, RegionStat, ReportResponse, UserResponse, WaterSource } from './types'
+import type { AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -245,6 +245,15 @@ export async function submitFeedback(data: { message: string; country?: string; 
 // Lista de sugerencias (admin).
 export async function getFeedback(): Promise<Feedback[]> {
   return apiFetch<Feedback[]>('/feedback')
+}
+
+// Gestión de roles (solo owner): listar el equipo y cambiar el rol de un usuario.
+export async function getStaff(): Promise<StaffMember[]> {
+  return apiFetch<StaffMember[]>('/users/staff')
+}
+
+export async function setUserRole(userID: string, role: UserRole): Promise<UserResponse> {
+  return apiFetch<UserResponse>(`/users/${userID}/role`, { method: 'PUT', body: JSON.stringify({ role }) })
 }
 
 // Perfil público de un usuario: identidad + su actividad (fuentes y reseñas).

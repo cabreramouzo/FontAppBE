@@ -54,7 +54,7 @@ struct FontReportController: RouteCollection {
         guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {
             throw Abort(.notFound)
         }
-        guard user.isAdmin || report.$user.id == user.id else {
+        guard user.canModerate || report.$user.id == user.id else {
             throw Abort(.forbidden, reason: "Solo puedes borrar tus propias incidencias")
         }
         try await report.delete(on: req.db)

@@ -81,7 +81,7 @@ struct SeedCommand: AsyncCommand {
             } else {
                 // xavi123 es admin en la demo (para probar moderación).
                 let user = User(name: name, username: username, email: "\(username)@example.com",
-                                passwordHash: try Bcrypt.hash("demo12345"), isAdmin: username == "xavi123")
+                                passwordHash: try Bcrypt.hash("demo12345"), role: username == "xavi123" ? .admin : .user)
                 try await user.save(on: db)
                 users.append(user)
             }

@@ -15,10 +15,48 @@ struct UserController: RouteCollection {
         // Editar/borrar requiere token y solo sobre la propia cuenta (self-only).
         let protected = users.grouped(UserToken.authenticator(), User.guardMiddleware())
         protected.get("stats", "regions", use: regionStats)  // admin
+        protected.get("staff", use: staff)                   // owner: moderadores/admins
         protected.group(":userID") { user in
             user.put(use: update)
             user.delete(use: destroy)
+            user.put("role", use: setRole)                   // owner: cambiar rol
         }
+    }
+
+    /// GET /users/staff — usuarios con rol por encima de `user` (solo owner).
+    @Sendable func staff(req: Request) async throws -> [StaffMember] {
+        let me = try req.auth.require(User.self)
+        guard me.isOwner else { throw Abort(.forbidden, reason: "Solo el propietario") }
+        let users = try await User.query(on: req.db)
+            .filter(\.$role != UserRole.user)
+            .all()
+        return users
+            .sorted { $0.role.rank > $1.role.rank }
+            .map { StaffMember(id: $0.id, username: $0.username, role: $0.role.rawValue) }
+    }
+
+    /// PUT /users/:userID/role — cambia el rol de un usuario (solo owner).
+    /// No permite: cambiarte a ti mismo, tocar a otro owner, ni asignar el rol owner
+    /// (el owner se fija por CLI con `set-role`, para que no se pueda escalar desde la web).
+    @Sendable func setRole(req: Request) async throws -> UserResponse {
+        let me = try req.auth.require(User.self)
+        guard me.isOwner else { throw Abort(.forbidden, reason: "Solo el propietario puede asignar roles") }
+        let dto = try req.content.decode(SetRoleDTO.self)
+        guard let role = UserRole(rawValue: dto.role), role != .owner else {
+            throw Abort(.badRequest, reason: "Rol no válido (user/moderator/admin)")
+        }
+        guard let target = try await User.find(req.parameters.get("userID"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        guard target.id != me.id else {
+            throw Abort(.badRequest, reason: "No puedes cambiar tu propio rol")
+        }
+        guard !target.isOwner else {
+            throw Abort(.forbidden, reason: "No puedes cambiar el rol del propietario")
+        }
+        target.role = role
+        try await target.save(on: req.db)
+        return UserResponse(target, includeEmail: true)
     }
 
     /// GET /users/stats/regions — nº de usuarios por región de registro (solo admins).
@@ -141,7 +179,7 @@ struct UserController: RouteCollection {
         user.email = nil
         user.emailPublic = false
         user.namePublic = false
-        user.isAdmin = false
+        user.role = .user
         user.signupCountry = nil
         user.signupRegion = nil
         user.signupCity = nil
@@ -193,6 +231,17 @@ struct RegionCount: Content {
     let country: String?
     let region: String?
     let count: Int
+}
+
+/// Miembro del equipo (rol > user) para la vista de gestión de roles del owner.
+struct StaffMember: Content {
+    let id: UUID?
+    let username: String
+    let role: String
+}
+
+struct SetRoleDTO: Content {
+    let role: String
 }
 
 extension CreateUserDTO: Validatable {

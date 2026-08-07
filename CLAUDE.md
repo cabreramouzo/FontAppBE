@@ -20,6 +20,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   reseñas de ejemplo sobre las fuentes existentes de la zona del Moianès (bbox), sin tocar el resto.
 - Importar/zonas: `import-fonts` (Overpass/OSM) · `import-geojson` (ICGC/ACA) ·
   `populate-regions <fronteras.geojson>` (rellena país/región offline por point-in-polygon).
+- Roles: `swift run App set-role <username> <user|moderator|admin|owner>` (owner solo por CLI).
 - Servidor: `swift run App serve` (`127.0.0.1:8080`). Cargar entorno: `export $(cat env.development | xargs)`.
 - Web (dev): `cd web && npm run dev` (proxy `/api` y `/uploads` → backend).
 - Imagen Docker del backend: `docker build -t fontappbe .` (probada; ver [DEPLOY.md](DEPLOY.md)).
@@ -27,7 +28,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 ## Estructura
 - `Sources/App/configure.swift` — DB (soporta `DATABASE_URL`), CORS, migraciones, arranque.
 - `Sources/App/routes.swift` — registro de `RouteCollection`s.
-- `Sources/App/Models/` — modelos Fluent (`User`, `UserToken`, `Font`, `FontReport`, `FontComment`, `FontFavorite`).
+- `Sources/App/Models/` — modelos Fluent (`User`+`UserRole`, `UserToken`, `Font`, `FontReport`, `FontComment`, `FontFavorite`).
 - `Sources/App/Migrations/` — una migración por cambio de esquema.
 - `Sources/App/Controllers/` — un `RouteCollection` por recurso (User, Font, Report, Comment, Auth, Image).
 - `Sources/App/Commands/SeedCommand.swift` · `Sources/App/Utils/Geo.swift` (haversine).
@@ -52,8 +53,11 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - `R2ImageStorage` (Soto) compila pero **sin probar** contra un bucket real (necesita credenciales `R2_*`); en local usa disco.
 - Correo (`MailSender`): en dev `LogMailSender` (solo loguea); en prod `ResendMailSender` si hay `RESEND_API_KEY` + `MAIL_FROM` (requiere dominio propio con SPF/DKIM/DMARC). Sin probar contra Resend real.
 - Compresión de imágenes: en el cliente (canvas). El borrado del fichero al eliminar fuente/reseña es best-effort (`try?`).
-- Moderación básica: rol `is_admin` (borra contenido de cualquiera; edita/borra fuentes solo creador o admin),
-  denuncias de contenido (`content_flags`) con vista de moderación en el perfil del admin.
+- Roles jerárquicos (`users.role`, ver `UserRole`): `user` < `moderator` < `admin` < `owner`,
+  comprobados por umbral (`user.canModerate`/`isAdmin`/`isOwner`). Moderador: modera contenido ajeno
+  (reseñas, incidencias, denuncias `content_flags`); admin: gestiona fuentes y ve estadísticas; owner:
+  asigna roles (`/users/staff`, `PUT /users/:id/role`). El `owner` solo se fija por CLI
+  (`swift run App set-role <username> owner`), no desde la web. La columna `is_admin` queda como legacy.
 - Rate-limit en `/auth/*` (en memoria, por IP) y limpieza periódica de tokens caducados (cada 6 h).
   A escala multi-instancia el rate-limit debería ir a Redis.
 - Ubicación de registro (`GeoLocator`): al crear cuenta se deduce país/región/ciudad de la IP

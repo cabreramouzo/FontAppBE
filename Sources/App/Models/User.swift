@@ -12,8 +12,9 @@ final class User: Model, @unchecked Sendable {
     // Nullable: los usuarios previos (demo) no tienen; los nuevos sí (validado). Único.
     @OptionalField(key: "email") var email: String?
     @Field(key: "password_hash") var passwordHash: String
-    // Moderación: los admin pueden borrar contenido de cualquiera y ver los flags.
-    @Field(key: "is_admin") var isAdmin: Bool
+    // Rol jerárquico (fuente de verdad de permisos). Ver `UserRole` y los helpers abajo.
+    // La columna `is_admin` sigue en la BD por compatibilidad, pero ya no se lee.
+    @Field(key: "role") var role: UserRole
     // Privacidad: si el usuario decide mostrar su email en su perfil público.
     @Field(key: "email_public") var emailPublic: Bool
     // Privacidad: si el nombre real se muestra en el perfil público (si no, solo @username).
@@ -31,7 +32,7 @@ final class User: Model, @unchecked Sendable {
 
     init() {}
 
-    init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, isAdmin: Bool = false,
+    init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, role: UserRole = .user,
          emailPublic: Bool = false, namePublic: Bool = true,
          signupCountry: String? = nil, signupRegion: String? = nil, signupCity: String? = nil) {
         self.id = id
@@ -39,7 +40,7 @@ final class User: Model, @unchecked Sendable {
         self.username = username
         self.email = email
         self.passwordHash = passwordHash
-        self.isAdmin = isAdmin
+        self.role = role
         self.emailPublic = emailPublic
         self.namePublic = namePublic
         self.signupCountry = signupCountry
@@ -56,6 +57,15 @@ extension User: ModelAuthenticatable {
     func verify(password: String) throws -> Bool {
         try Bcrypt.verify(password, created: self.passwordHash)
     }
+}
+
+extension User {
+    /// El propietario del servicio: máximo nivel, único, se fija por CLI (`set-role`).
+    var isOwner: Bool { role == .owner }
+    /// Admin o superior: gestiona fuentes, revierte ediciones y ve estadísticas.
+    var isAdmin: Bool { role.atLeast(.admin) }
+    /// Moderador o superior: modera contenido ajeno (reseñas, incidencias, denuncias).
+    var canModerate: Bool { role.atLeast(.moderator) }
 }
 
 extension User {
@@ -79,6 +89,8 @@ struct UserResponse: Content {
     let username: String
     let email: String?
     let isAdmin: Bool?
+    /// Rol jerárquico (solo en respuestas propias): user/moderator/admin/owner.
+    let role: String?
     let emailPublic: Bool?
     let namePublic: Bool?
     let anonymized: Bool
@@ -92,8 +104,9 @@ struct UserResponse: Content {
         self.name = (includeEmail || user.namePublic) ? user.name : user.username
         self.username = user.username
         self.email = (includeEmail || user.emailPublic) ? user.email : nil
-        // isAdmin y los flags de privacidad solo se exponen al propio usuario.
+        // El rol (y su isAdmin derivado) y los flags de privacidad solo se exponen al propio usuario.
         self.isAdmin = includeEmail ? user.isAdmin : nil
+        self.role = includeEmail ? user.role.rawValue : nil
         self.emailPublic = includeEmail ? user.emailPublic : nil
         self.namePublic = includeEmail ? user.namePublic : nil
         self.anonymized = user.anonymizedAt != nil
