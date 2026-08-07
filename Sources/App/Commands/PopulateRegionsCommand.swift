@@ -13,8 +13,10 @@ import Vapor
 ///       [--country-field admin] [--region-field name]`
 ///
 /// Dataset recomendado (global, una sola descarga): **Natural Earth 1:10m Admin 1 –
-/// States, Provinces** en GeoJSON (`ne_10m_admin_1_states_provinces`). Propiedades:
-/// `admin` = país, `name` = primera división. Si usas GADM nivel 1, pasa
+/// States, Provinces** en GeoJSON (`ne_10m_admin_1_states_provinces`). De cada feature
+/// se leen dos PROPIEDADES del GeoJSON (no son "administradores": es cómo Natural Earth
+/// nombró los campos): `"admin"` = nombre del país, `"name"` = primera división. Si usas
+/// GADM nivel 1, esas propiedades se llaman `NAME_0`/`NAME_1`, pasa
 /// `--country-field NAME_0 --region-field NAME_1`.
 ///
 /// - `--all`: reprocesa TODAS las fuentes. Por defecto solo las que aún no tienen región.

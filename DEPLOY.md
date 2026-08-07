@@ -91,8 +91,10 @@ semántica consistente en todo el mundo.
 
 1. Descarga el dataset global (una sola vez): **Natural Earth 1:10m Admin 1 – States, Provinces**
    en GeoJSON (`ne_10m_admin_1_states_provinces`, [naturalearthdata.com](https://www.naturalearthdata.com/downloads/10m-cultural-vectors/)).
-   Propiedades usadas: `admin` (país) y `name` (región). Con GADM nivel 1, pasa
-   `--country-field NAME_0 --region-field NAME_1`.
+   El comando lee dos **propiedades del fichero GeoJSON** (no tienen nada que ver con los
+   administradores de la app): en Natural Earth se llaman `"admin"` (contiene el nombre del país,
+   p. ej. `"Spain"`) y `"name"` (la región, p. ej. `"Catalunya"`). Con GADM nivel 1 esas propiedades
+   se llaman distinto: pasa `--country-field NAME_0 --region-field NAME_1`.
 2. Ejecuta el comando (tras importar las fuentes). Por defecto solo toca las que aún no tienen
    región; `--all` reprocesa todas:
    ```bash
