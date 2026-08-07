@@ -61,6 +61,38 @@ import { timeAgo } from '../lib/time'
 // Centro por defecto: comarca del Moianès.
 const MOIANES: [number, number] = [41.81, 2.09]
 
+// Última vista del mapa (centro + zoom), para restaurarla al volver del detalle.
+// En sessionStorage: persiste durante la navegación y recargas de la sesión, y se
+// limpia al cerrar la pestaña (una apertura nueva vuelve al centro por defecto).
+const VIEW_KEY = 'fontapp_map_view'
+type SavedView = { lat: number; lng: number; zoom: number }
+function loadView(): SavedView | null {
+  try {
+    const s = sessionStorage.getItem(VIEW_KEY)
+    return s ? (JSON.parse(s) as SavedView) : null
+  } catch {
+    return null
+  }
+}
+function saveView(v: SavedView) {
+  try {
+    sessionStorage.setItem(VIEW_KEY, JSON.stringify(v))
+  } catch {
+    /* almacenamiento no disponible: no pasa nada, solo no recordaremos la vista */
+  }
+}
+
+// Guarda la vista del mapa cada vez que el usuario lo mueve o hace zoom.
+function PersistView() {
+  const map = useMapEvents({
+    moveend: () => {
+      const c = map.getCenter()
+      saveView({ lat: c.lat, lng: c.lng, zoom: map.getZoom() })
+    },
+  })
+  return null
+}
+
 // Los labels i18n empiezan por emoji ("📍 A prop meu"); en MUI usamos iconos Material,
 // así que quitamos el emoji inicial del texto.
 const noEmoji = (s: string) => s.replace(/^[^\p{L}\d]+/u, '')
@@ -453,6 +485,8 @@ export function MapPage() {
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [place, setPlace] = useState<Place | null>(null)
   const [params, setParams] = useSearchParams()
+  // Vista inicial: la última guardada (al volver del detalle) o el Moianès por defecto.
+  const [initialView] = useState(loadView)
 
   // Llegada desde el detalle (?lat&lng&sel): centra el mapa en esa fuente y la selecciona.
   useEffect(() => {
@@ -531,12 +565,19 @@ export function MapPage() {
         </DialogActions>
       </Dialog>
 
-      <MapContainer center={MOIANES} zoom={12} className="map" scrollWheelZoom zoomControl={false}>
+      <MapContainer
+        center={initialView ? [initialView.lat, initialView.lng] : MOIANES}
+        zoom={initialView?.zoom ?? 12}
+        className="map"
+        scrollWheelZoom
+        zoomControl={false}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
+        <PersistView />
         <FocusOn target={goto} />
         <FlyToPlace place={place} />
         <ZoomControls />
