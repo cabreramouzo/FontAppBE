@@ -42,7 +42,7 @@ export function ProfilePage() {
   useEffect(() => {
     if (loading) return // esperamos a que se restaure la sesión antes de decidir
     if (!user) {
-      navigate('/login')
+      window.location.replace('/login')
       return
     }
     getMyFonts().then(setFonts).catch(() => setFonts([]))

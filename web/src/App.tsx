@@ -14,14 +14,20 @@ import { IntroDialog } from './components/IntroDialog'
 // con el mapa). Las páginas son exports con nombre, de ahí el mapeo a `default`.
 const MapPage = lazy(() => import('./pages/MapPage').then((m) => ({ default: m.MapPage })))
 const FontDetailPage = lazy(() => import('./pages/FontDetailPage').then((m) => ({ default: m.FontDetailPage })))
-const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
+// Las páginas de autenticación NO van en un chunk lazy a propósito: deben estar
+// renderizadas cuando el navegador analiza el documento, o los gestores de contraseñas
+// no reconocen el formulario (iOS acaba ofreciendo correos de Contactos en su lugar).
+import { LoginPage } from './pages/LoginPage'
+import { RegisterPage } from './pages/RegisterPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
+
 const LegalPage = lazy(() => import('./pages/LegalPage').then((m) => ({ default: m.LegalPage })))
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })))
 const AdminEditsPage = lazy(() => import('./pages/AdminEditsPage').then((m) => ({ default: m.AdminEditsPage })))
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })))
-const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
 export default function App() {
@@ -38,6 +44,8 @@ export default function App() {
                   <Route path="/" element={<MapPage />} />
                   <Route path="/fonts/:id" element={<FontDetailPage />} />
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="/reset" element={<ResetPasswordPage />} />
                   <Route path="/me" element={<ProfilePage />} />
                   <Route path="/admin" element={<AdminPage />} />

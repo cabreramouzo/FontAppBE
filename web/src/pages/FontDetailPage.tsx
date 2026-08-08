@@ -468,7 +468,7 @@ export function FontDetailPage() {
   // Guarda / deja de guardar la fuente en favoritos (requiere sesión).
   async function toggleFavorite() {
     if (!id) return
-    if (!user) { navigate('/login'); return }
+    if (!user) { window.location.assign('/login'); return }
     setSavingFavorite(true)
     try {
       const next = await setFavorite(id, !favorite?.favorited)
@@ -617,7 +617,7 @@ export function FontDetailPage() {
                 </Collapse>
               </>
             ) : (
-              <Typography color="text.secondary" sx={{ my: 1.5 }}><Link component={RouterLink} to="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+              <Typography color="text.secondary" sx={{ my: 1.5 }}><Link href="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
             )}
           </>
         ) : (
@@ -633,7 +633,7 @@ export function FontDetailPage() {
                 <UpdateForm fontID={font.id} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
               )
             ) : (
-              <Typography color="text.secondary" sx={{ my: 1 }}><Link component={RouterLink} to="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+              <Typography color="text.secondary" sx={{ my: 1 }}><Link href="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
             )}
           </>
         )}
@@ -670,7 +670,7 @@ export function FontDetailPage() {
         {user ? (
           <ReportForm fontID={font.id} onPosted={load} />
         ) : (
-          <Typography color="text.secondary"><Link component={RouterLink} to="/login">{t('nav.enter')}</Link> {t('report.loginToReport')}</Typography>
+          <Typography color="text.secondary"><Link href="/login">{t('nav.enter')}</Link> {t('report.loginToReport')}</Typography>
         )}
       </Box>
     </Box>

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
 import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
@@ -59,7 +58,7 @@ export function IntroDialog() {
       <DialogActions sx={{ px: 3, pb: 3, flexDirection: 'column', gap: 1 }}>
         <Button variant="contained" disableElevation fullWidth onClick={close}>{t('intro.cta')}</Button>
         <Typography variant="body2" color="text.secondary">
-          <Link component={RouterLink} to="/login" onClick={close}>{t('intro.register')}</Link>
+          <Link href="/register" onClick={close}>{t('intro.register')}</Link>
         </Typography>
       </DialogActions>
     </Dialog>

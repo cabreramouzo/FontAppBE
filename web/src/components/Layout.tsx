@@ -105,7 +105,9 @@ export function Layout({ children }: { children: ReactNode }) {
               </Tooltip>
             </>
           ) : (
-            <Button component={RouterLink} to="/login" variant="contained" size="small" disableElevation>{t('nav.enter')}</Button>
+            // Enlace normal (no client-side): carga el documento para que el formulario
+            // de acceso exista cuando el navegador lo analiza (autorrelleno fiable).
+            <Button component="a" href="/login" variant="contained" size="small" disableElevation>{t('nav.enter')}</Button>
           )}
         </Toolbar>
       </AppBar>

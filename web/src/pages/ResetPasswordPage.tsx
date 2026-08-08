@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
@@ -14,7 +14,6 @@ import { describeError, resetPassword } from '../api/client'
 
 export function ResetPasswordPage() {
   const { t } = useI18n()
-  const navigate = useNavigate()
   const [params] = useSearchParams()
   const token = params.get('token') ?? ''
   const [password, setPassword] = useState('')
@@ -28,7 +27,7 @@ export function ResetPasswordPage() {
     try {
       await resetPassword(token, password)
       setDone(true)
-      setTimeout(() => navigate('/login'), 1800)
+      setTimeout(() => window.location.assign('/login'), 1800)
     } catch (e) {
       setError(describeError(e, t))
     }
@@ -40,7 +39,7 @@ export function ResetPasswordPage() {
       {!token ? (
         <>
           <Alert severity="error" sx={{ mb: 2 }}>{t('reset.invalid')}</Alert>
-          <Button component={RouterLink} to="/login">← {t('login.enter')}</Button>
+          <Button component="a" href="/login">← {t('login.enter')}</Button>
         </>
       ) : done ? (
         <Alert severity="success">{t('reset.done')}</Alert>
