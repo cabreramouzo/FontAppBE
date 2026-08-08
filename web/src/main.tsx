@@ -15,6 +15,14 @@ window.addEventListener('beforeinstallprompt', (e) => {
   window.__bipEvent = e
 })
 
+// Cuando el usuario instala la app, lo recordamos para no volver a ofrecer el banner
+// ni siquiera si más tarde abre la web en el navegador normal (donde no podríamos
+// detectar la instalación de otra forma).
+window.addEventListener('appinstalled', () => {
+  try { localStorage.setItem('fontapp_installed', '1') } catch { /* modo privado: da igual */ }
+  window.__bipEvent = undefined
+})
+
 // Evita el zoom de página por pinch/doble-toque (iOS Safari lo hace aunque el
 // viewport diga user-scalable=no). El mapa de Leaflet usa touchmove dentro de su
 // contenedor, así que su propio pinch-zoom sigue funcionando; esto solo bloquea el

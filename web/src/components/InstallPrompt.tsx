@@ -50,6 +50,17 @@ function isStandalone(): boolean {
     (navigator as unknown as { standalone?: boolean }).standalone === true
 }
 
+// ¿La tenemos por instalada? O bien corre en modo app (standalone), o bien la instaló
+// antes (evento `appinstalled`, persistido en main.tsx) aunque ahora esté en el navegador.
+function isInstalled(): boolean {
+  if (isStandalone()) return true
+  try {
+    return localStorage.getItem('fontapp_installed') === '1'
+  } catch {
+    return false
+  }
+}
+
 // La instalación manual solo funciona en Safari; Chrome/Firefox/Edge en iOS no.
 function isIOSSafari(): boolean {
   const ua = navigator.userAgent
@@ -63,7 +74,7 @@ export function InstallPrompt() {
   const deferred = useRef<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
-    if (dismissedRecently() || isStandalone()) return
+    if (dismissedRecently() || isInstalled()) return
 
     // Android/Chromium: capturamos el evento para lanzar la instalación nosotros.
     const onBip = (e: Event) => {
