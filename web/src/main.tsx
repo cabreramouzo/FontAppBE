@@ -3,6 +3,18 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// PWA (Android/Chromium): captura `beforeinstallprompt` LO ANTES posible. Chrome
+// puede dispararlo antes de que React monte; si en ese instante no hay listener, el
+// evento se pierde y el banner "instalar app" no aparece. Lo guardamos en window para
+// que InstallPrompt lo recoja aunque haya llegado antes.
+declare global {
+  interface Window { __bipEvent?: Event }
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault()
+  window.__bipEvent = e
+})
+
 // Evita el zoom de página por pinch/doble-toque (iOS Safari lo hace aunque el
 // viewport diga user-scalable=no). El mapa de Leaflet usa touchmove dentro de su
 // contenedor, así que su propio pinch-zoom sigue funcionando; esto solo bloquea el

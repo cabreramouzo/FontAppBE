@@ -58,6 +58,13 @@ export function InstallPrompt() {
     }
     window.addEventListener('beforeinstallprompt', onBip)
 
+    // Puede haberse disparado ANTES de montar (lo captura main.tsx en window).
+    if (window.__bipEvent) {
+      deferred.current = window.__bipEvent as BeforeInstallPromptEvent
+      setMode('android')
+      setShow(true)
+    }
+
     // iOS Safari: aviso con la instrucción manual, tras un pequeño retardo.
     let timer: number | undefined
     if (isIOSSafari()) {
