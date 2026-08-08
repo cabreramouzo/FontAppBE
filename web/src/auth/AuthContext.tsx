@@ -17,6 +17,21 @@ interface AuthState {
   dismissLocationPrompt: () => void
 }
 
+// Guarda la credencial en el gestor del navegador (Chromium: Credential Management
+// API). En una SPA el prompt "¿Guardar contraseña?" no salta solo tras un login por
+// fetch + navegación JS; esto lo dispara explícitamente. No soportado en Firefox/Safari
+// (esos se apoyan en la heurística del formulario) → detección de soporte y silencioso.
+function storeCredential(username: string, password: string) {
+  try {
+    const PC = (window as unknown as { PasswordCredential?: new (d: { id: string; password: string }) => Credential }).PasswordCredential
+    if (PC && window.isSecureContext && navigator.credentials?.store) {
+      void navigator.credentials.store(new PC({ id: username, password }))
+    }
+  } catch {
+    /* no soportado o rechazado por el usuario: da igual */
+  }
+}
+
 const AuthContext = createContext<AuthState | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -43,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await loginRequest(username, password)
     setToken(res.token)
     setUser(res.user)
+    storeCredential(username, password)
   }
 
   async function register(name: string, username: string, email: string, password: string) {
