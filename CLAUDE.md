@@ -8,6 +8,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - **Backend:** Swift 6.3 · Vapor 4 · Fluent + PostgreSQL · SwiftPM (sin proyecto Xcode).
 - **Web:** Vite + React 19 + TypeScript en `web/` (Leaflet + markercluster para el mapa).
   UI con **MUI (Material Design)** — tema en `web/src/theme/` (`ThemeModeContext` fija `data-theme` en `<html>` y alimenta el `ThemeProvider` de MUI; claro/oscuro/sistema). Los popups del mapa siguen siendo HTML imperativo.
+  PWA con service worker propio (`web/public/sw.js`): lecturas offline y **bandeja de salida**
+  (`web/src/lib/outbox.ts`, IndexedDB) para crear fuentes/reseñas sin cobertura; se vacía sola al
+  volver la red y, en Android, también con la app cerrada vía Background Sync (Safari/iOS no lo tiene).
   i18n propio sin dependencias en `web/src/i18n/` (CA por defecto + ES, selector en la barra, detecta navegador y persiste en `localStorage`).
 
 ## Comandos

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { UserResponse } from '../api/types'
 import { apiFetch, getToken, loginRequest, setToken } from '../api/client'
+import { saveSessionForSync } from '../lib/outbox'
 
 interface AuthState {
   user: UserResponse | null
@@ -42,7 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function restore() {
-      if (getToken()) {
+      const stored = getToken()
+      if (stored) {
+        void saveSessionForSync(stored)
         try {
           setUser(await apiFetch<UserResponse>('/auth/me'))
         } catch {
@@ -58,6 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await loginRequest(username, password)
     setToken(res.token)
     setUser(res.user)
+    // El service worker necesita el token en IndexedDB para poder enviar la cola
+    // en segundo plano (Android); no puede leer localStorage.
+    void saveSessionForSync(res.token)
     storeCredential(username, password)
   }
 
@@ -87,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setToken(null)
     setUser(null)
+    void saveSessionForSync(null)
   }
 
   return (

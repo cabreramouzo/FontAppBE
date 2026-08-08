@@ -98,3 +98,100 @@ self.addEventListener('fetch', (event) => {
   // Assets propios: cache-first.
   event.respondWith(cacheFirst(req, SHELL_CACHE))
 })
+
+// ---------------------------------------------------------------------------
+// Background Sync: enviar la bandeja de salida con la app CERRADA.
+//
+// Solo Chromium/Android lo soporta (Safari/iOS y Firefox no); allí el vaciado lo hace
+// la propia página (src/lib/outbox.ts). OJO: esta lógica es un espejo de la de
+// `flushOutbox()` — si cambia el contrato de la API, hay que tocar los dos sitios.
+// Va aquí y no en el bundle porque el SW se ejecuta sin la página abierta, y por eso
+// mismo no puede leer `localStorage`: el token viaja por IndexedDB (almacén `meta`).
+// ---------------------------------------------------------------------------
+const OUTBOX_DB = 'fontapp-outbox'
+const OUTBOX_DB_VERSION = 2
+const CLAIM_TTL_MS = 2 * 60 * 1000
+const MAX_ATTEMPTS = 3
+
+function outboxDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(OUTBOX_DB, OUTBOX_DB_VERSION)
+    req.onupgradeneeded = () => {
+      const db = req.result
+      if (!db.objectStoreNames.contains('items')) db.createObjectStore('items', { keyPath: 'id', autoIncrement: true })
+      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' })
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+function idb(db, store, mode, run) {
+  return new Promise((resolve, reject) => {
+    const rq = run(db.transaction(store, mode).objectStore(store))
+    rq.onsuccess = () => resolve(rq.result)
+    rq.onerror = () => reject(rq.error)
+  })
+}
+
+// Lanza un error si la respuesta no es 2xx, distinguiendo lo transitorio.
+async function post(url, token, body, isForm) {
+  const headers = { Authorization: `Bearer ${token}` }
+  if (!isForm) headers['Content-Type'] = 'application/json'
+  const res = await fetch(url, { method: 'POST', headers, body: isForm ? body : JSON.stringify(body) })
+  if (!res.ok) {
+    const err = new Error(`HTTP ${res.status}`)
+    err.status = res.status
+    throw err
+  }
+  return res.status === 204 ? null : res.json()
+}
+
+async function syncOutbox() {
+  const db = await outboxDB()
+  const session = await idb(db, 'meta', 'readonly', (s) => s.get('session'))
+  if (!session || !session.token) return // sin sesión no podemos enviar nada
+  const base = session.apiBase || '/api'
+  const items = (await idb(db, 'items', 'readonly', (s) => s.getAll())).sort((a, b) => a.id - b.id)
+  const now = Date.now()
+
+  for (const item of items) {
+    if (item.claimedAt && now - item.claimedAt < CLAIM_TTL_MS) continue // lo envía la página
+    await idb(db, 'items', 'readwrite', (s) => s.put({ ...item, claimedAt: Date.now() }))
+    try {
+      let image = item.data.image
+      if (item.photo) {
+        const form = new FormData()
+        form.append('file', new File([item.photo], item.photoName || 'photo.jpg', { type: item.photo.type || 'image/jpeg' }))
+        image = (await post(`${base}/images`, session.token, form, true)).url
+      }
+      if (item.kind === 'font') {
+        const font = await post(`${base}/fonts`, session.token, { ...item.data, image })
+        if (item.waterStatus) {
+          try {
+            await post(`${base}/fonts/${font.id}/comments`, session.token, { waterStatus: item.waterStatus })
+          } catch (_) { /* la fuente ya está creada */ }
+        }
+      } else {
+        await post(`${base}/fonts/${item.fontID}/comments`, session.token, { ...item.data, image })
+      }
+      await idb(db, 'items', 'readwrite', (s) => s.delete(item.id))
+    } catch (e) {
+      const status = e && e.status
+      // Transitorio (sin red, sesión, servidor caído): soltamos la marca y relanzamos
+      // para que el navegador reintente este sync más tarde.
+      if (!status || status === 401 || status >= 500) {
+        await idb(db, 'items', 'readwrite', (s) => s.put({ ...item, claimedAt: 0 }))
+        throw e
+      }
+      // 4xx: estos datos no van a entrar nunca; unos reintentos y fuera.
+      const attempts = (item.attempts || 0) + 1
+      if (attempts >= MAX_ATTEMPTS) await idb(db, 'items', 'readwrite', (s) => s.delete(item.id))
+      else await idb(db, 'items', 'readwrite', (s) => s.put({ ...item, attempts, claimedAt: 0 }))
+    }
+  }
+}
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'fontapp-outbox') event.waitUntil(syncOutbox())
+})
