@@ -67,28 +67,34 @@ export function LoginPage() {
         </>
       ) : (
         <>
-          {/* `key={mode}` remonta los campos al cambiar entre entrar/registrarse. Sin
-              esto React reutiliza los mismos <input> y solo cambia su `autocomplete`
-              (current-password ↔ new-password); Safari cachea su análisis del formulario
-              y acaba autorellenando el campo equivocado. */}
-          <Box key={mode} component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {mode === 'register' && (
               <TextField label={t('login.name')} name="name" value={name} onChange={(e) => setName(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: 'name' } }} />
             )}
             {mode !== 'forgot' && (
-              <TextField
-                label={mode === 'login' ? t('login.userOrEmail') : t('login.username')}
-                name="username"
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                fullWidth
-                size="small"
-                // `name`/`id` + autoComplete son lo que necesita iOS Safari para reconocer
-                // este campo como el de usuario y ofrecer Passwords. Sin capitalizar/corregir.
-                slotProps={{ htmlInput: { autoComplete: 'username', autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } }}
-              />
+              <Box>
+                <TextField
+                  // OJO: la etiqueta NO debe mencionar "correo/email". Safari pesa el texto
+                  // de la etiqueta y, si lo ve, clasifica el campo como email de Contactos:
+                  // deja de ofrecer el usuario guardado y descuadra el par usuario/contraseña.
+                  // Que también se acepte el correo se explica en el texto de abajo, que no
+                  // va asociado al input (ni label ni aria-describedby).
+                  label={mode === 'login' ? t('login.userLabel') : t('login.username')}
+                  name="username"
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  fullWidth
+                  size="small"
+                  slotProps={{ htmlInput: { autoComplete: 'username', autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } }}
+                />
+                {mode === 'login' && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                    {t('login.userOrEmailHint')}
+                  </Typography>
+                )}
+              </Box>
             )}
             {mode !== 'login' && (
               <TextField type="email" label={t('login.email')} name="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: 'email', autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } }} />
