@@ -69,24 +69,28 @@ export function LoginPage() {
         <>
           <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {mode === 'register' && (
-              <TextField label={t('login.name')} value={name} onChange={(e) => setName(e.target.value)} required fullWidth size="small" />
+              <TextField label={t('login.name')} name="name" value={name} onChange={(e) => setName(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: 'name' } }} />
             )}
             {mode !== 'forgot' && (
               <TextField
                 label={mode === 'login' ? t('login.userOrEmail') : t('login.username')}
+                name="username"
+                id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 fullWidth
                 size="small"
-                slotProps={{ htmlInput: { autoComplete: 'username' } }}
+                // `name`/`id` + autoComplete son lo que necesita iOS Safari para reconocer
+                // este campo como el de usuario y ofrecer Passwords. Sin capitalizar/corregir.
+                slotProps={{ htmlInput: { autoComplete: 'username', autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } }}
               />
             )}
             {mode !== 'login' && (
-              <TextField type="email" label={t('login.email')} value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: 'email' } }} />
+              <TextField type="email" label={t('login.email')} name="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: 'email', autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } }} />
             )}
             {mode !== 'forgot' && (
-              <TextField type="password" label={t('login.password')} value={password} onChange={(e) => setPassword(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: mode === 'login' ? 'current-password' : 'new-password' } }} />
+              <TextField type="password" label={t('login.password')} name="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: mode === 'login' ? 'current-password' : 'new-password' } }} />
             )}
             <Button type="submit" variant="contained" disableElevation>
               {mode === 'login' ? t('login.enter') : mode === 'register' ? t('login.register') : t('forgot.submit')}
