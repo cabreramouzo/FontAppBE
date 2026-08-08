@@ -14,8 +14,24 @@ import { useI18n } from '../i18n/I18nContext'
 //   instalación real de un toque.
 // - iOS Safari: Apple no expone ese evento, así que mostramos la instrucción
 //   manual (Compartir → Afegeix a la pantalla d'inici).
-// No se muestra si ya está instalada (standalone) ni si el usuario lo descartó.
+// No se muestra si ya está instalada (standalone). Si el usuario lo descarta, NO
+// desaparece para siempre: guardamos la fecha y volvemos a ofrecerlo pasado un mes
+// (por si lo cerró sin querer o cambió de idea). Una vez instalada, `isStandalone`
+// evita seguir insistiendo.
 const STORAGE_KEY = 'fontapp_install_hint'
+const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000 // ~1 mes
+
+// ¿Se descartó hace menos de un mes? (valores antiguos "1" cuentan como caducados).
+function dismissedRecently(): boolean {
+  try {
+    const v = localStorage.getItem(STORAGE_KEY)
+    if (!v) return false
+    const ts = Number(v)
+    return Number.isFinite(ts) && Date.now() - ts < COOLDOWN_MS
+  } catch {
+    return false
+  }
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -47,7 +63,7 @@ export function InstallPrompt() {
   const deferred = useRef<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY) || isStandalone()) return
+    if (dismissedRecently() || isStandalone()) return
 
     // Android/Chromium: capturamos el evento para lanzar la instalación nosotros.
     const onBip = (e: Event) => {
@@ -79,7 +95,8 @@ export function InstallPrompt() {
   }, [])
 
   function dismiss() {
-    try { localStorage.setItem(STORAGE_KEY, '1') } catch { /* modo privado: da igual */ }
+    // Guardamos la fecha del descarte: reaparecerá pasado el enfriamiento (~1 mes).
+    try { localStorage.setItem(STORAGE_KEY, String(Date.now())) } catch { /* modo privado: da igual */ }
     setShow(false)
   }
 
