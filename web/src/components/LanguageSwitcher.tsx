@@ -14,6 +14,11 @@ export function LanguageSwitcher() {
       variant="standard"
       disableUnderline
       aria-label={t('lang.label')}
+      // MUI renderiza un <input> nativo oculto para el valor del Select. Va ANTES del
+      // formulario de login, así que el autorrelleno de Safari puede tomarlo como campo
+      // candidato y desplazar el par usuario/contraseña (metiendo la contraseña en el
+      // campo de usuario). Lo marcamos para que los gestores lo ignoren.
+      inputProps={{ autoComplete: 'off', name: 'lang', 'data-1p-ignore': true, 'data-lpignore': true }}
       // Cerrado: solo el código (ES/CA/EN…) para no saturar la barra en móvil.
       // Abierto: el nombre completo del idioma.
       renderValue={(value) => String(value).toUpperCase()}
