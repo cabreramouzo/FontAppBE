@@ -67,7 +67,11 @@ export function LoginPage() {
         </>
       ) : (
         <>
-          <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* `key={mode}` remonta los campos al cambiar entre entrar/registrarse. Sin
+              esto React reutiliza los mismos <input> y solo cambia su `autocomplete`
+              (current-password ↔ new-password); Safari cachea su análisis del formulario
+              y acaba autorellenando el campo equivocado. */}
+          <Box key={mode} component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {mode === 'register' && (
               <TextField label={t('login.name')} name="name" value={name} onChange={(e) => setName(e.target.value)} required fullWidth size="small" slotProps={{ htmlInput: { autoComplete: 'name' } }} />
             )}
