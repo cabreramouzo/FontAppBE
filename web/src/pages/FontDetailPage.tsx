@@ -54,6 +54,7 @@ import { useToast } from '../components/ToastContext'
 import { StarRating } from '../components/StarRating'
 import { ImagePicker } from '../components/ImagePicker'
 import { Skeleton } from '../components/Skeleton'
+import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { compressImage } from '../lib/image'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
@@ -347,10 +348,13 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
       <Typography variant="caption" color="text.secondary">{t('detail.editInfoNote')}</Typography>
       <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} required size="small" />
       <TextField label={t('detail.description')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" />
-      <TextField select label={t('detail.type')} value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')} size="small">
-        <MenuItem value="">{t('detail.unknownType')}</MenuItem>
-        {SOURCE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</MenuItem>))}
-      </TextField>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <TextField select label={t('detail.type')} value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')} size="small" sx={{ flexGrow: 1 }}>
+          <MenuItem value="">{t('detail.unknownType')}</MenuItem>
+          {SOURCE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</MenuItem>))}
+        </TextField>
+        <WaterTypeHelpButton />
+      </Box>
       <TextField select label={t('detail.drinkability')} value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')} size="small">
         <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
         {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
@@ -539,9 +543,11 @@ export function FontDetailPage() {
             const dr = drinkableInfo(font.drinkable)
             if (!src && !dr) return null
             return (
-              <Stack direction="row" sx={{ my: 1, flexWrap: "wrap", gap: 1 }}>
+              <Stack direction="row" sx={{ my: 1, flexWrap: "wrap", gap: 1, alignItems: 'center' }}>
                 {src && <Chip size="small" label={`${src.emoji} ${t(src.labelKey)}`} />}
                 {dr && <Chip size="small" color={font.drinkable === 'no' ? 'error' : 'default'} label={`${dr.emoji} ${t(dr.labelKey)}`} />}
+                {/* Leyenda: qué significa cada tipo y qué esperar del agua. */}
+                {src && <WaterTypeHelpButton />}
               </Stack>
             )
           })()}

@@ -49,6 +49,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
+import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
 import { ImagePicker } from '../components/ImagePicker'
 import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
@@ -392,10 +393,13 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
           ))}
         </TextField>
         <TextField label={t('newFont.descriptionOpt')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" />
-        <TextField select label={t('detail.type')} value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')} size="small">
-          <MenuItem value="">{t('detail.unknownType')}</MenuItem>
-          {SOURCE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</MenuItem>))}
-        </TextField>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <TextField select label={t('detail.type')} value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')} size="small" sx={{ flexGrow: 1 }}>
+            <MenuItem value="">{t('detail.unknownType')}</MenuItem>
+            {SOURCE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</MenuItem>))}
+          </TextField>
+          <WaterTypeHelpButton />
+        </Box>
         <TextField select label={t('detail.drinkability')} value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')} size="small">
           <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
           {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
