@@ -44,13 +44,13 @@ import { userLocationIcon } from '../lib/userLocationIcon'
 
 const meIcon = userLocationIcon()
 import type { Drinkable, Font, FontSummary, Page, WaterSource } from '../api/types'
-import { apiFetch, createFont, describeError, uploadImage } from '../api/client'
+import { apiFetch, createComment, createFont, describeError, uploadImage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { ImagePicker } from '../components/ImagePicker'
-import { WATER_STATUS, waterStatusInfo } from '../lib/waterStatus'
+import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
 import { searchPlaces, type Place } from '../lib/geocode'
 import { compressImage } from '../lib/image'
@@ -313,11 +313,20 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
   const [source, setSource] = useState<WaterSource | ''>('')
   const [drinkable, setDrinkable] = useState<Drinkable | ''>('')
   const [file, setFile] = useState<File | null>(null)
+  // Estado del agua: se puede dejar ya al crear la fuente (quien la añade suele estar
+  // delante de ella). Se publica como primera actualización, sin abrir el detalle.
+  const [waterStatus, setWaterStatus] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   // Ubicación efectiva: el clic del usuario, que la foto puede sugerir cambiar.
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: pos.lat, lng: pos.lng })
   const [gpsHint, setGpsHint] = useState<GpsCoords | null>(null)
+
+  // El pin se puede seguir moviendo tocando el mapa con el formulario abierto:
+  // hay que reflejarlo aquí o crearíamos la fuente en el punto inicial.
+  useEffect(() => {
+    setCoords({ lat: pos.lat, lng: pos.lng })
+  }, [pos])
 
   // Al elegir foto: si su EXIF lleva GPS y difiere > ~15 m del punto actual,
   // ofrecemos usar esas coordenadas (leídas del File ORIGINAL, antes de comprimir).
@@ -338,7 +347,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
     try {
       let image: string | undefined
       if (file) image = await uploadImage(await compressImage(file))
-      await createFont({
+      const font = await createFont({
         name,
         latitude: coords.lat,
         longitude: coords.lng,
@@ -347,6 +356,15 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
         source: source || undefined,
         drinkable: drinkable || undefined,
       })
+      // El estado va como primera actualización de la fuente. Best-effort: si fallara,
+      // la fuente ya está creada y no tiene sentido abortar (se puede añadir luego).
+      if (waterStatus) {
+        try {
+          await createComment(font.id, { waterStatus })
+        } catch {
+          /* la fuente se ha creado igualmente */
+        }
+      }
       toast.show(t('toast.fontCreated'))
       onCreated()
     } catch (e) {
@@ -359,9 +377,20 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
   return (
     <div className="panel">
       <Typography variant="h6">{t('newFont.title')}</Typography>
-      <Typography variant="caption" color="text.secondary">Lat {coords.lat.toFixed(5)}, Long {coords.lng.toFixed(5)}</Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+        Lat {coords.lat.toFixed(5)}, Long {coords.lng.toFixed(5)}
+      </Typography>
+      <Typography variant="caption" color="text.secondary">{t('newFont.tapToMove')}</Typography>
       <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
         <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} required size="small" />
+        {/* El estado del agua, aquí mismo: es el dato más útil y quien añade la fuente
+            está delante de ella. Evita crear → volver al mapa → abrir el detalle. */}
+        <TextField select label={t('update.status')} value={waterStatus} onChange={(e) => setWaterStatus(e.target.value)} size="small">
+          <MenuItem value="">—</MenuItem>
+          {WATER_STATUS_OPTIONS.map((k) => (
+            <MenuItem key={k} value={k}>{WATER_STATUS[k].emoji} {t(`status.${k}`)}</MenuItem>
+          ))}
+        </TextField>
         <TextField label={t('newFont.descriptionOpt')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" />
         <TextField select label={t('detail.type')} value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')} size="small">
           <MenuItem value="">{t('detail.unknownType')}</MenuItem>
@@ -504,6 +533,26 @@ export function MapPage() {
     setGoto([f.latitude, f.longitude])
     setSelectedID(f.id ?? null)
   }
+
+  // Añadir fuente: si ya sabemos dónde está el usuario, ponemos el pin ahí y abrimos
+  // el formulario directamente (lo normal es estar delante de la fuente). Si no, se
+  // pide la ubicación y mientras tanto se puede tocar el mapa para situarla.
+  function startPlacing() {
+    setPlacing(true)
+    setPos(null)
+    if (me) {
+      setPos(L.latLng(me[0], me[1]))
+      setGoto([me[0], me[1]])
+    } else {
+      locate(false)
+    }
+  }
+
+  // La ubicación puede llegar después de abrir el formulario: si el usuario aún no ha
+  // tocado el mapa, situamos el pin donde está.
+  useEffect(() => {
+    if (placing && !pos && me) setPos(L.latLng(me[0], me[1]))
+  }, [placing, pos, me])
 
   function cancel() {
     setPlacing(false)
@@ -675,7 +724,7 @@ export function MapPage() {
             <NearMeIcon />
           </Fab>
           {user && (
-            <Fab variant="extended" color="primary" onClick={() => { setPlacing(true); setPos(null) }}>
+            <Fab variant="extended" color="primary" onClick={startPlacing}>
               <AddIcon sx={{ mr: 1 }} /> {noEmoji(t('map.addFont'))}
             </Fab>
           )}
