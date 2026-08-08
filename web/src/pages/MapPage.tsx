@@ -525,19 +525,35 @@ export function MapPage() {
       setGeoError(t('map.geoInsecure'))
       return
     }
+    const onOk = (p: GeolocationPosition) => {
+      const c: [number, number] = [p.coords.latitude, p.coords.longitude]
+      setMe(c)
+      setGoto([...c])
+      if (openList) setShowNearby(true)
+    }
+
+    // 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT.
     navigator.geolocation.getCurrentPosition(
-      (p) => {
-        const c: [number, number] = [p.coords.latitude, p.coords.longitude]
-        setMe(c)
-        setGoto([...c])
-        if (openList) setShowNearby(true)
-      },
+      onOk,
       (err) => {
-        // 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT
-        setGeoError(err.code === err.PERMISSION_DENIED ? t('map.geoDenied') : t('map.geoFailed'))
-        console.warn('geolocation error', err.code, err.message)
+        // Permiso denegado: es decisión del usuario, no reintentamos.
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoError(t('map.geoDenied'))
+          return
+        }
+        // POSITION_UNAVAILABLE / TIMEOUT: en escritorio la alta precisión (GPS)
+        // suele fallar o tardar. Reintentamos con precisión de RED, más fiable,
+        // con más tiempo y aceptando una posición cacheada reciente.
+        navigator.geolocation.getCurrentPosition(
+          onOk,
+          (err2) => {
+            setGeoError(t('map.geoFailed'))
+            console.warn('geolocation error', err2.code, err2.message)
+          },
+          { enableHighAccuracy: false, timeout: 20000, maximumAge: 600000 },
+        )
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     )
   }
 
