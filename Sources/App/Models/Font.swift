@@ -1,10 +1,15 @@
 import Fluent
 import Vapor
 
-/// Qué tipo de punto de agua es (calcado de los tags de OpenStreetMap).
+/// Qué tipo de punto de agua es. La distinción clave para quien camina es el ORIGEN
+/// del agua (red municipal vs acuífero) y si el manantial está CAPTADO (con caño):
+/// - urbana: caudal garantizado y agua tratada.
+/// - natural captada: caudal estacional, potabilidad no garantizada, pero bebible.
+/// - manantial sin captar: puede ser un rezume del que ni se llena una botella.
 enum WaterSource: String, Codable, Sendable, CaseIterable {
-    case tap        // amenity=drinking_water / man_made=water_tap (grifo/fuente pública)
-    case spring     // natural=spring (manantial)
+    case tap        // amenity=drinking_water / man_made=water_tap: fuente urbana, de red
+    case mountain   // manantial CAPTADO (caño/pila): la "font de muntanya" clásica
+    case spring     // natural=spring: manantial sin captar, brota solo
     case well       // man_made=water_well (pozo)
     case fountain   // amenity=fountain (ornamental)
     case other

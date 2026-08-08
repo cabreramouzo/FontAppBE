@@ -4,8 +4,9 @@ import type { Drinkable, WaterSource } from '../api/types'
 // se traduce vía i18n con las claves `source.<key>` / `drink.<key>`.
 
 export const SOURCE_EMOJI: Record<WaterSource, string> = {
-  tap: '💧',
-  spring: '⛰️',
+  tap: '🚰',       // fuente urbana: agua de red
+  mountain: '⛰️',  // manantial captado (caño): la font de muntanya
+  spring: '💦',    // manantial sin captar: brota solo
   well: '🪣',
   fountain: '⛲',
   other: '💧',
@@ -17,7 +18,7 @@ export const DRINKABLE_EMOJI: Record<Drinkable, string> = {
   conditional: '⚠️',
 }
 
-export const SOURCE_OPTIONS: WaterSource[] = ['tap', 'spring', 'well', 'fountain', 'other']
+export const SOURCE_OPTIONS: WaterSource[] = ['tap', 'mountain', 'spring', 'well', 'fountain', 'other']
 export const DRINKABLE_OPTIONS: Drinkable[] = ['yes', 'no', 'conditional']
 
 export function sourceInfo(s: WaterSource | null | undefined): { emoji: string; labelKey: string } | null {
