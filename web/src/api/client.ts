@@ -47,12 +47,24 @@ async function parse(res: Response) {
   return data
 }
 
-/** fetch con captura del fallo de red como ApiError(0). */
+// Sin timeout, `fetch` puede quedarse colgado varios MINUTOS con cobertura mala (la
+// conexión se abre pero no avanza), y la app se queda en "enviando…" para siempre.
+// Cortamos pronto para poder avisar o encolar. Las subidas de foto van por multipart
+// y son legítimamente más lentas, así que tienen más margen.
+const REQUEST_TIMEOUT_MS = 12_000
+const UPLOAD_TIMEOUT_MS = 45_000
+
+/** fetch con timeout; cualquier fallo de red (o corte por tiempo) es ApiError(0). */
 async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
+  const isUpload = init?.body instanceof FormData
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), isUpload ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS)
   try {
-    return await fetch(input, init)
+    return await fetch(input, { ...init, signal: controller.signal })
   } catch {
     throw new ApiError(0, 'network')
+  } finally {
+    clearTimeout(timer)
   }
 }
 

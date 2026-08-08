@@ -26,6 +26,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { OfflineBanner } from './OfflineBanner'
 import { AppInterestBanner } from './AppInterestBanner'
 import { InstallPrompt } from './InstallPrompt'
+import { PendingUploads } from './PendingUploads'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -113,6 +114,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </AppBar>
       <OfflineBanner />
       <InstallPrompt />
+      <PendingUploads />
       <Box component="main" className="main">{children}</Box>
 
       <Dialog open={confirmLogout} onClose={() => setConfirmLogout(false)} maxWidth="xs" fullWidth>

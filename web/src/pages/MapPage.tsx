@@ -50,6 +50,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
+import { enqueue, isOffline } from '../lib/outbox'
 import { ImagePicker } from '../components/ImagePicker'
 import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
@@ -345,18 +346,20 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
     e.preventDefault()
     setError('')
     setSaving(true)
+    // Comprimimos antes de nada: así la foto ya está lista tanto para subirla ahora
+    // como para guardarla en la cola si resulta que no hay cobertura.
+    const photo = file ? await compressImage(file) : undefined
+    const data = {
+      name,
+      latitude: coords.lat,
+      longitude: coords.lng,
+      description: description || undefined,
+      source: source || undefined,
+      drinkable: drinkable || undefined,
+    }
     try {
-      let image: string | undefined
-      if (file) image = await uploadImage(await compressImage(file))
-      const font = await createFont({
-        name,
-        latitude: coords.lat,
-        longitude: coords.lng,
-        image,
-        description: description || undefined,
-        source: source || undefined,
-        drinkable: drinkable || undefined,
-      })
+      const image = photo ? await uploadImage(photo) : undefined
+      const font = await createFont({ ...data, image })
       // El estado va como primera actualización de la fuente. Best-effort: si fallara,
       // la fuente ya está creada y no tiene sentido abortar (se puede añadir luego).
       if (waterStatus) {
@@ -369,7 +372,14 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
       toast.show(t('toast.fontCreated'))
       onCreated()
     } catch (e) {
-      setError(describeError(e, t))
+      // Sin cobertura: no perdemos la fuente. Se guarda en el móvil y se envía sola.
+      if (isOffline(e)) {
+        await enqueue({ kind: 'font', data, waterStatus: waterStatus || undefined, photo, photoName: photo?.name })
+        toast.show(t('offline.savedFont'))
+        onCreated()
+      } else {
+        setError(describeError(e, t))
+      }
     } finally {
       setSaving(false)
     }

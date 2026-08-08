@@ -55,6 +55,7 @@ import { StarRating } from '../components/StarRating'
 import { ImagePicker } from '../components/ImagePicker'
 import { Skeleton } from '../components/Skeleton'
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
+import { enqueue, isOffline } from '../lib/outbox'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { compressImage } from '../lib/image'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
@@ -208,18 +209,26 @@ function UpdateForm({ fontID, onPosted, onCancel }: { fontID: string; onPosted: 
     e.preventDefault()
     setError('')
     setSaving(true)
+    // Comprimimos antes: la foto queda lista para subirla o para guardarla en la cola.
+    const photo = file ? await compressImage(file) : undefined
+    const data = { body: body.trim() || undefined, rating: rating || undefined, waterStatus: waterStatus || undefined }
+    const clear = () => { setBody(''); setRating(0); setWaterStatus(''); setFile(null) }
     try {
-      let image: string | undefined
-      if (file) image = await uploadImage(await compressImage(file))
-      await createComment(fontID, { body: body.trim() || undefined, rating: rating || undefined, waterStatus: waterStatus || undefined, image })
-      setBody('')
-      setRating(0)
-      setWaterStatus('')
-      setFile(null)
+      const image = photo ? await uploadImage(photo) : undefined
+      await createComment(fontID, { ...data, image })
+      clear()
       toast.show(t('toast.reviewPosted'))
       onPosted()
     } catch (e) {
-      setError(describeError(e, t))
+      // Sin cobertura: se guarda en el móvil y se envía en cuanto haya red.
+      if (isOffline(e)) {
+        await enqueue({ kind: 'comment', fontID, data, photo, photoName: photo?.name })
+        clear()
+        toast.show(t('offline.savedUpdate'))
+        onPosted()
+      } else {
+        setError(describeError(e, t))
+      }
     } finally {
       setSaving(false)
     }
