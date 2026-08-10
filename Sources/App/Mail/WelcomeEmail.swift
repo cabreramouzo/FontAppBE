@@ -19,6 +19,10 @@ enum WelcomeEmail {
         let offlineBody: String
         let installTitle: String
         let installBody: String
+        /// Pasos concretos por plataforma: el menú no está en el mismo sitio y sin
+        /// decir dónde mirar (sobre todo el "Compartir" de iOS) casi nadie la instala.
+        let installIOS: (label: String, steps: String)
+        let installAndroid: (label: String, steps: String)
         let cta: String
         let outro: String
         let footer: String
@@ -73,6 +77,8 @@ enum WelcomeEmail {
                   <tr><td style="padding:0 18px 16px;">
                     <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">\(esc(c.installTitle))</p>
                     <p style="margin:6px 0 0;font-size:14px;line-height:21px;color:#475569;">\(esc(c.installBody))</p>
+                    <p style="margin:10px 0 0;font-size:14px;line-height:21px;color:#475569;"><strong style="color:#0f172a;">\(esc(c.installIOS.label))</strong> \(esc(c.installIOS.steps))</p>
+                    <p style="margin:6px 0 0;font-size:14px;line-height:21px;color:#475569;"><strong style="color:#0f172a;">\(esc(c.installAndroid.label))</strong> \(esc(c.installAndroid.steps))</p>
                   </td></tr>
                 </table>
               </td></tr>
@@ -99,7 +105,9 @@ enum WelcomeEmail {
     private static func text(_ c: Copy, base: String) -> String {
         var out = "\(c.greeting)\n\n\(c.intro)\n\n"
         out += c.bullets.map { "- \($0.1)" }.joined(separator: "\n")
-        out += "\n\n\(c.offlineTitle)\n\(c.offlineBody)\n\n\(c.installTitle)\n\(c.installBody)\n\n\(c.cta): \(base)\n\n\(c.outro)\n\n\(c.footer)\n"
+        out += "\n\n\(c.offlineTitle)\n\(c.offlineBody)\n\n\(c.installTitle)\n\(c.installBody)\n"
+        out += "\(c.installIOS.label) \(c.installIOS.steps)\n\(c.installAndroid.label) \(c.installAndroid.steps)\n"
+        out += "\n\(c.cta): \(base)\n\n\(c.outro)\n\n\(c.footer)\n"
         return out
     }
 
@@ -130,6 +138,8 @@ enum WelcomeEmail {
                 offlineBody: "En el monte casi nunca hay señal. Puedes consultar el mapa que ya has visitado sin conexión, y si añades una fuente o una reseña sin datos, se guarda en el móvil y se envía sola en cuanto vuelve la red (en Android, incluso con la app cerrada). Nada se pierde.",
                 installTitle: "📲 Instálala en el móvil",
                 installBody: "FontApp se instala como una app desde el propio navegador, sin tienda de aplicaciones: se abre a pantalla completa, ocupa muy poco y tienes la ubicación y la cámara a mano para añadir una fuente en el momento.",
+                installIOS: ("iPhone y iPad (Safari):", "abre fontapp.net, pulsa el botón Compartir (el cuadrado con la flecha hacia arriba, abajo en el centro), baja hasta «Añadir a pantalla de inicio» y confirma con «Añadir»."),
+                installAndroid: ("Android (Chrome):", "abre fontapp.net y toca el aviso de instalar que aparece abajo; si no sale, entra en el menú ⋮ (arriba a la derecha) y elige «Instalar aplicación» o «Añadir a pantalla de inicio»."),
                 cta: "Empezar a explorar",
                 outro: "Gracias por sumarte. Cada estado que confirmas puede ahorrarle a alguien un desvío de varios kilómetros hasta una fuente seca.",
                 footer: "Recibes este correo porque te has dado de alta en FontApp. Si no has sido tú, ignóralo."
@@ -149,6 +159,8 @@ enum WelcomeEmail {
                 offlineBody: "No monte case nunca hai sinal. Podes consultar sen conexión o mapa que xa visitaches e, se engades unha fonte ou unha reseña sen datos, gárdase no móbil e envíase soa en canto volve a rede (en Android, mesmo coa app pechada). Non se perde nada.",
                 installTitle: "📲 Instálaa no móbil",
                 installBody: "FontApp instálase como unha app desde o propio navegador, sen tenda de aplicacións: ábrese a pantalla completa, ocupa moi pouco e tes a localización e a cámara a man para engadir unha fonte no momento.",
+                installIOS: ("iPhone e iPad (Safari):", "abre fontapp.net, preme o botón Compartir (o cadrado coa frecha cara arriba, abaixo no centro), baixa ata «Engadir á pantalla de inicio» e confirma con «Engadir»."),
+                installAndroid: ("Android (Chrome):", "abre fontapp.net e toca o aviso de instalar que aparece abaixo; se non sae, entra no menú ⋮ (arriba á dereita) e escolle «Instalar aplicación» ou «Engadir á pantalla de inicio»."),
                 cta: "Comezar a explorar",
                 outro: "Grazas por sumarte. Cada estado que confirmas pode aforrarlle a alguén un desvío de varios quilómetros ata unha fonte seca.",
                 footer: "Recibes este correo porque te deches de alta en FontApp. Se non fuches ti, ignórao."
@@ -168,6 +180,8 @@ enum WelcomeEmail {
                 offlineBody: "Mendian ia inoiz ez dago seinalerik. Dagoeneko bisitatu duzun mapa konexiorik gabe kontsulta dezakezu eta, daturik gabe iturri bat edo iritzi bat gehitzen baduzu, mugikorrean gordetzen da eta sarea itzultzean bakarrik bidaltzen da (Android-en, appa itxita egonda ere). Ez da ezer galtzen.",
                 installTitle: "📲 Instalatu mugikorrean",
                 installBody: "FontApp app gisa instalatzen da nabigatzailetik bertatik, aplikazio-dendarik gabe: pantaila osoan irekitzen da, oso leku gutxi hartzen du eta kokapena eta kamera eskura dituzu iturri bat unean bertan gehitzeko.",
+                installIOS: ("iPhone eta iPad (Safari):", "ireki fontapp.net, sakatu Partekatu botoia (gora doan gezia duen laukia, behean erdian), jaitsi «Gehitu hasierako pantailara» aukeraraino eta berretsi «Gehitu» sakatuta."),
+                installAndroid: ("Android (Chrome):", "ireki fontapp.net eta sakatu behean agertzen den instalatzeko oharra; agertzen ez bada, joan ⋮ menura (goian eskuinean) eta aukeratu «Instalatu aplikazioa» edo «Gehitu hasierako pantailara»."),
                 cta: "Hasi arakatzen",
                 outro: "Eskerrik asko batzeagatik. Berresten duzun egoera bakoitzak norbaiti kilometro batzuetako bidea aurreztu diezaioke iturri lehor bateraino.",
                 footer: "Mezu hau jasotzen duzu FontApp-en izena eman duzulako. Zu izan ez bazara, ez ikusi egin."
@@ -187,6 +201,8 @@ enum WelcomeEmail {
                 offlineBody: "There's rarely coverage up in the hills. You can browse the map you've already visited offline, and if you add a fountain or a review with no data, it's saved on your phone and sent by itself as soon as the network is back (on Android, even with the app closed). Nothing is lost.",
                 installTitle: "📲 Install it on your phone",
                 installBody: "FontApp installs as an app straight from your browser, no app store: it opens full screen, takes up very little space, and keeps your location and camera at hand to add a fountain on the spot.",
+                installIOS: ("iPhone and iPad (Safari):", "open fontapp.net, tap the Share button (the square with an up arrow, bottom centre), scroll down to \"Add to Home Screen\" and confirm with \"Add\"."),
+                installAndroid: ("Android (Chrome):", "open fontapp.net and tap the install prompt at the bottom; if it doesn't show, open the ⋮ menu (top right) and pick \"Install app\" or \"Add to Home screen\"."),
                 cta: "Start exploring",
                 outro: "Thanks for joining. Every status you confirm can save someone a several-kilometre detour to a dry fountain.",
                 footer: "You're getting this email because you signed up for FontApp. If it wasn't you, just ignore it."
@@ -206,6 +222,8 @@ enum WelcomeEmail {
                 offlineBody: "A muntanya gairebé mai hi ha senyal. Pots consultar sense connexió el mapa que ja has visitat i, si afegeixes una font o una ressenya sense dades, es desa al mòbil i s'envia sola quan torna la xarxa (a Android, fins i tot amb l'app tancada). No es perd res.",
                 installTitle: "📲 Instal·la-la al mòbil",
                 installBody: "FontApp s'instal·la com una app des del mateix navegador, sense botiga d'aplicacions: s'obre a pantalla completa, ocupa molt poc i tens la ubicació i la càmera a mà per afegir una font al moment.",
+                installIOS: ("iPhone i iPad (Safari):", "obre fontapp.net, prem el botó Compartir (el quadrat amb la fletxa cap amunt, a baix al centre), baixa fins a «Afegeix a la pantalla d'inici» i confirma amb «Afegeix»."),
+                installAndroid: ("Android (Chrome):", "obre fontapp.net i toca l'avís d'instal·lació que apareix a baix; si no surt, entra al menú ⋮ (a dalt a la dreta) i tria «Instal·la l'aplicació» o «Afegeix a la pantalla d'inici»."),
                 cta: "Comença a explorar",
                 outro: "Gràcies per sumar-t'hi. Cada estat que confirmes pot estalviar a algú una desviació de diversos quilòmetres fins a una font seca.",
                 footer: "Reps aquest correu perquè t'has donat d'alta a FontApp. Si no has estat tu, ignora'l."
