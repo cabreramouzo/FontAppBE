@@ -28,12 +28,26 @@ SORTIDA = ARREL / "pobles"
 
 
 def qr_svg(url: str) -> str:
-    """Dibuix del QR llest per encastar (només el <path>, sense capçalera XML)."""
+    """Dibuix del QR llest per encastar.
+
+    segno escriu el <svg> amb `width`/`height` en píxels i SENSE `viewBox`. El cartell
+    li dona la mida per CSS (30 mm), i sense `viewBox` el dibuix no s'escala: es queda
+    a la mida original i el que sobra queda TALLAT. A més, cada URL té la seva llargada,
+    i una de més llarga necessita un QR més gran (més mòduls), així que la mida no és
+    sempre la mateixa. Per això li posem el `viewBox` amb la mida real d'aquest QR.
+    """
     import io
+    qr = segno.make(url, error="m")
     buf = io.BytesIO()
-    segno.make(url, error="m").save(buf, kind="svg", scale=10, border=2, dark="#0f172a")
-    svg = buf.getvalue().decode()
-    return re.search(r"(<svg.*</svg>)", svg, re.S).group(1)
+    qr.save(buf, kind="svg", scale=10, border=2, dark="#0f172a")
+    svg = re.search(r"(<svg.*</svg>)", buf.getvalue().decode(), re.S).group(1)
+    width, height = qr.symbol_size(scale=10, border=2)
+    return re.sub(
+        r"<svg[^>]*>",
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}">',
+        svg,
+        count=1,
+    )
 
 
 def genera(codi: str) -> pathlib.Path:
