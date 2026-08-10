@@ -14,7 +14,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getRegionStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole } from '../api/client'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getNewUsers, getRegionStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -23,6 +23,7 @@ import { RolesHelpButton } from '../components/RolesHelp'
 import { timeAgo } from '../lib/time'
 import { canModerate, isAdminRole, isOwner } from '../lib/roles'
 import { WeeklyDigestPanel } from '../components/WeeklyDigestPanel'
+import { lastSeenAt, markUsersSeen } from '../lib/newUsers'
 
 // Cuántas ediciones pendientes se muestran en el panel (la cola). El resto, en /admin/edits.
 const EDITS_INBOX = 15
@@ -37,6 +38,7 @@ export function AdminPage() {
   const [interest, setInterest] = useState<InterestStats | null>(null)
   const [feedback, setFeedback] = useState<Feedback[] | null>(null)
   const [staff, setStaff] = useState<StaffMember[] | null>(null)
+  const [newUsers, setNewUsers] = useState<{ count: number; since: string } | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -53,6 +55,11 @@ export function AdminPage() {
       getRegionStats().then(setRegions).catch(() => setRegions([]))
       getInterestStats().then(setInterest).catch(() => setInterest(null))
       getFeedback().then(setFeedback).catch(() => setFeedback([]))
+      // Altas desde la última visita. Se leen ANTES de marcar como visto, y se marca
+      // en cuanto llegan: el distintivo se apaga, pero el número sigue aquí a la vista.
+      getNewUsers(lastSeenAt())
+        .then((r) => { setNewUsers(r); markUsersSeen() })
+        .catch(() => setNewUsers(null))
     }
     // Gestión de roles (solo owner).
     if (isOwner(user)) getStaff().then(setStaff).catch(() => setStaff([]))
@@ -184,6 +191,23 @@ export function AdminPage() {
       {isOwner(user) && <WeeklyDigestPanel />}
 
       {isAdminRole(user) && (<>
+      <Box component="section" sx={{ mt: 3 }}>
+        <Typography variant="h6" gutterBottom>🙋 {t('admin.newUsers')}</Typography>
+        {newUsers === null ? <Skeleton lines={1} /> : (
+          <>
+            <Typography sx={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>{newUsers.count}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {newUsers.count === 0
+                ? t('admin.newUsersNone')
+                : t('admin.newUsersSince', { date: new Date(newUsers.since).toLocaleString() })}
+            </Typography>
+            <Button component={RouterLink} to="/admin/users" variant="outlined" size="small" sx={{ mt: 1.5 }}>
+              {t('admin.manageUsers')}
+            </Button>
+          </>
+        )}
+      </Box>
+
       <Box component="section" sx={{ mt: 3 }}>
         <Typography variant="h6" gutterBottom>🌍 {t('admin.regions')}</Typography>
         {regions === null && <Skeleton lines={2} />}

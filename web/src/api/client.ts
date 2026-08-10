@@ -216,6 +216,11 @@ export async function resetPassword(token: string, password: string): Promise<vo
   await apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) })
 }
 
+// Altas desde una fecha, para el distintivo de "usuarios nuevos" del panel (admin).
+export async function getNewUsers(since: string): Promise<{ count: number; since: string }> {
+  return apiFetch(`/users/stats/new?since=${encodeURIComponent(since)}`)
+}
+
 // Resumen semanal (solo propietario): la vista previa no envía nada; el POST sí.
 export interface DigestResult {
   candidates: number

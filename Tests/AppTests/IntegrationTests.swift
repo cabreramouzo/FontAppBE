@@ -731,4 +731,39 @@ final class IntegrationTests: XCTestCase {
             })
         }
     }
+
+    /// El contador de altas del distintivo: solo admins, y entiende la fecha que manda
+    /// el navegador (`toISOString()`, con milisegundos).
+    func testNewUsersCount() async throws {
+        try await withApp { app in
+            let adminID = try await register(app, username: "count-admin")
+            try await setRole(app, userID: adminID, role: .admin)
+            let adminTok = try await login(app, username: "count-admin")
+
+            // Un usuario normal no ve la estadística.
+            try await register(app, username: "count-plain")
+            let plainTok = try await login(app, username: "count-plain")
+            try await app.test(.GET, "users/stats/new", headers: bearer(plainTok), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+
+            // Marca de tiempo con milisegundos, como la que manda el navegador.
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            let now = f.string(from: Date())
+
+            try await app.test(.GET, "users/stats/new?since=\(now)", headers: bearer(adminTok), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                // Nadie s'ha registrat després d'aquest instant.
+                XCTAssertEqual(try res.content.decode(NewUsersCount.self).count, 0)
+            })
+
+            try await register(app, username: "count-new-one")
+            try await register(app, username: "count-new-two")
+
+            try await app.test(.GET, "users/stats/new?since=\(now)", headers: bearer(adminTok), afterResponse: { res in
+                XCTAssertEqual(try res.content.decode(NewUsersCount.self).count, 2)
+            })
+        }
+    }
 }

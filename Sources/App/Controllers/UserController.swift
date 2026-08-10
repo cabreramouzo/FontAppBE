@@ -17,6 +17,7 @@ struct UserController: RouteCollection {
         // Editar/borrar requiere token y solo sobre la propia cuenta (self-only).
         let protected = users.grouped(UserToken.authenticator(), User.guardMiddleware())
         protected.get("stats", "regions", use: regionStats)  // admin
+        protected.get("stats", "new", use: newUsers)         // admin: altas recientes
         protected.get("staff", use: staff)                   // owner: moderadores/admins
         protected.get("admin", use: adminList)               // owner: listado completo paginado
         protected.group(":userID") { user in
@@ -93,6 +94,30 @@ struct UserController: RouteCollection {
             GROUP BY signup_country, signup_region
             ORDER BY count DESC, region ASC
             """).all(decoding: RegionCount.self)
+    }
+
+    /// GET /users/stats/new?since=<ISO-8601> — cuántos usuarios se han dado de alta
+    /// desde esa fecha, para el distintivo del panel (solo admins). Sin `since`,
+    /// cuenta los de los últimos 7 días.
+    @Sendable func newUsers(req: Request) async throws -> NewUsersCount {
+        let user = try req.auth.require(User.self)
+        guard user.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
+        let since = req.query[String.self, at: "since"].flatMap(Self.parseISO)
+            ?? Date().addingTimeInterval(-7 * 86_400)
+        let count = try await User.query(on: req.db)
+            .filter(\.$createdAt > since)
+            .filter(\.$anonymizedAt == nil)
+            .count()
+        return NewUsersCount(count: count, since: since)
+    }
+
+    /// El navegador manda `toISOString()`, que lleva milisegundos ("...T10:00:00.123Z");
+    /// `ISO8601DateFormatter` NO los acepta por defecto y devolvía nil en silencio (con
+    /// lo que el contador se iba a "los últimos 7 días" y siempre salía distinto de cero).
+    private static func parseISO(_ value: String) -> Date? {
+        let withMillis = ISO8601DateFormatter()
+        withMillis.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return withMillis.date(from: value) ?? ISO8601DateFormatter().date(from: value)
     }
 
     @Sendable func create(req: Request) async throws -> Response {
@@ -279,6 +304,12 @@ struct CreateUserDTO: Content {
     /// Idioma de la interfaz para localizar el correo de bienvenida (ca/es/gl/eu/en).
     /// Opcional: sin él se envía en catalán, el idioma por defecto de la app.
     var lang: String? = nil
+}
+
+/// Altas desde una fecha, para el distintivo de "usuarios nuevos" del panel.
+struct NewUsersCount: Content {
+    let count: Int
+    let since: Date
 }
 
 /// Fila de la estadística de registros por región.

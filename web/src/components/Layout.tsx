@@ -19,7 +19,8 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import LogoutIcon from '@mui/icons-material/Logout'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
-import { getFlags } from '../api/client'
+import { getFlags, getNewUsers } from '../api/client'
+import { lastSeenAt } from '../lib/newUsers'
 import { Footer } from './Footer'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
@@ -32,12 +33,15 @@ export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
   const { t } = useI18n()
   const [flagCount, setFlagCount] = useState(0)
+  const [newUsers, setNewUsers] = useState(0)
   const [confirmLogout, setConfirmLogout] = useState(false)
 
-  // Nº de denuncias pendientes (solo admins), para el badge de moderación.
+  // Cosas por mirar (solo admins): denuncias pendientes + altas desde la última visita
+  // al panel. Van juntas en el mismo distintivo: es "tienes N cosas nuevas ahí dentro".
   useEffect(() => {
-    if (user?.isAdmin) getFlags().then((f) => setFlagCount(f.length)).catch(() => {})
-    else setFlagCount(0)
+    if (!user?.isAdmin) { setFlagCount(0); setNewUsers(0); return }
+    getFlags().then((f) => setFlagCount(f.length)).catch(() => {})
+    getNewUsers(lastSeenAt()).then((r) => setNewUsers(r.count)).catch(() => {})
   }, [user])
 
   return (
@@ -68,7 +72,7 @@ export function Layout({ children }: { children: ReactNode }) {
               {user.isAdmin && (
                 <Tooltip title={t('admin.title')}>
                   <IconButton component={RouterLink} to="/admin" color="inherit" size="small" aria-label={t('admin.title')}>
-                    <Badge badgeContent={flagCount} color="error">
+                    <Badge badgeContent={flagCount + newUsers} color="error">
                       <GppMaybeIcon />
                     </Badge>
                   </IconButton>

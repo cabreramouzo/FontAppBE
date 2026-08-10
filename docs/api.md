@@ -130,10 +130,15 @@ sobre fuentes que creó o reseñó, más las fuentes nuevas de otros a menos de 
 | Método | Ruta | Auth | Body | OK | Errores |
 |---|---|---|---|---|---|
 | POST | `/users/unsubscribe` | — | `{user, token}` | 200 | 400 (enlace no válido) |
+| GET | `/users/stats/new?since=<ISO>` | Bearer (**admin**) | — | 200 `{count, since}` | 401, 403 |
 | GET | `/admin/weekly-digest` | Bearer (**owner**) | — | 200 `{candidates, recipients[], skipped, failed, sent:false}` | 401, 403 |
 | POST | `/admin/weekly-digest` | Bearer (**owner**) | — | 200 igual, `sent:true` | 401, 403 |
 
-El GET es la **vista previa** (mismo cálculo, sin enviar) y el POST envía al momento desde el
+`/users/stats/new` cuenta las altas desde `since` (sin `since`, los últimos 7 días) para el
+distintivo de "usuarios nuevos" del panel. Acepta la marca de tiempo con o sin milisegundos
+(la del navegador los lleva). La fecha de "última visita" la guarda el navegador del admin.
+
+El GET de `/admin/weekly-digest` es la **vista previa** (mismo cálculo, sin enviar) y el POST envía al momento desde el
 panel de administración. Solo el propietario: es la acción de mayor alcance de la app, escribe
 a todos los usuarios a la vez y no se puede deshacer. Comparte código con el cron
 (`WeeklyDigestSender`), así que la previsualización no puede desviarse de lo que se envía.
