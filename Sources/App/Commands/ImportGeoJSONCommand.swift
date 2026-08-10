@@ -96,10 +96,12 @@ struct ImportGeoJSONCommand: AsyncCommand {
                     // Si la existente tiene un nombre genérico (p. ej. "Font"/"Manantial"
                     // de OSM) y el topónimo del ICGC es más específico, lo mejoramos.
                     if let font = hit.font, Self.isGeneric(font.name), !Self.isGeneric(p.name), font.name != p.name {
-                        if !signature.dryRun {
-                            font.name = p.name
-                            try await font.save(on: db)
-                        }
+                        // El nombre se cambia SIEMPRE en memoria, también en el ensayo en
+                        // seco: si no, un segundo punto del origen junto a la misma fuente
+                        // la vería aún genérica y contaría otro renombrado que en la
+                        // importación real no ocurre (el ensayo inflaba la cifra).
+                        font.name = p.name
+                        if !signature.dryRun { try await font.save(on: db) }
                         renamed += 1
                     } else {
                         skipped += 1
