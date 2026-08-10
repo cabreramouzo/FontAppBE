@@ -33,6 +33,13 @@ function storeCredential(username: string, password: string) {
   }
 }
 
+// Tras registrarse hacemos una navegación REAL a "/" (para que el navegador ofrezca
+// guardar la contraseña), y eso recarga la app entera: cualquier estado en memoria se
+// pierde, incluido el "acabo de registrarme" que abre la bienvenida. Lo dejamos escrito
+// aquí para recogerlo al arrancar. `sessionStorage` y no `localStorage`: vale para esta
+// pestaña y este rato, que es justo lo que dura el paso entre el registro y la portada.
+const JUST_REGISTERED_KEY = 'fontapp_just_registered'
+
 const AuthContext = createContext<AuthState | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -43,6 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function restore() {
+      // Se consume una sola vez: si el usuario recarga la portada, ya no reaparece.
+      if (sessionStorage.getItem(JUST_REGISTERED_KEY)) {
+        sessionStorage.removeItem(JUST_REGISTERED_KEY)
+        setJustRegistered(true)
+      }
       const stored = getToken()
       if (stored) {
         void saveSessionForSync(stored)
@@ -75,7 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ name, username, email, password, lang: document.documentElement.lang || undefined }),
     })
     await login(username, password)
-    setJustRegistered(true) // dispara el pop-up de bienvenida
+    // Sobrevive a la recarga que hace RegisterPage justo después (ver JUST_REGISTERED_KEY).
+    // No lo ponemos también en memoria: se vería un parpadeo de la bienvenida sobre el
+    // formulario de registro antes de que la recarga se lleve por delante el estado.
+    // El pop-up lo abre `restore()` ya en la portada.
+    sessionStorage.setItem(JUST_REGISTERED_KEY, '1')
   }
 
   async function refresh() {
