@@ -1,1 +1,8 @@
+# Enlaces cortos por campaña: el parámetro de seguimiento no se ve al compartirlos.
+# 302 (temporal) a propósito: así se puede reapuntar un enlace ya publicado.
+# OJO: van ANTES del catch-all del SPA, que si no se los come.
+/in     /?p=linkedin      302
+/ig     /?p=instagram     302
+/wa     /?p=whatsapp      302
+
 /*    /index.html   200
