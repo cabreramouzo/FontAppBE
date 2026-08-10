@@ -90,6 +90,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Zona de la fuente: `fonts.country` y `fonts.region` (migración `AddRegionToFont`, nullable) para
   funciones por zona (admins por región, filtros). `region` = **primera división administrativa**
   del país (comunidad autónoma en ES, région en FR, distrito en PT…), consistente en todo el mundo.
+  Al **crear** una fuente se heredan de la fuente clasificada más cercana (≤55 km, en
+  segundo plano; ver `FontController.inheritZone`): instantáneo y sin cargar fronteras en
+  el servidor. Si en la zona no hay ninguna clasificada, quedan nulas (no se inventa nada).
+  La autoridad sigue siendo `populate-regions`, que corrige los casos de frontera.
   Se pueblan **offline** con `populate-regions <fronteras.geojson>` (point-in-polygon contra Natural
   Earth admin-1 o GADM nivel 1; sin terceros). Distinto del `GeoLocator`, que es país por IP del
   registro, no por coordenadas del punto. **Pendiente:** poblarlas en producción y, más adelante,

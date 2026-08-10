@@ -833,4 +833,35 @@ final class IntegrationTests: XCTestCase {
             })
         }
     }
+
+    /// Una fuente nueva hereda país/región de la fuente clasificada más cercana, y no
+    /// se inventa nada si en la zona no hay ninguna.
+    func testNewFontInheritsZoneFromNearest() async throws {
+        try await withApp { app in
+            try await register(app, username: "zone-user")
+            let token = try await login(app, username: "zone-user")
+
+            // Vecina ya clasificada, a ~1 km.
+            let neighbourID = try await createFont(app, token: token, name: "Veïna", lat: 41.800, long: 2.100)
+            guard let neighbour = try await Font.find(neighbourID, on: app.db) else { return XCTFail("no trobada") }
+            neighbour.country = "Spain"
+            neighbour.region = "Barcelona"
+            try await neighbour.save(on: app.db)
+
+            let newID = try await createFont(app, token: token, name: "Nova a prop", lat: 41.809, long: 2.100)
+            var created = try await Font.find(newID, on: app.db)
+            for _ in 0..<50 where created?.region == nil {
+                try await Task.sleep(nanoseconds: 100_000_000)
+                created = try await Font.find(newID, on: app.db)
+            }
+            XCTAssertEqual(created?.region, "Barcelona")
+            XCTAssertEqual(created?.country, "Spain")
+
+            // Lejos de todo: sin vecina clasificada, se queda sin zona (no se inventa).
+            let farID = try await createFont(app, token: token, name: "Lluny", lat: -33.9, long: 151.2)
+            try await Task.sleep(nanoseconds: 500_000_000)
+            let far = try await Font.find(farID, on: app.db)
+            XCTAssertNil(far?.region)
+        }
+    }
 }

@@ -66,9 +66,46 @@ struct FontController: RouteCollection {
         let font = Font(name: dto.name, latitude: dto.latitude, longitude: dto.longitude, image: dto.image, description: dto.description, source: dto.source, drinkable: dto.drinkable, creatorID: try user.requireID())
         try await font.save(on: req.db)
 
+        // País y región, heredados de la fuente conocida más cercana (ver `inheritZone`).
+        // En segundo plano: es un dato para filtros y estadística, no algo que deba
+        // hacer esperar a quien está en el monte con una barra de cobertura.
+        let app = req.application
+        let fontID = try font.requireID()
+        Task.detached { await Self.inheritZone(fontID: fontID, lat: dto.latitude, long: dto.longitude, db: app.db, logger: app.logger) }
+
         let response = Response(status: .created)
         try response.content.encode(font)
         return response
+    }
+
+    /// Copia país/región de la fuente ya clasificada más cercana.
+    ///
+    /// La alternativa —resolver el punto contra las fronteras reales— obligaría a llevar
+    /// el GeoJSON dentro del contenedor y tenerlo en memoria para usarlo cuatro veces al
+    /// día. Con miles de fuentes ya clasificadas, la más próxima suele estar a menos de
+    /// un par de kilómetros y su zona es la buena. Los pocos casos de frontera los corrige
+    /// después `populate-regions`, que sigue siendo la autoridad.
+    static func inheritZone(fontID: UUID, lat: Double, long: Double, db: any Database, logger: Logger) async {
+        // ~55 km de caja: si en ese radio no hay ninguna fuente clasificada, es que la
+        // zona no está poblada y no hay nada mejor que adivinar; mejor dejarlo nulo.
+        let delta = 0.5
+        do {
+            let candidates = try await Font.query(on: db)
+                .filter(\.$region != nil)
+                .filter(\.$latitude >= lat - delta).filter(\.$latitude <= lat + delta)
+                .filter(\.$longitude >= long - delta).filter(\.$longitude <= long + delta)
+                .limit(500)
+                .all()
+            guard let nearest = candidates.min(by: {
+                haversineKm(lat, long, $0.latitude, $0.longitude) < haversineKm(lat, long, $1.latitude, $1.longitude)
+            }) else { return }
+            guard let font = try await Font.find(fontID, on: db) else { return }
+            font.country = nearest.country
+            font.region = nearest.region
+            try await font.save(on: db)
+        } catch {
+            logger.warning("No s'ha pogut deduir la zona de la font \(fontID): \(error)")
+        }
     }
 
     /// GET /fonts?page=&per=&search= — listado paginado; `search` filtra por nombre (ILIKE, insensible a mayúsculas).

@@ -398,6 +398,17 @@ Dos señales fiables (no adivines por el reloj):
      `fly ssh console -a fontapp -C "/app/App migrate --yes"`).
    - **2xx** (p. ej. `204`) → desplegado **y** migrado. ✅
 
+### Zonas de las fuentes (país/región)
+
+Las fuentes nuevas **heredan la zona de la más cercana ya clasificada**, así que no se
+quedan en blanco. Eso no sustituye a `populate-regions`: pásalo después de cada importación
+grande y de vez en cuando, para corregir los puntos cerca de una frontera y clasificar zonas
+donde todavía no hay ninguna fuente con región.
+
+```bash
+fly ssh console -a fontapp -C "/app/App populate-regions /app/fronteres.geojson"
+```
+
 ## Límites de uso (anti-bot)
 
 Todos los endpoints de escritura llevan un límite por IP y ventana deslizante
