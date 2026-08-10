@@ -18,6 +18,7 @@ func routes(_ app: Application) throws {
     try app.register(collection: FontFavoriteController())
     try app.register(collection: FlagController())
     try app.register(collection: AdminMailController())
+    try app.register(collection: ActivityController())
     try app.register(collection: ImageController())
     try app.register(collection: InterestController())
     try app.register(collection: FeedbackController())

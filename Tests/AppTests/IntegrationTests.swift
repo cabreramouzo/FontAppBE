@@ -797,4 +797,40 @@ final class IntegrationTests: XCTestCase {
             XCTAssertNil(UserController.cleanSource("///"))
         }
     }
+
+    /// La actividad reciente mezcla los cuatro tipos de movimiento, más nuevos primero,
+    /// y es solo para admins.
+    func testActivityFeed() async throws {
+        try await withApp { app in
+            let adminID = try await register(app, username: "act-admin")
+            try await setRole(app, userID: adminID, role: .admin)
+            let adminTok = try await login(app, username: "act-admin")
+
+            try await register(app, username: "act-user")
+            let userTok = try await login(app, username: "act-user")
+            try await app.test(.GET, "activity", headers: bearer(userTok), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+            try await app.test(.GET, "activity", afterResponse: { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            })
+
+            let fontID = try await createFont(app, token: userTok, name: "Font activitat", lat: 41.8, long: 2.1)
+            _ = try await addComment(app, token: userTok, fontID: fontID, body: "Raja bé")
+
+            try await app.test(.GET, "activity?limit=10", headers: bearer(adminTok), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let items = try res.content.decode([ActivityItem].self)
+                XCTAssertTrue(items.contains { $0.kind == .fontAdded && $0.fontName == "Font activitat" })
+                XCTAssertTrue(items.contains { $0.kind == .review && $0.author == "act-user" })
+                // Orden: del más reciente al más antiguo.
+                XCTAssertEqual(items.map(\.createdAt), items.map(\.createdAt).sorted(by: >))
+            })
+
+            // Filtro por zona: la fuente no tiene región, así que no sale.
+            try await app.test(.GET, "activity?region=Barcelona", headers: bearer(adminTok), afterResponse: { res in
+                XCTAssertEqual(try res.content.decode([ActivityItem].self).count, 0)
+            })
+        }
+    }
 }

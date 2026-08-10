@@ -21,6 +21,7 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { UnsubscribePage } from './pages/UnsubscribePage'
+import { AdminActivityPage } from './pages/AdminActivityPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 
 const LegalPage = lazy(() => import('./pages/LegalPage').then((m) => ({ default: m.LegalPage })))
@@ -52,6 +53,7 @@ export default function App() {
                   <Route path="/admin" element={<AdminPage />} />
                   <Route path="/admin/users" element={<AdminUsersPage />} />
                   <Route path="/admin/edits" element={<AdminEditsPage />} />
+                  <Route path="/admin/activity" element={<AdminActivityPage />} />
                   <Route path="/users/:id" element={<UserProfilePage />} />
                   <Route path="/unsubscribe" element={<UnsubscribePage />} />
                   <Route path="/legal" element={<LegalPage />} />

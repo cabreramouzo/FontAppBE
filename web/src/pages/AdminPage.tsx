@@ -23,6 +23,7 @@ import { RolesHelpButton } from '../components/RolesHelp'
 import { timeAgo } from '../lib/time'
 import { canModerate, isAdminRole, isOwner } from '../lib/roles'
 import { WeeklyDigestPanel } from '../components/WeeklyDigestPanel'
+import { ActivityFeed } from '../components/ActivityFeed'
 import { lastSeenAt, markUsersSeen } from '../lib/newUsers'
 
 // Cuántas ediciones pendientes se muestran en el panel (la cola). El resto, en /admin/edits.
@@ -110,6 +111,17 @@ export function AdminPage() {
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
       <Typography variant="h4" sx={{ my: 1, fontWeight: 800 }}>🛠️ {t('admin.title')}</Typography>
       {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
+
+      {isAdminRole(user) && (
+        <Box component="section" sx={{ mt: 3 }}>
+          <Typography variant="h6" gutterBottom>📡 {t('activity.title')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('activity.intro')}</Typography>
+          <ActivityFeed limit={15} showFilter />
+          <Button component={RouterLink} to="/admin/activity" variant="outlined" size="small" sx={{ mt: 1.5 }}>
+            {t('activity.seeAll')}
+          </Button>
+        </Box>
+      )}
 
       <Box component="section" sx={{ mt: 3 }}>
         <Typography variant="h6" gutterBottom>🛡️ {t('admin.flags')}</Typography>

@@ -216,6 +216,26 @@ export async function resetPassword(token: string, password: string): Promise<vo
   await apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) })
 }
 
+// Actividad reciente (solo admin de momento): fuentes nuevas, reseñas, incidencias
+// y ediciones mezcladas en una línea de tiempo.
+export interface ActivityItem {
+  kind: 'fontAdded' | 'review' | 'report' | 'edit'
+  fontID: string
+  fontName: string
+  region: string | null
+  author: string | null
+  waterStatus: string | null
+  text: string | null
+  createdAt: string
+}
+
+export async function getActivity(opts: { limit?: number; region?: string } = {}): Promise<ActivityItem[]> {
+  const q = new URLSearchParams()
+  if (opts.limit) q.set('limit', String(opts.limit))
+  if (opts.region) q.set('region', opts.region)
+  return apiFetch(`/activity?${q}`)
+}
+
 // Altas por código de cartel (?p=…). `source` nulo = llegaron sin código.
 export async function getSourceStats(): Promise<{ source: string | null; count: number }[]> {
   return apiFetch('/users/stats/sources')

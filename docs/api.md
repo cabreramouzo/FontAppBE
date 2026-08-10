@@ -132,6 +132,7 @@ sobre fuentes que creó o reseñó, más las fuentes nuevas de otros a menos de 
 | POST | `/users/unsubscribe` | — | `{user, token}` | 200 | 400 (enlace no válido) |
 | GET | `/users/stats/new?since=<ISO>` | Bearer (**admin**) | — | 200 `{count, since}` | 401, 403 |
 | GET | `/users/stats/sources` | Bearer (**admin**) | — | 200 `[{source, count}]` | 401, 403 |
+| GET | `/activity?limit=&region=` | Bearer (**admin**) | — | 200 `[ActivityItem]` | 401, 403 |
 | GET | `/admin/weekly-digest` | Bearer (**owner**) | — | 200 `{candidates, recipients[], skipped, failed, sent:false}` | 401, 403 |
 | POST | `/admin/weekly-digest` | Bearer (**owner**) | — | 200 igual, `sent:true` | 401, 403 |
 
@@ -145,6 +146,13 @@ central del operador en la cabecera de comarca, no al pueblo real.
 `/users/stats/new` cuenta las altas desde `since` (sin `since`, los últimos 7 días) para el
 distintivo de "usuarios nuevos" del panel. Acepta la marca de tiempo con o sin milisegundos
 (la del navegador los lleva). La fecha de "última visita" la guarda el navegador del admin.
+
+`/activity` es la línea de tiempo de todo lo que se mueve: fuentes nuevas, reseñas,
+incidencias y ediciones, mezcladas y ordenadas por fecha (`limit` 1–100, por defecto 30).
+Cada `ActivityItem` trae `kind` (`fontAdded`/`review`/`report`/`edit`), la fuente, la zona,
+el autor (nulo si la cuenta se anonimizó o el dato es importado), el estado del agua si lo
+hay y el texto. **Solo admins de momento**, pero no expone nada que no esté ya en la ficha
+pública de cada fuente: abrirlo al público es cambiar el guard.
 
 El GET de `/admin/weekly-digest` es la **vista previa** (mismo cálculo, sin enviar) y el POST envía al momento desde el
 panel de administración. Solo el propietario: es la acción de mayor alcance de la app, escribe

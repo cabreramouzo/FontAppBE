@@ -55,6 +55,11 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Config por env: `DATABASE_URL` (o `DATABASE_*`), `WEB_ORIGIN` (CORS en prod), `AUTO_MIGRATE=true`.
 - Web: build con `VITE_API_URL=<origen del backend>`. Guía completa: [DEPLOY.md](DEPLOY.md).
 
+## Panel de administración
+- Actividad reciente (`ActivityController` → `/activity`, `ActivityFeed.tsx`): fuentes,
+  reseñas, incidencias y ediciones en una línea de tiempo, con filtro por zona. Solo admin;
+  pensado para abrirse al público sin cambios (no expone nada que no esté ya en la ficha).
+
 ## Carteles / campañas
 - Cartel A5 en catalán en `flyer/` (HTML editable + PDF). `flyer/genera-cartells.py <codis>`
   genera una copia por pueblo con su QR y su código (`fontapp.net/?p=castellcir`).
