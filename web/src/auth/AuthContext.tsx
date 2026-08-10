@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { UserResponse } from '../api/types'
 import { apiFetch, getToken, loginRequest, setToken } from '../api/client'
 import { saveSessionForSync } from '../lib/outbox'
+import { storedSource } from '../lib/campaign'
 
 interface AuthState {
   user: UserResponse | null
@@ -84,7 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       // `lang` localiza el correo de bienvenida. Lo leemos del <html lang>, que fija
       // I18nContext, para no tener que pasar el idioma por toda la cadena de llamadas.
-      body: JSON.stringify({ name, username, email, password, lang: document.documentElement.lang || undefined }),
+      // `source` es el código del cartel por el que llegó (?p=…), si venía con uno.
+      body: JSON.stringify({
+        name, username, email, password,
+        lang: document.documentElement.lang || undefined,
+        source: storedSource(),
+      }),
     })
     await login(username, password)
     // Sobrevive a la recarga que hace RegisterPage justo después (ver JUST_REGISTERED_KEY).

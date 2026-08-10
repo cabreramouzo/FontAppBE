@@ -14,7 +14,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getNewUsers, getRegionStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole } from '../api/client'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getNewUsers, getRegionStats, getSourceStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -39,6 +39,7 @@ export function AdminPage() {
   const [feedback, setFeedback] = useState<Feedback[] | null>(null)
   const [staff, setStaff] = useState<StaffMember[] | null>(null)
   const [newUsers, setNewUsers] = useState<{ count: number; since: string } | null>(null)
+  const [sources, setSources] = useState<{ source: string | null; count: number }[] | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -60,6 +61,7 @@ export function AdminPage() {
       getNewUsers(lastSeenAt())
         .then((r) => { setNewUsers(r); markUsersSeen() })
         .catch(() => setNewUsers(null))
+      getSourceStats().then(setSources).catch(() => setSources([]))
     }
     // Gestión de roles (solo owner).
     if (isOwner(user)) getStaff().then(setStaff).catch(() => setStaff([]))
@@ -206,6 +208,21 @@ export function AdminPage() {
             </Button>
           </>
         )}
+      </Box>
+
+      <Box component="section" sx={{ mt: 3 }}>
+        <Typography variant="h6" gutterBottom>📌 {t('admin.sources')}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('admin.sourcesHint')}</Typography>
+        {sources === null && <Skeleton lines={2} />}
+        {sources?.length === 0 && <Typography color="text.secondary">{t('admin.sourcesEmpty')}</Typography>}
+        <List disablePadding>
+          {sources?.map((s) => (
+            <ListItem key={s.source ?? 'direct'} divider disableGutters
+              secondaryAction={<Typography sx={{ fontWeight: 700 }}>{s.count}</Typography>}>
+              <ListItemText primary={s.source ?? t('admin.sourceDirect')} />
+            </ListItem>
+          ))}
+        </List>
       </Box>
 
       <Box component="section" sx={{ mt: 3 }}>

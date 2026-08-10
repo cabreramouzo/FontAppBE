@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { startOutboxAutoFlush } from './lib/outbox'
+import { captureSource } from './lib/campaign'
 
 // PWA (Android/Chromium): captura `beforeinstallprompt` LO ANTES posible. Chrome
 // puede dispararlo antes de que React monte; si en ese instante no hay listener, el
@@ -65,6 +66,9 @@ if (import.meta.env.PROD && cfAnalyticsToken) {
   beacon.setAttribute('data-cf-beacon', JSON.stringify({ token: cfAnalyticsToken }))
   document.head.appendChild(beacon)
 }
+
+// Guarda el código del cartel (?p=…) antes de que nada toque la URL.
+captureSource()
 
 // Envía lo que quedó guardado sin cobertura: al arrancar y al recuperar la red.
 startOutboxAutoFlush()

@@ -766,4 +766,29 @@ final class IntegrationTests: XCTestCase {
             })
         }
     }
+
+    /// El código del cartel (`?p=…`) se guarda con el alta, y entra saneado a la BD:
+    /// lo escribe quien quiera en la URL, así que nada de HTML ni cadenas kilométricas.
+    func testSignupSourceIsStoredAndCleaned() async throws {
+        try await withApp { app in
+            try await app.test(.POST, "users", beforeRequest: { req in
+                var dto = CreateUserDTO(name: "Cartell", username: "src-user", email: "src@example.com", password: "password123")
+                dto.source = "  CASTELLCIR/<script>x</script> "
+                try req.content.encode(dto)
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+            })
+            let user = try await User.query(on: app.db).filter(\.$username == "src-user").first()
+            XCTAssertEqual(user?.signupSource, "castellcirscriptxscript")
+
+            // Sin código: queda nulo, no cadena vacía.
+            try await register(app, username: "src-none")
+            let plain = try await User.query(on: app.db).filter(\.$username == "src-none").first()
+            XCTAssertNil(plain?.signupSource)
+
+            // Tope de longitud.
+            XCTAssertEqual(UserController.cleanSource(String(repeating: "a", count: 100))?.count, 40)
+            XCTAssertNil(UserController.cleanSource("///"))
+        }
+    }
 }

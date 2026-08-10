@@ -216,6 +216,11 @@ export async function resetPassword(token: string, password: string): Promise<vo
   await apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) })
 }
 
+// Altas por código de cartel (?p=…). `source` nulo = llegaron sin código.
+export async function getSourceStats(): Promise<{ source: string | null; count: number }[]> {
+  return apiFetch('/users/stats/sources')
+}
+
 // Altas desde una fecha, para el distintivo de "usuarios nuevos" del panel (admin).
 export async function getNewUsers(since: string): Promise<{ count: number; since: string }> {
   return apiFetch(`/users/stats/new?since=${encodeURIComponent(since)}`)

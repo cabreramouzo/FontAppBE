@@ -75,7 +75,7 @@ Login con credenciales inválidas → **401**.
 
 | Método | Ruta | 🔒 | Cuerpo | Éxito | Errores |
 |--------|------|----|--------|-------|---------|
-| POST | `/users` | — | `{name, username≥3, email, password≥8, lang?}` | 201 `UserResponse` | 400, 409 (username/email en uso) |
+| POST | `/users` | — | `{name, username≥3, email, password≥8, lang?, source?}` | 201 `UserResponse` | 400, 409 (username/email en uso) |
 | GET | `/users/:id` | — | — | 200 `UserResponse` (sin email) | 404 |
 | GET | `/users/:id/fonts` | — | — | 200 `[Font]` (creadas por ese usuario) | 404 |
 | GET | `/users/:id/comments` | — | — | 200 `[reseña]` (con `fontName`) | 404 |
@@ -131,8 +131,16 @@ sobre fuentes que creó o reseñó, más las fuentes nuevas de otros a menos de 
 |---|---|---|---|---|---|
 | POST | `/users/unsubscribe` | — | `{user, token}` | 200 | 400 (enlace no válido) |
 | GET | `/users/stats/new?since=<ISO>` | Bearer (**admin**) | — | 200 `{count, since}` | 401, 403 |
+| GET | `/users/stats/sources` | Bearer (**admin**) | — | 200 `[{source, count}]` | 401, 403 |
 | GET | `/admin/weekly-digest` | Bearer (**owner**) | — | 200 `{candidates, recipients[], skipped, failed, sent:false}` | 401, 403 |
 | POST | `/admin/weekly-digest` | Bearer (**owner**) | — | 200 igual, `sent:true` | 401, 403 |
+
+`source` es el código del cartel o campaña por el que llegó el usuario (`fontapp.net/?p=castellcir`,
+`?p=whatsapp-ad`). La web lo guarda en la primera visita —gana la primera, no la última— y lo manda
+al registrarse; `/users/stats/sources` agrupa las altas por ese código (nulo = llegaron sin código).
+Se sanea al guardarlo: minúsculas, solo `a-z0-9-_` y como mucho 40 caracteres, porque lo escribe
+cualquiera en la URL. Resuelve lo que el geo-IP no puede: en un pueblo pequeño la IP resuelve a la
+central del operador en la cabecera de comarca, no al pueblo real.
 
 `/users/stats/new` cuenta las altas desde `since` (sin `since`, los últimos 7 días) para el
 distintivo de "usuarios nuevos" del panel. Acepta la marca de tiempo con o sin milisegundos

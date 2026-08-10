@@ -33,6 +33,8 @@ final class User: Model, @unchecked Sendable {
     @Field(key: "weekly_digest") var weeklyDigest: Bool
     // Idioma con el que se registró, para los correos que no nacen de una petición suya.
     @OptionalField(key: "lang") var lang: String?
+    // Código del cartel por el que llegó (`?p=castellcir`), si venía con uno.
+    @OptionalField(key: "signup_source") var signupSource: String?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
@@ -40,7 +42,7 @@ final class User: Model, @unchecked Sendable {
     init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, role: UserRole = .user,
          emailPublic: Bool = false, namePublic: Bool = true,
          signupCountry: String? = nil, signupRegion: String? = nil, signupCity: String? = nil,
-         weeklyDigest: Bool = true, lang: String? = nil) {
+         weeklyDigest: Bool = true, lang: String? = nil, signupSource: String? = nil) {
         self.id = id
         self.name = name
         self.username = username
@@ -54,6 +56,7 @@ final class User: Model, @unchecked Sendable {
         self.signupCity = signupCity
         self.weeklyDigest = weeklyDigest
         self.lang = lang
+        self.signupSource = signupSource
     }
 }
 

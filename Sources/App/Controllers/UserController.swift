@@ -18,6 +18,7 @@ struct UserController: RouteCollection {
         let protected = users.grouped(UserToken.authenticator(), User.guardMiddleware())
         protected.get("stats", "regions", use: regionStats)  // admin
         protected.get("stats", "new", use: newUsers)         // admin: altas recientes
+        protected.get("stats", "sources", use: sourceStats)  // admin: altas por cartel
         protected.get("staff", use: staff)                   // owner: moderadores/admins
         protected.get("admin", use: adminList)               // owner: listado completo paginado
         protected.group(":userID") { user in
@@ -111,6 +112,16 @@ struct UserController: RouteCollection {
         return NewUsersCount(count: count, since: since)
     }
 
+    /// El codi del cartell l'escriu qui vulgui a la URL, així que entra a la BD net:
+    /// minúscules, sense espais, només lletres/números/guions i com a molt 40 caràcters.
+    static func cleanSource(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789-_")
+        let clean = String(value.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            .unicodeScalars.filter { allowed.contains($0) }.prefix(40))
+        return clean.isEmpty ? nil : clean
+    }
+
     /// El navegador manda `toISOString()`, que lleva milisegundos ("...T10:00:00.123Z");
     /// `ISO8601DateFormatter` NO los acepta por defecto y devolvía nil en silencio (con
     /// lo que el contador se iba a "los últimos 7 días" y siempre salía distinto de cero).
@@ -118,6 +129,21 @@ struct UserController: RouteCollection {
         let withMillis = ISO8601DateFormatter()
         withMillis.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return withMillis.date(from: value) ?? ISO8601DateFormatter().date(from: value)
+    }
+
+    /// GET /users/stats/sources — altas por código de cartel (`?p=…`), solo admins.
+    /// Las que llegaron sin código salen con `source` nulo ("directo").
+    @Sendable func sourceStats(req: Request) async throws -> [SourceCount] {
+        let user = try req.auth.require(User.self)
+        guard user.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
+        guard let sql = req.db as? SQLDatabase else { throw Abort(.internalServerError) }
+        return try await sql.raw("""
+            SELECT signup_source AS source, COUNT(*)::int AS count
+            FROM users
+            WHERE anonymized_at IS NULL
+            GROUP BY signup_source
+            ORDER BY count DESC, source ASC
+            """).all(decoding: SourceCount.self)
     }
 
     @Sendable func create(req: Request) async throws -> Response {
@@ -144,7 +170,8 @@ struct UserController: RouteCollection {
             signupCountry: geo?.country,
             signupRegion: geo?.region,
             signupCity: geo?.city,
-            lang: dto.lang
+            lang: dto.lang,
+            signupSource: Self.cleanSource(dto.source)
         )
         try await user.save(on: req.db)
 
@@ -304,12 +331,20 @@ struct CreateUserDTO: Content {
     /// Idioma de la interfaz para localizar el correo de bienvenida (ca/es/gl/eu/en).
     /// Opcional: sin él se envía en catalán, el idioma por defecto de la app.
     var lang: String? = nil
+    /// Codi del cartell pel qual va arribar (`?p=castellcir`). Opcional.
+    var source: String? = nil
 }
 
 /// Altas desde una fecha, para el distintivo de "usuarios nuevos" del panel.
 struct NewUsersCount: Content {
     let count: Int
     let since: Date
+}
+
+/// Fila de la estadística de altas por cartel (`source` nulo = llegaron sin código).
+struct SourceCount: Content {
+    let source: String?
+    let count: Int
 }
 
 /// Fila de la estadística de registros por región.

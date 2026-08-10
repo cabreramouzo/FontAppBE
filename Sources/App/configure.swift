@@ -122,6 +122,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddReviewedAtToFontEdit()) // triaje de ediciones (revisada ✓)
     app.migrations.add(AddWeeklyDigestToUser()) // preferencia: resumen semanal por correo
     app.migrations.add(AddLangToUser())         // idioma del usuario (correos sin petición)
+    app.migrations.add(AddSignupSourceToUser()) // cartel por el que llegó (?p=…)
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

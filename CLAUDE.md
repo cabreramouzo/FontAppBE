@@ -55,6 +55,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Config por env: `DATABASE_URL` (o `DATABASE_*`), `WEB_ORIGIN` (CORS en prod), `AUTO_MIGRATE=true`.
 - Web: build con `VITE_API_URL=<origen del backend>`. Guía completa: [DEPLOY.md](DEPLOY.md).
 
+## Carteles / campañas
+- Cartel A5 en catalán en `flyer/` (HTML editable + PDF). `flyer/genera-cartells.py <codis>`
+  genera una copia por pueblo con su QR y su código (`fontapp.net/?p=castellcir`).
+- Ese código se guarda en `users.signup_source` al registrarse (primera visita gana) y se
+  agrupa en el panel de administración. Sirve para saber qué cartel/campaña funciona, que es
+  justo lo que el geo-IP del registro NO puede decir (resuelve a la cabecera de comarca).
+
 ## Pendiente / deuda
 - `R2ImageStorage` (Soto) compila pero **sin probar** contra un bucket real (necesita credenciales `R2_*`); en local usa disco.
 - Correo (`MailSender`): en dev `LogMailSender` (solo loguea); en prod `ResendMailSender` si hay `RESEND_API_KEY` + `MAIL_FROM` (requiere dominio propio con SPF/DKIM/DMARC). Sin probar contra Resend real.
