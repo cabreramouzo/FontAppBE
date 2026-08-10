@@ -108,3 +108,8 @@ iOSInjectionProject/
 
 # Datos OSM descargados (no versionar)
 fonts-*.json
+
+# Volcados de la base de datos: contienen correos y hashes de contraseñas.
+# El repo es PÚBLICO: que no se cuelen ni por accidente.
+*.dump
+*.sql.gz
