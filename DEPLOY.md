@@ -124,7 +124,7 @@ Las imágenes se **comprimen en el cliente** (redimensionado + JPEG) antes de su
 
 Dos caras separadas (no confundir):
 
-- **Enviar** (transaccional, desde la app: reset de contraseña) → **Resend**.
+- **Enviar** (transaccional, desde la app: bienvenida, resumen semanal, reset de contraseña) → **Resend**.
 - **Recibir** contacto humano en `admin@fontapp.net` → **iCloud+** (Custom Email Domain).
 
 El envío es **pluggable** (`MailSender`): en dev, `LogMailSender` solo loguea el enlace;
@@ -167,14 +167,85 @@ swift run App send-weekly-digest --dry-run    # muestra a quién se enviaría, s
 swift run App send-weekly-digest --user pepe  # solo a un usuario (pruebas)
 ```
 
-En Fly.io, una máquina programada que ejecuta el comando y se apaga:
+**Dónde poner el cron.** Dos opciones, ambas sin servidor extra:
+
+**a) Máquina programada de Fly** (lo más simple, pero no eliges el día ni la hora: Fly solo
+admite `hourly`/`daily`/`weekly`/`monthly` y decide él cuándo dentro de esa ventana):
 
 ```bash
-fly machine run . --schedule weekly -a fontapp --command "App send-weekly-digest"
+fly machine run . --schedule weekly -a fontapp --entrypoint "/app/App" --command "send-weekly-digest"
 ```
 
-Requiere `APP_SECRET` (enlaces de baja estables), `WEB_ORIGIN` (enlaces del correo) y las
-variables de Resend. Antes del primer envío real, pásale `--dry-run` y revisa el recuento.
+**b) GitHub Actions** (recomendada: eliges día y hora exactos — el resumen luce más el jueves
+o viernes por la tarde, antes de las salidas del fin de semana). Reutiliza el `FLY_API_TOKEN`
+que ya usa el despliegue automático. Crea `.github/workflows/weekly-digest.yml` **cuando quieras
+activarlo** (en cuanto esté en `main` empieza a enviar correo de verdad):
+
+```yaml
+name: weekly-digest
+on:
+  schedule:
+    - cron: '0 16 * * 4'   # jueves 16:00 UTC — OJO: UTC, no hora local
+  workflow_dispatch:        # permite lanzarlo a mano desde la pestaña Actions
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl ssh console -a fontapp -C "/app/App send-weekly-digest"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+```
+
+Prueba primero con `workflow_dispatch` y `--dry-run` en el comando; cuando el recuento cuadre,
+quítalo. Si la máquina de Fly está parada por autostop, `ssh console` la despierta.
+
+Requiere `APP_SECRET` (ver abajo), `WEB_ORIGIN` (enlaces del correo) y las variables de
+Resend. Antes del primer envío real, pásale `--dry-run` y revisa el recuento.
+
+### `APP_SECRET` — firma de los enlaces de baja
+
+El enlace de «dejar de recibirlo» del resumen semanal se pulsa **desde el buzón, sin sesión
+iniciada**. Para poder fiarnos de una petición anónima que dice «da de baja al usuario X», el
+enlace lleva una firma **HMAC-SHA256** del id de usuario hecha con `APP_SECRET`:
+
+```
+/unsubscribe?u=<id-de-usuario>&t=HMAC-SHA256(APP_SECRET, id-de-usuario)
+```
+
+El servidor recalcula la firma y compara. Sin la clave no se puede fabricar una válida, así que
+**nadie puede dar de baja a otro** (ni reusar su propio enlace cambiando el id). No se guarda
+nada en la BD y el enlace **no caduca**: alguien puede pulsar el de un correo de hace meses.
+
+Alternativa a obligar a iniciar sesión para darse de baja, que es justo lo que no hay que hacer:
+quien no consigue salir en dos clics pulsa «esto es spam», y eso hunde la reputación del dominio
+para **todos** los correos, incluido el de recuperar contraseña.
+
+**Generar y fijar la clave** (obligatorio en producción):
+
+```bash
+openssl rand -hex 32
+```
+
+```bash
+fly secrets set APP_SECRET='<lo que salga>' -a fontapp
+```
+
+- **Si falta**, la app usa una clave aleatoria por proceso: los enlaces de baja dejan de valer en
+  **cada reinicio o despliegue** y el usuario se encuentra un «enlace no válido». Se avisa en el
+  log al arrancar en producción, pero no falla el arranque.
+- **No la cambies** salvo filtración: rotarla invalida los enlaces de todos los correos ya
+  enviados. Si hay que rotar, hazlo justo **después** de un envío semanal, no antes.
+- En dev hay un valor fijo y deliberadamente tonto en `env.development` (`dev-only-not-a-secret`)
+  para que los enlaces locales sobrevivan a los reinicios. No protege nada y por eso sí está en git.
+- El nombre es genérico a propósito: si algún día hay que firmar otra cosa (confirmaciones,
+  invitaciones), la misma clave sirve.
+
+> **Si mueves el backend a otro proveedor** (o recreas la app en Fly): `APP_SECRET` es un secreto
+> del *entorno*, no del código, así que **no viaja con el repositorio**. Llévate el **mismo valor**
+> al servidor nuevo — si generas uno distinto, todos los enlaces de baja ya enviados se rompen.
+> Lo mismo aplica a `RESEND_API_KEY`, `MAIL_FROM`, `MAIL_REPLY_TO`, `DATABASE_URL` y las `R2_*`;
+> revisa la tabla de variables del principio y trasládalas todas antes de apuntar el DNS.
 
 ## Web
 
