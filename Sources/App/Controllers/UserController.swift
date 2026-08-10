@@ -11,6 +11,8 @@ struct UserController: RouteCollection {
         users.get(":userID", use: show)     // lectura: pública
         users.get(":userID", "fonts", use: userFonts)       // fuentes creadas: público
         users.get(":userID", "comments", use: userComments) // reseñas: público
+        // Baja del resumen semanal desde el propio correo, sin sesión (token firmado).
+        users.post("unsubscribe", use: unsubscribe)
 
         // Editar/borrar requiere token y solo sobre la propia cuenta (self-only).
         let protected = users.grouped(UserToken.authenticator(), User.guardMiddleware())
@@ -116,7 +118,8 @@ struct UserController: RouteCollection {
             passwordHash: try req.password.hash(dto.password),
             signupCountry: geo?.country,
             signupRegion: geo?.region,
-            signupCity: geo?.city
+            signupCity: geo?.city,
+            lang: dto.lang
         )
         try await user.save(on: req.db)
 
@@ -134,6 +137,23 @@ struct UserController: RouteCollection {
         let response = Response(status: .created)
         try response.content.encode(UserResponse(user, includeEmail: true))
         return response
+    }
+
+    /// POST /users/unsubscribe — desactiva el resumen semanal con el token del correo.
+    /// Público a propósito: el enlace se pulsa desde el buzón, sin sesión. El token es un
+    /// HMAC del id (ver `UnsubscribeToken`), así que no se puede dar de baja a otro.
+    /// Idempotente: darse de baja dos veces responde 200 igualmente.
+    @Sendable func unsubscribe(req: Request) async throws -> HTTPStatus {
+        let dto = try req.content.decode(UnsubscribeDTO.self)
+        guard let userID = UUID(uuidString: dto.user), UnsubscribeToken.verify(dto.token, userID: userID) else {
+            throw Abort(.badRequest, reason: "Enlace de baja no válido")
+        }
+        guard let user = try await User.find(userID, on: req.db) else {
+            throw Abort(.badRequest, reason: "Enlace de baja no válido")
+        }
+        user.weeklyDigest = false
+        try await user.save(on: req.db)
+        return .ok
     }
 
     @Sendable func show(req: Request) async throws -> UserResponse {
@@ -184,6 +204,7 @@ struct UserController: RouteCollection {
         user.email = email
         if let emailPublic = dto.emailPublic { user.emailPublic = emailPublic }
         if let namePublic = dto.namePublic { user.namePublic = namePublic }
+        if let weeklyDigest = dto.weeklyDigest { user.weeklyDigest = weeklyDigest }
         if let password = dto.password {
             user.passwordHash = try req.password.hash(password)
         }
@@ -315,6 +336,12 @@ extension CreateUserDTO: Validatable {
     }
 }
 
+/// Baja del resumen semanal desde el correo: id de usuario + su HMAC.
+struct UnsubscribeDTO: Content {
+    let user: String
+    let token: String
+}
+
 struct UpdateUserDTO: Content {
     let name: String
     let username: String
@@ -322,6 +349,8 @@ struct UpdateUserDTO: Content {
     let password: String?
     let emailPublic: Bool?
     let namePublic: Bool?
+    /// Resumen semanal por correo. Opcional: si no viene, la preferencia no se toca.
+    var weeklyDigest: Bool? = nil
 }
 
 extension UpdateUserDTO: Validatable {

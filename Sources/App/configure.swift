@@ -63,6 +63,13 @@ public func configure(_ app: Application) async throws {
     ))
     app.middleware.use(cors, at: .beginning)
 
+    // Sin APP_SECRET los enlaces de baja del resumen semanal se firman con una clave
+    // aleatoria por proceso: dejarían de valer en cada reinicio (y un enlace de baja
+    // roto es una queja de spam garantizada). En dev da igual.
+    if app.environment == .production && Environment.get("APP_SECRET") == nil {
+        app.logger.warning("APP_SECRET no está definida: los enlaces de baja del resumen semanal caducarán en cada reinicio")
+    }
+
     // Sirve ficheros estáticos de /Public (incluye las imágenes subidas en /Public/uploads).
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
@@ -113,6 +120,8 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddRoleToUser())         // rol jerárquico (migra is_admin → role)
     app.migrations.add(DropIsAdminFromUser())   // elimina la columna legacy is_admin
     app.migrations.add(AddReviewedAtToFontEdit()) // triaje de ediciones (revisada ✓)
+    app.migrations.add(AddWeeklyDigestToUser()) // preferencia: resumen semanal por correo
+    app.migrations.add(AddLangToUser())         // idioma del usuario (correos sin petición)
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
@@ -133,6 +142,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(ImportGeoJSONCommand(), as: "import-geojson")
     app.asyncCommands.use(PopulateRegionsCommand(), as: "populate-regions")
     app.asyncCommands.use(SetRoleCommand(), as: "set-role")
+    app.asyncCommands.use(WeeklyDigestCommand(), as: "send-weekly-digest")
 
     // Rutas.
     try routes(app)

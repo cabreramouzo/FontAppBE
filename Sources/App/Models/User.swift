@@ -28,13 +28,19 @@ final class User: Model, @unchecked Sendable {
     // (fuentes, reseñas) se conservan desligadas de su identidad; los datos
     // personales se eliminan y el login queda inutilizado.
     @OptionalField(key: "anonymized_at") var anonymizedAt: Date?
+    // Preferencia de correo: resumen semanal de actividad (se puede desactivar en el
+    // perfil o desde el enlace de baja del propio correo).
+    @Field(key: "weekly_digest") var weeklyDigest: Bool
+    // Idioma con el que se registró, para los correos que no nacen de una petición suya.
+    @OptionalField(key: "lang") var lang: String?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
 
     init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, role: UserRole = .user,
          emailPublic: Bool = false, namePublic: Bool = true,
-         signupCountry: String? = nil, signupRegion: String? = nil, signupCity: String? = nil) {
+         signupCountry: String? = nil, signupRegion: String? = nil, signupCity: String? = nil,
+         weeklyDigest: Bool = true, lang: String? = nil) {
         self.id = id
         self.name = name
         self.username = username
@@ -46,6 +52,8 @@ final class User: Model, @unchecked Sendable {
         self.signupCountry = signupCountry
         self.signupRegion = signupRegion
         self.signupCity = signupCity
+        self.weeklyDigest = weeklyDigest
+        self.lang = lang
     }
 }
 
@@ -93,6 +101,8 @@ struct UserResponse: Content {
     let role: String?
     let emailPublic: Bool?
     let namePublic: Bool?
+    /// Resumen semanal por correo (solo en respuestas propias).
+    let weeklyDigest: Bool?
     let anonymized: Bool
     let createdAt: Date?
 
@@ -109,6 +119,7 @@ struct UserResponse: Content {
         self.role = includeEmail ? user.role.rawValue : nil
         self.emailPublic = includeEmail ? user.emailPublic : nil
         self.namePublic = includeEmail ? user.namePublic : nil
+        self.weeklyDigest = includeEmail ? user.weeklyDigest : nil
         self.anonymized = user.anonymizedAt != nil
         self.createdAt = user.createdAt
     }

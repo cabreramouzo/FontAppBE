@@ -27,6 +27,8 @@ export interface UserResponse {
   role?: UserRole | null
   emailPublic?: boolean | null
   namePublic?: boolean | null
+  /** Resumen semanal por correo (solo en respuestas propias). */
+  weeklyDigest?: boolean | null
   anonymized?: boolean
   createdAt?: string | null
 }

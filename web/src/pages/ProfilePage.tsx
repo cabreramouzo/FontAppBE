@@ -50,7 +50,7 @@ export function ProfilePage() {
     getMyComments().then(setComments).catch(() => setComments([]))
   }, [user, loading, navigate])
 
-  async function savePrivacy(patch: { emailPublic?: boolean; namePublic?: boolean }) {
+  async function savePrivacy(patch: { emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean }) {
     if (!user) return
     setSavingPrivacy(true)
     try {
@@ -60,6 +60,7 @@ export function ProfilePage() {
         email: user.email ?? '',
         emailPublic: user.emailPublic ?? false,
         namePublic: user.namePublic ?? true,
+        weeklyDigest: user.weeklyDigest ?? true,
         ...patch,
       })
       await refresh() // refresca el usuario para reflejar el nuevo estado
@@ -138,6 +139,17 @@ export function ProfilePage() {
             {t('privacy.viewPublic')}
           </Link>
         </Box>
+      </Box>
+
+      <Box component="section" sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom>{t('notif.title')}</Typography>
+        <FormControlLabel
+          control={<Switch checked={user.weeklyDigest ?? true} disabled={savingPrivacy} onChange={(e) => savePrivacy({ weeklyDigest: e.target.checked })} />}
+          label={t('notif.weekly')}
+        />
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          {t('notif.weeklyHint')}
+        </Typography>
       </Box>
 
       <Divider sx={{ mb: 3 }} />

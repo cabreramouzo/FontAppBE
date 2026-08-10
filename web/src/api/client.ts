@@ -125,7 +125,7 @@ export async function setFontPhotoFromComment(fontID: string, commentID: string)
 }
 
 // Actualiza el perfil propio (self-only). Manda los campos actuales + los cambios.
-export async function updateProfile(id: string, data: { name: string; username: string; email: string; emailPublic?: boolean; namePublic?: boolean }): Promise<UserResponse> {
+export async function updateProfile(id: string, data: { name: string; username: string; email: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean }): Promise<UserResponse> {
   return apiFetch<UserResponse>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 }
 
@@ -204,6 +204,12 @@ export async function deleteAccount(userID: string): Promise<void> {
 // `lang` localiza el correo (idioma de la interfaz).
 export async function forgotPassword(email: string, lang?: string): Promise<{ ok: boolean; devLink: string | null }> {
   return apiFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email, lang }) })
+}
+
+// Baja del resumen semanal desde el enlace del correo: no requiere sesión, el token
+// firmado que viaja en la URL es la única credencial (ver UnsubscribeToken en el backend).
+export async function unsubscribeWeekly(user: string, token: string): Promise<void> {
+  await apiFetch('/users/unsubscribe', { method: 'POST', body: JSON.stringify({ user, token }) })
 }
 
 export async function resetPassword(token: string, password: string): Promise<void> {

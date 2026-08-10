@@ -23,9 +23,10 @@ docker build -t fontappbe .
 | `WEB_ORIGIN` | recomendada | Origen(es) del web permitidos por CORS, separados por comas (p. ej. `https://fontapp.com`). Si no se define, CORS permite todo (solo dev). |
 | `AUTO_MIGRATE` | opcional | `true` → migra la BD al arrancar. Útil en un solo contenedor. |
 | `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | opcional | Si están **las cinco**, las imágenes se suben a Cloudflare R2; si no, a disco local. `R2_PUBLIC_URL` es la base pública del bucket (p. ej. `https://pub-xxxx.r2.dev`). |
-| `RESEND_API_KEY` | opcional | API key de [Resend](https://resend.com). Junto con `MAIL_FROM` activa el envío real de correo (bienvenida al registrarse y reset de contraseña); si falta, en dev solo se loguea (`LogMailSender`). |
+| `RESEND_API_KEY` | opcional | API key de [Resend](https://resend.com). Junto con `MAIL_FROM` activa el envío real de correo (bienvenida, resumen semanal y reset de contraseña); si falta, en dev solo se loguea (`LogMailSender`). |
 | `MAIL_FROM` | opcional | Remitente de los correos, p. ej. `FontApp <no-reply@send.fontapp.net>`. Obligatoria junto con `RESEND_API_KEY`. |
 | `MAIL_REPLY_TO` | opcional | Dirección de respuesta (p. ej. `admin@fontapp.net`), para enviar desde un no-reply pero recibir las respuestas en un buzón real. |
+| `APP_SECRET` | recomendada | Clave con la que se firman los enlaces de baja del resumen semanal. Si falta, se usa una aleatoria por proceso y **los enlaces dejan de valer en cada reinicio** (la app lo avisa en el log al arrancar en producción). Genérala con `openssl rand -hex 32`. |
 | `GEOIP_ENABLED` | opcional | `true` → deduce país/región de la IP al registrarse (solo estadística; nunca se guarda la IP). Noop si no se define. |
 
 \* Usa **o** `DATABASE_URL` **o** las variables sueltas. En `--env production` las credenciales son obligatorias (la app falla al arrancar si faltan).
@@ -154,6 +155,26 @@ iCloud+ incluye **Custom Email Domain** (buzón real: recibir y enviar). Ojo: un
 tener **un** juego de MX, así que **no** actives a la vez el Email Routing de Cloudflare sobre el raíz.
 Configura el dominio en iCloud, y añade en Cloudflare los **MX/SPF/DKIM de iCloud** (DNS only).
 Como iCloud va en el raíz y Resend en `send.`, **no hay conflicto de SPF**.
+
+### Resumen semanal (cron)
+
+El resumen semanal NO lo dispara el servidor: es un comando, para que con varias
+instancias no se envíe una vez por instancia.
+
+```bash
+swift run App send-weekly-digest              # envía
+swift run App send-weekly-digest --dry-run    # muestra a quién se enviaría, sin enviar
+swift run App send-weekly-digest --user pepe  # solo a un usuario (pruebas)
+```
+
+En Fly.io, una máquina programada que ejecuta el comando y se apaga:
+
+```bash
+fly machine run . --schedule weekly -a fontapp --command "App send-weekly-digest"
+```
+
+Requiere `APP_SECRET` (enlaces de baja estables), `WEB_ORIGIN` (enlaces del correo) y las
+variables de Resend. Antes del primer envío real, pásale `--dry-run` y revisa el recuento.
 
 ## Web
 

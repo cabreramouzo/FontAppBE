@@ -639,4 +639,67 @@ final class IntegrationTests: XCTestCase {
             }
         }
     }
+
+    /// El resumen semanal recoge la actividad AJENA en tus fuentes (y no la tuya),
+    /// y una fuente nueva de otro cerca cuenta como novedad.
+    func testWeeklyDigestCollectsOthersActivity() async throws {
+        try await withApp { app in
+            try await register(app, username: "digest-owner")
+            try await register(app, username: "digest-other")
+            let owner = try await login(app, username: "digest-owner")
+            let other = try await login(app, username: "digest-other")
+
+            let fontID = try await createFont(app, token: owner, name: "Font meva", lat: 41.8, long: 2.1)
+            _ = try await addComment(app, token: other, fontID: fontID, body: "Rajava bé")
+            _ = try await addComment(app, token: owner, fontID: fontID, body: "La meva pròpia")
+            _ = try await createFont(app, token: other, name: "Font nova a prop", lat: 41.81, long: 2.11)
+
+            guard let user = try await User.query(on: app.db).filter(\.$username == "digest-owner").first() else {
+                return XCTFail("usuari no trobat")
+            }
+            let digest = try await WeeklyDigest.build(for: user, since: Date().addingTimeInterval(-7 * 86_400), on: app.db)
+            XCTAssertTrue(digest.isWorthSending)
+            // Solo la reseña del OTRO, nunca la propia.
+            XCTAssertEqual(digest.activity.count, 1)
+            XCTAssertEqual(digest.activity.first?.author, "digest-other")
+            XCTAssertEqual(digest.fontsAdded, 1)
+            XCTAssertEqual(digest.nearby.map(\.name), ["Font nova a prop"])
+        }
+    }
+
+    /// Sin actividad ajena no se envía nada (un resumen vacío solo enseña a ignorarlo).
+    func testWeeklyDigestSkipsQuietWeek() async throws {
+        try await withApp { app in
+            try await register(app, username: "digest-quiet")
+            let token = try await login(app, username: "digest-quiet")
+            _ = try await createFont(app, token: token, name: "Font solitària", lat: 10, long: 10)
+            guard let user = try await User.query(on: app.db).filter(\.$username == "digest-quiet").first() else {
+                return XCTFail("usuari no trobat")
+            }
+            let digest = try await WeeklyDigest.build(for: user, since: Date().addingTimeInterval(-7 * 86_400), on: app.db)
+            XCTAssertFalse(digest.isWorthSending)
+        }
+    }
+
+    /// La baja desde el correo funciona sin sesión, pero solo con el token firmado
+    /// correcto: uno inventado (o el de otro usuario) no da de baja a nadie.
+    func testUnsubscribeNeedsValidToken() async throws {
+        try await withApp { app in
+            let userID = try await register(app, username: "digest-unsub")
+
+            try await app.test(.POST, "users/unsubscribe", beforeRequest: { req in
+                try req.content.encode(UnsubscribeDTO(user: userID.uuidString, token: "inventat"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+
+            try await app.test(.POST, "users/unsubscribe", beforeRequest: { req in
+                try req.content.encode(UnsubscribeDTO(user: userID.uuidString, token: UnsubscribeToken.make(userID: userID)))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+            let user = try await User.find(userID, on: app.db)
+            XCTAssertEqual(user?.weeklyDigest, false)
+        }
+    }
 }

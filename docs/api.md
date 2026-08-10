@@ -83,7 +83,7 @@ Login con credenciales inválidas → **401**.
 | GET | `/users/staff` | Bearer (owner) | — | 200 `[{id, username, role}]` (rol > user) | 401, 403 |
 | GET | `/users/admin` | Bearer (owner) | `?page=&per=&search=` | 200 `Page<AdminUser>` (todas las columnas menos el hash; PII) | 401, 403 |
 | PUT | `/users/:id/role` | Bearer (owner) | `{role: user\|moderator\|admin}` | 200 `UserResponse` | 400, 401, 403, 404 |
-| PUT | `/users/:id` | Bearer | `{name, username, email, password?}` | 200 `UserResponse` | 400, 401, 403 (no eres tú), 404, 409 |
+| PUT | `/users/:id` | Bearer | `{name, username, email, password?, emailPublic?, namePublic?, weeklyDigest?}` | 200 `UserResponse` | 400, 401, 403 (no eres tú), 404, 409 |
 | DELETE | `/users/:id` | Bearer | — | 204 | 401, 403, 404 |
 
 **Roles y permisos.** Cada usuario tiene un rol jerárquico `role` (solo visible en
@@ -116,6 +116,24 @@ Al registrarse se envía un **correo de bienvenida** (`WelcomeEmail`) con la ilu
 la app, qué es FontApp, qué puede hacer y las funciones de móvil (offline / instalar la
 app). Se localiza con `lang` (`ca` por defecto) y es **best-effort**: si el proveedor de
 correo falla, el alta se completa igualmente.
+
+### Resumen semanal por correo
+
+Un cron semanal (`swift run App send-weekly-digest`, ver [../DEPLOY.md](../DEPLOY.md)) envía a
+cada usuario lo que ha pasado en **sus** fuentes: reseñas, incidencias y ediciones de otros
+sobre fuentes que creó o reseñó, más las fuentes nuevas de otros a menos de 25 km de las suyas.
+
+- Se envía solo a quien tenga `weekly_digest = true` (preferencia editable en `PUT /users/:id`).
+- **Una semana sin novedades no genera correo**: un resumen vacío solo enseña a ignorarlos.
+- El correo se localiza con `users.lang` (el idioma con el que se registró; `ca` si no lo tiene).
+
+| Método | Ruta | Auth | Body | OK | Errores |
+|---|---|---|---|---|---|
+| POST | `/users/unsubscribe` | — | `{user, token}` | 200 | 400 (enlace no válido) |
+
+`token` es un HMAC-SHA256 del id de usuario firmado con `APP_SECRET` (ver `UnsubscribeToken`).
+Es **público a propósito**: el enlace se pulsa desde el buzón, sin sesión. No caduca, no se
+guarda en la BD y solo sirve para desactivar el resumen de ese usuario concreto.
 
 ## Fonts (fuentes de agua)
 
