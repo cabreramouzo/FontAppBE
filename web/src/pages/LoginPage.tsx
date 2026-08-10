@@ -7,7 +7,7 @@ import Link from '@mui/material/Link'
 import Alert from '@mui/material/Alert'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
-import { describeError } from '../api/client'
+import { ApiError, describeError } from '../api/client'
 
 // Formulario de INICIO DE SESIÓN, en su propia URL y sin mezclarse con el registro.
 //
@@ -39,7 +39,11 @@ export function LoginPage() {
       // tras enviar el formulario, que es lo que dispara el "¿guardar contraseña?".
       window.location.assign('/')
     } catch (err) {
-      setError(describeError(err, t))
+      // Aquí un 401 no es "se te ha caducado la sesión" (el mensaje genérico), sino
+      // que las credenciales no son correctas. El backend no distingue si falla el
+      // usuario o la contraseña, a propósito: así no se puede sondear qué usuarios existen.
+      if (err instanceof ApiError && err.status === 401) setError(t('login.badCredentials'))
+      else setError(describeError(err, t))
       setBusy(false)
     }
   }
