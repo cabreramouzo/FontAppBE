@@ -44,7 +44,33 @@ El contenedor arranca con `serve --env production` (ver `CMD` del `Dockerfile`).
 `./App seed --env production` inserta las 67 fuentes reales del Moianès (OSM, ODbL).
 **No** ejecutes `seed --demo` en producción (crea usuarios y reseñas de ejemplo).
 
-Para cargar el dataset de fuentes del **ICGC/ACA** (GeoJSON exportado), usa `import-geojson`
+### Fuentes oficiales de la ACA (las de CercaFonts)
+
+La app CercaFonts (ICGC + ACA) ya no está, pero **su capa de datos sigue publicada** en el
+WFS abierto de la ACA: `AIGUA:AIGUA_FONTS`, unas 10.000 fuentes de toda Catalunya con
+topónimo, tipo, municipio y comarca. Descarga en GeoJSON:
+
+```bash
+curl "https://sig.gencat.cat/ows/AIGUA/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=AIGUA:AIGUA_FONTS&outputFormat=application/json&srsName=EPSG:4326" -o fonts-aca-catalunya.json
+```
+
+Ensayo en seco primero (no toca la BD) y después la importación de verdad:
+
+```bash
+swift run App import-geojson fonts-aca-catalunya.json --name-field NOM --dedupe 50 --titlecase --dry-run
+swift run App import-geojson fonts-aca-catalunya.json --name-field NOM --dedupe 50 --titlecase
+```
+
+- Cada fuente viene como **MultiPoint** de un punto (el importador acepta ambas geometrías).
+- `--titlecase` porque los nombres vienen EN MAYÚSCULAS y al lado de los de OSM cantan.
+- `--dedupe 50` evita duplicar lo que ya está y, de paso, **mejora los nombres genéricos**
+  de OSM ("Font") con el topónimo oficial.
+- Después conviene pasar `populate-regions` para clasificar las nuevas.
+
+⚠️ **Licencia sin confirmar**: la ACA no publica en su web qué licencia cubre estos datos.
+Antes de meterlos en producción, pregúntaselo por escrito.
+
+Para cargar cualquier otro GeoJSON de puntos, usa `import-geojson`
 con dedupe por distancia (fusiona topónimos y evita duplicados de lo ya sembrado):
 
 ```bash

@@ -30,6 +30,10 @@ struct ImportGeoJSONCommand: AsyncCommand {
         var dedupe: Double?
         @Option(name: "attribution", help: "Texto de atribución en la descripción (por defecto '© ICGC/ACA')")
         var attribution: String?
+        @Flag(name: "dry-run", help: "Calcula y muestra qué se importaría, sin tocar la BD.")
+        var dryRun: Bool
+        @Flag(name: "titlecase", help: "Pasa los nombres EN MAYÚSCULAS a Tipo Título (los datos de la ACA vienen así).")
+        var titlecase: Bool
     }
 
     var help: String { "Importa fuentes desde un GeoJSON de puntos en WGS84 (ICGC/ACA, CC BY 4.0)" }
@@ -46,20 +50,27 @@ struct ImportGeoJSONCommand: AsyncCommand {
         let nameKeys = ([signature.nameField].compactMap { $0 }) + ["nom", "name", "NOM", "toponim", "TOPONIM", "topònim"]
 
         // Parsea features → tuplas (nombre, lat, lon), descartando geometrías no-punto.
+        // El WFS de la ACA sirve cada fuente como `MultiPoint` de un solo punto, así que
+        // aceptamos los dos tipos: si no, la importación no metería absolutamente nada.
         var points: [(name: String, lat: Double, lon: Double)] = []
         for feature in collection.features {
-            guard feature.geometry?.type == "Point",
-                  let coords = feature.geometry?.coordinates, coords.count >= 2 else { continue }
-            let lon = coords[0], lat = coords[1] // GeoJSON es [lon, lat]
+            guard let geometry = feature.geometry else { continue }
             let props = feature.properties ?? [:]
-            let name = nameKeys.lazy.compactMap { props[$0]?.stringValue }
+            var name = nameKeys.lazy.compactMap { props[$0]?.stringValue }
                 .first { !$0.isEmpty } ?? "Font"
-            points.append((name, lat, lon))
+            if signature.titlecase { name = Self.titleCased(name) }
+            for coords in geometry.points {
+                points.append((name, coords.lat, coords.lon))
+            }
         }
 
         context.console.info("Features: \(collection.features.count) · puntos válidos: \(points.count)")
+        if points.isEmpty {
+            context.console.warning("Ningún punto utilizable: ¿el GeoJSON tiene geometrías Point/MultiPoint en EPSG:4326?")
+            return
+        }
 
-        if signature.replace {
+        if signature.replace && !signature.dryRun {
             try await Font.query(on: db).delete()
             context.console.info("Fuentes existentes borradas (--replace).")
         }
@@ -76,6 +87,7 @@ struct ImportGeoJSONCommand: AsyncCommand {
         var inserted = 0
         var skipped = 0
         var renamed = 0
+        var samples: [String] = []   // primeras altas, para verlas en el ensayo en seco
         var buffer: [Font] = []
         for p in points {
             if let dedupeKm {
@@ -84,8 +96,10 @@ struct ImportGeoJSONCommand: AsyncCommand {
                     // Si la existente tiene un nombre genérico (p. ej. "Font"/"Manantial"
                     // de OSM) y el topónimo del ICGC es más específico, lo mejoramos.
                     if let font = hit.font, Self.isGeneric(font.name), !Self.isGeneric(p.name), font.name != p.name {
-                        font.name = p.name
-                        try await font.save(on: db)
+                        if !signature.dryRun {
+                            font.name = p.name
+                            try await font.save(on: db)
+                        }
                         renamed += 1
                     } else {
                         skipped += 1
@@ -95,6 +109,7 @@ struct ImportGeoJSONCommand: AsyncCommand {
                     continue
                 }
             }
+            if samples.count < 10 { samples.append("\(p.name)  (\(p.lat), \(p.lon))") }
             buffer.append(Font(
                 name: p.name,
                 latitude: p.lat,
@@ -105,6 +120,11 @@ struct ImportGeoJSONCommand: AsyncCommand {
             ))
             if dedupeKm != nil { existing.append((p.lat, p.lon, nil)) }
 
+            if signature.dryRun {
+                inserted += 1
+                buffer.removeAll(keepingCapacity: true)
+                continue
+            }
             if buffer.count >= 500 {
                 try await buffer.create(on: db)
                 inserted += buffer.count
@@ -112,13 +132,47 @@ struct ImportGeoJSONCommand: AsyncCommand {
                 context.console.info("  insertadas \(inserted)…")
             }
         }
-        if !buffer.isEmpty {
+        if !buffer.isEmpty && !signature.dryRun {
             try await buffer.create(on: db)
             inserted += buffer.count
         }
+
+        if signature.dryRun {
+            context.console.info("ENSAYO EN SECO (no se ha tocado la base de datos)")
+            context.console.info("Se añadirían \(inserted) fuentes" +
+                (renamed > 0 ? " · \(renamed) existentes se renombrarían con el topónimo oficial" : "") +
+                (skipped > 0 ? " · \(skipped) se saltarían por proximidad" : "") + ".")
+            if !samples.isEmpty {
+                context.console.info("Primeras que entrarían:")
+                for sample in samples { context.console.print("  • \(sample)") }
+            }
+            return
+        }
+
         context.console.info("Importadas \(inserted) fuentes desde \(signature.file)" +
             (renamed > 0 ? " · \(renamed) renombradas con el topónimo del ICGC" : "") +
             (skipped > 0 ? " · \(skipped) saltadas por proximidad" : "") + ".")
+    }
+
+    /// "FONT DE LA VALLMITJANA" → "Font de la Vallmitjana". Los datos de la ACA vienen
+    /// todos en mayúsculas y, al lado de los nombres de OSM, cantan mucho en el mapa.
+    /// Las preposiciones y artículos quedan en minúscula, como se escribe un topónimo.
+    static func titleCased(_ name: String) -> String {
+        // Si no está todo en mayúsculas, es que alguien ya lo escribió bien: no lo tocamos.
+        guard name == name.uppercased() else { return name }
+        let minor: Set<String> = ["de", "del", "dels", "des", "la", "les", "el", "els", "l'", "d'", "i", "o",
+                                  "en", "na", "ca", "can", "sa", "ses", "a", "al", "als", "amb", "per", "sota", "sobre"]
+        return name.lowercased().split(separator: " ").enumerated().map { index, word -> String in
+            let w = String(word)
+            if index > 0 && minor.contains(w) { return w }
+            // "d'olzinelles" → "d'Olzinelles"
+            if let apos = w.firstIndex(where: { $0 == "'" || $0 == "’" }), apos < w.index(before: w.endIndex) {
+                let prefix = String(w[...apos])
+                let rest = String(w[w.index(after: apos)...])
+                return prefix + rest.prefix(1).uppercased() + rest.dropFirst()
+            }
+            return w.prefix(1).uppercased() + w.dropFirst()
+        }.joined(separator: " ")
     }
 
     /// Nombres genéricos que conviene sustituir por un topónimo más específico.
@@ -141,13 +195,21 @@ private struct GeoJSONFeature: Decodable {
 
 private struct GeoJSONGeometry: Decodable {
     let type: String
-    // Solo soportamos puntos: [lon, lat]. (Ignoramos multi/línea/polígono.)
-    let coordinates: [Double]?
+    /// Puntos de la geometría, ya en (lat, lon). Vacío para líneas y polígonos.
+    let points: [(lat: Double, lon: Double)]
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         type = try container.decode(String.self, forKey: .type)
-        coordinates = try? container.decode([Double].self, forKey: .coordinates)
+        // GeoJSON es [lon, lat]. `Point` trae un par; `MultiPoint`, una lista de pares
+        // (así sirve la ACA cada fuente). El resto de geometrías no nos interesan.
+        if type == "Point", let c = try? container.decode([Double].self, forKey: .coordinates), c.count >= 2 {
+            points = [(c[1], c[0])]
+        } else if type == "MultiPoint", let cs = try? container.decode([[Double]].self, forKey: .coordinates) {
+            points = cs.filter { $0.count >= 2 }.map { ($0[1], $0[0]) }
+        } else {
+            points = []
+        }
     }
     private enum CodingKeys: String, CodingKey { case type, coordinates }
 }
