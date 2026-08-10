@@ -29,7 +29,11 @@ export function LegalPage() {
       }}
     >
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
-      {lang === 'ca' ? <LegalCA /> : lang === 'en' ? <LegalEN /> : <LegalES />}
+      {lang === 'ca' ? <LegalCA />
+        : lang === 'en' ? <LegalEN />
+        : lang === 'gl' ? <LegalGL />
+        : lang === 'eu' ? <LegalEU />
+        : <LegalES />}
     </Box>
   )
 }
@@ -269,6 +273,165 @@ function LegalEN() {
         <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a> licence.
         {' '}Some fountains come from the <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> and
         ACA, under the <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> licence.
+      </p>
+    </>
+  )
+}
+
+function LegalGL() {
+  return (
+    <>
+      <h1>Aviso legal e privacidade</h1>
+
+      <h2>⚠️ Advertencia sobre a auga e responsabilidade</h2>
+      <p className="stale-warn">
+        FontApp é un servizo de información <strong>colaborativa</strong>: as fontes, o estado da auga e a potabilidade
+        achégaas a xente usuaria e fontes de datos abertas, e poden estar <strong>desactualizados, incompletos ou ser incorrectos</strong>.
+        A información é <strong>meramente orientativa</strong> e non substitúe unha análise oficial da auga. FontApp <strong>non garante</strong> a
+        potabilidade nin a salubridade da auga de ningunha fonte. Beber auga das fontes que aparecen queda
+        <strong> baixo o criterio e o risco exclusivo da persoa usuaria</strong>. En caso de dúbida, non bebas ou trata a auga (fervea ou depúraa).
+        Nin FontApp nin o seu responsable se fan responsables de ningún dano derivado do uso desta información.
+      </p>
+
+      <h2>Aviso legal</h2>
+      <p>
+        Responsable deste sitio: <strong>Miguel Cabrera</strong>. Contacto:{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>. O uso do servizo implica a aceptación destas condicións.
+        O contido publicado polas persoas usuarias (fontes, reseñas, fotos, incidencias) é responsabilidade de quen o publica.
+      </p>
+
+      <h2>Privacidade (RXPD)</h2>
+      <p><strong>Responsable do tratamento:</strong> Miguel Cabrera, <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.</p>
+      <p><strong>Que datos tratamos:</strong></p>
+      <ul>
+        <li>O teu <strong>nome de usuario e nome</strong>, o teu <strong>enderezo de correo</strong> e o teu <strong>contrasinal</strong> (gardado cifrado con bcrypt, nunca en claro).</li>
+        <li>O <strong>contido que publicas</strong>: fontes, reseñas, valoracións, fotos e incidencias.</li>
+        <li>A túa <strong>localización precisa</strong> só se usa, se ti o autorizas, para amosarche fontes próximas; <strong>non se garda</strong> no servidor.</li>
+        <li>Ao <strong>rexistrarte</strong> gardamos a túa <strong>rexión aproximada</strong> (país/rexión deducidos da IP, <strong>non a IP</strong>) e o <strong>idioma</strong> da interface, para estatística de uso e para escribirche na túa lingua.</li>
+        <li>Se chegas desde un <strong>cartel ou unha campaña</strong> con código (<code>fontapp.net/?p=castellcir</code>), gardamos ese código coa alta para saber que cartel funciona. Non identifica a ninguén.</li>
+      </ul>
+      <p><strong>Para que usamos o teu correo:</strong></p>
+      <ul>
+        <li>Mensaxes necesarias do servizo: benvida e recuperación de contrasinal.</li>
+        <li>Un <strong>resumo semanal</strong> de novidades nas fontes que engadiches ou onde participaches. Podes desactivalo cando queiras desde o teu perfil ou coa ligazón de baixa que leva cada correo, sen iniciar sesión.</li>
+      </ul>
+      <p>
+        <strong>Finalidade e base legal:</strong> prestar o servizo que solicitas (execución) e o consentimento que outorgas ao rexistrarte.
+        <strong> Conservación:</strong> mentres manteñas a conta.
+      </p>
+      <p>
+        <strong>Os teus dereitos:</strong> acceso, rectificación, supresión, portabilidade, limitación e oposición.
+        Podes <strong>borrar a túa conta</strong> desde a propia app (elimina os teus datos), ou escribir a{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.
+        Tamén podes reclamar ante a Axencia Española de Protección de Datos (AEPD).
+      </p>
+      <p>
+        <strong>Almacenamento no teu navegador:</strong> <strong>non usamos cookies</strong>. Gardamos no teu propio
+        dispositivo: o <em>token de sesión</em> (para manterte identificado), as túas preferencias (idioma, tema claro/escuro,
+        avisos xa lidos), o código do cartel polo que chegaches e, se engades algo <strong>sen cobertura</strong>,
+        a túa achega e a foto nunha cola local ata que haxa rede. Todo iso queda no teu dispositivo e podes
+        borralo baleirando os datos do sitio no navegador.
+      </p>
+      <p>
+        <strong>Analítica:</strong> usamos <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
+        que mide visitas de forma <strong>agregada, sen cookies e sen identificarte</strong>; por iso non che pedimos
+        consentimento. Non usamos Google Analytics nin ningunha rede publicitaria, e non vendemos nin cedemos datos a ninguén.
+      </p>
+      <p><strong>Quen trata datos por encarga nosa:</strong></p>
+      <ul>
+        <li><strong>Fly.io</strong> (servidor) e <strong>Neon</strong> (base de datos PostgreSQL).</li>
+        <li><strong>Cloudflare</strong>: web e CDN, analítica agregada e almacenamento das fotos (R2).</li>
+        <li><strong>Resend</strong>: envío dos correos (recibe o teu enderezo e o contido da mensaxe).</li>
+        <li><strong>ip-api.com</strong>: só no momento de rexistrarte, para deducir o país e a rexión. <strong>Recibe a túa IP</strong>, que nós non gardamos en ningún sitio.</li>
+      </ul>
+
+      <h2>Datos cartográficos</h2>
+      <p>
+        O mapa base e os datos de fontes proceden de{' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>,
+        © colaboradores de OpenStreetMap, baixo licenza{' '}
+        <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
+        {' '}Parte das fontes proveñen do <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> e
+        a ACA, baixo licenza <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
+      </p>
+    </>
+  )
+}
+
+function LegalEU() {
+  return (
+    <>
+      <h1>Lege oharra eta pribatutasuna</h1>
+
+      <h2>⚠️ Urari buruzko oharra eta erantzukizuna</h2>
+      <p className="stale-warn">
+        FontApp informazio <strong>kolaboratiboko</strong> zerbitzu bat da: iturriak, uraren egoera eta edangarritasuna
+        erabiltzaileek eta datu irekien iturriek ekartzen dituzte, eta <strong>zaharkituta, osatu gabe edo oker</strong> egon daitezke.
+        Informazioa <strong>orientagarria besterik ez da</strong> eta ez du uraren azterketa ofizial bat ordezkatzen. FontApp-ek <strong>ez du bermatzen</strong>
+        inongo iturriren uraren edangarritasuna edo osasungarritasuna. Hemen agertzen diren iturrietako ura edatea
+        <strong> erabiltzailearen irizpide eta arrisku hutsez</strong> egiten da. Zalantzarik izanez gero, ez edan edo tratatu ura (irakin edo araztu).
+        Ez FontApp-ek ez haren arduradunak ez dute erantzukizunik informazio hau erabiltzeagatik sor daitekeen kalteagatik.
+      </p>
+
+      <h2>Lege oharra</h2>
+      <p>
+        Gune honen arduraduna: <strong>Miguel Cabrera</strong>. Harremana:{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>. Zerbitzua erabiltzeak baldintza hauek onartzea dakar.
+        Erabiltzaileek argitaratutako edukia (iturriak, iritziak, argazkiak, oharrak) argitaratzen duenaren erantzukizuna da.
+      </p>
+
+      <h2>Pribatutasuna (DBEO)</h2>
+      <p><strong>Tratamenduaren arduraduna:</strong> Miguel Cabrera, <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.</p>
+      <p><strong>Zer datu tratatzen ditugun:</strong></p>
+      <ul>
+        <li>Zure <strong>erabiltzaile-izena eta izena</strong>, zure <strong>helbide elektronikoa</strong> eta zure <strong>pasahitza</strong> (bcrypt-ekin zifratuta gordeta, inoiz ez testu lauan).</li>
+        <li><strong>Argitaratzen duzun edukia</strong>: iturriak, iritziak, balorazioak, argazkiak eta oharrak.</li>
+        <li>Zure <strong>kokapen zehatza</strong> baimentzen baduzu bakarrik erabiltzen da, inguruko iturriak erakusteko; <strong>ez da gordetzen</strong> zerbitzarian.</li>
+        <li><strong>Izena ematean</strong> zure <strong>gutxi gorabeherako eskualdea</strong> (IPtik ondorioztatutako herrialdea/eskualdea, <strong>ez IPa</strong>) eta interfazearen <strong>hizkuntza</strong> gordetzen ditugu, erabilera-estatistiketarako eta zure hizkuntzan idazteko.</li>
+        <li>Kodea duen <strong>kartel edo kanpaina</strong> batetik iristen bazara (<code>fontapp.net/?p=castellcir</code>), kode hori altarekin batera gordetzen dugu, zein kartelek funtzionatzen duen jakiteko. Ez du inor identifikatzen.</li>
+      </ul>
+      <p><strong>Zertarako erabiltzen dugun zure helbide elektronikoa:</strong></p>
+      <ul>
+        <li>Zerbitzuaren beharrezko mezuak: ongi etorria eta pasahitza berreskuratzea.</li>
+        <li>Gehitu dituzun edo parte hartu duzun iturrietako berrien <strong>asteko laburpena</strong>. Nahi duzunean desaktiba dezakezu zure profiletik edo mezu bakoitzak daraman baja-estekatik, saiorik hasi gabe.</li>
+      </ul>
+      <p>
+        <strong>Helburua eta oinarri juridikoa:</strong> eskatzen duzun zerbitzua ematea (betearaztea) eta izena ematean ematen duzun baimena.
+        <strong> Kontserbazioa:</strong> kontua mantentzen duzun bitartean.
+      </p>
+      <p>
+        <strong>Zure eskubideak:</strong> sarbidea, zuzenketa, ezabaketa, eramangarritasuna, mugaketa eta aurka egitea.
+        Zure <strong>kontua ezaba dezakezu</strong> app-etik bertatik (zure datuak ezabatzen ditu), edo hona idatzi:{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.
+        Datuak Babesteko Espainiako Agentziara (AEPD) ere jo dezakezu.
+      </p>
+      <p>
+        <strong>Zure nabigatzailean gordetzen dena:</strong> <strong>ez dugu cookierik erabiltzen</strong>. Zure gailuan
+        bertan gordetzen ditugu: <em>saio-tokena</em> (identifikatuta jarraitzeko), zure hobespenak (hizkuntza, gai argia/iluna,
+        jada irakurritako oharrak), iritsi zinen kartelaren kodea eta, <strong>estaldurarik gabe</strong> zerbait gehitzen baduzu,
+        zure ekarpena eta argazkia tokiko ilara batean, sarea itzuli arte. Hori guztia zure gailuan geratzen da eta
+        ezaba dezakezu nabigatzailean gunearen datuak hustuz.
+      </p>
+      <p>
+        <strong>Analitika:</strong> <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a> erabiltzen dugu,
+        bisitak modu <strong>agregatuan, cookierik gabe eta zu identifikatu gabe</strong> neurtzen dituena; horregatik ez dizugu
+        baimenik eskatzen. Ez dugu Google Analytics-ik ez publizitate-sarerik erabiltzen, eta ez dugu daturik saltzen ez lagatzen.
+      </p>
+      <p><strong>Gure izenean datuak tratatzen dituztenak:</strong></p>
+      <ul>
+        <li><strong>Fly.io</strong> (zerbitzaria) eta <strong>Neon</strong> (PostgreSQL datu-basea).</li>
+        <li><strong>Cloudflare</strong>: weba eta CDNa, analitika agregatua eta argazkien biltegiratzea (R2).</li>
+        <li><strong>Resend</strong>: mezu elektronikoen bidalketa (zure helbidea eta mezuaren edukia jasotzen ditu).</li>
+        <li><strong>ip-api.com</strong>: izena ematen duzun unean bakarrik, herrialdea eta eskualdea ondorioztatzeko. <strong>Zure IPa jasotzen du</strong>, guk inon gordetzen ez duguna.</li>
+      </ul>
+
+      <h2>Datu kartografikoak</h2>
+      <p>
+        Oinarrizko mapa eta iturrien datuak{' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>-etik datoz,
+        © OpenStreetMap-eko laguntzaileak, <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a> lizentziapean.
+        {' '}Iturri batzuk <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a>-tik eta
+        ACA-tik datoz, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> lizentziapean.
       </p>
     </>
   )
