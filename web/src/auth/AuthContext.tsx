@@ -70,7 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function register(name: string, username: string, email: string, password: string) {
     await apiFetch<UserResponse>('/users', {
       method: 'POST',
-      body: JSON.stringify({ name, username, email, password }),
+      // `lang` localiza el correo de bienvenida. Lo leemos del <html lang>, que fija
+      // I18nContext, para no tener que pasar el idioma por toda la cadena de llamadas.
+      body: JSON.stringify({ name, username, email, password, lang: document.documentElement.lang || undefined }),
     })
     await login(username, password)
     setJustRegistered(true) // dispara el pop-up de bienvenida

@@ -23,7 +23,7 @@ docker build -t fontappbe .
 | `WEB_ORIGIN` | recomendada | Origen(es) del web permitidos por CORS, separados por comas (p. ej. `https://fontapp.com`). Si no se define, CORS permite todo (solo dev). |
 | `AUTO_MIGRATE` | opcional | `true` → migra la BD al arrancar. Útil en un solo contenedor. |
 | `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | opcional | Si están **las cinco**, las imágenes se suben a Cloudflare R2; si no, a disco local. `R2_PUBLIC_URL` es la base pública del bucket (p. ej. `https://pub-xxxx.r2.dev`). |
-| `RESEND_API_KEY` | opcional | API key de [Resend](https://resend.com). Junto con `MAIL_FROM` activa el envío real de correo (reset de contraseña); si falta, en dev solo se loguea (`LogMailSender`). |
+| `RESEND_API_KEY` | opcional | API key de [Resend](https://resend.com). Junto con `MAIL_FROM` activa el envío real de correo (bienvenida al registrarse y reset de contraseña); si falta, en dev solo se loguea (`LogMailSender`). |
 | `MAIL_FROM` | opcional | Remitente de los correos, p. ej. `FontApp <no-reply@send.fontapp.net>`. Obligatoria junto con `RESEND_API_KEY`. |
 | `MAIL_REPLY_TO` | opcional | Dirección de respuesta (p. ej. `admin@fontapp.net`), para enviar desde un no-reply pero recibir las respuestas en un buzón real. |
 | `GEOIP_ENABLED` | opcional | `true` → deduce país/región de la IP al registrarse (solo estadística; nunca se guarda la IP). Noop si no se define. |

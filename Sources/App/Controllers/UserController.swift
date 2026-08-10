@@ -120,6 +120,17 @@ struct UserController: RouteCollection {
         )
         try await user.save(on: req.db)
 
+        // Correo de bienvenida. Best-effort a propósito: si el proveedor falla, el alta
+        // ya está hecha y no tiene sentido devolver un error al usuario por esto.
+        let base = Environment.get("WEB_ORIGIN")?.split(separator: ",").first.map(String.init)
+            ?? "http://localhost:5174"
+        let mail = WelcomeEmail.build(lang: dto.lang, name: user.name, webOrigin: base)
+        do {
+            try await req.mailSender.send(to: email, subject: mail.subject, html: mail.html, text: mail.text, on: req.client)
+        } catch {
+            req.logger.error("No s'ha pogut enviar el correu de benvinguda a \(email): \(error)")
+        }
+
         let response = Response(status: .created)
         try response.content.encode(UserResponse(user, includeEmail: true))
         return response
@@ -244,6 +255,9 @@ struct CreateUserDTO: Content {
     let username: String
     let email: String
     let password: String
+    /// Idioma de la interfaz para localizar el correo de bienvenida (ca/es/gl/eu/en).
+    /// Opcional: sin él se envía en catalán, el idioma por defecto de la app.
+    var lang: String? = nil
 }
 
 /// Fila de la estadística de registros por región.

@@ -75,7 +75,7 @@ Login con credenciales inválidas → **401**.
 
 | Método | Ruta | 🔒 | Cuerpo | Éxito | Errores |
 |--------|------|----|--------|-------|---------|
-| POST | `/users` | — | `{name, username≥3, email, password≥8}` | 201 `UserResponse` | 400, 409 (username/email en uso) |
+| POST | `/users` | — | `{name, username≥3, email, password≥8, lang?}` | 201 `UserResponse` | 400, 409 (username/email en uso) |
 | GET | `/users/:id` | — | — | 200 `UserResponse` (sin email) | 404 |
 | GET | `/users/:id/fonts` | — | — | 200 `[Font]` (creadas por ese usuario) | 404 |
 | GET | `/users/:id/comments` | — | — | 200 `[reseña]` (con `fontName`) | 404 |
@@ -111,6 +111,11 @@ ni se expone la ubicación en las respuestas de usuario.
   un servicio HTTP en prod (ip-api.com), activado con la variable de entorno **`GEOIP_ENABLED=true`**.
   Con el flag apagado, los campos quedan siempre `null` ("región desconocida").
 - El agregado se consulta en `GET /users/stats/regions` (solo admin).
+
+Al registrarse se envía un **correo de bienvenida** (`WelcomeEmail`) con la ilustración de
+la app, qué es FontApp, qué puede hacer y las funciones de móvil (offline / instalar la
+app). Se localiza con `lang` (`ca` por defecto) y es **best-effort**: si el proveedor de
+correo falla, el alta se completa igualmente.
 
 ## Fonts (fuentes de agua)
 
