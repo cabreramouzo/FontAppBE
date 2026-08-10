@@ -167,6 +167,10 @@ swift run App send-weekly-digest --dry-run    # muestra a quién se enviaría, s
 swift run App send-weekly-digest --user pepe  # solo a un usuario (pruebas)
 ```
 
+También puedes lanzarlo **a mano desde el panel de administración** (solo propietario):
+sección «Resumen semanal» → *Ver a quién se enviaría* y, si cuadra, *Enviar ahora*. Usa el mismo
+código que el cron. Útil para el primer envío o para una semana suelta sin tocar el cron.
+
 **Dónde poner el cron.** Dos opciones, ambas sin servidor extra:
 
 **a) Máquina programada de Fly** (lo más simple, pero no eliges el día ni la hora: Fly solo

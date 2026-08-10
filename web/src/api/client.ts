@@ -216,6 +216,23 @@ export async function resetPassword(token: string, password: string): Promise<vo
   await apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) })
 }
 
+// Resumen semanal (solo propietario): la vista previa no envía nada; el POST sí.
+export interface DigestResult {
+  candidates: number
+  recipients: { username: string; email: string; activityCount: number; nearbyCount: number }[]
+  skipped: number
+  failed: number
+  sent: boolean
+}
+
+export async function previewWeeklyDigest(): Promise<DigestResult> {
+  return apiFetch('/admin/weekly-digest')
+}
+
+export async function sendWeeklyDigest(): Promise<DigestResult> {
+  return apiFetch('/admin/weekly-digest', { method: 'POST' })
+}
+
 // Moderación: denunciar contenido; listar/descartar denuncias (admin).
 export async function createFlag(targetType: 'comment' | 'font', targetID: string, fontID?: string, reason?: string): Promise<void> {
   await apiFetch('/flags', { method: 'POST', body: JSON.stringify({ targetType, targetID, fontID, reason }) })

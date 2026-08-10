@@ -130,6 +130,13 @@ sobre fuentes que creó o reseñó, más las fuentes nuevas de otros a menos de 
 | Método | Ruta | Auth | Body | OK | Errores |
 |---|---|---|---|---|---|
 | POST | `/users/unsubscribe` | — | `{user, token}` | 200 | 400 (enlace no válido) |
+| GET | `/admin/weekly-digest` | Bearer (**owner**) | — | 200 `{candidates, recipients[], skipped, failed, sent:false}` | 401, 403 |
+| POST | `/admin/weekly-digest` | Bearer (**owner**) | — | 200 igual, `sent:true` | 401, 403 |
+
+El GET es la **vista previa** (mismo cálculo, sin enviar) y el POST envía al momento desde el
+panel de administración. Solo el propietario: es la acción de mayor alcance de la app, escribe
+a todos los usuarios a la vez y no se puede deshacer. Comparte código con el cron
+(`WeeklyDigestSender`), así que la previsualización no puede desviarse de lo que se envía.
 
 `token` es un HMAC-SHA256 del id de usuario firmado con `APP_SECRET` (ver `UnsubscribeToken`).
 Es **público a propósito**: el enlace se pulsa desde el buzón, sin sesión. No caduca, no se

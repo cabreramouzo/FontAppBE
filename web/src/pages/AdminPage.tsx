@@ -22,6 +22,7 @@ import { EditsTable } from '../components/EditsTable'
 import { RolesHelpButton } from '../components/RolesHelp'
 import { timeAgo } from '../lib/time'
 import { canModerate, isAdminRole, isOwner } from '../lib/roles'
+import { WeeklyDigestPanel } from '../components/WeeklyDigestPanel'
 
 // Cuántas ediciones pendientes se muestran en el panel (la cola). El resto, en /admin/edits.
 const EDITS_INBOX = 15
@@ -179,6 +180,8 @@ export function AdminPage() {
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{t('admin.rolesHint')}</Typography>
         </Box>
       )}
+
+      {isOwner(user) && <WeeklyDigestPanel />}
 
       {isAdminRole(user) && (<>
       <Box component="section" sx={{ mt: 3 }}>

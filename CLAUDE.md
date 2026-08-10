@@ -24,7 +24,8 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Importar/zonas: `import-fonts` (Overpass/OSM) · `import-geojson` (ICGC/ACA) ·
   `populate-regions <fronteras.geojson>` (rellena país/región offline por point-in-polygon).
 - Resumen semanal por correo: `swift run App send-weekly-digest [--dry-run] [--user <username>]`
-  (pensado para un cron semanal; ver DEPLOY.md).
+  (pensado para un cron semanal; ver DEPLOY.md). También a mano desde el panel de
+  administración (solo owner): vista previa + enviar, con el mismo código (`WeeklyDigestSender`).
 - Roles: `swift run App set-role <username> <user|moderator|admin|owner>` (owner solo por CLI).
 - Servidor: `swift run App serve` (`127.0.0.1:8080`). Cargar entorno: `export $(cat env.development | xargs)`.
 - Web (dev): `cd web && npm run dev` (proxy `/api` y `/uploads` → backend).

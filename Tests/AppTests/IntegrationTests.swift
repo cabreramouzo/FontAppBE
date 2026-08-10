@@ -702,4 +702,33 @@ final class IntegrationTests: XCTestCase {
             XCTAssertEqual(user?.weeklyDigest, false)
         }
     }
+
+    /// El envío manual del resumen es la acción de mayor alcance de la app
+    /// (escribe a todos los usuarios): solo el propietario, ni siquiera un admin.
+    func testWeeklyDigestSendIsOwnerOnly() async throws {
+        try await withApp { app in
+            let adminID = try await register(app, username: "digest-admin")
+            try await setRole(app, userID: adminID, role: .admin)
+            let adminTok = try await login(app, username: "digest-admin")
+
+            try await app.test(.GET, "admin/weekly-digest", headers: bearer(adminTok), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+            try await app.test(.POST, "admin/weekly-digest", headers: bearer(adminTok), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+            try await app.test(.GET, "admin/weekly-digest", afterResponse: { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            })
+
+            // El propietario sí puede, y la vista previa no envía nada.
+            let bossID = try await register(app, username: "digest-boss")
+            try await setRole(app, userID: bossID, role: .owner)
+            let ownerTok = try await login(app, username: "digest-boss")
+            try await app.test(.GET, "admin/weekly-digest", headers: bearer(ownerTok), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertFalse(try res.content.decode(WeeklyDigestSender.Result.self).sent)
+            })
+        }
+    }
 }
