@@ -6,6 +6,11 @@ import { useI18n } from '../i18n/I18nContext'
 // NOTA: redactado por el responsable, NO asesoramiento legal profesional.
 // Datos de contacto y responsable: Miguel Cabrera · admin@fontapp.net.
 // Incluye un descargo de responsabilidad sobre la potabilidad del agua.
+//
+// OJO al tocar la app: este texto describe hechos verificables (qué datos se guardan,
+// qué terceros los reciben, qué se guarda en el navegador). Si añades un servicio
+// externo, una analítica o un dato nuevo, ACTUALIZA ESTO. Un aviso legal que miente
+// es peor que no tenerlo.
 export function LegalPage() {
   const { lang, t } = useI18n()
   return (
@@ -55,10 +60,16 @@ function LegalCA() {
       <p><strong>Responsable del tractament:</strong> Miguel Cabrera, <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.</p>
       <p><strong>Quines dades tractem:</strong></p>
       <ul>
-        <li>El teu <strong>nom d'usuari i nom</strong>, i la teva <strong>contrasenya</strong> (desada xifrada amb bcrypt, mai en clar).</li>
+        <li>El teu <strong>nom d'usuari i nom</strong>, la teva <strong>adreça de correu</strong> i la teva <strong>contrasenya</strong> (desada xifrada amb bcrypt, mai en clar).</li>
         <li>El <strong>contingut que publiques</strong>: fonts, ressenyes, valoracions, fotos i incidències.</li>
         <li>La teva <strong>ubicació precisa</strong> només s'utilitza, si l'autoritzes, per mostrar-te fonts properes; <strong>no es desa</strong> al servidor.</li>
-        <li>En <strong>registrar-te</strong> desem la teva <strong>regió aproximada</strong> (país/regió deduïts de la IP, <strong>no la IP</strong>) només per a estadística d'ús.</li>
+        <li>En <strong>registrar-te</strong> desem la teva <strong>regió aproximada</strong> (país/regió deduïts de la IP, <strong>no la IP</strong>) i l'<strong>idioma</strong> de la interfície, per a estadística d'ús i per escriure't en la teva llengua.</li>
+        <li>Si arribes des d'un <strong>cartell o una campanya</strong> amb codi (<code>fontapp.net/?p=castellcir</code>), desem aquest codi amb l'alta per saber quin cartell funciona. No identifica cap persona.</li>
+      </ul>
+      <p><strong>Per a què fem servir el teu correu:</strong></p>
+      <ul>
+        <li>Missatges necessaris del servei: benvinguda i recuperació de contrasenya.</li>
+        <li>Un <strong>resum setmanal</strong> de novetats a les fonts que has afegit o on has participat. Pots desactivar-lo quan vulguis des del teu perfil o amb l'enllaç de baixa que porta cada correu, sense iniciar sessió.</li>
       </ul>
       <p>
         <strong>Finalitat i base legal:</strong> prestar el servei que sol·licites (execució) i el consentiment que atorgues en registrar-te.
@@ -71,10 +82,24 @@ function LegalCA() {
         També pots reclamar davant l'Agència Espanyola de Protecció de Dades (AEPD).
       </p>
       <p>
-        <strong>Emmagatzematge al teu navegador:</strong> guardem únicament un <em>token de sessió</em> a <code>localStorage</code>,
-        necessari per mantenir la sessió iniciada. No fem servir cookies de seguiment ni analítica de tercers, per la qual cosa no cal cap bàner de consentiment.
+        <strong>Emmagatzematge al teu navegador:</strong> <strong>no fem servir cookies</strong>. Desem al teu propi
+        dispositiu: el <em>token de sessió</em> (per mantenir-te identificat), les teves preferències (idioma, tema clar/fosc,
+        avisos ja llegits), el codi del cartell pel qual vas arribar i, si afegeixes alguna cosa <strong>sense cobertura</strong>,
+        la teva aportació i la foto en una cua local fins que hi hagi xarxa. Tot això es queda al teu dispositiu i pots
+        esborrar-ho buidant les dades del lloc al navegador.
       </p>
-      <p><strong>Allotjament:</strong> les dades es processen a Fly.io (backend), Neon (base de dades PostgreSQL) i Cloudflare (web/CDN).</p>
+      <p>
+        <strong>Analítica:</strong> fem servir <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
+        que mesura visites de forma <strong>agregada, sense cookies i sense identificar-te</strong>; per això no et demanem
+        consentiment. No fem servir Google Analytics ni cap xarxa publicitària, i no venem ni cedim dades a ningú.
+      </p>
+      <p><strong>Qui tracta dades per encàrrec nostre:</strong></p>
+      <ul>
+        <li><strong>Fly.io</strong> (servidor) i <strong>Neon</strong> (base de dades PostgreSQL).</li>
+        <li><strong>Cloudflare</strong>: web i CDN, analítica agregada i emmagatzematge de les fotos (R2).</li>
+        <li><strong>Resend</strong>: enviament dels correus (rep la teva adreça i el contingut del missatge).</li>
+        <li><strong>ip-api.com</strong>: només en el moment de registrar-te, per deduir el país i la regió. <strong>Rep la teva IP</strong>, que nosaltres no desem enlloc.</li>
+      </ul>
 
       <h2>Dades cartogràfiques</h2>
       <p>
@@ -115,10 +140,16 @@ function LegalES() {
       <p><strong>Responsable del tratamiento:</strong> Miguel Cabrera, <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.</p>
       <p><strong>Qué datos tratamos:</strong></p>
       <ul>
-        <li>Tu <strong>nombre de usuario y nombre</strong>, y tu <strong>contraseña</strong> (almacenada cifrada con bcrypt, nunca en claro).</li>
+        <li>Tu <strong>nombre de usuario y nombre</strong>, tu <strong>dirección de correo</strong> y tu <strong>contraseña</strong> (almacenada cifrada con bcrypt, nunca en claro).</li>
         <li>El <strong>contenido que publicas</strong>: fuentes, reseñas, valoraciones, fotos e incidencias.</li>
         <li>Tu <strong>ubicación precisa</strong> solo se usa, si tú lo autorizas, para mostrarte fuentes cercanas; <strong>no se almacena</strong> en el servidor.</li>
-        <li>Al <strong>registrarte</strong> guardamos tu <strong>región aproximada</strong> (país/región deducidos de la IP, <strong>no la IP</strong>) solo para estadística de uso.</li>
+        <li>Al <strong>registrarte</strong> guardamos tu <strong>región aproximada</strong> (país/región deducidos de la IP, <strong>no la IP</strong>) y el <strong>idioma</strong> de la interfaz, para estadística de uso y para escribirte en tu lengua.</li>
+        <li>Si llegas desde un <strong>cartel o una campaña</strong> con código (<code>fontapp.net/?p=castellcir</code>), guardamos ese código con el alta para saber qué cartel funciona. No identifica a ninguna persona.</li>
+      </ul>
+      <p><strong>Para qué usamos tu correo:</strong></p>
+      <ul>
+        <li>Mensajes necesarios del servicio: bienvenida y recuperación de contraseña.</li>
+        <li>Un <strong>resumen semanal</strong> de novedades en las fuentes que has añadido o donde has participado. Puedes desactivarlo cuando quieras desde tu perfil o con el enlace de baja que lleva cada correo, sin iniciar sesión.</li>
       </ul>
       <p>
         <strong>Finalidad y base legal:</strong> prestar el servicio que solicitas (ejecución) y el consentimiento que otorgas al registrarte.
@@ -131,10 +162,24 @@ function LegalES() {
         También puedes reclamar ante la Agencia Española de Protección de Datos (AEPD).
       </p>
       <p>
-        <strong>Almacenamiento en tu navegador:</strong> guardamos únicamente un <em>token de sesión</em> en <code>localStorage</code>,
-        necesario para mantener tu sesión iniciada. No usamos cookies de seguimiento ni analítica de terceros, por lo que no requiere banner de consentimiento.
+        <strong>Almacenamiento en tu navegador:</strong> <strong>no usamos cookies</strong>. Guardamos en tu propio
+        dispositivo: el <em>token de sesión</em> (para mantenerte identificado), tus preferencias (idioma, tema claro/oscuro,
+        avisos ya leídos), el código del cartel por el que llegaste y, si añades algo <strong>sin cobertura</strong>,
+        tu aportación y la foto en una cola local hasta que haya red. Todo eso se queda en tu dispositivo y puedes
+        borrarlo vaciando los datos del sitio en el navegador.
       </p>
-      <p><strong>Alojamiento:</strong> los datos se procesan en Fly.io (backend), Neon (base de datos PostgreSQL) y Cloudflare (web/CDN).</p>
+      <p>
+        <strong>Analítica:</strong> usamos <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
+        que mide visitas de forma <strong>agregada, sin cookies y sin identificarte</strong>; por eso no te pedimos
+        consentimiento. No usamos Google Analytics ni ninguna red publicitaria, y no vendemos ni cedemos datos a nadie.
+      </p>
+      <p><strong>Quién trata datos por encargo nuestro:</strong></p>
+      <ul>
+        <li><strong>Fly.io</strong> (servidor) y <strong>Neon</strong> (base de datos PostgreSQL).</li>
+        <li><strong>Cloudflare</strong>: web y CDN, analítica agregada y almacenamiento de las fotos (R2).</li>
+        <li><strong>Resend</strong>: envío de los correos (recibe tu dirección y el contenido del mensaje).</li>
+        <li><strong>ip-api.com</strong>: solo en el momento de registrarte, para deducir el país y la región. <strong>Recibe tu IP</strong>, que nosotros no guardamos en ningún sitio.</li>
+      </ul>
 
       <h2>Datos cartográficos</h2>
       <p>
@@ -175,9 +220,16 @@ function LegalEN() {
       <p><strong>Data controller:</strong> Miguel Cabrera, <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.</p>
       <p><strong>What data we process:</strong></p>
       <ul>
-        <li>Your <strong>username and name</strong>, and your <strong>password</strong> (stored hashed with bcrypt, never in clear text).</li>
+        <li>Your <strong>username and name</strong>, your <strong>email address</strong> and your <strong>password</strong> (stored hashed with bcrypt, never in clear text).</li>
         <li>The <strong>content you publish</strong>: fountains, reviews, ratings, photos and issues.</li>
         <li>Your <strong>location</strong> is only used, if you allow it, to show you nearby fountains; it is <strong>not stored</strong> on the server.</li>
+        <li>When you <strong>sign up</strong> we store your <strong>approximate region</strong> (country/region derived from your IP — <strong>not the IP</strong>) and your interface <strong>language</strong>, for usage statistics and to write to you in your language.</li>
+        <li>If you arrive from a <strong>poster or campaign</strong> carrying a code (<code>fontapp.net/?p=castellcir</code>), we store that code with your sign-up to learn which poster works. It identifies no one.</li>
+      </ul>
+      <p><strong>What we use your email for:</strong></p>
+      <ul>
+        <li>Service messages: welcome and password recovery.</li>
+        <li>A <strong>weekly round-up</strong> of activity on the fountains you added or took part in. You can turn it off any time from your profile, or with the unsubscribe link in every email — no sign-in needed.</li>
       </ul>
       <p>
         <strong>Purpose and legal basis:</strong> to provide the service you request (performance) and the consent you give when signing up.
@@ -190,10 +242,24 @@ function LegalEN() {
         You may also complain to your data protection authority.
       </p>
       <p>
-        <strong>Storage in your browser:</strong> we only keep a <em>session token</em> in <code>localStorage</code>,
-        needed to keep you signed in. We use no tracking cookies or third-party analytics, so no consent banner is required.
+        <strong>Storage in your browser:</strong> <strong>we use no cookies</strong>. We keep on your own device: the
+        <em> session token</em> (to keep you signed in), your preferences (language, light/dark theme, notices already seen),
+        the poster code you arrived with and, if you add something <strong>with no signal</strong>, your contribution and its
+        photo in a local queue until the network is back. All of it stays on your device and you can clear it by deleting
+        the site data in your browser.
       </p>
-      <p><strong>Hosting:</strong> data is processed at Fly.io (backend), Neon (PostgreSQL database) and Cloudflare (web/CDN).</p>
+      <p>
+        <strong>Analytics:</strong> we use <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
+        which measures visits in <strong>aggregate, without cookies and without identifying you</strong> — which is why we
+        ask for no consent. We use no Google Analytics and no ad network, and we neither sell nor share your data.
+      </p>
+      <p><strong>Processors acting on our behalf:</strong></p>
+      <ul>
+        <li><strong>Fly.io</strong> (server) and <strong>Neon</strong> (PostgreSQL database).</li>
+        <li><strong>Cloudflare</strong>: web and CDN, aggregate analytics and photo storage (R2).</li>
+        <li><strong>Resend</strong>: email delivery (receives your address and the message content).</li>
+        <li><strong>ip-api.com</strong>: only at sign-up, to derive country and region. <strong>It receives your IP</strong>, which we store nowhere.</li>
+      </ul>
 
       <h2>Map data</h2>
       <p>
