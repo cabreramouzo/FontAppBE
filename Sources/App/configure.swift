@@ -41,6 +41,10 @@ public func configure(_ app: Application) async throws {
         )
     }
 
+    // Timeouts de salida. Sin esto, una llamada a un tercero (Resend, ip-api) puede
+    // quedarse colgada minutos y arrastrar consigo la petición que la disparó.
+    app.http.client.configuration.timeout = .init(connect: .seconds(5), read: .seconds(15))
+
     // Hashing de contraseñas.
     app.passwords.use(.bcrypt)
 

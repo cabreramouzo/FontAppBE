@@ -38,11 +38,16 @@ extension Application {
 /// Middleware que corta las peticiones que superan `max` intentos por IP en `window`.
 /// Se aplica antes de la autenticación (p. ej. en /auth/login) para frenar fuerza bruta.
 struct RateLimitMiddleware: AsyncMiddleware {
+    /// Etiqueta del contador. IMPRESCINDIBLE que sea distinta por endpoint: si dos
+    /// límites comparten clave, comparten cuenta, y el más generoso se queda sin
+    /// margen porque otro endpoint ya gastó los intentos (registrarte te dejaría sin
+    /// cupo para añadir fuentes).
+    let scope: String
     let max: Int
     let window: TimeInterval
 
     func respond(to request: Request, chainingTo next: any AsyncResponder) async throws -> Response {
-        let key = Self.clientIP(request)
+        let key = "\(scope):\(Self.clientIP(request))"
         let allowed = await request.application.rateLimiter.allow(key: key, max: max, window: window)
         guard allowed else {
             throw Abort(.tooManyRequests, reason: "Demasiados intentos. Prueba de nuevo en unos minutos.")

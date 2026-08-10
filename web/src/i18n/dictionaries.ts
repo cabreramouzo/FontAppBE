@@ -360,6 +360,7 @@ const ca: Dict = {
   'offline.savedUpdate': 'Guardat sense cobertura. S\'enviarà quan tornis a tenir senyal.',
   'offline.pending': 'Pendents d\'enviar: {n}',
   'offline.pendingHint': 'S\'enviaran soles quan hi hagi connexió.',
+  'offline.needsLogin': 'La sessió ha caducat: torna a entrar i s\'enviarà sol.',
   'offline.sendNow': 'Envia ara',
   'offline.sending': 'Enviant…',
 
@@ -721,6 +722,7 @@ const es: Dict = {
   'offline.savedUpdate': 'Guardado sin cobertura. Se enviará cuando recuperes señal.',
   'offline.pending': 'Pendientes de enviar: {n}',
   'offline.pendingHint': 'Se enviarán solos cuando haya conexión.',
+  'offline.needsLogin': 'La sesión ha caducado: vuelve a entrar y se enviará solo.',
   'offline.sendNow': 'Enviar ahora',
   'offline.sending': 'Enviando…',
 
@@ -1078,6 +1080,7 @@ const gl: Dict = {
   'offline.savedUpdate': 'Gardado sen cobertura. Enviarase cando recuperes sinal.',
   'offline.pending': 'Pendentes de enviar: {n}',
   'offline.pendingHint': 'Enviaranse sós cando haxa conexión.',
+  'offline.needsLogin': 'A sesión caducou: volve entrar e enviarase só.',
   'offline.sendNow': 'Enviar agora',
   'offline.sending': 'Enviando…',
 
@@ -1435,6 +1438,7 @@ const eu: Dict = {
   'offline.savedUpdate': 'Estaldurarik gabe gordeta. Seinalea berreskuratzean bidaliko da.',
   'offline.pending': 'Bidaltzeke: {n}',
   'offline.pendingHint': 'Konexioa dagoenean bakarrik bidaliko dira.',
+  'offline.needsLogin': 'Saioa iraungi da: sartu berriro eta bakarrik bidaliko da.',
   'offline.sendNow': 'Bidali orain',
   'offline.sending': 'Bidaltzen…',
 
@@ -1792,6 +1796,7 @@ const en: Dict = {
   'offline.savedUpdate': 'Saved offline. It will be sent when you get signal again.',
   'offline.pending': 'Waiting to be sent: {n}',
   'offline.pendingHint': 'They will be sent on their own once you are back online.',
+  'offline.needsLogin': 'Your session expired: sign in again and it will send itself.',
   'offline.sendNow': 'Send now',
   'offline.sending': 'Sending…',
 

@@ -8,8 +8,8 @@ struct AuthController: RouteCollection {
         let auth = routes.grouped("auth")
 
         // Rate-limit anti fuerza bruta en los endpoints sensibles (por IP).
-        let loginThrottle = RateLimitMiddleware(max: 10, window: 5 * 60)   // 10 / 5 min
-        let resetThrottle = RateLimitMiddleware(max: 5, window: 15 * 60)   // 5 / 15 min
+        let loginThrottle = RateLimitMiddleware(scope: "login", max: 10, window: 5 * 60)   // 10 / 5 min
+        let resetThrottle = RateLimitMiddleware(scope: "reset", max: 5, window: 15 * 60)   // 5 / 15 min
 
         // Login con Basic auth, con rate-limit ANTES de autenticar. El identificador
         // puede ser el nombre de usuario O el email (ver UserCredentialsAuthenticator).

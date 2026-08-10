@@ -7,6 +7,38 @@ import Vapor
 /// la web y el cron hacen EXACTAMENTE lo mismo: la vista previa que ve el admin no
 /// puede desviarse de lo que se acaba enviando.
 enum WeeklyDigestSender {
+    /// Evita mandar el resumen dos veces. Dos escenarios reales: doble clic (o dos
+    /// pestañas) lanzando envíos a la vez, y volver al panel al rato y pulsar otra vez
+    /// sin recordar que ya se envió. En ambos casos el usuario recibiría el correo
+    /// duplicado, y eso no se puede deshacer.
+    ///
+    /// En memoria y por instancia: suficiente para el envío manual desde el panel (una
+    /// sola máquina). El cron no pasa por aquí, así que no interfiere.
+    actor SendGate {
+        static let shared = SendGate()
+        private var sending = false
+        private var lastSentAt: Date?
+
+        /// Cuánto tiempo se rechaza un segundo envío manual.
+        static let cooldown: TimeInterval = 6 * 60 * 60
+
+        func begin() throws {
+            if sending {
+                throw Abort(.conflict, reason: "Ya se está enviando el resumen ahora mismo")
+            }
+            if let last = lastSentAt, Date().timeIntervalSince(last) < Self.cooldown {
+                let minutes = Int((Self.cooldown - Date().timeIntervalSince(last)) / 60)
+                throw Abort(.conflict, reason: "El resumen ya se envió hace poco. Podrás repetirlo en \(minutes) min.")
+            }
+            sending = true
+        }
+
+        func end(sent: Bool) {
+            sending = false
+            if sent { lastSentAt = Date() }
+        }
+    }
+
     /// Una línea del resumen: a quién le tocaría y con cuánto contenido.
     struct Recipient: Content {
         let username: String
@@ -34,6 +66,10 @@ enum WeeklyDigestSender {
     static func run(dryRun: Bool, days: Int = 7, username: String? = nil,
                     db: any Database, client: any Client, mailSender: any MailSender,
                     logger: Logger) async throws -> Result {
+        // Solo el envío real pasa por el cerrojo; la vista previa no manda nada.
+        if !dryRun { try await SendGate.shared.begin() }
+        defer { if !dryRun { Task { await SendGate.shared.end(sent: true) } } }
+
         let since = Date().addingTimeInterval(-Double(days) * 86_400)
         let base = Environment.get("WEB_ORIGIN")?.split(separator: ",").first.map(String.init)
             ?? "http://localhost:5174"

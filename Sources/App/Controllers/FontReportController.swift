@@ -8,7 +8,7 @@ struct FontReportController: RouteCollection {
         let reports = routes.grouped("fonts", ":fontID", "report")
         reports.get(use: index) // lectura pública
         let auth = reports.grouped(UserToken.authenticator(), User.guardMiddleware())
-        auth.post(use: create)
+        auth.grouped(RateLimitMiddleware(scope: "report", max: 20, window: 60 * 60)).post(use: create)
         auth.group(":reportID") { r in
             r.delete(use: destroy)
         }

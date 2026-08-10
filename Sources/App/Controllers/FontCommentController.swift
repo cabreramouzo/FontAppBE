@@ -12,7 +12,8 @@ struct FontCommentController: RouteCollection {
         // usuario ya confirmó cada estado (confirmedByMe), sin exigir login.
         comments.grouped(UserToken.authenticator()).get(use: index)
         let auth = comments.grouped(UserToken.authenticator(), User.guardMiddleware())
-        auth.post(use: create)
+        // Confirmar estados es rápido y deseable; escribir 40 reseñas en una hora, no.
+        auth.grouped(RateLimitMiddleware(scope: "comment", max: 40, window: 60 * 60)).post(use: create)
         auth.group(":commentID") { c in
             c.put(use: update)
             c.delete(use: destroy)

@@ -21,7 +21,7 @@ docker build -t fontappbe .
 | `DATABASE_URL` | sí* | Cadena de conexión Postgres (`postgres://user:pass@host:5432/db`). |
 | `DATABASE_HOST` / `_PORT` / `_USERNAME` / `_PASSWORD` / `_NAME` | sí* | Alternativa a `DATABASE_URL` (variables sueltas). |
 | `WEB_ORIGIN` | recomendada | Origen(es) del web permitidos por CORS, separados por comas (p. ej. `https://fontapp.com`). Si no se define, CORS permite todo (solo dev). |
-| `AUTO_MIGRATE` | opcional | `true` → migra la BD al arrancar. Útil en un solo contenedor. |
+| `AUTO_MIGRATE` | opcional | `true` → migra la BD al arrancar. Útil en un solo contenedor. **Vive en `fly.toml` (`[env]`), no en los secrets.** Para migrar a mano: `fly ssh console -a fontapp -C "/app/App migrate --yes"`. |
 | `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` | opcional | Si están **las cinco**, las imágenes se suben a Cloudflare R2; si no, a disco local. `R2_PUBLIC_URL` es la base pública del bucket (p. ej. `https://pub-xxxx.r2.dev`). |
 | `RESEND_API_KEY` | opcional | API key de [Resend](https://resend.com). Junto con `MAIL_FROM` activa el envío real de correo (bienvenida, resumen semanal y reset de contraseña); si falta, en dev solo se loguea (`LogMailSender`). |
 | `MAIL_FROM` | opcional | Remitente de los correos, p. ej. `FontApp <no-reply@send.fontapp.net>`. Obligatoria junto con `RESEND_API_KEY`. |
@@ -397,6 +397,30 @@ Dos señales fiables (no adivines por el reloj):
    - **500 / error de BD** → código nuevo pero **falta la migración** (fuérzala:
      `fly ssh console -a fontapp -C "/app/App migrate --yes"`).
    - **2xx** (p. ej. `204`) → desplegado **y** migrado. ✅
+
+## Límites de uso (anti-bot)
+
+Todos los endpoints de escritura llevan un límite por IP y ventana deslizante
+(`RateLimitMiddleware`), calibrado a lo que haría una persona:
+
+| Acción | Límite |
+|---|---|
+| Registro | 5 / hora |
+| Crear fuente | 30 / hora |
+| Reseña | 40 / hora |
+| Incidencia | 20 / hora |
+| Subir imagen | 60 / hora |
+| Login | 10 / 5 min |
+| Recuperar contraseña | 5 / 15 min |
+| Sugerencias | 5 / 10 min |
+
+Cada límite lleva su propia etiqueta (`scope`): si compartieran contador, registrarte te
+dejaría sin margen para añadir fuentes. El contador es **en memoria y por instancia**: con
+varias máquinas el límite efectivo se multiplica por el número de instancias. A esa escala,
+Redis (o Cloudflare Rate Limiting delante) es el siguiente paso.
+
+Siguiente nivel si aparecen bots de verdad: **Cloudflare Turnstile** en el formulario de
+registro (gratuito, sin cookies ni puzles) y verificación del correo antes de poder publicar.
 
 ## Backups de la base de datos
 

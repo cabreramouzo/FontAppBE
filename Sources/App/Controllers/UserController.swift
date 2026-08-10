@@ -7,7 +7,11 @@ import Vapor
 struct UserController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let users = routes.grouped("users")
-        users.post(use: create)             // registro: público
+        // Ritmo humano: darse de alta es algo que se hace una vez. El límite deja
+        // margen a una familia o un grupo que comparten wifi, y corta en seco al bot
+        // que registra cuentas en bucle (cada alta manda un correo de bienvenida).
+        let signupThrottle = RateLimitMiddleware(scope: "signup", max: 5, window: 60 * 60)   // 5 / hora
+        users.grouped(signupThrottle).post(use: create)  // registro: público
         users.get(":userID", use: show)     // lectura: pública
         users.get(":userID", "fonts", use: userFonts)       // fuentes creadas: público
         users.get(":userID", "comments", use: userComments) // reseñas: público
@@ -159,31 +163,42 @@ struct UserController: RouteCollection {
             throw Abort(.conflict, reason: "El correo '\(email)' ya está registrado")
         }
 
-        // Ubicación aproximada del registro (best-effort; nunca bloquea ni guarda la IP).
-        let geo = await req.geoLocator.locate(ip: req.clientIP, on: req.client)
-
         let user = User(
             name: dto.name,
             username: dto.username,
             email: email,
             passwordHash: try req.password.hash(dto.password),
-            signupCountry: geo?.country,
-            signupRegion: geo?.region,
-            signupCity: geo?.city,
             lang: dto.lang,
             signupSource: Self.cleanSource(dto.source)
         )
         try await user.save(on: req.db)
 
-        // Correo de bienvenida. Best-effort a propósito: si el proveedor falla, el alta
-        // ya está hecha y no tiene sentido devolver un error al usuario por esto.
-        let base = Environment.get("WEB_ORIGIN")?.split(separator: ",").first.map(String.init)
-            ?? "http://localhost:5174"
-        let mail = WelcomeEmail.build(lang: dto.lang, name: user.name, webOrigin: base)
-        do {
-            try await req.mailSender.send(to: email, subject: mail.subject, html: mail.html, text: mail.text, on: req.client)
-        } catch {
-            req.logger.error("No s'ha pogut enviar el correu de benvinguda a \(email): \(error)")
+        // El geo-IP y el correo de bienvenida son DOS llamadas HTTP a servicios ajenos.
+        // Hacerlas aquí dejaba al usuario mirando el botón de "crear cuenta" mientras
+        // respondía un tercero, así que van en segundo plano: la cuenta ya está creada
+        // y ninguna de las dos cosas cambia lo que hay que responderle.
+        let app = req.application
+        let ip = req.clientIP
+        let userID = try user.requireID()
+        let name = user.name
+        let lang = dto.lang
+        Task.detached {
+            // Ubicación aproximada del registro (nunca se guarda la IP).
+            if let geo = await app.geoLocator.locate(ip: ip, on: app.client),
+               let saved = try? await User.find(userID, on: app.db) {
+                saved.signupCountry = geo.country
+                saved.signupRegion = geo.region
+                saved.signupCity = geo.city
+                try? await saved.save(on: app.db)
+            }
+            let base = Environment.get("WEB_ORIGIN")?.split(separator: ",").first.map(String.init)
+                ?? "http://localhost:5174"
+            let mail = WelcomeEmail.build(lang: lang, name: name, webOrigin: base)
+            do {
+                try await app.mailSender.send(to: email, subject: mail.subject, html: mail.html, text: mail.text, on: app.client)
+            } catch {
+                app.logger.error("No s'ha pogut enviar el correu de benvinguda a \(email): \(error)")
+            }
         }
 
         let response = Response(status: .created)

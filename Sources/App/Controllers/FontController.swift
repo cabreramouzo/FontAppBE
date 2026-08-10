@@ -21,7 +21,9 @@ struct FontController: RouteCollection {
 
         // Escritura: requiere token Bearer válido.
         let protected = fonts.grouped(UserToken.authenticator(), User.guardMiddleware())
-        protected.post(use: create)
+        // En una ruta larga se pueden encontrar muchas fuentes, pero no 30 en una hora:
+        // por encima de eso ya no es alguien caminando.
+        protected.grouped(RateLimitMiddleware(scope: "font-create", max: 30, window: 60 * 60)).post(use: create)
         // Historial de ediciones (moderación): solo admins. Antes de `:fontID`
         // para que "edits" no se interprete como un id de fuente.
         protected.get("edits", use: edits)

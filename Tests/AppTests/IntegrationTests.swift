@@ -414,7 +414,13 @@ final class IntegrationTests: XCTestCase {
         try await withApp { app in
             app.geoLocator = StubGeoLocator(location: GeoLocation(country: "Spain", region: "Galicia", city: "A Coruña"))
             let id = try await register(app, username: "galego")
-            let u = try await User.find(id, on: app.db)
+            // El geo-IP ya no bloquea el registro: se resuelve en segundo plano, así
+            // que aquí esperamos a que aterrice en vez de leerlo de inmediato.
+            var u = try await User.find(id, on: app.db)
+            for _ in 0..<50 where u?.signupRegion == nil {
+                try await Task.sleep(nanoseconds: 100_000_000)
+                u = try await User.find(id, on: app.db)
+            }
             XCTAssertEqual(u?.signupRegion, "Galicia")
             XCTAssertEqual(u?.signupCountry, "Spain")
             XCTAssertEqual(u?.signupCity, "A Coruña")

@@ -8,7 +8,7 @@ struct FeedbackController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let feedback = routes.grouped("feedback")
         // Anti-spam: 5 envíos / 10 min por IP. Auth opcional (liga el usuario si hay token).
-        let throttle = RateLimitMiddleware(max: 5, window: 10 * 60)
+        let throttle = RateLimitMiddleware(scope: "feedback", max: 5, window: 10 * 60)
         feedback.grouped(throttle, UserToken.authenticator()).post(use: create)
         // Estadística: exige token y rol admin.
         feedback.grouped(UserToken.authenticator(), User.guardMiddleware()).get(use: index)

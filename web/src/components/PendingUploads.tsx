@@ -4,7 +4,7 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
-import { flushOutbox, onOutboxChanged, pendingCount } from '../lib/outbox'
+import { flushOutbox, onOutboxChanged, pendingStatus } from '../lib/outbox'
 import { useI18n } from '../i18n/I18nContext'
 
 // Aviso de aportaciones guardadas sin cobertura. Solo aparece si hay algo pendiente,
@@ -12,9 +12,12 @@ import { useI18n } from '../i18n/I18nContext'
 export function PendingUploads() {
   const { t } = useI18n()
   const [count, setCount] = useState(0)
+  const [needsAuth, setNeedsAuth] = useState(false)
   const [sending, setSending] = useState(false)
 
-  const refresh = useCallback(() => { void pendingCount().then(setCount) }, [])
+  const refresh = useCallback(() => {
+    void pendingStatus().then(({ count, needsAuth }) => { setCount(count); setNeedsAuth(needsAuth) })
+  }, [])
 
   useEffect(() => {
     refresh()
@@ -48,11 +51,20 @@ export function PendingUploads() {
       <CloudOffIcon color="warning" fontSize="small" />
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography variant="body2" sx={{ fontWeight: 600 }}>{t('offline.pending', { n: count })}</Typography>
-        <Typography variant="caption" color="text.secondary">{t('offline.pendingHint')}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          {needsAuth ? t('offline.needsLogin') : t('offline.pendingHint')}
+        </Typography>
       </Box>
-      <Button size="small" variant="contained" disableElevation onClick={sendNow} disabled={sending}>
-        {sending ? t('offline.sending') : t('offline.sendNow')}
-      </Button>
+      {needsAuth ? (
+        // Reintentar no sirve hasta que vuelva a haber sesión: le llevamos al acceso.
+        <Button size="small" variant="contained" disableElevation component="a" href="/login">
+          {t('nav.enter')}
+        </Button>
+      ) : (
+        <Button size="small" variant="contained" disableElevation onClick={sendNow} disabled={sending}>
+          {sending ? t('offline.sending') : t('offline.sendNow')}
+        </Button>
+      )}
     </Paper>
   )
 }

@@ -32,7 +32,11 @@ export type OutboxItem =
   // Actualización/reseña sobre una fuente que YA existe.
   | { kind: 'comment'; fontID: string; data: NewComment; photo?: Blob; photoName?: string }
 
-type StoredItem = OutboxItem & { id: number; queuedAt: number; attempts: number; claimedAt?: number }
+type StoredItem = OutboxItem & {
+  id: number; queuedAt: number; attempts: number; claimedAt?: number
+  /** La sesión caducó al intentar enviarlo: hace falta volver a entrar. */
+  needsAuth?: boolean
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -69,6 +73,13 @@ function tx<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequ
 export async function saveSessionForSync(token: string | null): Promise<void> {
   try {
     await tx('readwrite', (s) => s.put({ key: 'session', token, apiBase: import.meta.env.VITE_API_URL || '/api' }), META)
+    // Sesión nueva: lo que estaba esperando a que volvieras a entrar ya puede salir.
+    if (token) {
+      for (const item of await allItems()) {
+        if (item.needsAuth) await tx('readwrite', (s) => s.put({ ...item, needsAuth: false }))
+      }
+      notifyChanged()
+    }
   } catch {
     /* sin IndexedDB: el envío en segundo plano no estará disponible, nada más */
   }
@@ -110,6 +121,16 @@ export async function pendingCount(): Promise<number> {
     return await tx<number>('readonly', (s) => s.count())
   } catch {
     return 0 // sin IndexedDB (modo privado antiguo): la app sigue funcionando
+  }
+}
+
+/** Cuántas cosas quedan y si alguna está esperando a que vuelvas a iniciar sesión. */
+export async function pendingStatus(): Promise<{ count: number; needsAuth: boolean }> {
+  try {
+    const items = await allItems()
+    return { count: items.length, needsAuth: items.some((i) => i.needsAuth) }
+  } catch {
+    return { count: 0, needsAuth: false }
   }
 }
 
@@ -164,9 +185,18 @@ export async function flushOutbox(): Promise<number> {
         // Todo lo TRANSITORIO se reintenta indefinidamente: la aportación del usuario
         // no se descarta nunca por algo que no dependa de ella. Liberamos la marca para
         // que un reintento inmediato ("enviar ahora") pueda volver a cogerlo.
+        // Sesión caducada: reintentar no sirve de nada hasta que el usuario vuelva a
+        // entrar, y si no se lo decimos, el aviso de pendientes se queda ahí para
+        // siempre sin explicación. Lo marcamos y paramos.
+        if (e instanceof ApiError && e.status === 401) {
+          await tx('readwrite', (s) => s.put({ ...item, claimedAt: 0, needsAuth: true }))
+          notifyChanged()
+          break
+        }
         const transient =
-          isOffline(e) ||                                            // seguimos sin red
-          (e instanceof ApiError && (e.status === 401 || e.status >= 500)) // sesión / servidor
+          isOffline(e) ||                                  // seguimos sin red
+          (e instanceof ApiError && (e.status === 429 ||   // límite de uso: es cuestión de esperar
+                                     e.status >= 500))     // el servidor está mal
         if (transient) {
           await tx('readwrite', (s) => s.put({ ...item, claimedAt: 0 }))
           break
