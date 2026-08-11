@@ -69,6 +69,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - El `--dedupe 50` del importador **está medido, no elegido a ojo**: en la banda 25–50 m el
   80 % de los puntos son la misma fuente registrada dos veces. Antes de bajarlo, lee el
   porqué en DEPLOY.md. Las vecinas que sí eran distintas (80) se rescataron a mano.
+- `scripts/fonts-import-tools.py` (Python sin dependencias): `filtra` lo que no son fuentes
+  de beber, `llindar` mide en qué metro poner el `--dedupe`, y `rescata` saca las vecinas
+  que sí eran fuentes distintas. Sirve para cualquier dataset nuevo, no solo el de la ACA.
 
 ## Carteles / campañas
 - Cartel A5 en catalán en `flyer/` (HTML editable + PDF). `flyer/genera-cartells.py <codis>`

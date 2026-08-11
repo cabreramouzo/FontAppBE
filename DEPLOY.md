@@ -57,6 +57,18 @@ Descarga:
 curl "https://sig.gencat.cat/ows/AIGUA/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=AIGUA:AIGUA_FONTS&outputFormat=application/json&srsName=EPSG:4326" -o fonts-aca-catalunya.json
 ```
 
+Los tres pasos de preparación (filtrar, elegir el umbral, rescatar vecinas) están en
+`scripts/fonts-import-tools.py`, sin dependencias. Necesita las fuentes actuales en CSV:
+
+```bash
+psql "$DATABASE_URL" -tAc "COPY (SELECT latitude, longitude, name FROM fonts) TO STDOUT WITH CSV" > /tmp/fonts.csv
+
+python3 scripts/fonts-import-tools.py filtra  fonts-aca-catalunya.json fonts-aca-filtrado.json
+python3 scripts/fonts-import-tools.py llindar fonts-aca-filtrado.json /tmp/fonts.csv     # ANTES de importar
+python3 scripts/fonts-import-tools.py rescata fonts-aca-filtrado.json /tmp/fonts.csv \
+    --min 25 --max 50 --limit 50 --enlaces --salida fonts-aca-extra50.json
+```
+
 **Filtrado previo.** Todo viene etiquetado como `TIPUS = Font`, pero por el nombre se cuelan
 cosas que no son fuentes de beber. Se descartan por prefijo del nombre (227 de 10.057):
 `BASSA`, `ESTANY(OL)`, `POU`, `MINA`, `GORG`, `CAPTACIÓ`, `SURGÈNCIA`, `PRESA`, `TORRENT`.
