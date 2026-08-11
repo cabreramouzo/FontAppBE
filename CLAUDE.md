@@ -22,8 +22,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   Con la BD ya poblada (p. ej. tras `import-fonts`), `seed --demo` NO reinserta fuentes: solo añade
   reseñas de ejemplo sobre las fuentes existentes de la zona del Moianès (bbox), sin tocar el resto.
 - Importar/zonas: `import-fonts` (Overpass/OSM) · `import-geojson` (ICGC/ACA; acepta Point y
-  MultiPoint, con `--dry-run` y `--titlecase`; las ~10.000 fuentes oficiales de la ACA salen
-  del WFS `AIGUA:AIGUA_FONTS`, ver DEPLOY.md) ·
+  MultiPoint, con `--dry-run` y `--titlecase`) ·
   `populate-regions <fronteras.geojson>` (rellena país/región offline por point-in-polygon).
 - Resumen semanal por correo: `swift run App send-weekly-digest [--dry-run] [--user <username>]`
   (pensado para un cron semanal; ver DEPLOY.md). También a mano desde el panel de
@@ -61,6 +60,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Actividad reciente (`ActivityController` → `/activity`, `ActivityFeed.tsx`): fuentes,
   reseñas, incidencias y ediciones en una línea de tiempo, con filtro por zona. Solo admin;
   pensado para abrirse al público sin cambios (no expone nada que no esté ya en la ficha).
+
+## Datos de fuentes
+- Dos orígenes: **OpenStreetMap** (`import-fonts`, ODbL) y el **WFS abierto de la ACA**
+  (`AIGUA:AIGUA_FONTS`, ~10.000 fuentes de Catalunya con topónimo oficial; es la capa que
+  alimentaba la desaparecida app CercaFonts del ICGC). **La ACA autorizó el uso**; se atribuye
+  con `© ICGC/ACA`. Runbook completo en [DEPLOY.md](DEPLOY.md).
+- El `--dedupe 50` del importador **está medido, no elegido a ojo**: en la banda 25–50 m el
+  80 % de los puntos son la misma fuente registrada dos veces. Antes de bajarlo, lee el
+  porqué en DEPLOY.md. Las vecinas que sí eran distintas (80) se rescataron a mano.
 
 ## Carteles / campañas
 - Cartel A5 en catalán en `flyer/` (HTML editable + PDF). `flyer/genera-cartells.py <codis>`

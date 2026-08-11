@@ -47,28 +47,88 @@ El contenedor arranca con `serve --env production` (ver `CMD` del `Dockerfile`).
 ### Fuentes oficiales de la ACA (las de CercaFonts)
 
 La app CercaFonts (ICGC + ACA) ya no está, pero **su capa de datos sigue publicada** en el
-WFS abierto de la ACA: `AIGUA:AIGUA_FONTS`, unas 10.000 fuentes de toda Catalunya con
-topónimo, tipo, municipio y comarca. Descarga en GeoJSON:
+WFS abierto de la ACA: `AIGUA:AIGUA_FONTS`, ~10.000 fuentes de toda Catalunya con topónimo,
+tipo, municipio y comarca. **La ACA dio su visto bueno al uso** (agosto de 2026); se atribuye
+con `© ICGC/ACA` en la descripción de cada fuente.
+
+Descarga:
 
 ```bash
 curl "https://sig.gencat.cat/ows/AIGUA/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=AIGUA:AIGUA_FONTS&outputFormat=application/json&srsName=EPSG:4326" -o fonts-aca-catalunya.json
 ```
 
-Ensayo en seco primero (no toca la BD) y después la importación de verdad:
+**Filtrado previo.** Todo viene etiquetado como `TIPUS = Font`, pero por el nombre se cuelan
+cosas que no son fuentes de beber. Se descartan por prefijo del nombre (227 de 10.057):
+`BASSA`, `ESTANY(OL)`, `POU`, `MINA`, `GORG`, `CAPTACIÓ`, `SURGÈNCIA`, `PRESA`, `TORRENT`.
+**No** filtrar por `TIPUSUS`: ese campo describe el aprovechamiento del agua, no lo que hay
+allí — «Font Vella» figura como *Industrial* por la embotelladora y es una fuente de verdad.
 
 ```bash
-swift run App import-geojson fonts-aca-catalunya.json --name-field NOM --dedupe 50 --titlecase --dry-run
-swift run App import-geojson fonts-aca-catalunya.json --name-field NOM --dedupe 50 --titlecase
+swift run App import-geojson fonts-aca-filtrado.json --name-field NOM --dedupe 50 --titlecase --dry-run
+swift run App import-geojson fonts-aca-filtrado.json --name-field NOM --dedupe 50 --titlecase
 ```
 
 - Cada fuente viene como **MultiPoint** de un punto (el importador acepta ambas geometrías).
-- `--titlecase` porque los nombres vienen EN MAYÚSCULAS y al lado de los de OSM cantan.
-- `--dedupe 50` evita duplicar lo que ya está y, de paso, **mejora los nombres genéricos**
-  de OSM ("Font") con el topónimo oficial.
-- Después conviene pasar `populate-regions` para clasificar las nuevas.
+- `--titlecase` porque los nombres vienen EN MAYÚSCULAS.
+- `--dedupe 50` evita duplicar y **mejora los nombres genéricos** de OSM («Font») con el
+  topónimo oficial.
 
-⚠️ **Licencia sin confirmar**: la ACA no publica en su web qué licencia cubre estos datos.
-Antes de meterlos en producción, pregúntaselo por escrito.
+Resultado de la primera pasada: **6.602 nuevas · 111 renombradas · 3.117 saltadas**.
+
+#### Por qué el dedupe es 50 m y no 25
+
+Medido, no intuido. Distancia de cada punto de la ACA a la fuente más cercana ya existente:
+pico fortísimo por debajo de 20 m que cae en picado, y a partir de ahí una cola larga. La
+distancia sola no distingue «duplicado» de «fuente vecina», así que se cruzó por **nombre**:
+
+| Distancia | Puntos | El nombre coincide |
+|---|---|---|
+| 0–10 m | 1.126 | 91 % |
+| 10–25 m | 295 | 73 % |
+| **25–50 m** | **191** | **59 %** (+40 con vecina genérica ⇒ ~80 % duplicados) |
+| 50–100 m | 200 | 28 % |
+
+En la banda 25–50 m cuatro de cada cinco son la misma fuente con las coordenadas puestas por
+dos manos distintas. A 50–100 m la coincidencia se desploma: ahí empiezan las fuentes
+realmente distintas. **Si alguien vuelve a plantear bajarlo a 25, este es el motivo de no
+hacerlo**: se colarían ~190 duplicados para ganar ~40 fuentes.
+
+#### Rescatar las vecinas que sí eran distintas
+
+De esas 272 descartadas se recuperaron **80** revisándolas: se ordenan por *disimilitud* de
+nombre con la vecina (descartando las que comparten alguna palabra larga, las de nombre-código
+y las que la ACA marca como asociadas a bassa/mina/pou), y se revisan de arriba abajo. Las de
+nombre completamente distinto son dos fuentes reales en la misma plaza — verificado sobre el
+terreno con la Font del Lleó de Caldes de Montbui. Se importan **sin** dedupe grande, con
+`--dedupe 20`, que solo sirve para quitar los puntos repetidos dentro del propio fichero:
+
+```bash
+swift run App import-geojson fonts-aca-extra10.json        --name-field NOM --titlecase --dedupe 20
+swift run App import-geojson fonts-aca-extra50.json        --name-field NOM --titlecase --dedupe 20
+swift run App import-geojson fonts-aca-cola-distintas.json --name-field NOM --titlecase --dedupe 20
+```
+
+Los ficheros no se versionan (`.gitignore`): se regeneran del GeoJSON de la ACA.
+
+#### Llevarlo a producción
+
+**No se copian filas entre bases de datos.** Se repiten las mismas importaciones apuntando a
+Neon, así el dedupe se calcula contra lo que hay de verdad en producción (incluidas las
+fuentes que hayan añadido los usuarios). El comando es un CLI: no hace falta entrar en Fly.
+
+```bash
+export NEON_URL=$(cat ~/.config/fontapp/neon_url)
+/opt/homebrew/opt/postgresql@18/bin/pg_dump "$NEON_URL" -Fc -f ~/fontapp-antes-aca-$(date +%Y%m%d).dump
+
+DATABASE_URL="$NEON_URL" swift run App import-geojson fonts-aca-filtrado.json --name-field NOM --dedupe 50 --titlecase --dry-run
+# …y después las cuatro importaciones, la grande PRIMERO (las tres pequeñas
+# asumen que ya ha pasado), y al final:
+DATABASE_URL="$NEON_URL" swift run App populate-regions fronteres.geojson
+```
+
+Los recuentos en producción **no coinciden** con los de local: hay fuentes de usuarios que en
+la copia local no están. Si el ensayo diera 9.800 nuevas (ninguna saltada), es que apuntas a
+una base equivocada.
 
 Para cargar cualquier otro GeoJSON de puntos, usa `import-geojson`
 con dedupe por distancia (fusiona topónimos y evita duplicados de lo ya sembrado):

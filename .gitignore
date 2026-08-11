@@ -106,8 +106,9 @@ fastlane/test_output
 
 iOSInjectionProject/
 
-# Datos OSM descargados (no versionar)
+# Datos descargados de OSM / ACA (no versionar: son grandes y se regeneran)
 fonts-*.json
+fonts_*.geojson
 
 # Volcados de la base de datos: contienen correos y hashes de contraseñas.
 # El repo es PÚBLICO: que no se cuelen ni por accidente.
