@@ -49,7 +49,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
-import { BaseLayers } from '../components/BaseLayers'
+import { BaseLayerTile, LayerPicker, useBaseLayer } from '../components/BaseLayers'
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
 import { enqueue, isOffline } from '../lib/outbox'
 import { ImagePicker } from '../components/ImagePicker'
@@ -549,6 +549,7 @@ export function MapPage() {
   const [showNonPotable, setShowNonPotable] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>('all')
   const [controlsOpen, setControlsOpen] = useState(false)
+  const { layer, setLayer } = useBaseLayer()
   // Nº de filtros activos (para el aviso cuando las herramientas están plegadas).
   const activeFilters = (onlyWithWater ? 1 : 0) + (showNonPotable ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
   const [showNearby, setShowNearby] = useState(false)
@@ -760,7 +761,7 @@ export function MapPage() {
         scrollWheelZoom
         zoomControl={false}
       >
-        <BaseLayers />
+        <BaseLayerTile layer={layer} />
         <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
         <PersistView />
         <FocusOn target={goto} />
@@ -788,6 +789,9 @@ export function MapPage() {
             {controlsOpen ? <CloseIcon /> : <TuneIcon />}
           </Fab>
         </Badge>
+        {/* Debajo del de herramientas: los filtros se despliegan más abajo, así que
+            este no se mueve al abrirlos. */}
+        <LayerPicker layer={layer} onChange={setLayer} />
         <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
         <Chip clickable variant="outlined" icon={<MyLocationIcon />} label={noEmoji(t('map.near'))} onClick={() => locate(true)} sx={chipSx(false)} />
         <Chip

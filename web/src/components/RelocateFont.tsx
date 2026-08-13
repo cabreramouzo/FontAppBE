@@ -14,7 +14,7 @@ import MyLocationIcon from '@mui/icons-material/MyLocation'
 import UndoIcon from '@mui/icons-material/Undo'
 import { useI18n } from '../i18n/I18nContext'
 import { haversineKm, formatDist } from '../lib/geo'
-import { BaseLayers } from './BaseLayers'
+import { BaseLayerTile, LayerPicker, useBaseLayer } from './BaseLayers'
 
 // El pin se mueve tocando el mapa.
 function PickOnMap({ onPick }: { onPick: (p: LatLng) => void }) {
@@ -57,6 +57,7 @@ export function RelocateFont({
   onChange: (lat: number, lng: number) => void
 }) {
   const { t } = useI18n()
+  const { layer, setLayer } = useBaseLayer()
   const [geoError, setGeoError] = useState('')
   const [buscando, setBuscando] = useState(false)
   // Precisión declarada por el móvil en la última lectura, en metros.
@@ -96,11 +97,16 @@ export function RelocateFont({
         {t('relocate.hint')}
       </Typography>
 
-      <Box sx={{ height: 220, borderRadius: 2, overflow: 'hidden', border: 1, borderColor: 'divider' }}>
+      <Box sx={{ position: 'relative', height: 220, borderRadius: 2, overflow: 'hidden', border: 1, borderColor: 'divider' }}>
+        {/* El selector va encima del mapa, no dentro: es un control de MUI. El z-index
+            lo pone por encima de los paneles de Leaflet (que llegan a 800). */}
+        <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 900 }}>
+          <LayerPicker layer={layer} onChange={setLayer} size="small" />
+        </Box>
         {/* `key` con la posición original: si se abre el formulario de otra fuente,
             el mapa se recrea en su sitio en vez de quedarse donde estaba. */}
         <MapContainer key={`${original.lat},${original.lng}`} center={[lat, lng]} zoom={17} style={{ height: '100%', width: '100%' }}>
-          <BaseLayers />
+          <BaseLayerTile layer={layer} />
           <Marker position={[lat, lng]} />
           <PickOnMap onPick={(p) => onChange(p.lat, p.lng)} />
           <AjustaTamaño />
