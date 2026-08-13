@@ -298,6 +298,9 @@ function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; o
           onChange={(e) => setQ(e.target.value)}
           placeholder={t('map.searchPlaceholder').replace(/^[^\p{L}]+/u, '')}
           fullWidth
+          // Ningún topónimo se acerca a 80. El servidor también lo acota (ver
+          // `SearchTerm`); esto es solo para no mandar de balde lo que se va a recortar.
+          inputProps={{ maxLength: 80 }}
           sx={{ py: 1, fontSize: 16 }}
         />
       </Paper>

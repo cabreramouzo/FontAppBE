@@ -111,10 +111,12 @@ struct FontController: RouteCollection {
     /// GET /fonts?page=&per=&search= — listado paginado; `search` filtra por nombre (ILIKE, insensible a mayúsculas).
     @Sendable func index(req: Request) async throws -> Page<Font> {
         let query = Font.query(on: req.db).sort(\.$name)
-        if let search = req.query[String.self, at: "search"], !search.isEmpty {
-            query.filter(\.$name, .custom("ILIKE"), "%\(search)%")
+        // El patrón se acota y se escapa: ver `SearchTerm` (un ILIKE con una cadena
+        // enorme cuesta segundos de CPU por petición).
+        if let raw = req.query[String.self, at: "search"], let patron = SearchTerm.likePattern(raw) {
+            query.filter(\.$name, .custom("ILIKE"), patron)
         }
-        return try await query.paginate(for: req)
+        return try await query.paginate(SafePage.from(req))
     }
 
     @Sendable func show(req: Request) async throws -> Font {

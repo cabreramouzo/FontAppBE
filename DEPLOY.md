@@ -528,6 +528,12 @@ dejaría sin margen para añadir fuentes. El contador es **en memoria y por inst
 varias máquinas el límite efectivo se multiplica por el número de instancias. A esa escala,
 Redis (o Cloudflare Rate Limiting delante) es el siguiente paso.
 
+**Coste por petición.** Además del ritmo, se acota lo que una sola petición puede
+costar: el término de búsqueda se recorta a 80 caracteres y se le escapan los comodines
+de `LIKE` (`SearchTerm`), y el tamaño de página se topa en 100 (`SafePage`). Sin eso, un
+`?search=` de 50.000 caracteres costaba **20 s de CPU** de base de datos y un `?per=100000`
+devolvía **14 MB** — ambos sin necesidad de tener cuenta.
+
 Siguiente nivel si aparecen bots de verdad: **Cloudflare Turnstile** en el formulario de
 registro (gratuito, sin cookies ni puzles) y verificación del correo antes de poder publicar.
 

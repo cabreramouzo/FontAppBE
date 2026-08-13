@@ -51,15 +51,14 @@ struct UserController: RouteCollection {
         let me = try req.auth.require(User.self)
         guard me.isOwner else { throw Abort(.forbidden, reason: "Solo el propietario") }
         let query = User.query(on: req.db).sort(\.$createdAt, .descending)
-        if let search = req.query[String.self, at: "search"]?.trimmingCharacters(in: .whitespaces), !search.isEmpty {
-            let like = "%\(search)%"
+        if let raw = req.query[String.self, at: "search"], let like = SearchTerm.likePattern(raw) {
             query.group(.or) { or in
                 or.filter(\.$username, .custom("ILIKE"), like)
                 or.filter(\.$name, .custom("ILIKE"), like)
                 or.filter(\.$email, .custom("ILIKE"), like)
             }
         }
-        let page = try await query.paginate(for: req)
+        let page = try await query.paginate(SafePage.from(req))
         return Page(items: page.items.map(AdminUser.init), metadata: page.metadata)
     }
 

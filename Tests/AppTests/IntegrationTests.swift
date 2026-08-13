@@ -864,4 +864,25 @@ final class IntegrationTests: XCTestCase {
             XCTAssertNil(far?.region)
         }
     }
+
+    /// El tamaño de página que pide el cliente va acotado: `?per=100000` devolvía
+    /// catorce megas por una petición anónima.
+    func testPageSizeIsCapped() async throws {
+        try await withApp { app in
+            try await register(app, username: "pager")
+            let token = try await login(app, username: "pager")
+            for i in 0..<12 {
+                _ = try await createFont(app, token: token, name: "Font \(i)", lat: 41.0 + Double(i) / 1000, long: 2.0)
+            }
+            try await app.test(.GET, "fonts?per=100000", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let page = try res.content.decode(Page<Font>.self)
+                XCTAssertLessThanOrEqual(page.metadata.per, SafePage.maxPer)
+            })
+            // Y una búsqueda con comodines busca el carácter literal, no todo.
+            try await app.test(.GET, "fonts?search=%25", afterResponse: { res in
+                XCTAssertEqual(try res.content.decode(Page<Font>.self).metadata.total, 0)
+            })
+        }
+    }
 }
