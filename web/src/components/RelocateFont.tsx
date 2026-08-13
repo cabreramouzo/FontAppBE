@@ -58,6 +58,12 @@ export function RelocateFont({
   const { t } = useI18n()
   const [geoError, setGeoError] = useState('')
   const [buscando, setBuscando] = useState(false)
+  // Precisión declarada por el móvil en la última lectura, en metros.
+  const [precision, setPrecision] = useState<number | null>(null)
+
+  // Por encima de esto el GPS no sirve para colocar un pin: bajo roca, en un hoyo o
+  // entre arbolado espeso el teléfono resuelve por antenas y se va decenas de metros.
+  const PRECISION_MALA = 25
 
   const movido = haversineKm(original.lat, original.lng, lat, lng) * 1000
 
@@ -71,6 +77,7 @@ export function RelocateFont({
     navigator.geolocation.getCurrentPosition(
       (p) => {
         onChange(p.coords.latitude, p.coords.longitude)
+        setPrecision(p.coords.accuracy)
         setBuscando(false)
       },
       () => {
@@ -117,6 +124,15 @@ export function RelocateFont({
         <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
           {t('relocate.moved', { d: formatDist(movido / 1000) })}
         </Typography>
+      )}
+      {precision !== null && (
+        // Se dice siempre, no solo cuando es mala: que el usuario sepa con qué
+        // margen está colocando el pin, y decida si se fía o lo afina a mano.
+        <Alert severity={precision > PRECISION_MALA ? 'warning' : 'info'} sx={{ mt: 1 }}>
+          {precision > PRECISION_MALA
+            ? t('relocate.poorAccuracy', { m: String(Math.round(precision)) })
+            : t('relocate.accuracy', { m: String(Math.round(precision)) })}
+        </Alert>
       )}
       {geoError && <Alert severity="warning" sx={{ mt: 1 }}>{geoError}</Alert>}
     </Box>
