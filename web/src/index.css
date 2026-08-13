@@ -454,6 +454,26 @@ select:not([class*="Mui"]) {
 @media (prefers-reduced-motion: reduce) {
   .me-loc__pulse { animation: none; opacity: 0.35; }
 }
+/* Cono de orientación: hacia dónde apunta el móvil.
+   `--me-cone` es el ángulo ya corregido (brújula menos giro del mapa) y `--me-cone-on`
+   la opacidad, que vale 0 mientras no haya brújula: sin sensor fiable es mejor no
+   pintar nada que apuntar a un sitio al azar.
+   El degradado cónico arranca en -30° para que la cuña de 60° quede centrada arriba,
+   y se difumina hacia fuera con una máscara radial para no acabar en un corte seco. */
+.me-loc__cone {
+  position: absolute; top: 50%; left: 50%; width: 76px; height: 76px;
+  opacity: var(--me-cone-on, 0);
+  transform: translate(-50%, -50%) rotate(var(--me-cone, 0deg));
+  border-radius: 50%;
+  background: conic-gradient(from -30deg, rgba(26, 132, 255, 0.75), rgba(26, 132, 255, 0) 60deg);
+  -webkit-mask-image: radial-gradient(circle, #000 25%, transparent 72%);
+  mask-image: radial-gradient(circle, #000 25%, transparent 72%);
+  pointer-events: none;
+  transition: transform 0.15s linear, opacity 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .me-loc__cone { transition: opacity 0.3s ease; }
+}
 
 /* Leyenda (abajo a la izquierda). */
 /* Solo posición: la superficie la pone MUI Paper. */

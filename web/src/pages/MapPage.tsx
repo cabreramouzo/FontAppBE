@@ -40,9 +40,12 @@ import type { Theme } from '@mui/material/styles'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
-import { userLocationIcon } from '../lib/userLocationIcon'
+import { MeMarker } from '../components/MeMarker'
+import { Compass } from '../components/Compass'
+import { useHeading } from '../lib/useHeading'
+// Parchea L.Map para poder girar el mapa con dos dedos. Se importa por su efecto.
+import 'leaflet-rotate'
 
-const meIcon = userLocationIcon()
 import type { Drinkable, Font, FontSummary, Page, WaterSource } from '../api/types'
 import { apiFetch, createComment, createFont, describeError, uploadImage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -108,6 +111,15 @@ function DetectaGestoDelUsuario({ onGesto }: { onGesto: () => void }) {
       // así distinguimos "lo ha hecho el usuario" de "lo hemos hecho nosotros".
       if ((e as unknown as { originalEvent?: Event }).originalEvent) onGesto()
     },
+  })
+  return null
+}
+
+// Mantiene al día el giro del mapa (grados). Lo necesitan la brújula, para orientar la
+// aguja, y el cono del usuario, para descontar el giro y seguir apuntando al norte real.
+function VigilaGiro({ onChange }: { onChange: (deg: number) => void }) {
+  const map = useMapEvents({
+    rotate: () => onChange(map.getBearing()),
   })
   return null
 }
@@ -550,6 +562,10 @@ export function MapPage() {
   const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>('all')
   const [controlsOpen, setControlsOpen] = useState(false)
   const { layer, setLayer } = useBaseLayer()
+  // Instancia del mapa: hace falta fuera del lienzo para el botón de la brújula.
+  const [map, setMap] = useState<LeafletMap | null>(null)
+  const [bearing, setBearing] = useState(0)
+  const { heading, enable: enableCompass } = useHeading()
   // Nº de filtros activos (para el aviso cuando las herramientas están plegadas).
   const activeFilters = (onlyWithWater ? 1 : 0) + (showNonPotable ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
   const [showNearby, setShowNearby] = useState(false)
@@ -755,11 +771,20 @@ export function MapPage() {
       </Dialog>
 
       <MapContainer
+        ref={setMap}
         center={initialView ? [initialView.lat, initialView.lng] : MOIANES}
         zoom={initialView?.zoom ?? 12}
         className="map"
         scrollWheelZoom
         zoomControl={false}
+        // Girar el mapa con dos dedos, como en cualquier app de navegación: al seguir
+        // un camino se quiere el camino hacia arriba, no el norte.
+        rotate
+        touchRotate
+        // Sin esto las teselas se quedan a medio aparecer: leaflet-rotate rompe el
+        // bucle de opacidad del fundido de Leaflet 1.9 y nunca llega a 1. Apagarlo
+        // no se nota — las teselas salen de golpe, ya cargadas.
+        fadeAnimation={false}
       >
         <BaseLayerTile layer={layer} />
         <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
@@ -768,7 +793,8 @@ export function MapPage() {
         <DetectaGestoDelUsuario onGesto={() => setSiguiendo(false)} />
         <FlyToPlace place={place} />
         <ZoomControls />
-        {me && <Marker position={me} icon={meIcon} zIndexOffset={500} />}
+        <VigilaGiro onChange={setBearing} />
+        {me && <MeMarker pos={me} heading={heading} bearing={bearing} />}
         {placing && <PlacePicker onPick={setPos} />}
         {pos && <Marker position={pos} />}
       </MapContainer>
@@ -845,6 +871,14 @@ export function MapPage() {
 
       {!placing && (
         <div className="map-fabs">
+          <Compass
+            bearing={bearing}
+            onReset={() => {
+              map?.setBearing(0)
+              // Aprovechamos el gesto para pedirle a iOS el sensor de orientación.
+              void enableCompass()
+            }}
+          />
           <Fab size="medium" onClick={() => locate(false)} title={t('map.recenter')} aria-label={t('map.recenter')} sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}>
             <NearMeIcon />
           </Fab>

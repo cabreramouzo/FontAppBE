@@ -82,6 +82,19 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Añadir una capa es añadir una entrada al registro. Son servidores ajenos y gratuitos:
   hay que atribuirlos y no abusar. Latencia medida: 0,14–0,24 s por tesela, todas.
 
+## Girar el mapa y orientación
+- El mapa **gira con dos dedos** (`leaflet-rotate`, en `MapPage`: `rotate` + `touchRotate`).
+  Caminando se quiere el camino hacia arriba, no el norte. Un botón de brújula
+  (`Compass.tsx`) devuelve el norte arriba; solo aparece si el mapa está girado.
+- El plugin obliga a `fadeAnimation={false}`: rompe el bucle de opacidad del fundido de
+  teselas de Leaflet 1.9 y se quedan a medio aparecer. Comprobado que los clústeres
+  (markercluster) sobreviven al giro.
+- El punto azul lleva **cono de orientación** (`useHeading.ts` + `MeMarker.tsx`): iOS da
+  `webkitCompassHeading` y **exige pedir permiso desde un gesto** (lo hace el botón de la
+  brújula); el resto dan `alpha`, que va al revés y solo vale si es `absolute`. Al ángulo
+  se le resta el giro del mapa y se le suma `screen.orientation.angle`, o apunta torcido.
+  Sin sensor fiable el cono no se pinta: mejor nada que una dirección inventada.
+
 ## Edición de fuentes
 - Edición abierta estilo wiki para la **información** (nombre, descripción, tipo,
   potabilidad); la **ubicación y la foto** solo las toca el creador o un admin
@@ -146,4 +159,5 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).
 - No poner el proyecto en iCloud Drive (rompe builds y satura la sincronización).
-- No añadir dependencias sin justificarlo en el PR.
+- No añadir dependencias sin justificarlo en el PR. (`leaflet-rotate`: sin mantenimiento
+  desde 2023, pero es la única forma de girar Leaflet sin cambiar de motor de mapas.)
