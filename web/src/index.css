@@ -401,11 +401,14 @@ select:not([class*="Mui"]) {
   gap: 10px;
   align-items: flex-end;
 }
-/* El selector de capas de Leaflet vive en la esquina superior derecha, justo donde
-   está el botón de herramientas (.map-controls, top:12px). Lo bajamos para que no se
-   solapen: 56 px es el alto del botón más su margen. */
+/* El selector de capas comparte esquina con el botón de herramientas (.map-controls,
+   top:12px, right:16px). Lo dejamos a su MISMA altura y corrido a la izquierda: debajo
+   quedaba tapado al desplegar los filtros, que crecen hacia abajo. 60 px = ancho del
+   botón (48) + separación. */
 .leaflet-top.leaflet-right .leaflet-control-layers {
-  margin-top: 68px;
+  margin-top: 12px;
+  /* 16 (derecha de .map-controls) + 48 (botón) + 10 de aire. */
+  margin-right: 74px;
 }
 
 /* Chips de control estilo Material: pastilla, cristal esmerilado y elevación sutil. */
@@ -543,7 +546,8 @@ select:not([class*="Mui"]) {
   left: 60px;
   z-index: 1000;
   width: 240px;
-  max-width: calc(100% - 210px);
+  /* Deja libre la esquina de la derecha: botón de herramientas + selector de capas. */
+  max-width: calc(100% - 272px);
 }
 
 .stale-warn { color: #b45309; font-weight: 600; font-size: 14px; margin: 4px 0; }
@@ -651,6 +655,9 @@ select:not([class*="Mui"]) {
   }
   /* Con el buscador ocupando arriba, los controles bajan bajo él. */
   .map-controls { top: 90px; right: max(12px, env(safe-area-inset-right)); gap: 10px; }
+  /* Y el selector de capas baja con ellos, o se comería el buscador. */
+  /* En móvil el botón se pega más al borde (12 en vez de 16). */
+  .leaflet-top.leaflet-right .leaflet-control-layers { margin-top: 90px; margin-right: 70px; }
   .fab { font-size: 15px; padding: 12px 16px; min-height: 48px; border-radius: 999px; }
   .nearby {
     top: auto;
