@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import type { LatLng } from 'leaflet'
 // La hoja de estilos va aquí y no solo en MapPage: esa página se carga en diferido,
 // así que quien entra DIRECTO a la ficha de una fuente (un enlace compartido o el del
@@ -14,6 +14,7 @@ import MyLocationIcon from '@mui/icons-material/MyLocation'
 import UndoIcon from '@mui/icons-material/Undo'
 import { useI18n } from '../i18n/I18nContext'
 import { haversineKm, formatDist } from '../lib/geo'
+import { BaseLayers } from './BaseLayers'
 
 // El pin se mueve tocando el mapa.
 function PickOnMap({ onPick }: { onPick: (p: LatLng) => void }) {
@@ -99,10 +100,7 @@ export function RelocateFont({
         {/* `key` con la posición original: si se abre el formulario de otra fuente,
             el mapa se recrea en su sitio en vez de quedarse donde estaba. */}
         <MapContainer key={`${original.lat},${original.lng}`} center={[lat, lng]} zoom={17} style={{ height: '100%', width: '100%' }}>
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <BaseLayers />
           <Marker position={[lat, lng]} />
           <PickOnMap onPick={(p) => onChange(p.lat, p.lng)} />
           <AjustaTamaño />

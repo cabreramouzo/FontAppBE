@@ -401,6 +401,13 @@ select:not([class*="Mui"]) {
   gap: 10px;
   align-items: flex-end;
 }
+/* El selector de capas de Leaflet vive en la esquina superior derecha, justo donde
+   está el botón de herramientas (.map-controls, top:12px). Lo bajamos para que no se
+   solapen: 56 px es el alto del botón más su margen. */
+.leaflet-top.leaflet-right .leaflet-control-layers {
+  margin-top: 68px;
+}
+
 /* Chips de control estilo Material: pastilla, cristal esmerilado y elevación sutil. */
 .ctrl {
   display: inline-flex;

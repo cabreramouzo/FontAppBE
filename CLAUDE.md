@@ -71,6 +71,17 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   enlace a una fuente concreta. El mapa te sigue hasta que tocas el mapa: arrastrar o
   hacer zoom desengancha el seguimiento; el botón «centrar en mí» lo vuelve a activar.
 
+## Capas del mapa
+- Cinco capas elegibles (`web/src/lib/mapLayers.ts`, selector en `BaseLayers.tsx`, usado
+  tanto en el mapa principal como en el de reubicar): OSM, OpenTopoMap, satélite de Esri
+  y, solo para España, **ortofoto PNOA y topográfico MTN del IGN** (CC BY 4.0). La
+  elección se recuerda en `localStorage`.
+- El MTN del IGN **rotula las fuentes con su topónimo**, y la ortofoto del PNOA es la
+  capa que permite colocar un pin bajo arbolado, donde el GPS falla. Fuera de España
+  esas dos salen en blanco (marcadas «(ES)» en el nombre).
+- Añadir una capa es añadir una entrada al registro. Son servidores ajenos y gratuitos:
+  hay que atribuirlos y no abusar. Latencia medida: 0,14–0,24 s por tesela, todas.
+
 ## Edición de fuentes
 - Edición abierta estilo wiki para la **información** (nombre, descripción, tipo,
   potabilidad); la **ubicación y la foto** solo las toca el creador o un admin

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import { Link, useSearchParams } from 'react-router-dom'
 import Chip from '@mui/material/Chip'
 import Fab from '@mui/material/Fab'
@@ -49,6 +49,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
+import { BaseLayers } from '../components/BaseLayers'
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
 import { enqueue, isOffline } from '../lib/outbox'
 import { ImagePicker } from '../components/ImagePicker'
@@ -759,10 +760,7 @@ export function MapPage() {
         scrollWheelZoom
         zoomControl={false}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <BaseLayers />
         <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
         <PersistView />
         <FocusOn target={goto} />
