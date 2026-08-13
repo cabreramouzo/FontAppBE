@@ -61,6 +61,16 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   reseñas, incidencias y ediciones en una línea de tiempo, con filtro por zona. Solo admin;
   pensado para abrirse al público sin cambios (no expone nada que no esté ya en la ficha).
 
+## Mapa y ubicación
+- Seguimiento continuo con `watchPosition` (`MapPage`): el punto azul se actualiza solo
+  mientras caminas. Filtro anti-temblor de 15 m (el GPS baila estando quieto), pausa con
+  la pestaña en segundo plano, y la lista de cercanas solo recarga al cambiar de casilla
+  de ~100 m — si no, sería una petición por latido del GPS.
+- Al abrir la app se ubica sola **si el permiso ya estaba concedido** (nunca lanza el
+  diálogo del navegador a bocajarro) y **si no venías de una vista guardada** ni de un
+  enlace a una fuente concreta. El mapa te sigue hasta que tocas el mapa: arrastrar o
+  hacer zoom desengancha el seguimiento; el botón «centrar en mí» lo vuelve a activar.
+
 ## Datos de fuentes
 - Dos orígenes: **OpenStreetMap** (`import-fonts`, ODbL) y el **WFS abierto de la ACA**
   (`AIGUA:AIGUA_FONTS`, ~10.000 fuentes de Catalunya con topónimo oficial; es la capa que

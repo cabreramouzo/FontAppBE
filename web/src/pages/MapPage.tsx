@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import { Link, useSearchParams } from 'react-router-dom'
 import Chip from '@mui/material/Chip'
@@ -90,6 +90,22 @@ function PersistView() {
     moveend: () => {
       const c = map.getCenter()
       saveView({ lat: c.lat, lng: c.lng, zoom: map.getZoom() })
+    },
+  })
+  return null
+}
+
+// Avisa cuando el usuario toma el control del mapa (arrastrar, rueda, pellizco).
+// Solo esos tres: `movestart` también lo dispara el centrado automático, y usarlo
+// haría que el mapa se "desenganchara" él solo al primer centrado.
+function DetectaGestoDelUsuario({ onGesto }: { onGesto: () => void }) {
+  useMapEvents({
+    dragstart: onGesto,      // arrastrar con el dedo o el ratón
+    zoomstart: (e) => {
+      // Cubre también la rueda y el pellizco, que acaban en un zoom. El zoom
+      // programático de FocusOn pasa por aquí igual, pero sin `originalEvent`:
+      // así distinguimos "lo ha hecho el usuario" de "lo hemos hecho nosotros".
+      if ((e as unknown as { originalEvent?: Event }).originalEvent) onGesto()
     },
   })
   return null
@@ -453,12 +469,19 @@ function NearbyPanel({
 }) {
   const { t } = useI18n()
   const [items, setItems] = useState<FontSummary[] | null>(null)
+  const posRef = useRef(pos)
+  posRef.current = pos
 
+  // Con la ubicación en seguimiento continuo, `pos` cambia cada pocos segundos. Si la
+  // lista se recargara con cada cambio sería una petición por latido del GPS, así que
+  // solo la refrescamos al cambiar de "casilla" de ~100 m (3 decimales de grado).
+  const casilla = `${pos[0].toFixed(3)},${pos[1].toFixed(3)}`
   useEffect(() => {
-    apiFetch<FontSummary[]>(`/fonts/near?lat=${pos[0]}&long=${pos[1]}&quantity=25`)
+    const [lat, long] = posRef.current
+    apiFetch<FontSummary[]>(`/fonts/near?lat=${lat}&long=${long}&quantity=25`)
       .then(setItems)
       .catch(() => setItems([]))
-  }, [pos])
+  }, [casilla])
 
   return (
     <Paper className="nearby" elevation={6} sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -576,6 +599,85 @@ export function MapPage() {
     cancel()
     setNonce((n) => n + 1) // fuerza recarga de marcadores
   }
+  // Seguimiento continuo: mientras caminas hacia una fuente, el punto azul te sigue
+  // solo. Antes había que ir pulsando el botón de ubicarse, que es justo lo que no
+  // quieres estar haciendo con el móvil en la mano y una cuesta por delante.
+  const watchID = useRef<number | null>(null)
+  const seguimiento = useRef(false)
+  // Última posición aceptada (la que pasó el filtro de temblor del GPS).
+  const ultimaPos = useRef<[number, number] | null>(null)
+  // ¿El mapa va detrás de ti? Deja de hacerlo en cuanto tocas el mapa: a partir de
+  // ahí estás mirando otra zona y que el mapa te devuelva a tu posición cada pocos
+  // segundos sería insufrible. El botón de "centrar en mí" lo vuelve a activar.
+  const [siguiendo, setSiguiendo] = useState(true)
+  const siguiendoRef = useRef(true)
+  siguiendoRef.current = siguiendo
+
+  const startWatching = useCallback(() => {
+    if (watchID.current !== null || !navigator.geolocation) return
+    seguimiento.current = true
+    watchID.current = navigator.geolocation.watchPosition(
+      (p) => {
+        const c: [number, number] = [p.coords.latitude, p.coords.longitude]
+        // El GPS "baila" unos metros estando quieto. Sin este filtro el punto
+        // temblaría y la lista de cercanas se recargaría sin haberte movido.
+        const anterior = ultimaPos.current
+        if (anterior && haversineKm(anterior[0], anterior[1], c[0], c[1]) * 1000 < 15) return
+        ultimaPos.current = c
+        setMe(c)
+        // Mientras no toques el mapa, va detrás de ti. La comparación se hace contra
+        // una ref y no dentro del actualizador de `setMe`: encadenar un `setGoto` ahí
+        // es una actualización en fase de render y React la descarta sin avisar.
+        if (siguiendoRef.current) setGoto([...c])
+      },
+      // Un fallo puntual del GPS no es noticia: seguimos con la última posición buena.
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
+    )
+  }, [])
+
+  // El efecto de arranque necesita llamar a `locate`, que se define más abajo y cambia
+  // en cada render; con la referencia el efecto puede depender solo de lo estable.
+  const locateRef = useRef<(openList: boolean) => void>(() => {})
+
+  const stopWatching = useCallback(() => {
+    if (watchID.current !== null) {
+      navigator.geolocation.clearWatch(watchID.current)
+      watchID.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    // Al abrir la app te situamos solo, sin esperar a que pulses el botón. Dos avisos:
+    //  · solo si el permiso YA está concedido, para no lanzar el diálogo del navegador
+    //    a bocajarro a quien acaba de llegar;
+    //  · y solo si no venimos de una vista guardada o de un enlace a una fuente
+    //    concreta — ahí el usuario ya dijo dónde quiere mirar.
+    // Se lee de `window.location` y no de `params` para que este efecto corra una
+    // sola vez al montar: `params` cambia de identidad y lo relanzaría.
+    const veniaDeOtroSitio = loadView() !== null
+      || new URLSearchParams(window.location.search).get('lat') !== null
+    if (veniaDeOtroSitio) setSiguiendo(false)
+    navigator.permissions?.query({ name: 'geolocation' })
+      .then((estado) => {
+        if (estado.state !== 'granted') return
+        startWatching()
+        if (!veniaDeOtroSitio) locateRef.current(false)
+      })
+      .catch(() => {})
+
+    // Con la app en segundo plano el GPS solo gasta batería.
+    const alCambiarVisibilidad = () => {
+      if (document.hidden) stopWatching()
+      else if (seguimiento.current) startWatching()
+    }
+    document.addEventListener('visibilitychange', alCambiarVisibilidad)
+    return () => {
+      document.removeEventListener('visibilitychange', alCambiarVisibilidad)
+      stopWatching()
+    }
+  }, [startWatching, stopWatching])
+
   // Geolocaliza: centra en mí y (opcionalmente) abre la lista de cercanas.
   function locate(openList: boolean) {
     setGeoError('')
@@ -588,11 +690,13 @@ export function MapPage() {
       setGeoError(t('map.geoInsecure'))
       return
     }
+    setSiguiendo(true)   // pulsar "centrar en mí" vuelve a enganchar el mapa
     const onOk = (p: GeolocationPosition) => {
       const c: [number, number] = [p.coords.latitude, p.coords.longitude]
       setMe(c)
-      setGoto([...c])
+      setGoto([...c])   // centrar el mapa solo aquí: el seguimiento NO lo mueve
       if (openList) setShowNearby(true)
+      startWatching()   // ya hay permiso: a partir de ahora se actualiza sola
     }
 
     // 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT.
@@ -619,6 +723,7 @@ export function MapPage() {
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     )
   }
+  locateRef.current = locate
 
   return (
     <div className="map-wrap">
@@ -658,6 +763,7 @@ export function MapPage() {
         <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
         <PersistView />
         <FocusOn target={goto} />
+        <DetectaGestoDelUsuario onGesto={() => setSiguiendo(false)} />
         <FlyToPlace place={place} />
         <ZoomControls />
         {me && <Marker position={me} icon={meIcon} zIndexOffset={500} />}
