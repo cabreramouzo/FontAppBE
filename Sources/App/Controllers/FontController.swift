@@ -197,6 +197,11 @@ struct FontController: RouteCollection {
         font.description = edit.before.description
         font.source = edit.before.source
         font.drinkable = edit.before.drinkable
+        // Solo si la edición guardó ubicación (las anteriores a esta función, no).
+        if let lat = edit.before.latitude, let lon = edit.before.longitude {
+            font.latitude = lat
+            font.longitude = lon
+        }
         try await font.save(on: req.db)
         let after = FontInfoSnapshot(font)
         if before != after {

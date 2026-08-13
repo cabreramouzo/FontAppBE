@@ -9,12 +9,20 @@ struct FontInfoSnapshot: Codable, Sendable, Equatable {
     var description: String?
     var source: WaterSource?
     var drinkable: Drinkable?
+    // La ubicación solo la puede tocar el creador o un admin, pero también queda
+    // registrada: mover un pin 200 m es un cambio tan reversible como renombrarlo.
+    // Opcionales porque las ediciones guardadas ANTES de esto no las tienen (el
+    // snapshot es JSON en la BD: añadir campos opcionales no rompe lo ya escrito).
+    var latitude: Double?
+    var longitude: Double?
 
     init(_ font: Font) {
         self.name = font.name
         self.description = font.description
         self.source = font.source
         self.drinkable = font.drinkable
+        self.latitude = font.latitude
+        self.longitude = font.longitude
     }
 }
 

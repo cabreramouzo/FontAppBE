@@ -58,6 +58,7 @@ import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
 import { enqueue, isOffline } from '../lib/outbox'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { compressImage } from '../lib/image'
+import { RelocateFont } from '../components/RelocateFont'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { DRINKABLE_EMOJI, DRINKABLE_OPTIONS, SOURCE_EMOJI, SOURCE_OPTIONS, drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
@@ -331,6 +332,7 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
   const [source, setSource] = useState<WaterSource | ''>(font.source ?? '')
   const [drinkable, setDrinkable] = useState<Drinkable | ''>(font.drinkable ?? '')
   const [file, setFile] = useState<File | null>(null)
+  const [coords, setCoords] = useState({ lat: font.latitude, lng: font.longitude })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -343,7 +345,9 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
       // si no, se conserva la actual.
       let image = font.image ?? undefined
       if (canManage && file) image = await uploadImage(await compressImage(file))
-      await updateFont(font.id, { name, latitude: font.latitude, longitude: font.longitude, image, description: description || undefined, source: source || undefined, drinkable: drinkable || undefined })
+      // La ubicación va siempre en la petición, pero el servidor solo la aplica si
+      // eres el creador o un admin: para el resto se conserva la que ya tenía.
+      await updateFont(font.id, { name, latitude: coords.lat, longitude: coords.lng, image, description: description || undefined, source: source || undefined, drinkable: drinkable || undefined })
       onSaved()
     } catch (e) {
       setError(describeError(e, t))
@@ -368,6 +372,17 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
         <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
         {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
       </TextField>
+      {canManage ? (
+        <RelocateFont
+          lat={coords.lat}
+          lng={coords.lng}
+          original={{ lat: font.latitude, lng: font.longitude }}
+          onChange={(lat, lng) => setCoords({ lat, lng })}
+        />
+      ) : (
+        // Quien no la creó no puede moverla: que lo avise y ya lo corregirá quien pueda.
+        <Typography variant="caption" color="text.secondary">📍 {t('relocate.notYours')}</Typography>
+      )}
       {canManage && (
         <Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>

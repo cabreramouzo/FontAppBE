@@ -71,6 +71,16 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   enlace a una fuente concreta. El mapa te sigue hasta que tocas el mapa: arrastrar o
   hacer zoom desengancha el seguimiento; el botón «centrar en mí» lo vuelve a activar.
 
+## Edición de fuentes
+- Edición abierta estilo wiki para la **información** (nombre, descripción, tipo,
+  potabilidad); la **ubicación y la foto** solo las toca el creador o un admin
+  (`FontController.canManage`). Quien no puede, ve un aviso que le remite a las notas.
+- Reubicar: `RelocateFont.tsx` (mapa para tocar + «estoy en la fuente», que usa el GPS).
+  Hace falta porque la ubicación original viene del GPS del móvil y bajo arbolado se va
+  decenas de metros.
+- Los movimientos quedan en `FontInfoSnapshot` (lat/long **opcionales**: las ediciones
+  guardadas antes de esto no los tienen) y por tanto son reversibles desde el panel.
+
 ## Datos de fuentes
 - Dos orígenes: **OpenStreetMap** (`import-fonts`, ODbL) y el **WFS abierto de la ACA**
   (`AIGUA:AIGUA_FONTS`, ~10.000 fuentes de Catalunya con topónimo oficial; es la capa que
