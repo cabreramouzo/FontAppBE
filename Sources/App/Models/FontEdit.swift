@@ -15,6 +15,9 @@ struct FontInfoSnapshot: Codable, Sendable, Equatable {
     // snapshot es JSON en la BD: añadir campos opcionales no rompe lo ya escrito).
     var latitude: Double?
     var longitude: Double?
+    // La foto, por lo mismo: desde que cualquiera puede poner la PRIMERA de una fuente
+    // sin creador, conviene que quede rastro de quién la puso y se pueda quitar.
+    var image: String?
 
     init(_ font: Font) {
         self.name = font.name
@@ -23,6 +26,7 @@ struct FontInfoSnapshot: Codable, Sendable, Equatable {
         self.drinkable = font.drinkable
         self.latitude = font.latitude
         self.longitude = font.longitude
+        self.image = font.image
     }
 }
 

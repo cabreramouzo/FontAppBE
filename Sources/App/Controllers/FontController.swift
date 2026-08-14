@@ -38,11 +38,18 @@ struct FontController: RouteCollection {
     }
 
     /// POST /fonts/:fontID/photo/from-comment/:commentID
-    /// El creador/admin elige la foto de una reseña como foto principal de la fuente.
+    /// Elige la foto de una reseña como foto principal de la fuente.
     /// Se copia el objeto (referencia independiente) para no compartir fichero con la reseña.
+    ///
+    /// Sustituir la foto sigue siendo cosa del creador o de un admin; poner la primera
+    /// lo puede hacer cualquiera, por la misma razón que en `update`: casi ninguna fuente
+    /// importada tiene creador, y la foto ya está hecha — está en la reseña.
     @Sendable func setPhotoFromComment(req: Request) async throws -> Font {
         let font = try await find(req)
-        try requireCanManage(req, font: font)
+        let user = try req.auth.require(User.self)
+        if font.image != nil, !canManage(user: user, font: font) {
+            throw Abort(.forbidden, reason: "Esta fuente ya tiene foto: solo el creador o un administrador puede cambiarla")
+        }
         let fontID = try font.requireID()
         guard let comment = try await FontComment.find(req.parameters.get("commentID"), on: req.db),
               comment.$font.id == fontID else {
@@ -136,8 +143,8 @@ struct FontController: RouteCollection {
         font.description = dto.description
         font.source = dto.source
         font.drinkable = dto.drinkable
-        // La ubicación y la imagen son más sensibles (mover el pin, cambiar la foto):
-        // se reservan al creador o a un admin. Para el resto se conservan tal cual.
+        // La ubicación y sustituir la foto son sensibles (mover el pin, tapar una foto
+        // buena con una mala): se reservan al creador o a un admin.
         if canManage(user: user, font: font) {
             let oldImage = font.image
             font.latitude = dto.latitude
@@ -146,6 +153,14 @@ struct FontController: RouteCollection {
             try await font.save(on: req.db)
             if let oldImage, oldImage != dto.image { try? await req.imageStorage.delete(oldImage) }
         } else {
+            // Poner la PRIMERA foto sí lo puede hacer cualquiera. La mayoría de fuentes
+            // vienen importadas (ACA, OSM) y no tienen creador, así que con la regla de
+            // arriba a secas nunca tendrían foto: no hay a quién pedírsela. Y es una
+            // asimetría real: añadir donde no había nada solo puede mejorar la ficha,
+            // mientras que sustituir puede empeorarla.
+            if font.image == nil, let nueva = dto.image {
+                font.image = nueva
+            }
             try await font.save(on: req.db)
         }
         // Deja rastro del cambio de información (historial de moderación), solo si
@@ -201,6 +216,14 @@ struct FontController: RouteCollection {
         if let lat = edit.before.latitude, let lon = edit.before.longitude {
             font.latitude = lat
             font.longitude = lon
+        }
+        // La foto se revierte solo si la edición la cambió de verdad. Comparar contra
+        // `after` evita que una edición antigua (sin `image` en el JSON) borre la foto
+        // actual al revertirla: ahí ambos son nil y no se toca nada.
+        if edit.before.image != edit.after.image {
+            let actual = font.image
+            font.image = edit.before.image
+            if let actual, actual != font.image { try? await req.imageStorage.delete(actual) }
         }
         try await font.save(on: req.db)
         let after = FontInfoSnapshot(font)

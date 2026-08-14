@@ -97,8 +97,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 
 ## Edición de fuentes
 - Edición abierta estilo wiki para la **información** (nombre, descripción, tipo,
-  potabilidad); la **ubicación y la foto** solo las toca el creador o un admin
+  potabilidad); la **ubicación** solo la toca el creador o un admin
   (`FontController.canManage`). Quien no puede, ve un aviso que le remite a las notas.
+- **La primera foto la puede poner cualquiera** (`update` y `setPhotoFromComment`);
+  sustituir una que ya existe sigue siendo del creador o admin. Sin esto las ~6.700
+  fuentes importadas (sin `created_by`) no tendrían foto jamás: no hay a quién pedirla.
+  La asimetría es el argumento — añadir donde no había nada solo puede mejorar la ficha.
+  Queda en `FontInfoSnapshot.image`, así que es reversible desde el panel; al revertir
+  solo se toca la foto si esa edición la cambió (`before.image != after.image`), o una
+  edición antigua sin el campo borraría la foto actual.
 - Reubicar: `RelocateFont.tsx` (mapa para tocar + «estoy en la fuente», que usa el GPS).
   Hace falta porque la ubicación original viene del GPS del móvil y bajo arbolado se va
   decenas de metros.

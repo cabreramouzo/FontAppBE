@@ -335,16 +335,19 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
   const [coords, setCoords] = useState({ lat: font.latitude, lng: font.longitude })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  // La primera foto la puede poner cualquiera; sustituir una que ya existe, no.
+  const puedeFoto = canManage || !font.image
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setSaving(true)
     try {
-      // La imagen solo la puede cambiar el creador/admin; si hay archivo nuevo se sube,
-      // si no, se conserva la actual.
+      // Sustituir la foto es cosa del creador/admin; poner la PRIMERA la puede poner
+      // cualquiera (casi ninguna fuente importada tiene creador). Si no hay archivo
+      // nuevo se conserva la actual.
       let image = font.image ?? undefined
-      if (canManage && file) image = await uploadImage(await compressImage(file))
+      if (puedeFoto && file) image = await uploadImage(await compressImage(file))
       // La ubicación va siempre en la petición, pero el servidor solo la aplica si
       // eres el creador o un admin: para el resto se conserva la que ya tenía.
       await updateFont(font.id, { name, latitude: coords.lat, longitude: coords.lng, image, description: description || undefined, source: source || undefined, drinkable: drinkable || undefined })
@@ -383,12 +386,17 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
         // Quien no la creó no puede moverla: que lo avise y ya lo corregirá quien pueda.
         <Typography variant="caption" color="text.secondary">📍 {t('relocate.notYours')}</Typography>
       )}
-      {canManage && (
+      {puedeFoto && (
         <Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
             {font.image ? t('detail.replacePhoto') : t('detail.addPhoto')}
           </Typography>
           <ImagePicker file={file} onChange={setFile} />
+          {!font.image && !canManage && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+              {t('detail.firstPhotoNote')}
+            </Typography>
+          )}
         </Box>
       )}
       {error && <Alert severity="error">{error}</Alert>}
@@ -515,6 +523,9 @@ export function FontDetailPage() {
   const latest = comments[0] ?? null
   const rest = comments.slice(1)
   const canManageFont = !!user && (!!user.isAdmin || font.creator?.id === user.id)
+  // Ascender la foto de una reseña: si la fuente aún no tiene foto, cualquiera puede.
+  // La foto ya está hecha — solo falta decir que sirve como principal.
+  const puedeAscenderFoto = canManageFont || (!!user && !font.image)
 
   return (
     <Box className="detail pad" sx={{ maxWidth: 720, mx: 'auto' }}>
@@ -607,7 +618,7 @@ export function FontDetailPage() {
                 const freshAt = latest.lastConfirmedAt ?? latest.createdAt
                 return freshAt && isStale(freshAt) ? <Alert severity="warning" sx={{ my: 1 }}>{t('detail.stale', { when: timeAgo(freshAt, t) })}</Alert> : null
               })()}
-              <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={canManageFont} fontImage={font.image} onChanged={load} />
+              <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} onChanged={load} />
               {latest.waterStatus && latest.lastConfirmedAt && (
                 <Typography variant="caption" color="text.secondary">
                   {t('confirm.lastConfirmed', { when: timeAgo(latest.lastConfirmedAt, t) })}
@@ -673,7 +684,7 @@ export function FontDetailPage() {
             <Divider sx={{ mt: 2 }} />
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
             {rest.slice(0, shownRest).map((c) => (
-              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={canManageFont} fontImage={font.image} onChanged={load} />
+              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} onChanged={load} />
             ))}
             {rest.length > shownRest && (
               <Button onClick={() => setShownRest((n) => n + REVIEWS_PAGE)} sx={{ mt: 1 }}>

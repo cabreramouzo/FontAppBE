@@ -333,21 +333,68 @@ final class IntegrationTests: XCTestCase {
                 commentID = try XCTUnwrap(res.content.decode(CommentResponse.self).id)
             })
 
-            // Un extraño no puede promover.
+            // La fuente aún no tiene foto: un extraño SÍ puede poner la primera. Casi
+            // ninguna fuente importada tiene creador, así que si solo pudiera él, esas
+            // fichas no tendrían foto nunca. La imagen resultante es una copia
+            // independiente (distinta de la de la reseña).
+            struct FontOut: Content { let image: String? }
             try await register(app, username: "photostranger")
             let strangerTok = try await login(app, username: "photostranger")
+            var primera: String?
             try await app.test(.POST, "fonts/\(fontID)/photo/from-comment/\(commentID)", headers: bearer(strangerTok)) { res in
-                XCTAssertEqual(res.status, .forbidden)
-            }
-
-            // El creador sí; la imagen resultante es una copia (distinta de la de la reseña).
-            struct FontOut: Content { let image: String? }
-            try await app.test(.POST, "fonts/\(fontID)/photo/from-comment/\(commentID)", headers: bearer(ownerTok)) { res in
                 XCTAssertEqual(res.status, .ok)
                 let f = try res.content.decode(FontOut.self)
                 XCTAssertNotNil(f.image)
                 XCTAssertNotEqual(f.image, "/uploads/orig.jpg")
+                primera = f.image
             }
+
+            // Pero SUSTITUIR la que ya hay sigue siendo cosa del creador o de un admin.
+            try await app.test(.POST, "fonts/\(fontID)/photo/from-comment/\(commentID)", headers: bearer(strangerTok)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+
+            // El creador sí puede cambiarla, y vuelve a copiarse.
+            try await app.test(.POST, "fonts/\(fontID)/photo/from-comment/\(commentID)", headers: bearer(ownerTok)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let f = try res.content.decode(FontOut.self)
+                XCTAssertNotNil(f.image)
+                XCTAssertNotEqual(f.image, primera)
+            }
+        }
+    }
+
+    /// La PRIMERA foto la puede poner cualquiera; sustituirla, no.
+    ///
+    /// Importa porque la mayoría de fuentes vienen importadas (ACA, OSM) y no tienen
+    /// creador: con la regla "solo el creador" no habría a quién pedírsela.
+    func testAnyoneCanAddTheFirstPhoto() async throws {
+        try await withApp { app in
+            try await register(app, username: "fotoowner2")
+            let ownerTok = try await login(app, username: "fotoowner2")
+            let fontID = try await createFont(app, token: ownerTok, name: "Sense foto", lat: 41, long: 2)
+
+            try await register(app, username: "fotoextrany")
+            let otroTok = try await login(app, username: "fotoextrany")
+
+            struct FontOut: Content { let image: String?; let latitude: Double }
+            // Pone la primera foto (y de paso intenta mover el pin, que no debe colar).
+            try await app.test(.PUT, "fonts/\(fontID)", headers: bearer(otroTok), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Sense foto", latitude: 0, longitude: 0, image: "/uploads/primera.jpg", description: nil, source: nil, drinkable: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let f = try res.content.decode(FontOut.self)
+                XCTAssertEqual(f.image, "/uploads/primera.jpg")
+                XCTAssertEqual(f.latitude, 41, "un extraño no puede mover la fuente")
+            })
+
+            // Ya hay foto: otro intento no la sustituye.
+            try await app.test(.PUT, "fonts/\(fontID)", headers: bearer(otroTok), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Sense foto", latitude: 41, longitude: 2, image: "/uploads/otra.jpg", description: nil, source: nil, drinkable: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode(FontOut.self).image, "/uploads/primera.jpg")
+            })
         }
     }
 
