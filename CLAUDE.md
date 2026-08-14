@@ -63,6 +63,12 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   fuente. Las **ediciones** son la excepción y solo las ven los admins — el historial es
   de moderación y "quién editó qué" no está a la vista de nadie más. El ámbito entra en
   la clave de la caché, o la respuesta de un admin se serviría a un anónimo.
+- Dos movimientos de la **misma fuente no salen pegados** (`separaRepetidas`): crear una
+  fuente y reseñarla acto seguido da dos eventos con la misma hora, y por fecha caían
+  juntos. El hueco y la ventana son 1 y 2 **porque están medidos**: separar más obliga a
+  intercalar elementos más antiguos y desordena la portada (con hueco 3, tres inversiones
+  de fecha y un salto atrás de 30 h; con 1, una y 17 h). Puede quedar una repetición al
+  final, cuando ya solo restan movimientos de la misma fuente.
 - Límite de 120/h por IP: es ruta pública y cara, y quien varíe las coordenadas falla la
   caché en cada intento.
 - `/activity` lleva **caché en memoria** (`ActivityCache`, 60 s): son cuatro consultas

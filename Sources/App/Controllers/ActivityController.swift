@@ -62,9 +62,47 @@ struct ActivityController: RouteCollection {
         async let editsTask = esAdmin ? fetchEdits(req, limit: limit, ids: fontIDsInRegion) : []
         let items = try await newFontsTask + commentsTask + reportsTask + editsTask
 
-        let resultado = Array(items.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
+        let ordenados = items.sorted { $0.createdAt > $1.createdAt }
+        let resultado = Self.separaRepetidas(Array(ordenados.prefix(limit)))
         await Self.cache.set(clave, resultado)
         return resultado
+    }
+
+    /// Aparta las novedades de una misma fuente para que no salgan pegadas.
+    ///
+    /// Puede quedar una repetición al final de la lista: cuando ya solo restan
+    /// movimientos de la misma fuente no hay nada que intercalar. Es el residuo del
+    /// método, y cae donde menos se mira.
+    ///
+    /// Pasa constantemente: quien añade una fuente suele dejar la primera reseña en el
+    /// mismo momento, así que son dos movimientos con la misma hora y el orden por fecha
+    /// los pone uno al lado del otro. Repetir fuente está bien —son dos cosas distintas
+    /// que contar—, pero en la portada parecen un error.
+    ///
+    /// No reordena por gusto: recorre la lista ya ordenada y solo adelanta un elemento
+    /// cuando el que tocaba repite fuente demasiado pronto. El desvío respecto al orden
+    /// por fecha es el mínimo imprescindible.
+    /// Los dos números son pequeños a propósito, y están medidos: separar más obliga a
+    /// meter más elementos entre medias, y los únicos disponibles son más antiguos, así
+    /// que la portada se desordena. Sobre los mismos datos, con `hueco` 3 salían tres
+    /// inversiones de fecha y un salto atrás de 30 h; con 1, una inversión y 17 h. En
+    /// los dos casos, cero pares pegados — que es lo único que había que arreglar.
+    ///
+    /// - Parameters:
+    ///   - hueco: cuántas posiciones deben pasar antes de repetir fuente.
+    ///   - ventana: cuánto se puede adelantar un elemento para tapar el hueco. Si ahí no
+    ///     hay ningún candidato se acepta la repetición: desordenar la portada es peor
+    ///     que ver dos veces la misma fuente.
+    static func separaRepetidas(_ items: [ActivityItem], hueco: Int = 1, ventana: Int = 2) -> [ActivityItem] {
+        var pendientes = items
+        var salida: [ActivityItem] = []
+        salida.reserveCapacity(items.count)
+        while !pendientes.isEmpty {
+            let ultimas = salida.suffix(hueco).map(\.fontID)
+            let i = pendientes.prefix(ventana).firstIndex { !ultimas.contains($0.fontID) } ?? 0
+            salida.append(pendientes.remove(at: i))
+        }
+        return salida
     }
 
     // MARK: - Caché

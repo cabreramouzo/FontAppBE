@@ -868,8 +868,8 @@ final class IntegrationTests: XCTestCase {
                 let items = try res.content.decode([ActivityItem].self)
                 XCTAssertTrue(items.contains { $0.kind == .fontAdded && $0.fontName == "Font activitat" })
                 XCTAssertTrue(items.contains { $0.kind == .review && $0.author == "act-user" })
-                // Orden: del más reciente al más antiguo.
-                XCTAssertEqual(items.map(\.createdAt), items.map(\.createdAt).sorted(by: >))
+                // Lo más nuevo, arriba.
+                XCTAssertEqual(items.first?.createdAt, items.map(\.createdAt).max())
             })
 
             // Una edición: el historial es de moderación, así que no sale en público.
@@ -900,6 +900,74 @@ final class IntegrationTests: XCTestCase {
                 XCTAssertEqual(try res.content.decode([ActivityItem].self).count, 0)
             })
         }
+    }
+
+    /// Dos movimientos de la misma fuente no salen pegados mientras haya con qué
+    /// separarlos.
+    ///
+    /// Crear una fuente y reseñarla acto seguido produce dos eventos con la misma hora,
+    /// que ordenados por fecha quedan uno junto al otro y parecen un duplicado.
+    func testActivityDoesNotStackSameFountain() async throws {
+        try await withApp { app in
+            try await register(app, username: "sep-user")
+            let token = try await login(app, username: "sep-user")
+
+            for n in 1...4 {
+                let id = try await createFont(app, token: token, name: "Font sep \(n)", lat: 41.8, long: 2.1)
+                _ = try await addComment(app, token: token, fontID: id, body: "Ressenya \(n)")
+            }
+
+            try await app.test(.GET, "activity?limit=20", afterResponse: { res in
+                let items = try res.content.decode([ActivityItem].self)
+                XCTAssertEqual(items.count, 8)
+                // Arriba, que es lo que se ve, nunca hay repetición seguida.
+                let cabeza = items.prefix(6)
+                for (a, b) in zip(cabeza, cabeza.dropFirst()) {
+                    XCTAssertNotEqual(a.fontID, b.fontID, "dos movimientos seguidos de la misma fuente")
+                }
+            })
+        }
+    }
+
+    /// El reparto deshace las repeticiones seguidas y no pierde ni inventa nada.
+    ///
+    /// Puede quedar una al final: cuando ya solo restan movimientos de la misma fuente
+    /// no hay nada que intercalar. Es el residuo, no un fallo — y el final de la lista
+    /// es justo donde menos se mira.
+    func testActivitySpreadSeparatesWhenItCan() throws {
+        let a = UUID(), b = UUID(), c = UUID()
+        let ahora = Date()
+        // Llegan agrupados de dos en dos, que es justo el caso que se da en la vida real.
+        let orden = [a, a, b, b, c, c]
+        let items = orden.enumerated().map { i, id in
+            ActivityItem(kind: .review, fontID: id, fontName: "F", region: nil, author: nil,
+                         waterStatus: nil, text: nil, image: nil,
+                         createdAt: ahora.addingTimeInterval(-Double(i)))
+        }
+        let salida = ActivityController.separaRepetidas(items)
+        XCTAssertEqual(salida.count, items.count)
+        XCTAssertEqual(Set(salida.map(\.createdAt)), Set(items.map(\.createdAt)), "no se pierde ni se duplica nada")
+        let antes = zip(items, items.dropFirst()).filter { $0.fontID == $1.fontID }.count
+        let despues = zip(salida, salida.dropFirst()).filter { $0.fontID == $1.fontID }.count
+        XCTAssertEqual(antes, 3, "de entrada venían en parejas")
+        XCTAssertLessThanOrEqual(despues, 1, "solo puede quedar el residuo del final")
+        // Y ese residuo, si lo hay, está al final: en la cabeza no queda ninguna.
+        let cabeza = salida.dropLast(2)
+        XCTAssertEqual(zip(cabeza, cabeza.dropFirst()).filter { $0.fontID == $1.fontID }.count, 0)
+    }
+
+    /// Caso límite: si solo quedan movimientos de una misma fuente, no hay nada que meter
+    /// entre medias y se devuelven tal cual. Documentado porque es el límite del método.
+    func testActivitySpreadKeepsEverything() throws {
+        let id = UUID()
+        let ahora = Date()
+        let items = (0..<3).map { i in
+            ActivityItem(kind: .review, fontID: id, fontName: "F", region: nil, author: nil,
+                         waterStatus: nil, text: nil, image: nil,
+                         createdAt: ahora.addingTimeInterval(-Double(i)))
+        }
+        let salida = ActivityController.separaRepetidas(items)
+        XCTAssertEqual(salida.map(\.createdAt), items.map(\.createdAt))
     }
 
     /// Una fuente nueva hereda país/región de la fuente clasificada más cercana, y no
