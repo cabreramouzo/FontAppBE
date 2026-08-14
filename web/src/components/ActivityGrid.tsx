@@ -8,11 +8,19 @@ import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
+import Button from '@mui/material/Button'
+import Stack from '@mui/material/Stack'
+import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt'
+import MapIcon from '@mui/icons-material/Map'
+import MyLocationIcon from '@mui/icons-material/MyLocation'
 import { alpha, useTheme } from '@mui/material/styles'
 import { assetUrl, getActivity, type ActivityItem } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
+import { askPosition, positionIfAllowed } from '../lib/quietPosition'
+import { DryFountain } from './DryFountain'
+import { useToast } from './ToastContext'
 
 // Ilustración de la app para las tarjetas sin foto. La mayoría de fuentes vienen
 // importadas y aún no tienen ninguna: sin esto la rejilla saldría medio vacía y
@@ -225,27 +233,96 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
   const { t } = useI18n()
   const theme = useTheme()
   const compacto = useMediaQuery(theme.breakpoints.down('sm'))
+  const { show } = useToast()
   const [items, setItems] = useState<ActivityItem[] | null>(null)
   const [region, setRegion] = useState('')
+  const [pos, setPos] = useState<[number, number] | null>(null)
+  // Arranca en "cerca de mí" y cae a "todo" si no hay ubicación: una portada global es
+  // casi inútil para quien vive lejos de donde se mueve la cosa.
+  const [cerca, setCerca] = useState(true)
+  const [ubicando, setUbicando] = useState(true)
+
+  // Al montar, la posición solo si el permiso YA estaba dado (ver `positionIfAllowed`).
+  useEffect(() => {
+    let vivo = true
+    positionIfAllowed().then((p) => {
+      if (!vivo) return
+      setPos(p)
+      if (!p) setCerca(false)
+      setUbicando(false)
+    })
+    return () => { vivo = false }
+  }, [])
 
   useEffect(() => {
+    if (ubicando) return
     setItems(null)
-    getActivity({ limit, region: region || undefined }).then(setItems).catch(() => setItems([]))
-  }, [limit, region])
+    const zona = cerca && pos ? { lat: pos[0], long: pos[1] } : {}
+    getActivity({ limit, region: cerca ? undefined : region || undefined, ...zona })
+      .then(setItems)
+      .catch(() => setItems([]))
+  }, [limit, region, cerca, pos, ubicando])
+
+  /**
+   * Invitar: la hoja de compartir del sistema si la hay, y si no, el enlace al
+   * portapapeles. Sin depender de ninguna red social concreta.
+   */
+  async function invitar() {
+    const url = `${location.origin}/?p=invite`
+    const texto = t('activity.inviteText')
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'FontApp', text: texto, url })
+        return
+      }
+      await navigator.clipboard.writeText(`${texto} ${url}`)
+      show(t('activity.inviteCopied'))
+    } catch {
+      // El usuario ha cancelado la hoja de compartir: no hay nada que avisar.
+    }
+  }
+
+  /** "Cerca de mí" pulsado sin tener posición: ahí sí se puede pedir permiso. */
+  async function activarCerca() {
+    if (pos) { setCerca(true); return }
+    const p = await askPosition()
+    if (!p) { show(t('map.geoFailed')); return }
+    setPos(p)
+    setCerca(true)
+  }
 
   const regions = [...new Set((items ?? []).map((i) => i.region).filter(Boolean))] as string[]
 
   return (
     <Box>
-      {showFilter && regions.length > 1 && (
-        <TextField
-          select size="small" label={t('activity.region')} value={region}
-          onChange={(e) => setRegion(e.target.value)} sx={{ minWidth: 200, mb: 2 }}
-        >
-          <MenuItem value="">{t('activity.allRegions')}</MenuItem>
-          {regions.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
-        </TextField>
-      )}
+      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', alignItems: 'center', rowGap: 1 }}>
+        <Chip
+          clickable
+          icon={<MyLocationIcon />}
+          label={t('activity.nearMe')}
+          color={cerca ? 'primary' : 'default'}
+          variant={cerca ? 'filled' : 'outlined'}
+          onClick={activarCerca}
+        />
+        <Chip
+          clickable
+          label={t('activity.everywhere')}
+          color={!cerca ? 'primary' : 'default'}
+          variant={!cerca ? 'filled' : 'outlined'}
+          onClick={() => setCerca(false)}
+        />
+        {/* La región solo tiene sentido mirando el global: con "cerca de mí" el
+            recorte ya lo dan las coordenadas, y dos filtros de zona a la vez confunden. */}
+        {showFilter && !cerca && regions.length > 1 && (
+          <TextField
+            select size="small" label={t('activity.region')} value={region}
+            onChange={(e) => setRegion(e.target.value)} sx={{ minWidth: 180 }}
+          >
+            <MenuItem value="">{t('activity.allRegions')}</MenuItem>
+            {regions.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+          </TextField>
+        )}
+      </Stack>
 
       <Box
         sx={{
@@ -287,7 +364,21 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
         })}
       </Box>
 
-      {items?.length === 0 && <Typography color="text.secondary">{t('activity.empty')}</Typography>}
+      {items?.length === 0 && (
+        <DryFountain
+          title={t(cerca ? 'activity.emptyNearTitle' : 'activity.emptyTitle')}
+          subtitle={t(cerca ? 'activity.emptyNearBody' : 'activity.emptyBody')}
+        >
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ justifyContent: 'center' }}>
+            <Button variant="contained" disableElevation startIcon={<PersonAddAltIcon />} onClick={invitar}>
+              {t('activity.invite')}
+            </Button>
+            <Button component={RouterLink} to="/" startIcon={<MapIcon />}>
+              {t('activity.toMap')}
+            </Button>
+          </Stack>
+        </DryFountain>
+      )}
     </Box>
   )
 }

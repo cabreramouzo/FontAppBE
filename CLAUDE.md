@@ -60,6 +60,14 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias
   y ediciones mezcladas por fecha, con filtro por zona. Solo admin; pensado para abrirse
   al público sin cambios (no expone nada que no esté ya en la ficha).
+- La rejilla arranca en **«cerca de mí»**: `/activity` acepta `lat`/`long`/`km` (radio,
+  40 km por defecto) además de `region`, y la cercanía manda si vienen las dos. Una
+  portada global es casi inútil para quien vive lejos de donde se mueve la cosa. La
+  posición solo se pide en silencio si el permiso ya estaba dado (`lib/quietPosition.ts`);
+  el chip «cerca de mí» sí puede pedirlo, porque es un gesto del usuario.
+- Zona vacía y 404 comparten ilustración (`DryFountain.tsx`, `public/dry-fountain.jpg`):
+  una fuente seca explica el hueco mejor que un icono de error. En la zona vacía se
+  invita a compartir la app (Web Share API, con copia al portapapeles de respaldo).
 - Dos vistas de lo mismo: **rejilla** (`ActivityGrid.tsx`) para mirar y **lista**
   (`ActivityFeed.tsx`) para revisar. `/activity` devuelve `image`: la de la reseña si la
   trae (es la más reciente y la que ilustra lo que se cuenta), si no la de la fuente.

@@ -231,10 +231,18 @@ export interface ActivityItem {
   createdAt: string
 }
 
-export async function getActivity(opts: { limit?: number; region?: string } = {}): Promise<ActivityItem[]> {
+export async function getActivity(
+  opts: { limit?: number; region?: string; lat?: number; long?: number; km?: number } = {},
+): Promise<ActivityItem[]> {
   const q = new URLSearchParams()
   if (opts.limit) q.set('limit', String(opts.limit))
   if (opts.region) q.set('region', opts.region)
+  // Cercanía: manda sobre la región si vienen las dos (lo decide el backend).
+  if (opts.lat !== undefined && opts.long !== undefined) {
+    q.set('lat', String(opts.lat))
+    q.set('long', String(opts.long))
+    if (opts.km) q.set('km', String(opts.km))
+  }
   return apiFetch(`/activity?${q}`)
 }
 

@@ -14,7 +14,15 @@ struct ActivityController: RouteCollection {
         activity.get(use: index)
     }
 
-    /// GET /activity?limit=&region= — últimos movimientos, más recientes primero.
+    /// Radio por defecto de la vista "cerca de mí", en km. Una comarca larga: lo bastante
+    /// ancho para que haya movimiento aunque tu pueblo esté tranquilo, y lo bastante
+    /// estrecho para que sean fuentes a las que podrías ir de verdad.
+    static let defaultRadiusKm = 40.0
+    static let maxRadiusKm = 200.0
+
+    /// GET /activity?limit=&region=&lat=&long=&km= — últimos movimientos, más recientes
+    /// primero. Con `lat`/`long` se acota a lo que hay alrededor; con `region`, a una
+    /// comunidad/región entera. La cercanía manda si vienen las dos.
     @Sendable func index(req: Request) async throws -> [ActivityItem] {
         let user = try req.auth.require(User.self)
         guard user.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
@@ -22,13 +30,10 @@ struct ActivityController: RouteCollection {
         let limit = min(max(req.query[Int.self, at: "limit"] ?? 30, 1), 100)
         let region = req.query[String.self, at: "region"]?.trimmingCharacters(in: .whitespaces)
 
-        // Si se filtra por zona, primero acotamos las fuentes de esa región y luego
-        // buscamos movimientos sobre ellas. Sin filtro, no hace falta esa vuelta.
+        // Acotar por zona es acotar el conjunto de fuentes, y después buscar movimientos
+        // sobre ellas. Sin filtro no hace falta esa vuelta.
         // `let` y no `var`: se captura en las tareas concurrentes de abajo.
-        let fontIDsInRegion: [UUID]? = try await {
-            guard let region, !region.isEmpty else { return nil }
-            return try await Font.query(on: req.db).filter(\.$region == region).all(\.$id)
-        }()
+        let fontIDsInRegion: [UUID]? = try await zoneFontIDs(req, region: region)
         if fontIDsInRegion?.isEmpty == true { return [] }
 
         // Cada tipo trae como mucho `limit`: al mezclar y recortar, el resultado es el
@@ -40,6 +45,33 @@ struct ActivityController: RouteCollection {
         let items = try await newFontsTask + commentsTask + reportsTask + editsTask
 
         return Array(items.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
+    }
+
+    /// Fuentes de la zona pedida, o `nil` si no se ha pedido ninguna (= todas).
+    ///
+    /// Dos maneras de decir "mi zona", y no son intercambiables: por coordenadas
+    /// (lo que tienes alrededor, que es lo que le importa a quien va a caminar) y por
+    /// región administrativa (Catalunya entera). La primera gana si vienen las dos.
+    private func zoneFontIDs(_ req: Request, region: String?) async throws -> [UUID]? {
+        if let lat = req.query[Double.self, at: "lat"], let long = req.query[Double.self, at: "long"] {
+            let km = min(max(req.query[Double.self, at: "km"] ?? Self.defaultRadiusKm, 1), Self.maxRadiusKm)
+            // Prefiltro por caja: un grado de latitud son ~111 km. En longitud los
+            // meridianos se juntan al subir de latitud, así que la caja se ensancha
+            // dividiendo por el coseno; sin eso, en el norte la caja se queda corta.
+            let dLat = km / 111.0
+            let dLong = km / (111.0 * max(cos(lat * .pi / 180), 0.01))
+            let candidates = try await Font.query(on: req.db)
+                .filter(\.$latitude >= lat - dLat).filter(\.$latitude <= lat + dLat)
+                .filter(\.$longitude >= long - dLong).filter(\.$longitude <= long + dLong)
+                .limit(5000)
+                .all()
+            // La caja es un cuadrado y el radio un círculo: el haversine recorta las esquinas.
+            return candidates.compactMap { f in
+                haversineKm(lat, long, f.latitude, f.longitude) <= km ? f.id : nil
+            }
+        }
+        guard let region, !region.isEmpty else { return nil }
+        return try await Font.query(on: req.db).filter(\.$region == region).all(\.$id)
     }
 
     // MARK: - Cada fuente de actividad
