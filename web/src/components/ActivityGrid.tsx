@@ -27,23 +27,34 @@ function encuadre(id: string): string {
   return `${15 + (h % 70)}% ${25 + ((h >> 8) % 50)}%`
 }
 
+/** Texto de la novedad, limpio: descripción, reseña o incidencia, sin espacios sueltos. */
+function textoDe(item: ActivityItem): string {
+  return (item.text ?? '').trim()
+}
+
 /**
- * Tamaño de cada pieza, en columnas × filas. Mezclar formatos es lo que le da el aire
- * de portada de periódico; hacerlo al azar, en cambio, se nota y marea, así que el
- * reparto es fijo y depende solo de la posición y de si hay foto de verdad.
+ * Tamaño de cada pieza, en columnas × filas (cada fila mide ~70 px).
  *
- * Las piezas grandes se reservan a las que traen foto propia: ampliar la ilustración
- * de relleno a doble tamaño solo consigue que se vea que es de relleno.
+ * Manda lo que hay que contar: una reseña larga necesita sitio para leerse, y una
+ * fuente importada que solo trae el nombre no. Mezclar formatos es lo que le da el
+ * aire de portada; hacerlo al azar se nota y marea, así que el reparto es fijo — el
+ * mismo elemento sale siempre igual, aunque se filtre o se recargue.
  *
  * En móvil solo hay dos columnas, así que una pieza "apaisada" sería la pantalla
  * entera: ahí se queda únicamente la de apertura y el resto varía solo de alto.
  */
 function pieza(item: ActivityItem, i: number, compacto: boolean): { cols: number; filas: number } {
   const conFoto = !!item.image
-  if (i === 0 && conFoto) return { cols: 2, filas: 3 }                 // la apertura
-  if (conFoto && !compacto && i % 7 === 3) return { cols: 2, filas: 2 } // apaisada
-  if (i % 5 === 2) return { cols: 1, filas: 3 }                         // vertical
-  return { cols: 1, filas: 2 }                                          // cuadrada
+  const texto = textoDe(item).length
+
+  // Con texto de sobra, la pieza doble-alta: cabe el nombre y un buen trozo de lo que
+  // se cuenta. Es la que ocupa lo que cuatro piezas pequeñas.
+  if (texto >= 140) return { cols: 2, filas: 4 }
+  if (i === 0 && conFoto) return { cols: 2, filas: 3 }                  // la apertura
+  if (conFoto && !compacto && i % 7 === 3) return { cols: 2, filas: 2 }  // apaisada
+  if (texto >= 60) return { cols: 1, filas: 3 }                          // algo que leer
+  if (i % 5 === 2) return { cols: 1, filas: 3 }                          // vertical
+  return { cols: 1, filas: 2 }                                           // pequeña
 }
 
 const KIND_EMOJI: Record<ActivityItem['kind'], string> = {
@@ -60,6 +71,10 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
   const esAviso = item.kind === 'report'
   // Piezas con sitio de sobra para la firma completa.
   const grande = cols > 1 || filas > 2
+  // El extracto solo donde de verdad cabe: en una pieza pequeña serían dos palabras
+  // y un puntito, que no informa de nada y quita aire al nombre.
+  const texto = textoDe(item)
+  const conExtracto = cols > 1 && filas >= 4 && texto.length > 0
 
   return (
     <Card
@@ -101,8 +116,12 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
             sx={{
               position: 'absolute',
               inset: 0,
+              // Con extracto el texto ocupa más alto, así que el velo tiene que subir
+              // con él o las últimas líneas caen sobre la parte clara de la foto.
               background: propia
-                ? 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.28) 42%, rgba(0,0,0,0) 68%)'
+                ? conExtracto
+                  ? 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.5) 45%, rgba(0,0,0,0) 82%)'
+                  : 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.28) 42%, rgba(0,0,0,0) 68%)'
                 : 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%)',
             }}
           />
@@ -155,6 +174,23 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
             >
               {item.fontName}
             </Typography>
+            {conExtracto && (
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  lineHeight: 1.35,
+                  opacity: 0.92,
+                  mt: 0.5,
+                  textShadow: '0 1px 3px rgba(0,0,0,.6)',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {texto}
+              </Typography>
+            )}
             {/* En las piezas pequeñas solo la fecha: el nombre de la fuente es lo que
                 hay que poder leer, y con la firma detrás no cabían los dos. En una
                 línea siempre, para que el bloque no crezca y choque con el chip. */}
