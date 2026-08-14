@@ -15,6 +15,12 @@ const proxy = {
     target: 'http://127.0.0.1:8080',
     changeOrigin: true,
   },
+  // Ilustraciones de las fuentes de ejemplo (`seed --demo`), que viven en el Public/
+  // del backend. Sin esto salen rotas en desarrollo y la demo se ve a medias.
+  '/demo': {
+    target: 'http://127.0.0.1:8080',
+    changeOrigin: true,
+  },
 }
 
 export default defineConfig({

@@ -102,7 +102,12 @@ struct SeedCommand: AsyncCommand {
             for _ in 0..<Int.random(in: 1...3) {
                 guard let user = users.randomElement() else { continue }
                 let status = Self.weightedStatus()
-                let (text, rating) = Self.reviewText(for: status)
+                var (text, rating) = Self.reviewText(for: status)
+                // Tres longitudes repartidas: frase suelta, párrafo corto y párrafo
+                // largo. De cada una sale un tamaño de pieza distinto en la portada.
+                let dado = Int.random(in: 0..<100)
+                if dado < 20 { text = Self.longReviewText(for: status) }
+                else if dado < 50 { text = Self.mediumReviewText(for: status) }
                 // ~25% de las reseñas llevan foto.
                 let image = Int.random(in: 0..<100) < 25 ? Self.demoImages.randomElement() ?? nil : nil
                 if image != nil { withPhoto += 1 }
@@ -153,6 +158,60 @@ struct SeedCommand: AsyncCommand {
     }
 
     /// Texto y valoración coherentes con el estado.
+    /// Reseñas de longitud media: el escalón intermedio. Sin ellas la demo solo tenía
+    /// frases de una línea y párrafos, y en la portada nunca aparecía la pieza vertical.
+    static func mediumReviewText(for status: String) -> String {
+        switch status {
+        case "flowing":
+            return [
+                "Raja bé i l'aigua surt fresca. Hi ha ombra al costat per parar una estona.",
+                "Sale con buen caudal. El acceso está despejado y hay sitio para dejar el coche.",
+            ].randomElement()!
+        case "trickle":
+            return [
+                "Raja poc, però l'aigua és bona i està neta. Cal una mica de paciència.",
+                "Poca agua, aunque suficiente para beber. Mejor no contar con ella para llenar.",
+            ].randomElement()!
+        case "dry":
+            return [
+                "Seca avui. La pica està plena de fulles i fa dies que no hi baixa aigua.",
+                "Sin agua. Merece la pena avisar para que alguien la revise.",
+            ].randomElement()!
+        default:
+            return [
+                "Lloc tranquil i ben senyalitzat, amb una taula sota els arbres.",
+            ].randomElement()!
+        }
+    }
+
+    /// Reseñas largas: una de cada cinco, para que la demo ejercite de verdad la
+    /// portada de novedades, donde el tamaño de cada pieza depende de cuánto hay que
+    /// leer. Con solo frases de una línea no saldría ni una pieza grande y el diseño
+    /// parecería otro del que es.
+    static func longReviewText(for status: String) -> String {
+        switch status {
+        case "flowing":
+            return [
+                "Raja amb força tot i que portem un estiu ben sec. S'hi arriba fàcil des del camí de Sant Pere, uns deu minuts a peu des de l'aparcament. Hi ha una taula de pedra a l'ombra i l'aigua surt molt fresca; la gent del poble hi baixa amb garrafes.",
+                "Hemos llenado cuatro cantimploras sin esperar nada. El caño está a buena altura y no salpica. El camino de subida es corto pero con piedra suelta, mejor con calzado de monte. A media mañana da el sol de lleno, así que si podéis, id temprano.",
+            ].randomElement()!
+        case "trickle":
+            return [
+                "Baixa un filet prim, prou per beure però no per omplir res de pressa. Sembla que la canonada està mig embussada de fulles; amb una branca s'hi arriba i millora una mica. Fa un any rajava molt més, potser val la pena avisar l'ajuntament.",
+                "Sale muy poca agua, tarda un buen rato en llenar una botella de litro. Aun así está limpia y fresca. El entorno se agradece: hay sombra y un banco. Si vais con prisa o con mucha gente, contad con otra fuente de reserva más abajo.",
+            ].randomElement()!
+        case "dry":
+            return [
+                "Completament seca, ni una gota. Hi hem passat dues vegades aquest mes i les dues igual. La bassa del costat també està buida i es veu la molsa resseca, o sigui que fa setmanes que no raja. No compteu amb aquesta font per a la ruta.",
+                "Seca desde hace semanas. Hemos bajado expresamente y nos hemos quedado sin agua a mitad de ruta, así que aviso: la siguiente potable está a más de una hora andando. Por lo demás el sitio es bonito y hay sombra para descansar un rato.",
+            ].randomElement()!
+        default:
+            return [
+                "Un lloc molt agradable per parar a dinar. Hi ha dues taules de fusta sota els roures i una zona plana on els nens poden córrer. L'accés en cotxe és per pista de terra, transitable amb qualsevol vehicle si no ha plogut els dies previs.",
+            ].randomElement()!
+        }
+    }
+
     static func reviewText(for status: String) -> (String, Int?) {
         switch status {
         case "flowing":

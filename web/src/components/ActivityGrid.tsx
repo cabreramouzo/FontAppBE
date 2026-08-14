@@ -66,8 +66,11 @@ const KIND_EMOJI: Record<ActivityItem['kind'], string> = {
 
 function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; filas: number }) {
   const { t } = useI18n()
+  // Una foto que no carga (borrada del almacén, red caída) dejaba la tarjeta en blanco
+  // con el texto blanco encima: ilegible. Si falla, se cae a la ilustración de relleno.
+  const [falla, setFalla] = useState(false)
   const ws = item.waterStatus ? waterStatusInfo(item.waterStatus) : null
-  const propia = !!item.image
+  const propia = !!item.image && !falla
   const esAviso = item.kind === 'report'
   // Piezas con sitio de sobra para la firma completa.
   const grande = cols > 1 || filas > 2
@@ -98,6 +101,7 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
             src={propia ? assetUrl(item.image as string) : SIN_FOTO}
             alt=""
             loading="lazy"
+            onError={() => setFalla(true)}
             sx={{
               width: '100%',
               height: '100%',
@@ -116,13 +120,13 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
             sx={{
               position: 'absolute',
               inset: 0,
-              // Con extracto el texto ocupa más alto, así que el velo tiene que subir
-              // con él o las últimas líneas caen sobre la parte clara de la foto.
-              background: propia
-                ? conExtracto
-                  ? 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.5) 45%, rgba(0,0,0,0) 82%)'
-                  : 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.28) 42%, rgba(0,0,0,0) 68%)'
-                : 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%)',
+              // El velo va fuerte al pie a propósito: hay fotos claras (nieve, cielo,
+              // piedra al sol) sobre las que el texto blanco desaparece, y no se puede
+              // saber de antemano cuál toca. Con extracto sube más, o las últimas
+              // líneas del párrafo se salen de la zona protegida.
+              background: conExtracto
+                ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.72) 32%, rgba(0,0,0,0.3) 62%, rgba(0,0,0,0) 88%)'
+                : 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.55) 32%, rgba(0,0,0,0) 72%)',
             }}
           />
           <Chip
