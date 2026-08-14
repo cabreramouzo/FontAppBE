@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
 import { useNavigate } from 'react-router-dom'
 import L from 'leaflet'
@@ -27,8 +27,15 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
   const map = useMap()
   const navigate = useNavigate()
   const { t } = useI18n()
+  // Fuente cuyo popup ha cerrado el usuario a mano. Los marcadores se reconstruyen con
+  // cada movimiento del mapa, y sin esto el popup volvía a salir una y otra vez.
+  const cerradoPorElUsuario = useRef<string | null>(null)
 
   useEffect(() => {
+    // El cleanup quita las capas, y quitar una capa con el popup abierto dispara
+    // `popupclose` igual que si lo hubiera cerrado el usuario. Esta bandera distingue
+    // los dos casos; si no, el primer movimiento del mapa ya lo daría por cerrado.
+    let desmontando = false
     const group = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 })
     let selectedMarker: L.Marker | null = null
 
@@ -58,6 +65,13 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
       if (isSelected) {
         // Suelta sobre el mapa (fuera del cluster) → siempre visible.
         selectedMarker = marker
+        marker.on('popupclose', () => {
+          if (!desmontando) cerradoPorElUsuario.current = selectedID ?? null
+        })
+        // Si vuelve a abrirlo tocando el pin, se olvida el cierre: quiere verlo.
+        marker.on('popupopen', () => {
+          if (cerradoPorElUsuario.current === selectedID) cerradoPorElUsuario.current = null
+        })
         marker.addTo(map)
       } else {
         group.addLayer(marker)
@@ -65,11 +79,13 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
     }
     map.addLayer(group)
 
-    // Popup del seleccionado. Al reconstruirse los marcadores (zoom/pan) también lo
-    // reabrimos, pero nunca movemos el mapa; el encuadre es cosa de <FocusOn>.
-    if (selectedMarker) selectedMarker.openPopup()
+    // Popup del seleccionado. Se reabre al reconstruirse los marcadores (zoom/pan)
+    // para que no desaparezca solo, pero NO si el usuario ya lo había cerrado. Nunca
+    // movemos el mapa: el encuadre es cosa de <FocusOn>.
+    if (selectedMarker && cerradoPorElUsuario.current !== selectedID) selectedMarker.openPopup()
 
     return () => {
+      desmontando = true
       map.removeLayer(group)
       if (selectedMarker) map.removeLayer(selectedMarker)
     }
