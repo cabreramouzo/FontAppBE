@@ -7,7 +7,8 @@ import Chip from '@mui/material/Chip'
 import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { alpha } from '@mui/material/styles'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { alpha, useTheme } from '@mui/material/styles'
 import { assetUrl, getActivity, type ActivityItem } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import { waterStatusInfo } from '../lib/waterStatus'
@@ -26,6 +27,25 @@ function encuadre(id: string): string {
   return `${15 + (h % 70)}% ${25 + ((h >> 8) % 50)}%`
 }
 
+/**
+ * Tamaño de cada pieza, en columnas × filas. Mezclar formatos es lo que le da el aire
+ * de portada de periódico; hacerlo al azar, en cambio, se nota y marea, así que el
+ * reparto es fijo y depende solo de la posición y de si hay foto de verdad.
+ *
+ * Las piezas grandes se reservan a las que traen foto propia: ampliar la ilustración
+ * de relleno a doble tamaño solo consigue que se vea que es de relleno.
+ *
+ * En móvil solo hay dos columnas, así que una pieza "apaisada" sería la pantalla
+ * entera: ahí se queda únicamente la de apertura y el resto varía solo de alto.
+ */
+function pieza(item: ActivityItem, i: number, compacto: boolean): { cols: number; filas: number } {
+  const conFoto = !!item.image
+  if (i === 0 && conFoto) return { cols: 2, filas: 3 }                 // la apertura
+  if (conFoto && !compacto && i % 7 === 3) return { cols: 2, filas: 2 } // apaisada
+  if (i % 5 === 2) return { cols: 1, filas: 3 }                         // vertical
+  return { cols: 1, filas: 2 }                                          // cuadrada
+}
+
 const KIND_EMOJI: Record<ActivityItem['kind'], string> = {
   fontAdded: '➕',
   review: '💬',
@@ -33,16 +53,20 @@ const KIND_EMOJI: Record<ActivityItem['kind'], string> = {
   edit: '✏️',
 }
 
-function Tarjeta({ item }: { item: ActivityItem }) {
+function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; filas: number }) {
   const { t } = useI18n()
   const ws = item.waterStatus ? waterStatusInfo(item.waterStatus) : null
   const propia = !!item.image
   const esAviso = item.kind === 'report'
+  // Piezas con sitio de sobra para la firma completa.
+  const grande = cols > 1 || filas > 2
 
   return (
     <Card
       elevation={0}
       sx={(theme) => ({
+        gridColumn: `span ${cols}`,
+        gridRow: `span ${filas}`,
         borderRadius: 4,
         overflow: 'hidden',
         border: 1,
@@ -51,10 +75,9 @@ function Tarjeta({ item }: { item: ActivityItem }) {
         '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
       })}
     >
-      <CardActionArea component={RouterLink} to={`/fonts/${item.fontID}`} sx={{ display: 'block' }}>
-        {/* Cuadrado: la rejilla se lee de un vistazo solo si todas las piezas miden
-            igual, tenga la foto la forma que tenga. */}
-        <Box sx={{ position: 'relative', aspectRatio: '1 / 1', overflow: 'hidden' }}>
+      <CardActionArea component={RouterLink} to={`/fonts/${item.fontID}`} sx={{ display: 'block', height: '100%' }}>
+        {/* La altura la marca la rejilla, no la foto: `cover` recorta lo que sobre. */}
+        <Box sx={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
           <Box
             component="img"
             src={propia ? assetUrl(item.image as string) : SIN_FOTO}
@@ -119,7 +142,7 @@ function Tarjeta({ item }: { item: ActivityItem }) {
             <Typography
               sx={{
                 fontWeight: 800,
-                fontSize: 15,
+                fontSize: cols > 1 ? 20 : 15,
                 lineHeight: 1.25,
                 textShadow: '0 1px 3px rgba(0,0,0,.6)',
                 // Dos líneas como mucho: hay topónimos larguísimos y si no, la
@@ -132,10 +155,16 @@ function Tarjeta({ item }: { item: ActivityItem }) {
             >
               {item.fontName}
             </Typography>
-            <Typography sx={{ fontSize: 12, opacity: 0.85, textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>
+            {/* En las piezas pequeñas solo la fecha: el nombre de la fuente es lo que
+                hay que poder leer, y con la firma detrás no cabían los dos. En una
+                línea siempre, para que el bloque no crezca y choque con el chip. */}
+            <Typography
+              noWrap
+              sx={{ fontSize: 12, opacity: 0.85, textShadow: '0 1px 3px rgba(0,0,0,.6)' }}
+            >
               {timeAgo(item.createdAt, t)}
-              {item.author ? ` · ${item.author}` : ''}
-              {item.region ? ` · ${item.region}` : ''}
+              {grande && item.author ? ` · ${item.author}` : ''}
+              {grande && item.region ? ` · ${item.region}` : ''}
             </Typography>
           </Box>
         </Box>
@@ -152,6 +181,8 @@ function Tarjeta({ item }: { item: ActivityItem }) {
  */
 export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: number; showFilter?: boolean }) {
   const { t } = useI18n()
+  const theme = useTheme()
+  const compacto = useMediaQuery(theme.breakpoints.down('sm'))
   const [items, setItems] = useState<ActivityItem[] | null>(null)
   const [region, setRegion] = useState('')
 
@@ -177,20 +208,41 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
       <Box
         sx={{
           display: 'grid',
-          // `auto-fill` con un mínimo: las columnas las decide el ancho disponible,
-          // así que sirve igual en un móvil (2) que en un escritorio ancho (5-6).
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+          // Número fijo de columnas por tamaño de pantalla (no `auto-fill`): las piezas
+          // ocupan dos columnas y hay que saber cuántas hay para que quepan.
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)', lg: 'repeat(6, 1fr)' },
+          // Filas bajas: las piezas ocupan 2 o 3, y de ahí salen las proporciones.
+          gridAutoRows: { xs: '66px', sm: '64px', md: '72px' },
+          // `dense` rellena los huecos que dejan las piezas grandes al no caber en su
+          // sitio. Sin esto el mosaico sale agujereado.
+          gridAutoFlow: 'dense',
           gap: { xs: 1.25, sm: 2 },
         }}
       >
         {items === null &&
           // Huecos del mismo tamaño mientras carga: la rejilla no da saltos al llegar.
-          Array.from({ length: 8 }).map((_, i) => (
-            <Box key={i} sx={{ aspectRatio: '1 / 1', borderRadius: 4, bgcolor: 'action.hover' }} />
+          Array.from({ length: 10 }).map((_, i) => (
+            <Box
+              key={i}
+              sx={{
+                gridColumn: `span ${i === 0 ? 2 : 1}`,
+                gridRow: `span ${i === 0 ? 3 : i % 5 === 2 ? 3 : 2}`,
+                borderRadius: 4,
+                bgcolor: 'action.hover',
+              }}
+            />
           ))}
-        {items?.map((item, i) => (
-          <Tarjeta key={`${item.kind}-${item.fontID}-${item.createdAt}-${i}`} item={item} />
-        ))}
+        {items?.map((item, i) => {
+          const { cols, filas } = pieza(item, i, compacto)
+          return (
+            <Tarjeta
+              key={`${item.kind}-${item.fontID}-${item.createdAt}-${i}`}
+              item={item}
+              cols={cols}
+              filas={filas}
+            />
+          )
+        })}
       </Box>
 
       {items?.length === 0 && <Typography color="text.secondary">{t('activity.empty')}</Typography>}
