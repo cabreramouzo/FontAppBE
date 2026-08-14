@@ -50,7 +50,19 @@ export function Layout({ children }: { children: ReactNode }) {
       {rol && <StaffStripe role={rol} />}
       <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default', pt: 'env(safe-area-inset-top)' }}>
         <Toolbar sx={{ gap: 1, pl: 'max(16px, env(safe-area-inset-left))', pr: 'max(16px, env(safe-area-inset-right))' }}>
-          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          {/* En móvil el distintivo baja bajo el título: "Propietario" es largo y en una
+              sola fila se comía el sitio de los demás botones. En pantallas anchas cabe
+              todo al lado. */}
+          <Box
+            sx={{
+              flexGrow: 1,
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: rol ? { xs: 'column', sm: 'row' } : 'row',
+              alignItems: rol ? { xs: 'flex-start', sm: 'center' } : 'center',
+              gap: rol ? { xs: 0.25, sm: 0.75 } : 0.75,
+            }}
+          >
             <Typography
               component={RouterLink}
               to="/"

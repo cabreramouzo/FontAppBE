@@ -57,7 +57,14 @@ export function RoleChip({ role, count = 0 }: { role: UserRole; count?: number }
   const { t } = useI18n()
   return (
     <Tooltip title={t('nav.staffWarning')}>
-      <Badge badgeContent={count} color="error" overlap="circular">
+      {/* El contador va FUERA del chip, no encima: sobre la etiqueta tapaba el final
+          de la palabra, y "Propietario" es justo la más larga. El hueco a la derecha
+          se reserva con el margen para que no se salga de la barra. */}
+      <Badge
+        badgeContent={count}
+        color="error"
+        sx={{ mr: count > 0 ? 1.25 : 0, '& .MuiBadge-badge': { transform: 'translate(70%, -20%)' } }}
+      >
       <Chip
         component={RouterLink}
         to="/admin"

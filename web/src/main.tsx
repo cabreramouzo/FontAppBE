@@ -25,26 +25,14 @@ window.addEventListener('appinstalled', () => {
   window.__bipEvent = undefined
 })
 
-// Evita el zoom de página por pinch/doble-toque (iOS Safari lo hace aunque el
-// viewport diga user-scalable=no). El mapa de Leaflet usa touchmove dentro de su
-// contenedor, así que su propio pinch-zoom sigue funcionando; esto solo bloquea el
-// gesto a nivel de documento, que es el que descuadraba la UI.
-document.addEventListener('gesturestart', (e) => e.preventDefault())
-document.addEventListener('gesturechange', (e) => e.preventDefault())
-
-// Doble-toque para hacer zoom (iOS): lo suprimimos fuera del mapa.
-let lastTouch = 0
-document.addEventListener(
-  'touchend',
-  (e) => {
-    const now = Date.now()
-    if (now - lastTouch <= 300 && !(e.target as HTMLElement)?.closest?.('.leaflet-container')) {
-      e.preventDefault()
-    }
-    lastTouch = now
-  },
-  { passive: false },
-)
+// El zoom de la página está PERMITIDO: hay quien lo necesita para leer, y bloquearlo
+// con `user-scalable=no` incumple la pauta de accesibilidad de redimensionar el texto.
+// Lo único que se bloquea es el pinch DENTRO del mapa, donde el gesto ya significa otra
+// cosa (acercar el mapa) y dejar que además se ampliara la página descuadraba la
+// interfaz. iOS Safari dispara `gesture*` aunque el CSS diga `touch-action: none`.
+const enElMapa = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('.leaflet-container')
+document.addEventListener('gesturestart', (e) => { if (enElMapa(e.target)) e.preventDefault() })
+document.addEventListener('gesturechange', (e) => { if (enElMapa(e.target)) e.preventDefault() })
 
 // PWA: registramos el service worker solo en producción (en dev interferiría con el HMR de Vite).
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
