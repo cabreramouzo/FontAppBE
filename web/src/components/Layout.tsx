@@ -7,14 +7,12 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
-import Badge from '@mui/material/Badge'
 import Tooltip from '@mui/material/Tooltip'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
-import GppMaybeIcon from '@mui/icons-material/GppMaybeOutlined'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import LogoutIcon from '@mui/icons-material/Logout'
 import { useAuth } from '../auth/AuthContext'
@@ -28,6 +26,7 @@ import { OfflineBanner } from './OfflineBanner'
 import { AppInterestBanner } from './AppInterestBanner'
 import { InstallPrompt } from './InstallPrompt'
 import { PendingUploads } from './PendingUploads'
+import { RoleChip, StaffStripe, staffRole } from './StaffBadge'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -35,6 +34,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const [flagCount, setFlagCount] = useState(0)
   const [newUsers, setNewUsers] = useState(0)
   const [confirmLogout, setConfirmLogout] = useState(false)
+  // Rol del equipo (admin/moderador/owner), o null si es una cuenta normal.
+  const rol = staffRole(user)
 
   // Cosas por mirar (solo admins): denuncias pendientes + altas desde la última visita
   // al panel. Van juntas en el mismo distintivo: es "tienes N cosas nuevas ahí dentro".
@@ -46,6 +47,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app">
+      {rol && <StaffStripe role={rol} />}
       <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default', pt: 'env(safe-area-inset-top)' }}>
         <Toolbar sx={{ gap: 1, pl: 'max(16px, env(safe-area-inset-left))', pr: 'max(16px, env(safe-area-inset-right))' }}>
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -62,22 +64,16 @@ export function Layout({ children }: { children: ReactNode }) {
               size="small"
               color="warning"
               variant="outlined"
-              sx={{ height: 20, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', '& .MuiChip-label': { px: 0.75 } }}
+              sx={{ height: 20, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', '& .MuiChip-label': { px: 0.75 }, display: rol ? { xs: 'none', sm: 'inline-flex' } : 'inline-flex' }}
             />
+            {/* El rol, junto al nombre de la app: es lo primero que se lee. Lleva el
+                aviso de novedades del panel, que antes era un botón aparte. */}
+            {rol && <RoleChip role={rol} count={flagCount + newUsers} />}
           </Box>
           <ThemeToggle />
           <LanguageSwitcher />
           {user ? (
             <>
-              {user.isAdmin && (
-                <Tooltip title={t('admin.title')}>
-                  <IconButton component={RouterLink} to="/admin" color="inherit" size="small" aria-label={t('admin.title')}>
-                    <Badge badgeContent={flagCount + newUsers} color="error">
-                      <GppMaybeIcon />
-                    </Badge>
-                  </IconButton>
-                </Tooltip>
-              )}
               {/* Perfil: texto con saludo en pantallas anchas; solo icono en móvil para que quepa. */}
               <Button
                 component={RouterLink}
