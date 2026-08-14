@@ -22,6 +22,13 @@ import { askPosition, positionIfAllowed } from '../lib/quietPosition'
 import { DryFountain } from './DryFountain'
 import { useToast } from './ToastContext'
 
+// Radio de las esquinas de las piezas. En px y no con la escala del tema (`4` serían
+// 48 px, cuatro veces `shape.borderRadius`): estas tarjetas son pequeñas y con tanto
+// redondeo se comían la foto por las esquinas.
+// Lo usan la tarjeta Y el hueco gris de carga; si se separan, la rejilla cambia de
+// forma al llegar los datos.
+const RADIO = '15px'
+
 // Ilustración de la app para las tarjetas sin foto. La mayoría de fuentes vienen
 // importadas y aún no tienen ninguna: sin esto la rejilla saldría medio vacía y
 // desigual, que es justo lo que una rejilla no perdona.
@@ -97,7 +104,7 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
       sx={(theme) => ({
         gridColumn: `span ${cols}`,
         gridRow: `span ${filas}`,
-        borderRadius: 4,
+        borderRadius: RADIO,
         overflow: 'hidden',
         border: 1,
         borderColor: esAviso ? alpha(theme.palette.warning.main, 0.5) : 'divider',
@@ -365,7 +372,7 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
               sx={{
                 gridColumn: `span ${i === 0 ? 2 : 1}`,
                 gridRow: `span ${i === 0 || i % 5 === 2 ? 4 : 2}`,
-                borderRadius: 4,
+                borderRadius: RADIO,
                 bgcolor: 'action.hover',
               }}
             />
