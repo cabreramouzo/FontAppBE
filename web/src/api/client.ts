@@ -226,6 +226,8 @@ export interface ActivityItem {
   author: string | null
   waterStatus: string | null
   text: string | null
+  /** Foto de la reseña o de la fuente; nula si no hay ninguna. */
+  image: string | null
   createdAt: string
 }
 

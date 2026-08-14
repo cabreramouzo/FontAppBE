@@ -53,7 +53,7 @@ struct ActivityController: RouteCollection {
             guard let id = f.id, let date = f.createdAt else { return nil }
             return ActivityItem(kind: .fontAdded, fontID: id, fontName: f.name, region: f.region,
                                 author: f.$creator.id.flatMap { authors[$0] }, waterStatus: nil,
-                                text: f.description, createdAt: date)
+                                text: f.description, image: f.image, createdAt: date)
         }
     }
 
@@ -67,7 +67,9 @@ struct ActivityController: RouteCollection {
             guard let date = c.createdAt, let font = fonts[c.$font.id] else { return nil }
             return ActivityItem(kind: .review, fontID: c.$font.id, fontName: font.name, region: font.region,
                                 author: c.$user.id.flatMap { authors[$0] }, waterStatus: c.waterStatus,
-                                text: c.body.isEmpty ? nil : c.body, createdAt: date)
+                                // La foto de la reseña manda: es la más reciente y la
+                                // que ilustra justo lo que se está contando.
+                                text: c.body.isEmpty ? nil : c.body, image: c.image ?? font.image, createdAt: date)
         }
     }
 
@@ -81,7 +83,7 @@ struct ActivityController: RouteCollection {
             guard let date = r.createdAt, let font = fonts[r.$font.id] else { return nil }
             return ActivityItem(kind: .report, fontID: r.$font.id, fontName: font.name, region: font.region,
                                 author: r.$user.id.flatMap { authors[$0] }, waterStatus: nil,
-                                text: r.message, createdAt: date)
+                                text: r.message, image: font.image, createdAt: date)
         }
     }
 
@@ -95,7 +97,7 @@ struct ActivityController: RouteCollection {
             guard let date = e.createdAt, let font = fonts[e.$font.id] else { return nil }
             return ActivityItem(kind: .edit, fontID: e.$font.id, fontName: font.name, region: font.region,
                                 author: e.$editor.id.flatMap { authors[$0] }, waterStatus: nil,
-                                text: nil, createdAt: date)
+                                text: nil, image: font.image, createdAt: date)
         }
     }
 
@@ -122,5 +124,8 @@ struct ActivityItem: Content {
     let author: String?
     let waterStatus: String?
     let text: String?
+    /// Foto para la tarjeta: la de la reseña si la trae, si no la de la fuente. Puede
+    /// ser nula (la mayoría de fuentes importadas aún no tienen ninguna).
+    let image: String?
     let createdAt: Date
 }

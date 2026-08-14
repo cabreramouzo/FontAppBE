@@ -57,9 +57,14 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Web: build con `VITE_API_URL=<origen del backend>`. Guía completa: [DEPLOY.md](DEPLOY.md).
 
 ## Panel de administración
-- Actividad reciente (`ActivityController` → `/activity`, `ActivityFeed.tsx`): fuentes,
-  reseñas, incidencias y ediciones en una línea de tiempo, con filtro por zona. Solo admin;
-  pensado para abrirse al público sin cambios (no expone nada que no esté ya en la ficha).
+- Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias
+  y ediciones mezcladas por fecha, con filtro por zona. Solo admin; pensado para abrirse
+  al público sin cambios (no expone nada que no esté ya en la ficha).
+- Dos vistas de lo mismo: **rejilla** (`ActivityGrid.tsx`) para mirar y **lista**
+  (`ActivityFeed.tsx`) para revisar. `/activity` devuelve `image`: la de la reseña si la
+  trae (es la más reciente y la que ilustra lo que se cuenta), si no la de la fuente.
+  Las tarjetas sin foto usan `welcome.jpg` oscurecida y con el encuadre variado por un
+  hash del id — con el mismo recorte parecían tarjetas duplicadas.
 
 ## Mapa y ubicación
 - Seguimiento continuo con `watchPosition` (`MapPage`): el punto azul se actualiza solo
