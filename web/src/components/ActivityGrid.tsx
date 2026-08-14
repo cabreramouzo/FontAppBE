@@ -87,6 +87,8 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
   // El extracto solo donde de verdad cabe: en una pieza pequeña serían dos palabras
   // y un puntito, que no informa de nada y quita aire al nombre.
   const texto = textoDe(item)
+  // Pieza de una sola columna: no hay sitio para las dos etiquetas completas.
+  const estrecho = cols === 1
   const conExtracto = filas >= 4 && texto.length > 0
 
   return (
@@ -139,38 +141,55 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
                 : 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.55) 32%, rgba(0,0,0,0) 72%)',
             }}
           />
-          <Chip
-            size="small"
-            label={`${KIND_EMOJI[item.kind]} ${t(`activity.${item.kind}`)}`}
-            sx={(theme) => ({
+          {/* Los dos distintivos van en una MISMA fila, no colocados cada uno por su
+              cuenta en una esquina: así no pueden solaparse por estrecha que sea la
+              pieza. En las de una columna el tipo se queda en el emoji — el estado del
+              agua es el dato que hay que poder leer, y las dos etiquetas juntas no
+              caben en 150 px. */}
+          <Box
+            sx={{
               position: 'absolute',
               top: 10,
               left: 10,
-              height: 24,
-              fontSize: 11,
-              fontWeight: 700,
-              color: '#fff',
-              bgcolor: esAviso ? theme.palette.warning.dark : alpha('#000', 0.55),
-              backdropFilter: 'blur(4px)',
-            })}
-          />
-          {ws && (
+              right: 10,
+              display: 'flex',
+              gap: 0.75,
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+            }}
+          >
             <Chip
               size="small"
-              label={`${ws.emoji} ${t(`status.${ws.key}`)}`}
-              sx={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
+              label={estrecho ? KIND_EMOJI[item.kind] : `${KIND_EMOJI[item.kind]} ${t(`activity.${item.kind}`)}`}
+              sx={(theme) => ({
+                flexShrink: 0,
                 height: 24,
                 fontSize: 11,
                 fontWeight: 700,
                 color: '#fff',
-                bgcolor: alpha('#000', 0.55),
+                bgcolor: esAviso ? theme.palette.warning.dark : alpha('#000', 0.55),
                 backdropFilter: 'blur(4px)',
-              }}
+                '& .MuiChip-label': { px: estrecho ? 0.5 : 0.75 },
+              })}
             />
-          )}
+            {ws && (
+              <Chip
+                size="small"
+                label={`${ws.emoji} ${t(`status.${ws.key}`)}`}
+                sx={{
+                  height: 24,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#fff',
+                  bgcolor: alpha('#000', 0.55),
+                  backdropFilter: 'blur(4px)',
+                  // Si aun así no cabe, se recorta el estado antes que desbordar.
+                  minWidth: 0,
+                  '& .MuiChip-label': { px: 0.75, overflow: 'hidden', textOverflow: 'ellipsis' },
+                }}
+              />
+            )}
+          </Box>
           <Box sx={{ position: 'absolute', left: 12, right: 12, bottom: 10, color: '#fff' }}>
             <Typography
               sx={{

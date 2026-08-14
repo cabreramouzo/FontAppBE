@@ -60,6 +60,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias
   y ediciones mezcladas por fecha, con filtro por zona. Solo admin; pensado para abrirse
   al público sin cambios (no expone nada que no esté ya en la ficha).
+- `/activity` lleva **caché en memoria** (`ActivityCache`, 60 s): son cuatro consultas
+  por visita. Las coordenadas se redondean **y se consulta con las redondeadas**, o dos
+  personas distintas se llevarían el resultado de la otra; el paso es proporcional al
+  radio (`coordStep(forKm:)`), porque uno fijo de 5 km desvirtuaba los radios pequeños.
 - La rejilla arranca en **«cerca de mí»**: `/activity` acepta `lat`/`long`/`km` (radio,
   40 km por defecto) además de `region`, y la cercanía manda si vienen las dos. Una
   portada global es casi inútil para quien vive lejos de donde se mueve la cosa. La
