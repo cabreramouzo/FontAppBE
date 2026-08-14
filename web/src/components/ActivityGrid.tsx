@@ -47,13 +47,15 @@ function pieza(item: ActivityItem, i: number, compacto: boolean): { cols: number
   const conFoto = !!item.image
   const texto = textoDe(item).length
 
-  // Con texto de sobra, la pieza doble-alta: cabe el nombre y un buen trozo de lo que
-  // se cuenta. Es la que ocupa lo que cuatro piezas pequeñas.
-  if (texto >= 140) return { cols: 2, filas: 4 }
-  if (i === 0 && conFoto) return { cols: 2, filas: 3 }                  // la apertura
+  // TODAS las alturas son múltiplos de dos filas, y no por capricho: mezclando 2 y 3
+  // quedaban huecos de una sola fila que ninguna pieza podía tapar, porque la más
+  // pequeña ya mide dos. Con 2 y 4, cualquier hueco admite una pieza pequeña y el
+  // empaquetado denso lo rellena.
+  if (texto >= 140) return { cols: 2, filas: 4 }                         // párrafo
+  if (i === 0 && conFoto) return { cols: 2, filas: 4 }                   // la apertura
   if (conFoto && !compacto && i % 7 === 3) return { cols: 2, filas: 2 }  // apaisada
-  if (texto >= 60) return { cols: 1, filas: 3 }                          // algo que leer
-  if (i % 5 === 2) return { cols: 1, filas: 3 }                          // vertical
+  if (texto >= 60) return { cols: 1, filas: 4 }                          // algo que leer
+  if (i % 5 === 2) return { cols: 1, filas: 4 }                          // vertical
   return { cols: 1, filas: 2 }                                           // pequeña
 }
 
@@ -77,7 +79,7 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
   // El extracto solo donde de verdad cabe: en una pieza pequeña serían dos palabras
   // y un puntito, que no informa de nada y quita aire al nombre.
   const texto = textoDe(item)
-  const conExtracto = cols > 1 && filas >= 4 && texto.length > 0
+  const conExtracto = filas >= 4 && texto.length > 0
 
   return (
     <Card
@@ -266,7 +268,7 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
               key={i}
               sx={{
                 gridColumn: `span ${i === 0 ? 2 : 1}`,
-                gridRow: `span ${i === 0 ? 3 : i % 5 === 2 ? 3 : 2}`,
+                gridRow: `span ${i === 0 || i % 5 === 2 ? 4 : 2}`,
                 borderRadius: 4,
                 bgcolor: 'action.hover',
               }}
