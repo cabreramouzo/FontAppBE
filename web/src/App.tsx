@@ -46,7 +46,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<MapPage />} />
                   <Route path="/fonts/:id" element={<FontDetailPage />} />
-                  <Route path="/novedades" element={<NewsPage />} />
+                  <Route path="/activity" element={<NewsPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />

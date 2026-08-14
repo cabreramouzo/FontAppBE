@@ -58,7 +58,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 
 ## Novedades (público) y panel
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias
-  y ediciones mezcladas por fecha, con filtro por zona. **Lectura pública** (`/novedades`,
+  y ediciones mezcladas por fecha, con filtro por zona. **Lectura pública** (`/activity`,
   `NewsPage.tsx`, con entrada desde el mapa): lo que sale ya se ve en la ficha de cada
   fuente. Las **ediciones** son la excepción y solo las ven los admins — el historial es
   de moderación y "quién editó qué" no está a la vista de nadie más. El ámbito entra en

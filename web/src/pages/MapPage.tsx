@@ -825,7 +825,7 @@ export function MapPage() {
         <Fab
           size="medium"
           component={Link}
-          to="/novedades"
+          to="/activity"
           aria-label={t('news.title')}
           title={t('news.title')}
           sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
