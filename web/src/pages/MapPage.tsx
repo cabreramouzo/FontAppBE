@@ -35,6 +35,7 @@ import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import CloseIcon from '@mui/icons-material/Close'
 import TuneIcon from '@mui/icons-material/Tune'
+import NewspaperIcon from '@mui/icons-material/Newspaper'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import type { Theme } from '@mui/material/styles'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
@@ -818,6 +819,19 @@ export function MapPage() {
         {/* Debajo del de herramientas: los filtros se despliegan más abajo, así que
             este no se mueve al abrirlos. */}
         <LayerPicker layer={layer} onChange={setLayer} />
+        {/* Novedades: la otra mitad de la app. Va aquí y no en una barra de pestañas
+            porque una barra fija se come alto de mapa en todas las pantallas, y el alto
+            del mapa es lo último que conviene recortar en algo que se usa caminando. */}
+        <Fab
+          size="medium"
+          component={Link}
+          to="/novedades"
+          aria-label={t('news.title')}
+          title={t('news.title')}
+          sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
+        >
+          <NewspaperIcon />
+        </Fab>
         <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
         <Chip clickable variant="outlined" icon={<MyLocationIcon />} label={noEmoji(t('map.near'))} onClick={() => locate(true)} sx={chipSx(false)} />
         <Chip

@@ -4,13 +4,23 @@ import Vapor
 /// Actividad reciente de toda la app en una sola línea de tiempo: fuentes nuevas,
 /// reseñas, incidencias y ediciones, mezcladas y ordenadas por fecha.
 ///
-/// De momento **solo administradores**: es la vista para saber si esto se mueve y por
-/// dónde. Está pensada para poder abrirse al público tal cual —no expone nada que no
-/// sea ya visible en la ficha de cada fuente—, cambiando el guard por lectura libre.
+/// **Lectura pública.** Fuentes, reseñas e incidencias ya se ven en la ficha de cada
+/// fuente, así que juntarlas por fecha no descubre nada nuevo.
+///
+/// Las **ediciones** son la excepción y solo las ven los administradores: el historial
+/// (`/fonts/edits`) es de moderación, y "tal usuario editó tal fuente a tal hora" no está
+/// hoy a la vista de nadie más. Si algún día se quiere el modelo wiki —historial público,
+/// como OSM—, es quitar este filtro.
 struct ActivityController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
+        // El autenticador sin `guardMiddleware`: si hay token se sabe quién es (para
+        // enseñarle también las ediciones), y si no lo hay se sigue adelante igual.
         let activity = routes.grouped("activity")
-            .grouped(UserToken.authenticator(), User.guardMiddleware())
+            .grouped(UserToken.authenticator())
+            // Ruta pública y cara: la caché absorbe las recargas normales, pero quien
+            // vaya cambiando las coordenadas falla la caché en cada intento y paga
+            // cuatro consultas. Un visitante de verdad hace unas pocas peticiones.
+            .grouped(RateLimitMiddleware(scope: "activity", max: 120, window: 60 * 60))
         activity.get(use: index)
     }
 
@@ -24,8 +34,7 @@ struct ActivityController: RouteCollection {
     /// primero. Con `lat`/`long` se acota a lo que hay alrededor; con `region`, a una
     /// comunidad/región entera. La cercanía manda si vienen las dos.
     @Sendable func index(req: Request) async throws -> [ActivityItem] {
-        let user = try req.auth.require(User.self)
-        guard user.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
+        let esAdmin = req.auth.get(User.self)?.isAdmin ?? false
 
         let limit = min(max(req.query[Int.self, at: "limit"] ?? 30, 1), 100)
         let region = req.query[String.self, at: "region"]?.trimmingCharacters(in: .whitespaces)
@@ -34,7 +43,9 @@ struct ActivityController: RouteCollection {
         // devuelven cambia como mucho cada pocos minutos. La caché evita repetir todo
         // eso en cada recarga; es especialmente importante de cara a abrir la página
         // al público, donde el coste ya no lo paga un puñado de administradores.
-        let clave = try cacheKey(req, limit: limit, region: region)
+        // El ámbito entra en la clave: sin eso, la respuesta de un admin (que lleva
+        // ediciones) se le serviría al siguiente visitante anónimo.
+        let clave = try cacheKey(req, limit: limit, region: region, esAdmin: esAdmin)
         if let guardado = await Self.cache.get(clave) { return guardado }
 
         // Acotar por zona es acotar el conjunto de fuentes, y después buscar movimientos
@@ -48,7 +59,7 @@ struct ActivityController: RouteCollection {
         async let newFontsTask = fetchNewFonts(req, limit: limit, ids: fontIDsInRegion)
         async let commentsTask = fetchComments(req, limit: limit, ids: fontIDsInRegion)
         async let reportsTask = fetchReports(req, limit: limit, ids: fontIDsInRegion)
-        async let editsTask = fetchEdits(req, limit: limit, ids: fontIDsInRegion)
+        async let editsTask = esAdmin ? fetchEdits(req, limit: limit, ids: fontIDsInRegion) : []
         let items = try await newFontsTask + commentsTask + reportsTask + editsTask
 
         let resultado = Array(items.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
@@ -82,13 +93,14 @@ struct ActivityController: RouteCollection {
 
     static func snap(_ v: Double, step: Double) -> Double { (v / step).rounded() * step }
 
-    private func cacheKey(_ req: Request, limit: Int, region: String?) throws -> String {
+    private func cacheKey(_ req: Request, limit: Int, region: String?, esAdmin: Bool) throws -> String {
+        let ambito = esAdmin ? "a" : "p"
         if let lat = req.query[Double.self, at: "lat"], let long = req.query[Double.self, at: "long"] {
             let km = min(max(req.query[Double.self, at: "km"] ?? Self.defaultRadiusKm, 1), Self.maxRadiusKm)
             let step = Self.coordStep(forKm: km)
-            return "n:\(limit):\(Self.snap(lat, step: step)):\(Self.snap(long, step: step)):\(km)"
+            return "\(ambito):n:\(limit):\(Self.snap(lat, step: step)):\(Self.snap(long, step: step)):\(km)"
         }
-        return "r:\(limit):\(region ?? "")"
+        return "\(ambito):r:\(limit):\(region ?? "")"
     }
 
     /// Fuentes de la zona pedida, o `nil` si no se ha pedido ninguna (= todas).
@@ -213,6 +225,10 @@ actor ActivityCache {
         }
         return e.items
     }
+
+    /// Vacía la caché. La usan los tests: es estática y sobrevive de un caso al
+    /// siguiente, así que sin esto un test podría leer lo que dejó otro.
+    func clear() { entradas.removeAll() }
 
     func set(_ key: String, _ items: [ActivityItem]) {
         // Limpieza oportunista: sin esto el diccionario crecería con una entrada por

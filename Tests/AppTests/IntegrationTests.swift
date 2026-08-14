@@ -14,6 +14,9 @@ final class IntegrationTests: XCTestCase {
             try await configure(app)
             try? await app.autoRevert() // limpia posibles restos de una corrida previa
             try await app.autoMigrate()
+            // La caché de /activity es estática y no se va con la app: si no se vacía,
+            // un caso se lleva la respuesta que dejó el anterior sobre otra BD.
+            await ActivityController.cache.clear()
             try await test(app)
             try await app.autoRevert()
         } catch {
@@ -845,8 +848,8 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
-    /// La actividad reciente mezcla los cuatro tipos de movimiento, más nuevos primero,
-    /// y es solo para admins.
+    /// La actividad reciente mezcla los movimientos, más nuevos primero, y es de
+    /// LECTURA PÚBLICA — salvo las ediciones, que solo ven los administradores.
     func testActivityFeed() async throws {
         try await withApp { app in
             let adminID = try await register(app, username: "act-admin")
@@ -855,17 +858,12 @@ final class IntegrationTests: XCTestCase {
 
             try await register(app, username: "act-user")
             let userTok = try await login(app, username: "act-user")
-            try await app.test(.GET, "activity", headers: bearer(userTok), afterResponse: { res in
-                XCTAssertEqual(res.status, .forbidden)
-            })
-            try await app.test(.GET, "activity", afterResponse: { res in
-                XCTAssertEqual(res.status, .unauthorized)
-            })
 
             let fontID = try await createFont(app, token: userTok, name: "Font activitat", lat: 41.8, long: 2.1)
             _ = try await addComment(app, token: userTok, fontID: fontID, body: "Raja bé")
 
-            try await app.test(.GET, "activity?limit=10", headers: bearer(adminTok), afterResponse: { res in
+            // Sin sesión: se ve igual. Lo que hay aquí ya está en la ficha de la fuente.
+            try await app.test(.GET, "activity?limit=10", afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)
                 let items = try res.content.decode([ActivityItem].self)
                 XCTAssertTrue(items.contains { $0.kind == .fontAdded && $0.fontName == "Font activitat" })
@@ -874,8 +872,31 @@ final class IntegrationTests: XCTestCase {
                 XCTAssertEqual(items.map(\.createdAt), items.map(\.createdAt).sorted(by: >))
             })
 
+            // Una edición: el historial es de moderación, así que no sale en público.
+            try await app.test(.PUT, "fonts/\(fontID)", headers: bearer(userTok), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Font activitat", latitude: 41.8, longitude: 2.1, image: nil, description: "Editada", source: nil, drinkable: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+
+            try await app.test(.GET, "activity?limit=20", afterResponse: { res in
+                XCTAssertFalse(try res.content.decode([ActivityItem].self).contains { $0.kind == .edit },
+                               "el público no debe ver quién editó qué")
+            })
+            try await app.test(.GET, "activity?limit=20", headers: bearer(adminTok), afterResponse: { res in
+                XCTAssertTrue(try res.content.decode([ActivityItem].self).contains { $0.kind == .edit })
+            })
+
             // Filtro por zona: la fuente no tiene región, así que no sale.
-            try await app.test(.GET, "activity?region=Barcelona", headers: bearer(adminTok), afterResponse: { res in
+            try await app.test(.GET, "activity?region=Barcelona", afterResponse: { res in
+                XCTAssertEqual(try res.content.decode([ActivityItem].self).count, 0)
+            })
+
+            // Cercanía: dentro del radio sale; a mil kilómetros, no.
+            try await app.test(.GET, "activity?lat=41.8&long=2.1&km=5", afterResponse: { res in
+                XCTAssertTrue(try res.content.decode([ActivityItem].self).contains { $0.fontName == "Font activitat" })
+            })
+            try await app.test(.GET, "activity?lat=28.1&long=-15.4&km=5", afterResponse: { res in
                 XCTAssertEqual(try res.content.decode([ActivityItem].self).count, 0)
             })
         }

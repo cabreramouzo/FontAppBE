@@ -56,10 +56,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Config por env: `DATABASE_URL` (o `DATABASE_*`), `WEB_ORIGIN` (CORS en prod), `AUTO_MIGRATE=true`.
 - Web: build con `VITE_API_URL=<origen del backend>`. Guía completa: [DEPLOY.md](DEPLOY.md).
 
-## Panel de administración
+## Novedades (público) y panel
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias
-  y ediciones mezcladas por fecha, con filtro por zona. Solo admin; pensado para abrirse
-  al público sin cambios (no expone nada que no esté ya en la ficha).
+  y ediciones mezcladas por fecha, con filtro por zona. **Lectura pública** (`/novedades`,
+  `NewsPage.tsx`, con entrada desde el mapa): lo que sale ya se ve en la ficha de cada
+  fuente. Las **ediciones** son la excepción y solo las ven los admins — el historial es
+  de moderación y "quién editó qué" no está a la vista de nadie más. El ámbito entra en
+  la clave de la caché, o la respuesta de un admin se serviría a un anónimo.
+- Límite de 120/h por IP: es ruta pública y cara, y quien varíe las coordenadas falla la
+  caché en cada intento.
 - `/activity` lleva **caché en memoria** (`ActivityCache`, 60 s): son cuatro consultas
   por visita. Las coordenadas se redondean **y se consulta con las redondeadas**, o dos
   personas distintas se llevarían el resultado de la otra; el paso es proporcional al
