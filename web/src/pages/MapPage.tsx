@@ -57,7 +57,7 @@ import { BaseLayerTile, LayerPicker, useBaseLayer } from '../components/BaseLaye
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
 import { enqueue, isOffline } from '../lib/outbox'
 import { ImagePicker } from '../components/ImagePicker'
-import { WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
+import { NO_STATUS_COLOR, WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
 import { searchPlaces, type Place } from '../lib/geocode'
 import { compressImage } from '../lib/image'
@@ -545,6 +545,12 @@ function MapLegend() {
           <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: WATER_STATUS[k].color }} /> {t(`status.${k}`)}
         </Box>
       ))}
+      {/* El azul faltaba, y es el color de la MAYORÍA del mapa: son las fuentes que
+          nadie ha reseñado todavía, casi todas las importadas. Sin esta línea, quien
+          mira la leyenda no encuentra el color que más ve. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
+        <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: NO_STATUS_COLOR }} /> {t('status.unknown')}
+      </Box>
     </Paper>
   )
 }
