@@ -14,6 +14,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
+import NewspaperIcon from '@mui/icons-material/Newspaper'
 import LogoutIcon from '@mui/icons-material/Logout'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -82,6 +83,14 @@ export function Layout({ children }: { children: ReactNode }) {
                 aviso de novedades del panel, que antes era un botón aparte. */}
             {rol && <RoleChip role={rol} count={flagCount + newUsers} />}
           </Box>
+          {/* Novedades vive aquí y no sobre el mapa: los botones del mapa hacen cosas
+              SOBRE el mapa (filtran, cambian la capa, te centran) y este navega a otra
+              página. Mezclados, la columna del mapa se leía como un cajón de sastre. */}
+          <Tooltip title={t('news.title')}>
+            <IconButton component={RouterLink} to="/activity" color="inherit" size="small" aria-label={t('news.title')}>
+              <NewspaperIcon />
+            </IconButton>
+          </Tooltip>
           <ThemeToggle />
           <LanguageSwitcher />
           {user ? (

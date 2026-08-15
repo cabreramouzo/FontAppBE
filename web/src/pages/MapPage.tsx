@@ -35,9 +35,10 @@ import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import CloseIcon from '@mui/icons-material/Close'
 import TuneIcon from '@mui/icons-material/Tune'
-import NewspaperIcon from '@mui/icons-material/Newspaper'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
+import { useTheme } from '@mui/material/styles'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
@@ -271,9 +272,19 @@ function ZoomControls() {
 
 function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; onSelectPlace: (p: Place) => void }) {
   const { t, lang } = useI18n()
+  const theme = useTheme()
+  // En móvil el buscador ocupaba la franja superior entera: era, con diferencia, lo que
+  // más mapa tapaba, para algo que se usa un momento al principio y luego casi nunca.
+  // Plegado a una lupa, esa banda vuelve a ser mapa.
+  const compacto = useMediaQuery(theme.breakpoints.down('sm'))
+  const [abierto, setAbierto] = useState(!compacto)
+  const inputRef = useRef<HTMLInputElement>(null)
   const [q, setQ] = useState('')
   const [matches, setMatches] = useState<Font[]>([])
   const [places, setPlaces] = useState<Place[]>([])
+
+  // Al girar el móvil o cambiar de tamaño, el buscador vuelve a su forma natural.
+  useEffect(() => setAbierto(!compacto), [compacto])
 
   // Búsqueda con debounce: fuentes (nuestra API) y lugares (Nominatim/OSM) en paralelo.
   useEffect(() => {
@@ -302,12 +313,50 @@ function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; o
     setPlaces([])
   }
 
+  function abrir() {
+    setAbierto(true)
+    // El foco va tras el render, o el teclado no sube en iOS.
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }
+
+  function cerrar() {
+    clear()
+    setAbierto(false)
+  }
+
   const hasResults = matches.length > 0 || places.length > 0
+
+  if (!abierto) {
+    return (
+      <Box className="search search--collapsed">
+        <Paper
+          component="button"
+          onClick={abrir}
+          elevation={3}
+          aria-label={t('map.searchPlaceholder').replace(/^[^\p{L}]+/u, '')}
+          sx={{
+            width: 48,
+            height: 48,
+            p: 0,
+            border: 0,
+            borderRadius: '50%',
+            cursor: 'pointer',
+            display: 'grid',
+            placeItems: 'center',
+          }}
+        >
+          <SearchIcon sx={{ color: 'text.secondary' }} />
+        </Paper>
+      </Box>
+    )
+  }
+
   return (
     <Box className="search">
       <Paper elevation={3} sx={{ display: 'flex', alignItems: 'center', px: 1.5, borderRadius: '24px' }}>
         <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
         <InputBase
+          inputRef={inputRef}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t('map.searchPlaceholder').replace(/^[^\p{L}]+/u, '')}
@@ -317,19 +366,24 @@ function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; o
           inputProps={{ maxLength: 80 }}
           sx={{ py: 1, fontSize: 16 }}
         />
+        {compacto && (
+          <IconButton size="small" onClick={cerrar} aria-label={t('form.cancel')}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        )}
       </Paper>
       {hasResults && (
         <Paper elevation={4} sx={{ mt: 0.5, borderRadius: 3, overflow: 'hidden', maxHeight: '50vh', overflowY: 'auto' }}>
           <List dense disablePadding>
             {matches.length > 0 && <ListSubheader>💧 {t('search.fountains')}</ListSubheader>}
             {matches.map((f) => (
-              <ListItemButton key={f.id} onClick={() => { onSelect(f); clear() }}>
+              <ListItemButton key={f.id} onClick={() => { onSelect(f); compacto ? cerrar() : clear() }}>
                 <ListItemText primary={f.name} />
               </ListItemButton>
             ))}
             {places.length > 0 && <ListSubheader>📍 {t('search.places')}</ListSubheader>}
             {places.map((p, i) => (
-              <ListItemButton key={`p${i}`} onClick={() => { onSelectPlace(p); clear() }}>
+              <ListItemButton key={`p${i}`} onClick={() => { onSelectPlace(p); compacto ? cerrar() : clear() }}>
                 <ListItemText primary={p.name} sx={{ '& .MuiListItemText-primary': { fontSize: 13 } }} />
               </ListItemButton>
             ))}
@@ -885,19 +939,6 @@ export function MapPage() {
         {/* Debajo del de herramientas: los filtros se despliegan más abajo, así que
             este no se mueve al abrirlos. */}
         <LayerPicker layer={layer} onChange={setLayer} />
-        {/* Novedades: la otra mitad de la app. Va aquí y no en una barra de pestañas
-            porque una barra fija se come alto de mapa en todas las pantallas, y el alto
-            del mapa es lo último que conviene recortar en algo que se usa caminando. */}
-        <Fab
-          size="medium"
-          component={Link}
-          to="/activity"
-          aria-label={t('news.title')}
-          title={t('news.title')}
-          sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
-        >
-          <NewspaperIcon />
-        </Fab>
         <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
         <Chip clickable variant="outlined" icon={<MyLocationIcon />} label={noEmoji(t('map.near'))} onClick={() => locate(true)} sx={chipSx(false)} />
         <Chip

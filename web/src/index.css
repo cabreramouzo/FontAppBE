@@ -663,6 +663,8 @@ select:not([class*="Mui"]) {
     max-width: none;
     top: 12px;
   }
+  /* Plegado: solo la lupa. El resto de la franja superior vuelve a ser mapa. */
+  .search.search--collapsed { right: auto; width: 48px; }
   /* Con el buscador ocupando arriba, los controles bajan bajo él. */
   .map-controls { top: 90px; right: max(12px, env(safe-area-inset-right)); gap: 10px; }
   .fab { font-size: 15px; padding: 12px 16px; min-height: 48px; border-radius: 999px; }
