@@ -167,6 +167,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   datos, `WeeklyDigestEmail` los pinta). Todas localizadas en los 5 idiomas; los correos sin
   petición del usuario usan `users.lang`. La baja del resumen va firmada con `APP_SECRET`
   (`UnsubscribeToken`) para que funcione desde el buzón, sin sesión.
+- **Service worker y redirecciones:** un SW no puede devolver una respuesta marcada como
+  redirigida (WebKit: «Response served by service worker has redirections») y la marca
+  sobrevive a la Cache API. `/index.html` responde **308 hacia `/`** en Cloudflare Pages,
+  así que el `addAll` del precache dejaba el shell envenenado y la app fallaba al quedarse
+  sin cobertura. Se pide `/` y se guarda bajo las dos claves; `sinRedirecciones()` limpia
+  cualquier respuesta antes de cachearla o devolverla. **Al tocar el SW hay que subir la
+  versión del caché** (`fontapp-shell-vN`) o los usuarios se quedan con lo viejo.
 - Compresión de imágenes: en el cliente (canvas). El borrado del fichero al eliminar fuente/reseña es best-effort (`try?`).
 - Roles jerárquicos (`users.role`, ver `UserRole`): `user` < `moderator` < `admin` < `owner`,
   comprobados por umbral (`user.canModerate`/`isAdmin`/`isOwner`). Moderador: modera contenido ajeno

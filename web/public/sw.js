@@ -3,13 +3,37 @@
 // - Teselas del mapa (OSM, otro dominio): cache-first con tope (LRU sencillo).
 // - API GET del mismo origen: stale-while-revalidate (sirve al instante, refresca si hay red).
 // - Navegación SPA: network-first con respaldo en el shell.
-const SHELL_CACHE = 'fontapp-shell-v2'
+const SHELL_CACHE = 'fontapp-shell-v3'
 const TILE_CACHE = 'fontapp-tiles-v1'
 const API_CACHE = 'fontapp-api-v1'
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg']
+// El shell NO se pide a `/index.html`: en Cloudflare Pages esa ruta responde 308 hacia
+// `/`, y `cache.addAll` guardaría la respuesta redirigida bajo esa misma clave — que es
+// justo la que sirve el respaldo sin conexión. Se pide `/` y se guarda bajo las dos.
+const SHELL_EXTRA = ['/manifest.webmanifest', '/icon.svg']
 const TILE_LIMIT = 700 // ~ suficiente para la zona de una ruta sin llenar el móvil
 
 const isTile = (url) => /(^|\.)tile\.openstreetmap\.org$/.test(url.hostname)
+
+// Una respuesta que ha pasado por una redirección queda marcada (`res.redirected`), y un
+// service worker NO puede devolverla: WebKit corta con "Response served by service worker
+// has redirections". Peor todavía, la marca sobrevive al guardarla en la Cache API, así
+// que una sola navegación redirigida deja el shell envenenado y la app revienta la
+// siguiente vez que tira de caché — normalmente sin cobertura, que es justo cuando hace
+// falta.
+//
+// Pasa más de lo que parece: `http://fontapp.net` redirige a `https://`, y eso es lo que
+// hace cualquiera que escriba el dominio en la barra.
+//
+// Reconstruirla la desmarca. Solo se hace cuando hace falta: leer el cuerpo impide
+// servirlo en streaming, y en el caso normal no hay nada que arreglar.
+async function sinRedirecciones(res) {
+  if (!res || !res.redirected) return res
+  return new Response(await res.blob(), {
+    status: res.status,
+    statusText: res.statusText,
+    headers: res.headers,
+  })
+}
 
 // LRU básico: si el caché supera el máximo, borra las entradas más antiguas.
 async function trimCache(name, max) {
@@ -23,7 +47,7 @@ async function cacheFirst(req, cacheName, { limit } = {}) {
   const cache = await caches.open(cacheName)
   const hit = await cache.match(req)
   if (hit) return hit
-  const res = await fetch(req)
+  const res = await sinRedirecciones(await fetch(req))
   // Cacheamos respuestas OK y opacas (las teselas <img> son cross-origin/opacas).
   if (res && (res.ok || res.type === 'opaque')) {
     await cache.put(req, res.clone())
@@ -44,8 +68,24 @@ async function staleWhileRevalidate(req, cacheName) {
   return hit || network
 }
 
+async function precargaShell() {
+  const cache = await caches.open(SHELL_CACHE)
+  // `cache: 'reload'` para no precargar lo que ya hubiera en la caché HTTP del navegador.
+  const shell = await sinRedirecciones(await fetch('/', { cache: 'reload' }))
+  if (shell && shell.ok) {
+    await cache.put('/', shell.clone())
+    await cache.put('/index.html', shell.clone())
+  }
+  await Promise.all(
+    SHELL_EXTRA.map(async (u) => {
+      const res = await sinRedirecciones(await fetch(u, { cache: 'reload' }))
+      if (res && res.ok) await cache.put(u, res.clone())
+    }),
+  )
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL)))
+  event.waitUntil(precargaShell())
   self.skipWaiting()
 })
 
@@ -86,11 +126,27 @@ self.addEventListener('fetch', (event) => {
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
-        .then((res) => {
-          caches.open(SHELL_CACHE).then((c) => c.put('/index.html', res.clone()))
-          return res
+        .then(async (res) => {
+          const limpia = await sinRedirecciones(res)
+          if (limpia.ok) {
+            const c = await caches.open(SHELL_CACHE)
+            await c.put('/index.html', limpia.clone())
+          }
+          return limpia
         })
-        .catch(() => caches.match('/index.html')),
+        .catch(async () => {
+          const c = await caches.open(SHELL_CACHE)
+          const hit = await c.match('/index.html')
+          // Sin red y sin shell no hay nada que servir; una respuesta clara es mejor
+          // que dejar la promesa en nada, que el navegador muestra como error de red.
+          return (
+            hit ||
+            new Response('<h1>Sense connexió</h1>', {
+              status: 503,
+              headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            })
+          )
+        }),
     )
     return
   }
