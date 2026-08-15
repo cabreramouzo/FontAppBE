@@ -34,6 +34,7 @@ import DoNotDisturbAltIcon from '@mui/icons-material/DoNotDisturbAlt'
 import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import CloseIcon from '@mui/icons-material/Close'
+import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined'
 import TuneIcon from '@mui/icons-material/Tune'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import useMediaQuery from '@mui/material/useMediaQuery'
@@ -619,8 +620,6 @@ function MapLegend() {
     }
   }
 
-  const colores = [...LEYENDA.map((k) => WATER_STATUS[k].color), NO_STATUS_COLOR]
-
   return (
     <Box className="legend" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.75 }}>
       <Collapse in={abierta} unmountOnExit>
@@ -638,33 +637,19 @@ function MapLegend() {
         </Paper>
       </Collapse>
 
-      {/* El botón lleva DENTRO los cuatro colores. Un icono genérico (una "i", una
-          paleta) obliga a abrirlo para saber qué hay; los puntos ya lo dicen, y de
-          paso siguen sirviendo de recordatorio con la leyenda cerrada. */}
-      <Paper
-        component="button"
+      {/* Mismo `Fab` que los demás botones del mapa, y el mismo gesto que el de
+          herramientas: el icono pasa a una X cuando está abierto. Antes era un botón a
+          medida con cuatro puntos de color dentro y desentonaba con todo lo demás. */}
+      <Fab
+        size="small"
         onClick={alternar}
-        elevation={3}
         aria-expanded={abierta}
         aria-label={t(abierta ? 'legend.hide' : 'legend.show')}
         title={t(abierta ? 'legend.hide' : 'legend.show')}
-        sx={{
-          width: 34,
-          height: 34,
-          p: 0,
-          border: 0,
-          borderRadius: '50%',
-          cursor: 'pointer',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '3px',
-          placeContent: 'center',
-        }}
+        sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
       >
-        {colores.map((c) => (
-          <Box key={c} sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: c }} />
-        ))}
-      </Paper>
+        {abierta ? <CloseIcon fontSize="small" /> : <PaletteOutlinedIcon fontSize="small" />}
+      </Fab>
     </Box>
   )
 }
