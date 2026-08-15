@@ -12,6 +12,7 @@ import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt'
 import MapIcon from '@mui/icons-material/Map'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import MyLocationIcon from '@mui/icons-material/MyLocation'
 import { alpha, useTheme } from '@mui/material/styles'
 import { assetUrl, getActivity, type ActivityItem } from '../api/client'
@@ -261,6 +262,10 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
   const compacto = useMediaQuery(theme.breakpoints.down('sm'))
   const { show } = useToast()
   const [items, setItems] = useState<ActivityItem[] | null>(null)
+  // Un fallo de carga NO es una zona tranquila. Se distinguen porque el remedio es el
+  // contrario: ante un error hay que reintentar, y ante una zona vacía, traer gente.
+  const [fallo, setFallo] = useState(false)
+  const [intento, setIntento] = useState(0)
   const [region, setRegion] = useState('')
   const [pos, setPos] = useState<[number, number] | null>(null)
   // Arranca en "cerca de mí" y cae a "todo" si no hay ubicación: una portada global es
@@ -283,11 +288,15 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
   useEffect(() => {
     if (ubicando) return
     setItems(null)
+    setFallo(false)
     const zona = cerca && pos ? { lat: pos[0], long: pos[1] } : {}
     getActivity({ limit, region: cerca ? undefined : region || undefined, ...zona })
       .then(setItems)
-      .catch(() => setItems([]))
-  }, [limit, region, cerca, pos, ubicando])
+      .catch(() => {
+        setFallo(true)
+        setItems([])
+      })
+  }, [limit, region, cerca, pos, ubicando, intento])
 
   /**
    * Invitar: la hoja de compartir del sistema si la hay, y si no, el enlace al
@@ -390,7 +399,19 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
         })}
       </Box>
 
-      {items?.length === 0 && (
+      {/* Se ha caído la petición: decirlo y ofrecer reintentar. Antes esto enseñaba la
+          fuente seca invitando a traer amigos, que es el mensaje justo al revés — no
+          había nada que enseñar porque el servidor no contestó, no porque la zona esté
+          tranquila. */}
+      {fallo && (
+        <DryFountain title={t('activity.errorTitle')} subtitle={t('activity.errorBody')}>
+          <Button variant="contained" disableElevation startIcon={<RefreshIcon />} onClick={() => setIntento((n) => n + 1)}>
+            {t('activity.retry')}
+          </Button>
+        </DryFountain>
+      )}
+
+      {!fallo && items?.length === 0 && (
         <DryFountain
           title={t(cerca ? 'activity.emptyNearTitle' : 'activity.emptyTitle')}
           subtitle={t(cerca ? 'activity.emptyNearBody' : 'activity.emptyBody')}
