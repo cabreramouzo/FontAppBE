@@ -383,6 +383,8 @@ const ca: Dict = {
   'status.trickle': 'Poca aigua',
   'status.dry': 'Seca',
   'status.unknown': 'Es desconeix',
+  "legend.hide": "Amaga la llegenda",
+  "legend.show": "Què signifiquen els colors",
 
   // Tipo de fuente
   'source.tap': 'Font urbana (xarxa)',
@@ -789,6 +791,8 @@ const es: Dict = {
   'status.trickle': 'Poca agua',
   'status.dry': 'Seca',
   'status.unknown': 'Se desconoce',
+  "legend.hide": "Ocultar la leyenda",
+  "legend.show": "Qué significan los colores",
 
   'source.tap': 'Fuente urbana (red)',
   'source.mountain': 'Fuente natural',
@@ -1190,6 +1194,8 @@ const gl: Dict = {
   'status.trickle': 'Pouca auga',
   'status.dry': 'Seca',
   'status.unknown': 'Descoñécese',
+  "legend.hide": "Agochar a lenda",
+  "legend.show": "Que significan as cores",
 
   'source.tap': 'Fonte urbana (rede)',
   'source.mountain': 'Fonte natural',
@@ -1591,6 +1597,8 @@ const eu: Dict = {
   'status.trickle': 'Ur gutxi',
   'status.dry': 'Lehorra',
   'status.unknown': 'Ezezaguna',
+  "legend.hide": "Ezkutatu legenda",
+  "legend.show": "Zer esan nahi duten koloreek",
 
   'source.tap': 'Hiri-iturria (saretik)',
   'source.mountain': 'Iturri naturala',
@@ -1992,6 +2000,8 @@ const en: Dict = {
   'status.trickle': 'Little water',
   'status.dry': 'Dry',
   'status.unknown': 'Unknown',
+  "legend.hide": "Hide the legend",
+  "legend.show": "What the colours mean",
 
   'source.tap': 'Urban tap (mains)',
   'source.mountain': 'Natural fountain',

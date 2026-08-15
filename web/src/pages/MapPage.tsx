@@ -536,22 +536,82 @@ function NearbyPanel({
   )
 }
 
+// Preferencia de la leyenda. Se recuerda: quien ya sabe qué significa cada color no
+// quiere volver a cerrarla en cada visita, y quien la necesita la quiere abierta.
+const LEGEND_KEY = 'fontapp_legend_open'
+function legendOpen(): boolean {
+  try {
+    // Abierta la primera vez: enseña a leer el mapa, y sin ella los colores no
+    // significan nada para quien acaba de llegar.
+    return localStorage.getItem(LEGEND_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+const LEYENDA = ['flowing', 'trickle', 'dry'] as const
+
 function MapLegend() {
   const { t } = useI18n()
+  const [abierta, setAbierta] = useState(legendOpen)
+
+  function alternar() {
+    const v = !abierta
+    setAbierta(v)
+    try {
+      localStorage.setItem(LEGEND_KEY, v ? '1' : '0')
+    } catch {
+      /* sin almacenamiento: se abrirá por defecto en la próxima visita */
+    }
+  }
+
+  const colores = [...LEYENDA.map((k) => WATER_STATUS[k].color), NO_STATUS_COLOR]
+
   return (
-    <Paper className="legend" elevation={3} sx={{ borderRadius: 2, p: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-      {(['flowing', 'trickle', 'dry'] as const).map((k) => (
-        <Box key={k} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
-          <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: WATER_STATUS[k].color }} /> {t(`status.${k}`)}
-        </Box>
-      ))}
-      {/* El azul faltaba, y es el color de la MAYORÍA del mapa: son las fuentes que
-          nadie ha reseñado todavía, casi todas las importadas. Sin esta línea, quien
-          mira la leyenda no encuentra el color que más ve. */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
-        <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: NO_STATUS_COLOR }} /> {t('status.unknown')}
-      </Box>
-    </Paper>
+    <Box className="legend" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.75 }}>
+      <Collapse in={abierta} unmountOnExit>
+        <Paper elevation={3} sx={{ borderRadius: 2, p: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {LEYENDA.map((k) => (
+            <Box key={k} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
+              <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: WATER_STATUS[k].color }} /> {t(`status.${k}`)}
+            </Box>
+          ))}
+          {/* El azul es el color de la MAYORÍA del mapa: las fuentes que nadie ha
+              reseñado todavía, casi todas las importadas. */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
+            <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: NO_STATUS_COLOR }} /> {t('status.unknown')}
+          </Box>
+        </Paper>
+      </Collapse>
+
+      {/* El botón lleva DENTRO los cuatro colores. Un icono genérico (una "i", una
+          paleta) obliga a abrirlo para saber qué hay; los puntos ya lo dicen, y de
+          paso siguen sirviendo de recordatorio con la leyenda cerrada. */}
+      <Paper
+        component="button"
+        onClick={alternar}
+        elevation={3}
+        aria-expanded={abierta}
+        aria-label={t(abierta ? 'legend.hide' : 'legend.show')}
+        title={t(abierta ? 'legend.hide' : 'legend.show')}
+        sx={{
+          width: 34,
+          height: 34,
+          p: 0,
+          border: 0,
+          borderRadius: '50%',
+          cursor: 'pointer',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '3px',
+          placeContent: 'center',
+        }}
+      >
+        {colores.map((c) => (
+          <Box key={c} sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: c }} />
+        ))}
+      </Paper>
+    </Box>
   )
 }
 
