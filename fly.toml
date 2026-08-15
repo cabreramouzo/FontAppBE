@@ -17,13 +17,16 @@ primary_region = 'fra'
 [http_service]
   internal_port = 8080
   force_https = true
-  # Beta sin tráfico: apaga la máquina cuando está ociosa para minimizar coste.
-  # Contrapartida: la primera petición tras un rato tiene un arranque en frío de
-  # ~un par de segundos. Cuando haya tráfico real, subir min_machines_running a 1
-  # (y opcionalmente auto_stop='suspend') lo elimina.
-  auto_stop_machines = 'stop'
+  # Una máquina SIEMPRE encendida. Con `stop` + 0 máquinas la primera petición tras un
+  # rato ocioso se medía en más de 20 s (y otra de 6 s detrás), no en "un par de
+  # segundos": arrancar el contenedor y abrir la conexión a la base. El cliente corta a
+  # los 12 s, así que eso le llega al usuario como "Sin conexión con el servidor" — con
+  # el servidor perfectamente sano.
+  # Ya hay tráfico real, así que el ahorro dejó de compensar. `suspend` en vez de `stop`
+  # para las máquinas que sobren: reanudar es casi instantáneo.
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
   processes = ['app']
 
   # Health check: Fly vigila /health y no enruta tráfico a una instancia caída.
