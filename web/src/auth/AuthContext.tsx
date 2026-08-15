@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { UserResponse } from '../api/types'
-import { apiFetch, getToken, loginRequest, setToken } from '../api/client'
+import { ApiError, apiFetch, getToken, loginRequest, setToken } from '../api/client'
 import { saveSessionForSync } from '../lib/outbox'
 import { storedSource } from '../lib/campaign'
 
@@ -60,15 +60,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (stored) {
         void saveSessionForSync(stored)
         try {
-          setUser(await apiFetch<UserResponse>('/auth/me'))
-        } catch {
-          setToken(null)
+          setUser(await recuperaSesion())
+        } catch (e) {
+          // La sesión SOLO se cierra si el servidor dice que el token no vale. Un fallo
+          // de red no dice nada del token: antes se borraba ante cualquier error, así
+          // que recargar sin cobertura —o mientras el servidor despertaba— te dejaba
+          // fuera. Y sin sesión, la bandeja de salida tampoco puede enviar lo encolado.
+          if (e instanceof ApiError && e.status === 401) setToken(null)
         }
       }
       setLoading(false)
     }
     restore()
   }, [])
+
+  /**
+   * Pide el usuario del token guardado, con un reintento si falla la red.
+   *
+   * El reintento no es por gusto: la máquina del servidor se duerme cuando no hay
+   * tráfico y tarda unos segundos en despertar, más de lo que aguanta una petición. Sin
+   * él, recargar después de un rato parado se veía como "he perdido la sesión".
+   */
+  async function recuperaSesion(): Promise<UserResponse> {
+    try {
+      return await apiFetch<UserResponse>('/auth/me')
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 0) {
+        await new Promise((r) => setTimeout(r, 1500))
+        return await apiFetch<UserResponse>('/auth/me')
+      }
+      throw e
+    }
+  }
 
   async function login(username: string, password: string) {
     const res = await loginRequest(username, password)
