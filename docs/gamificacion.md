@@ -251,8 +251,12 @@ denuncias y roles; falta atarles los puntos.
   reseñas de quien confirma las tuyas por encima de un umbral.
 - **Rendimientos decrecientes por fuente**: la segunda aportación tuya a la misma fuente en un
   mes vale una fracción.
-- **Techo diario de gotas**, lo bastante alto para no molestar un día de ruta y lo bastante
-  bajo para no premiar un guion automatizado.
+- **Techo de 4 000 gotas por persona y día de aportación**; lo que se pasa no cobra. El
+  número sale de los datos: la mejor jornada real medida son 1 256 gotas en 8 aportaciones,
+  así que deja tres veces ese margen. Se cuenta por el día en que se aportó y no por el día
+  en que se cobra, porque un techo que se puede agotar y esperar a mañana no disuade de nada
+  —el guion también sabe esperar— y porque con el día de cobro el volcado del histórico se
+  estrangula solo (medido: 109 de 274 aportaciones se quedaban haciendo cola).
 - **Una foto retirada resta** lo que cobró. Sin esto, subir basura sale gratis.
 - Los límites por hora que ya hay —10 imágenes, 30 fuentes, 40 reseñas— son el suelo. La
   gamificación no los debe tocar.
@@ -296,9 +300,10 @@ usuario. Nada en la interfaz, ninguna tabla nueva. Sirve para **calibrar el bare
 reales** antes de comprometerse con ningún número, y contesta la pregunta que decide todo lo
 demás: ¿cuánta gente tendría algo el día 1?
 
-**Fase 2 — Registro de eventos y liquidación.** Una tabla de aportaciones con su estado
-—pendiente, liquidada, anulada— y la ventana de 72 horas. Fuente única de verdad; los puntos
-se derivan de ahí y se pueden recalcular. Se rellena con el comando de la fase 1.
+**Fase 2 — Registro de eventos y liquidación.** ✅ *Implementada:*
+`swift run App gamification-sync`. Tabla `contribution_events` con su estado —pendiente,
+liquidada, anulada— y la ventana de 72 horas. Fuente única de verdad; los puntos son la suma
+de lo liquidado. Ver el apéndice de abajo.
 
 **Fase 3 — Visible en el perfil, y nada más.** Gotas, nivel, insignias e impacto personal en
 tu página. Sin rankings todavía. Una semana así enseña si la gente lo entiende sin
@@ -358,8 +363,57 @@ Lo que el comando **no puede saber, y por qué**:
   aproximadamente: se cuenta como revertida la edición cuya siguiente edición sobre la misma
   fuente devuelve el valor anterior.
 
-Todo eso lo arregla la fase 2, que sí registra el evento en el momento en que ocurre. Los
-números de la fase 1 son para calibrar, no para publicar.
+Parte de eso lo arregla la fase 2. Los números de la fase 1 son para calibrar, no para
+publicar.
+
+---
+
+## Apéndice: el registro (fase 2)
+
+```bash
+swift run App gamification-sync              # registra lo nuevo y liquida lo maduro
+swift run App gamification-sync --dry-run    # dice qué haría, sin escribir nada
+swift run App gamification-sync --user marc  # además, el marcador de una persona
+```
+
+Pensado para un cron frecuente (cada 15 min o cada hora). Es **idempotente**: pasarlo dos
+veces seguidas no cambia nada la segunda vez, así que no pasa nada si se solapa con otra
+ejecución o si se lanza de más.
+
+### Tres decisiones que conviene entender
+
+**Las gotas quedan congeladas.** `gotes` se guarda con el valor que tenía el baremo el día
+que se registró la aportación. Si mañana se decide que una primera foto vale 150, quien la
+puso ayer no ve cambiar su marcador de golpe — que es exactamente lo que erosiona la
+confianza en un sistema de puntos. Para reescalar el histórico a propósito hay que vaciar la
+tabla y volver a sincronizar; es una decisión consciente, no un efecto secundario.
+
+**Se sincroniza, no se escribe desde los controladores.** Sería más inmediato registrar el
+evento dentro del `create` de cada controlador, pero eso mete la gamificación en el camino
+crítico de guardar una fuente: si el registro falla o tarda, el usuario pierde su aportación
+por culpa de un contador. Un barrido periódico no puede romper nada aguas arriba y se puede
+volver a pasar entero. El precio es que una aportación tarda hasta un ciclo en aparecer, y
+con una ventana de liquidación de 72 horas ese retraso no lo nota nadie.
+
+**Nada se borra, se anula.** Una aportación que desaparece o que se denuncia pasa a `void`
+con el motivo escrito, y la fila se queda. Un registro del que se borran filas no sirve para
+auditar nada, que es la mitad de su razón de ser.
+
+### Estados
+
+| Estado | Qué significa |
+|---|---|
+| `pending` | Dentro de la ventana de 72 h. Se enseña como «en camino», no suma al marcador. |
+| `settled` | Cobrada. La suma de estas es la puntuación. |
+| `void` | Anulada, con motivo: revertida, borrada, denunciada, o por encima del techo diario. |
+
+### Por qué la sincronización no duplica
+
+Cada aportación tiene una identidad estable —tabla de origen, fila y, cuando una misma fila
+genera varias (una edición que completa tres campos), cuál de ellas— con un índice único
+detrás. `detail` va `NOT NULL` con defecto `''` a propósito: en Postgres dos `NULL` se
+consideran distintos, así que con una columna nullable el índice único no habría impedido
+nada.
 
 ---
 ---
@@ -592,8 +646,10 @@ ha passat del 12 % al 15 % de fonts amb foto» és millor correu que «has fet 3
   confirmar ressenyes de qui confirma les teves per damunt d'un llindar.
 - **Rendiments decreixents per font**: la segona aportació teva a la mateixa font en un mes val
   una fracció.
-- **Sostre diari de gotes**, prou alt per no molestar un dia de ruta i prou baix per no premiar
-  un guió automatitzat.
+- **Sostre de 4 000 gotes per persona i dia d'aportació**; el que se'n passa no cobra. El
+  número surt de les dades: la millor jornada real mesurada són 1 256 gotes en 8 aportacions,
+  o sigui tres vegades de marge. Es compta pel dia en què es va aportar i no pel dia en què es
+  cobra, perquè un sostre que es pot esgotar i esperar a demà no dissuadeix de res.
 - **Una foto retirada resta** el que va cobrar. Sense això, pujar brossa surt gratis.
 - Els límits per hora que ja hi ha —10 imatges, 30 fonts, 40 ressenyes— són el terra. La
   gamificació no els ha de tocar.
@@ -630,9 +686,10 @@ Res a la interfície, cap taula nova. Serveix per **calibrar el barem amb dades 
 comprometre's amb cap número, i contesta la pregunta que decideix tota la resta: quanta gent
 tindria alguna cosa el dia 1?
 
-**Fase 2 — Registre d'esdeveniments i liquidació.** Una taula d'aportacions amb el seu estat
-—pendent, liquidada, anul·lada— i la finestra de 72 hores. Font única de veritat; els punts es
-deriven d'aquí i es poden recalcular. Es reomple amb la comanda de la fase 1.
+**Fase 2 — Registre d'esdeveniments i liquidació.** ✅ *Implementada:*
+`swift run App gamification-sync`. Taula `contribution_events` amb el seu estat —pendent,
+liquidada, anul·lada— i la finestra de 72 hores. Font única de veritat; els punts són la suma
+del que s'ha liquidat.
 
 **Fase 3 — Visible al perfil, i prou.** Gotes, nivell, insignies i impacte personal a la teva
 pàgina. Sense rànquings encara. Una setmana així ensenya si la gent ho entén sense

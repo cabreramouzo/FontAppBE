@@ -27,9 +27,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Resumen semanal por correo: `swift run App send-weekly-digest [--dry-run] [--user <username>]`
   (pensado para un cron semanal; ver DEPLOY.md). También a mano desde el panel de
   administración (solo owner): vista previa + enviar, con el mismo código (`WeeklyDigestSender`).
-- Gamificación (fase 1, **solo lectura**): `swift run App score-contributions [--user <username>] [--detail] [--json]`.
-  Puntúa el historial existente sin escribir nada; sirve para calibrar el baremo antes de crear
-  ninguna tabla. Plan completo en [docs/gamificacion.md](docs/gamificacion.md) (ES + CA).
+- Gamificación (plan completo en [docs/gamificacion.md](docs/gamificacion.md), ES + CA):
+  - Fase 1, **solo lectura**: `swift run App score-contributions [--user <u>] [--detail] [--json]`.
+    Puntúa el historial sin escribir nada; es la herramienta para calibrar el baremo.
+  - Fase 2: `swift run App gamification-sync [--dry-run] [--user <u>]` — registra las
+    aportaciones en `contribution_events` y liquida las que llevan 72 h sin incidencias.
+    Idempotente; pensado para un cron frecuente. Las gotas quedan **congeladas** con el valor
+    del baremo del día en que se registraron: reescalar el histórico exige vaciar la tabla.
 - Roles: `swift run App set-role <username> <user|moderator|admin|owner>` (owner solo por CLI).
 - Servidor: `swift run App serve` (`127.0.0.1:8080`). Cargar entorno: `export $(cat env.development | xargs)`.
 - Web (dev): `cd web && npm run dev` (proxy `/api` y `/uploads` → backend).

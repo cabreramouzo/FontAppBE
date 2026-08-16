@@ -1021,4 +1021,109 @@ final class IntegrationTests: XCTestCase {
             })
         }
     }
+
+    // MARK: - Gamificación (fase 2: registro y liquidación)
+
+    /// Lo esencial del registro: se puede volver a pasar cuantas veces haga falta sin
+    /// duplicar nada. Sin esto no se podría recalcular el histórico al tocar el baremo,
+    /// que es justo para lo que existe.
+    func testLedgerSyncIsIdempotent() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "ledger1")
+            let token = try await login(app, username: "ledger1")
+            let fontID = try await createFont(app, token: token, name: "Font del Registre", lat: 41.8, long: 2.1)
+            _ = try await addComment(app, token: token, fontID: fontID, body: "Raja bé")
+
+            let primera = try await ContributionLedger.sync(on: app.db)
+            XCTAssertGreaterThan(primera.inserted, 0)
+            let total = try await ContributionEvent.query(on: app.db).count()
+
+            let segunda = try await ContributionLedger.sync(on: app.db)
+            XCTAssertEqual(segunda.inserted, 0, "la segunda pasada no puede registrar nada nuevo")
+            XCTAssertEqual(segunda.alreadyKnown, primera.inserted)
+            let despues = try await ContributionEvent.query(on: app.db).count()
+            XCTAssertEqual(despues, total, "el número de filas no puede crecer al re-sincronizar")
+        }
+    }
+
+    /// La ventana de 72 h: nada se cobra al instante. Es la pieza antifraude central —
+    /// evita el grueso del problema sin tener que detectar nada.
+    func testNothingSettlesBeforeSeventyTwoHours() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "ledger2")
+            let token = try await login(app, username: "ledger2")
+            let fontID = try await createFont(app, token: token, name: "Font Nova", lat: 41.81, long: 2.11)
+            _ = try await addComment(app, token: token, fontID: fontID, body: "Hi ha aigua")
+
+            // Ahora mismo: todo pendiente, marcador a cero.
+            let r = try await ContributionLedger.sync(on: app.db)
+            XCTAssertEqual(r.settled, 0, "recién aportado no puede estar liquidado")
+            let uid = try await User.query(on: app.db).filter(\.$username == "ledger2").first()!.requireID()
+            var t = try await ContributionLedger.totals(for: uid, on: app.db)
+            XCTAssertEqual(t.settled, 0)
+            XCTAssertGreaterThan(t.pending, 0, "las gotas en camino sí se ven")
+
+            // Tres días después: cobra.
+            let despues = Date().addingTimeInterval(ContributionLedger.settlementWindow + 60)
+            let r2 = try await ContributionLedger.sync(on: app.db, now: despues)
+            XCTAssertGreaterThan(r2.settled, 0)
+            t = try await ContributionLedger.totals(for: uid, on: app.db)
+            XCTAssertGreaterThan(t.settled, 0)
+            XCTAssertEqual(t.pending, 0)
+        }
+    }
+
+    /// Borrar la reseña dentro de la ventana anula la aportación: la fila se queda como
+    /// rastro, pero en estado `void` y sin sumar.
+    func testDeletingTheContributionVoidsItInsteadOfPaying() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "ledger3")
+            let token = try await login(app, username: "ledger3")
+            let fontID = try await createFont(app, token: token, name: "Font Efímera", lat: 41.82, long: 2.12)
+            let commentID = try await addComment(app, token: token, fontID: fontID, body: "Raja")
+
+            _ = try await ContributionLedger.sync(on: app.db)
+            let antes = try await ContributionEvent.query(on: app.db)
+                .filter(\.$source == "comment").count()
+            XCTAssertGreaterThan(antes, 0)
+
+            try await app.test(.DELETE, "fonts/\(fontID)/comments/\(commentID)", headers: bearer(token),
+                               afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
+
+            // Aunque hayan pasado los tres días, no cobra: ya no existe.
+            let despues = Date().addingTimeInterval(ContributionLedger.settlementWindow + 60)
+            _ = try await ContributionLedger.sync(on: app.db, now: despues)
+
+            let delComentario = try await ContributionEvent.query(on: app.db)
+                .filter(\.$source == "comment").all()
+            XCTAssertTrue(delComentario.allSatisfy { $0.status == .void },
+                          "la reseña borrada no puede quedar liquidada")
+            XCTAssertTrue(delComentario.allSatisfy { $0.voidReason != nil }, "y debe decir por qué")
+
+            let uid = try await User.query(on: app.db).filter(\.$username == "ledger3").first()!.requireID()
+            let eventos = try await ContributionEvent.query(on: app.db)
+                .filter(\.$user.$id == uid).filter(\.$status == .settled).all()
+            XCTAssertFalse(eventos.contains { $0.source == "comment" })
+        }
+    }
+
+    /// Las gotas quedan congeladas con el valor del día en que se registraron. Si mañana
+    /// se sube el baremo, el marcador de quien ya aportó no cambia de golpe.
+    func testSettledGotesAreFrozenAgainstBaremoChanges() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "ledger4")
+            let token = try await login(app, username: "ledger4")
+            let fontID = try await createFont(app, token: token, name: "Font Congelada", lat: 41.83, long: 2.13)
+            _ = try await addComment(app, token: token, fontID: fontID, body: "Bona")
+
+            _ = try await ContributionLedger.sync(on: app.db)
+            let original = try await ContributionEvent.query(on: app.db).all().map { $0.gotes }.reduce(0, +)
+
+            // Re-sincronizar no reescribe lo ya registrado, pase lo que pase con el cálculo.
+            _ = try await ContributionLedger.sync(on: app.db)
+            let despues = try await ContributionEvent.query(on: app.db).all().map { $0.gotes }.reduce(0, +)
+            XCTAssertEqual(original, despues)
+        }
+    }
 }
+

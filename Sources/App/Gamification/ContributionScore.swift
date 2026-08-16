@@ -81,12 +81,24 @@ enum ContributionScore {
 
     // MARK: - Resultado
 
+    /// De qué tabla sale la aportación. Junto con `subjectID` y `detail` forma su
+    /// identidad estable: es lo que permite volver a pasar el cálculo tantas veces como
+    /// haga falta sin duplicar nada en el registro de la fase 2.
+    enum Source: String, Codable, Sendable {
+        case font, comment, edit, report, confirmation
+    }
+
     struct Contribution: Sendable {
         let userID: UUID
         let kind: Kind
         let fontID: UUID
         let fontName: String
         let at: Date
+        /// Identidad: tabla de origen, fila concreta y, cuando una misma fila genera
+        /// varias aportaciones (una edición que completa tres campos), cuál de ellas.
+        let source: Source
+        let subjectID: UUID
+        let detail: String
         let base: Int
         let multiplier: Double
         let note: String
@@ -203,15 +215,17 @@ enum ContributionScore {
 
         var contribs: [Contribution] = []
         func add(_ userID: UUID?, _ kind: Kind, fontID: UUID, at fecha: Date?,
+                 from source: Source, subject: UUID?, detail: String = "",
                  base: Int? = nil, applyMultiplier: Bool = true, isWaterStatus: Bool = false,
                  note: String = "") {
-            guard let userID, let fecha, let font = fontsByID[fontID] else { return }
+            guard let userID, let fecha, let subject, let font = fontsByID[fontID] else { return }
             var m = 1.0
             var razones: [String] = []
             if applyMultiplier { (m, razones) = multiplier(fontID: fontID, at: fecha, isWaterStatus: isWaterStatus) }
             let nota = [note, razones.joined(separator: "+")].filter { !$0.isEmpty }.joined(separator: " · ")
             contribs.append(Contribution(userID: userID, kind: kind, fontID: fontID,
                                          fontName: font.name, at: fecha,
+                                         source: source, subjectID: subject, detail: detail,
                                          base: base ?? kind.base, multiplier: m, note: nota,
                                          reasons: razones))
         }
@@ -219,7 +233,7 @@ enum ContributionScore {
         // --- Fuentes creadas ---------------------------------------------------
         for f in fonts {
             guard let id = f.id else { continue }
-            add(f.$creator.id, .fontCreated, fontID: id, at: f.createdAt)
+            add(f.$creator.id, .fontCreated, fontID: id, at: f.createdAt, from: .font, subject: id)
         }
 
         // --- Reseñas: primera vs actualización ---------------------------------
@@ -231,10 +245,12 @@ enum ContributionScore {
                 guard let fecha = c.createdAt else { continue }
                 let tieneEstado = c.waterStatus != nil
                 if anterior == nil {
-                    add(c.$user.id, .firstReview, fontID: fontID, at: fecha, isWaterStatus: tieneEstado)
+                    add(c.$user.id, .firstReview, fontID: fontID, at: fecha,
+                        from: .comment, subject: c.id, isWaterStatus: tieneEstado)
                 } else {
                     let dias = Int(fecha.timeIntervalSince(anterior!) / 86_400)
                     add(c.$user.id, .updateReview, fontID: fontID, at: fecha,
+                        from: .comment, subject: c.id,
                         base: freshness(daysSincePrevious: dias), isWaterStatus: tieneEstado,
                         note: "\(dias) d sin visitas")
                 }
@@ -245,19 +261,22 @@ enum ContributionScore {
         // --- Fotos: primera vs sustitución -------------------------------------
         // `fonts.image` no guarda autor, así que la autoría se reconstruye con lo que sí
         // deja rastro: reseñas con foto y ediciones que tocaron el campo `image`.
-        struct PhotoEvent { let userID: UUID?; let at: Date }
+        struct PhotoEvent { let userID: UUID?; let at: Date; let source: Source; let subject: UUID? }
         var photoEvents: [UUID: [PhotoEvent]] = [:]
         for c in comments where c.image != nil {
             guard let d = c.createdAt else { continue }
-            photoEvents[c.$font.id, default: []].append(PhotoEvent(userID: c.$user.id, at: d))
+            photoEvents[c.$font.id, default: []].append(
+                PhotoEvent(userID: c.$user.id, at: d, source: .comment, subject: c.id))
         }
         for e in edits where e.before.image != e.after.image && e.after.image != nil {
             guard let d = e.createdAt else { continue }
-            photoEvents[e.$font.id, default: []].append(PhotoEvent(userID: e.$editor.id, at: d))
+            photoEvents[e.$font.id, default: []].append(
+                PhotoEvent(userID: e.$editor.id, at: d, source: .edit, subject: e.id))
         }
         for (fontID, eventos) in photoEvents {
             for (i, ev) in eventos.sorted(by: { $0.at < $1.at }).enumerated() {
-                add(ev.userID, i == 0 ? .firstPhoto : .photoReplaced, fontID: fontID, at: ev.at)
+                add(ev.userID, i == 0 ? .firstPhoto : .photoReplaced, fontID: fontID, at: ev.at,
+                    from: ev.source, subject: ev.subject, detail: "foto")
             }
         }
         let conFotoSinAutor = fonts.filter { $0.image != nil && photoEvents[$0.id ?? UUID()] == nil }.count
@@ -286,7 +305,7 @@ enum ContributionScore {
                    let na = e.after.latitude, let no = e.after.longitude,
                    la != na || lo != no {
                     add(e.$editor.id, .relocation, fontID: fontID, at: e.createdAt,
-                        applyMultiplier: false,
+                        from: .edit, subject: e.id, applyMultiplier: false,
                         note: String(format: "%.0f m", haversineKm(la, lo, na, no) * 1000))
                 }
                 var completados: [String] = []
@@ -295,6 +314,7 @@ enum ContributionScore {
                 if e.before.source == nil && e.after.source != nil { completados.append("tipo") }
                 for campo in completados {
                     add(e.$editor.id, .fieldCompleted, fontID: fontID, at: e.createdAt,
+                        from: .edit, subject: e.id, detail: campo,
                         applyMultiplier: false, note: campo)
                 }
             }
@@ -302,7 +322,8 @@ enum ContributionScore {
 
         // --- Incidencias --------------------------------------------------------
         for r in reports {
-            add(r.$user.id, .report, fontID: r.$font.id, at: r.createdAt, applyMultiplier: false)
+            add(r.$user.id, .report, fontID: r.$font.id, at: r.createdAt,
+                from: .report, subject: r.id, applyMultiplier: false)
         }
 
         // --- Confirmaciones -----------------------------------------------------
@@ -311,7 +332,7 @@ enum ContributionScore {
             guard let comentario = commentsByID[c.$comment.id] else { continue }
             if comentario.$user.id == c.$user.id { autoConfirmaciones += 1; continue }
             add(c.$user.id, .confirmation, fontID: comentario.$font.id, at: c.createdAt,
-                applyMultiplier: false)
+                from: .confirmation, subject: c.id, applyMultiplier: false)
         }
         if autoConfirmaciones > 0 {
             caveats.append("\(autoConfirmaciones) confirmaciones son sobre la propia reseña: no puntúan.")

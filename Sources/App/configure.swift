@@ -127,6 +127,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddWeeklyDigestToUser()) // preferencia: resumen semanal por correo
     app.migrations.add(AddLangToUser())         // idioma del usuario (correos sin petición)
     app.migrations.add(AddSignupSourceToUser()) // cartel por el que llegó (?p=…)
+    app.migrations.add(CreateContributionEvent()) // gamificación: registro de aportaciones
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
@@ -149,6 +150,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(SetRoleCommand(), as: "set-role")
     app.asyncCommands.use(WeeklyDigestCommand(), as: "send-weekly-digest")
     app.asyncCommands.use(ScoreContributionsCommand(), as: "score-contributions")
+    app.asyncCommands.use(GamificationSyncCommand(), as: "gamification-sync")
 
     // Rutas.
     try routes(app)

@@ -507,6 +507,30 @@ donde todavía no hay ninguna fuente con región.
 fly ssh console -a fontapp -C "/app/App populate-regions /app/fronteres.geojson"
 ```
 
+## Gamificación: el cron de liquidación
+
+La fase 2 necesita que algo pase el barrido con regularidad. No es un temporizador dentro del
+servidor por lo mismo que el resumen semanal: con varias instancias se ejecutaría tantas veces
+como instancias haya. Aquí las escrituras son idempotentes y no rompería nada, pero sería
+trabajo repetido contra la base de datos cada pocos minutos.
+
+```bash
+fly ssh console -a fontapp -C "/app/App gamification-sync"
+```
+
+Cada 15 minutos o cada hora vale igual: la ventana de liquidación es de 72 horas, así que la
+frecuencia solo decide cuánto tarda una aportación en aparecer como «en camino».
+
+Antes de la primera vez, conviene mirar qué haría:
+
+```bash
+fly ssh console -a fontapp -C "/app/App gamification-sync --dry-run"
+```
+
+La primera pasada vuelca **todo el historial** de golpe. Es lo esperado y es idempotente, pero
+revisa el número de anuladas por techo diario antes de darlo por bueno: si sale alto, el techo
+está mal calibrado para los datos reales y más vale ajustarlo antes de que nadie vea puntos.
+
 ## Cloudflare delante de la API (`api.fontapp.net`)
 
 ### Por qué
