@@ -247,6 +247,23 @@ Las imágenes subidas se sirven como estáticos en `GET /uploads/<archivo>`.
 - Limpieza de tokens expirados y rate-limit en el login.
 - Paginación en reports/comments si una fuente acumula muchos.
 
+## Capacidades por nivel
+
+`GET /gamification/me` incluye `grant` (fase 6):
+
+```json
+{ "grant": { "capabilities": ["relocateAnyFont"], "blockedBy": [] } }
+```
+
+`blockedBy` explica por qué no se concede nada: `disabled` (el sistema está apagado),
+`provisional` (los puntos aún se pueden recalcular), `optedOut`, `activeDays` (menos de 8
+días distintos con aportación), `recentlyVoided` (anulación por mala conducta en 90 días) o
+`gotes`.
+
+`relocateAnyFont` permite cambiar `latitude`/`longitude` de una fuente ajena en
+`PUT /fonts/:id`. **No** permite sustituir la foto ni borrar: eso sigue siendo del creador
+o de un admin. Todo esto está **apagado por defecto**; ver DEPLOY.md.
+
 ## Zonas (`/zones`)
 
 Cobertura colectiva por región y ranking mensual. **Lectura pública**, límite de 120/h por

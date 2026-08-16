@@ -55,6 +55,14 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     no de las barras**, y hay un test que fija las dos mitades de la regla.
   - Diez niveles (`ContributionScore.levels`), de `drop` a `aquifer`. El nivel y las
     insignias viajan como **clave**, no como nombre: el rótulo lo traduce el navegador.
+  - Fase 6: capacidades por nivel (`Gamification/Capabilities.swift`). **Apagadas por
+    defecto**: hacen falta `GAMIFICATION_CAPABILITIES=true` *y* `GAMIFICATION_EPOCH`
+    pasada, porque conceder escritura sobre puntos que `--rescore` puede reescribir da
+    permisos que desaparecen solos. Además de las gotas: 8 días distintos con aportación
+    y ninguna anulación por mala conducta en 90 días (pasarse del techo diario no cuenta).
+    Se abre **una sola** capacidad, `relocateAnyFont` (nivel 5): reversible desde el panel
+    y necesaria porque las fuentes importadas no tienen creador. Sustituir foto y borrar
+    NO se abren por nivel.
   - `GAMIFICATION_EPOCH=AAAA-MM-DD`: fecha desde la que los puntos son **definitivos**.
     Antes de ella todo es provisional y `--rescore` lo reconstruye; a partir de ella se
     niega. No congela las anulaciones: borrar o denunciar una reseña anula igual, esté

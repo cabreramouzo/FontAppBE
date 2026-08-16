@@ -311,6 +311,9 @@ enum ContributionLedger {
         /// Si los puntos todavía se pueden recalcular. Se dice en la interfaz: prometer
         /// que no cambian y que cambien es peor que avisar.
         let provisional: Bool
+        /// Fase 6: qué abre el nivel. Lo rellena el controlador, no el cálculo — depende
+        /// del rol y de la configuración del despliegue, no del historial de puntos.
+        var grant: Capabilities.Grant?
     }
 
     /// Cuántas fuentes mantiene al día esta persona: aquellas cuya reseña más reciente es

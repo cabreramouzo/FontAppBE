@@ -8,6 +8,7 @@ import WaterDropOutlinedIcon from '@mui/icons-material/WaterDropOutlined'
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined'
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import AddLocationAltOutlinedIcon from '@mui/icons-material/AddLocationAltOutlined'
+import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined'
 import { getGamification } from '../api/client'
 import type { GamificationProfile } from '../api/types'
 import { useTheme } from '@mui/material/styles'
@@ -118,6 +119,32 @@ export function GamificationCard() {
               level: data.nextLevel ? t(`game.level.${data.nextLevel}`) : '',
             })}
           </Typography>
+        </Box>
+      )}
+
+      {/* Fase 6: qué abre el nivel. Solo se enseña si abre algo — anunciar una lista de
+          permisos que no tienes convierte el marcador en una pantalla de bloqueos, y el
+          sistema está apagado por defecto, así que para casi todo el mundo no diría nada
+          verdadero. Los motivos del bloqueo viajan en `grant.blockedBy` y se usan donde
+          la acción está, no aquí. */}
+      {(data.grant?.capabilities.length ?? 0) > 0 && (
+        <Box sx={{ mt: 1.5 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            {t('game.unlocked')}
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 0.5 }}>
+            {data.grant?.capabilities.map((c) => (
+              <Chip
+                key={c}
+                icon={<KeyOutlinedIcon />}
+                label={t(`game.can.${c}`)}
+                size="small"
+                variant="outlined"
+                color="success"
+                sx={{ fontWeight: 600 }}
+              />
+            ))}
+          </Box>
         </Box>
       )}
 

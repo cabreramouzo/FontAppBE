@@ -145,10 +145,27 @@ struct FontController: RouteCollection {
         font.drinkable = dto.drinkable
         // La ubicación y sustituir la foto son sensibles (mover el pin, tapar una foto
         // buena con una mala): se reservan al creador o a un admin.
-        if canManage(user: user, font: font) {
-            let oldImage = font.image
+        //
+        // La ubicación tiene además una segunda puerta: quien haya llegado al nivel que
+        // la abre (fase 6, ver `Capabilities`) puede corregir el pin de una fuente que no
+        // creó. Es la que más falta hace y la menos peligrosa de las tres: las ~6.700
+        // fuentes importadas no tienen creador, así que hoy solo un admin puede moverlas
+        // —el mismo callejón sin salida que ya tenía la primera foto—, y un movimiento
+        // queda en `FontInfoSnapshot` con lat/long, o sea que es reversible desde el
+        // panel. Sustituir foto y borrar NO se abren: la primera invita a la guerra de
+        // ediciones y la segunda no se deshace.
+        // El `||` no vale: el lado derecho es `async throws` y no cabe en un autoclosure.
+        let puedeGestionar = canManage(user: user, font: font)
+        var puedeReubicar = puedeGestionar
+        if !puedeReubicar {
+            puedeReubicar = try await Capabilities.has(.relocateAnyFont, user, on: req.db)
+        }
+        if puedeReubicar {
             font.latitude = dto.latitude
             font.longitude = dto.longitude
+        }
+        if puedeGestionar {
+            let oldImage = font.image
             font.image = dto.image
             try await font.save(on: req.db)
             if let oldImage, oldImage != dto.image { try? await req.imageStorage.delete(oldImage) }

@@ -21,7 +21,10 @@ struct GamificationController: RouteCollection {
     @Sendable func me(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
         guard !user.gamificationOptOut else { return Response(status: .noContent) }
-        let perfil = try await ContributionLedger.profile(for: try user.requireID(), on: req.db)
+        var perfil = try await ContributionLedger.profile(for: try user.requireID(), on: req.db)
+        // Fase 6: qué abre el nivel, y si no abre nada, por qué. Un botón desactivado sin
+        // explicación se lee como una avería.
+        perfil.grant = try await Capabilities.of(user, on: req.db)
         return try await perfil.encodeResponse(for: req)
     }
 }

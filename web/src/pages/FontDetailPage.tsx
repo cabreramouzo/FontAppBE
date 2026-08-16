@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { capabilities } from '../lib/capabilities'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
@@ -338,6 +339,15 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
   const [saving, setSaving] = useState(false)
   // La primera foto la puede poner cualquiera; sustituir una que ya existe, no.
   const puedeFoto = canManage || !font.image
+  // Mover el pin de una fuente ajena lo abre el nivel (fase 6). Se resuelve al abrir el
+  // formulario y no al pintar la ficha: solo hace falta aquí.
+  const [porNivel, setPorNivel] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    if (!canManage) capabilities().then((c) => { if (vivo) setPorNivel(c.includes('relocateAnyFont')) })
+    return () => { vivo = false }
+  }, [canManage])
+  const puedeReubicar = canManage || porNivel
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -376,7 +386,7 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
         <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
         {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
       </TextField>
-      {canManage ? (
+      {puedeReubicar ? (
         <RelocateFont
           lat={coords.lat}
           lng={coords.lng}

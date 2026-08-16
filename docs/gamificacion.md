@@ -373,9 +373,11 @@ por eso.
 El nombre de las regiones ya está resuelto: se pasaron a catalán en producción («Gerona» →
 «Girona», «Lérida» → «Lleida»). Ver el apéndice de abajo.
 
-**Fase 6 — Niveles con permisos.** Las capacidades de mantenimiento, atadas al modelo de
-administradores por región. El último a propósito: dar permisos automáticos antes de ver cómo
-se comporta la gente es como se rompe un mapa abierto.
+**Fase 6 — Niveles con permisos.** ✅ *Implementada, y apagada por defecto:*
+`Capabilities` + `GAMIFICATION_CAPABILITIES`. El último a propósito: dar permisos
+automáticos antes de ver cómo se comporta la gente es como se rompe un mapa abierto — así
+que hacen falta **dos decisiones explícitas** para que exista alguna capacidad. Se abre una
+sola, la reubicación. Ver el apéndice de abajo.
 
 ---
 
@@ -675,6 +677,84 @@ Dos cosas que el bloque **no** hace, a propósito:
   en semana, y un correo semanal cuya única novedad es un número que no ha cambiado es
   exactamente el correo que se aprende a ignorar. Viaja de acompañante cuando ya hay algo
   que contar.
+
+---
+
+## Apéndice: los permisos (fase 6)
+
+`Capabilities` decide qué abre un nivel; `FontController` lo aplica; `GET /gamification/me`
+lo devuelve en `grant` para que la interfaz pueda reflejarlo.
+
+### Todo está apagado por defecto, y hacen falta dos llaves
+
+Desplegar esta fase **no cambia nada por sí sola**. Para que exista alguna capacidad hacen
+falta dos decisiones explícitas del administrador:
+
+1. `GAMIFICATION_CAPABILITIES=true`, el interruptor.
+2. `GAMIFICATION_EPOCH` puesta **y pasada**, o sea, puntos definitivos.
+
+La segunda no es burocracia. Mientras los puntos son provisionales, `gamification-sync
+--rescore` puede reescribir el histórico entero: es exactamente lo que pasó al recalibrar
+los multiplicadores. Conceder permiso de escritura sobre puntos que mañana pueden bajar
+significa que alguien tiene una capacidad hoy y la pierde por la noche sin haber hecho nada
+mal, y **un permiso que aparece y desaparece solo no es un permiso: es un error
+intermitente**. «Los puntos ya no se mueven» es la precondición de «los puntos dan poder».
+
+### Las gotas no bastan
+
+| Requisito | Por qué |
+|---|---|
+| Gotas del nivel | La puerta nominal. |
+| **8 días distintos** con aportación liquidada | Es la mitad menos vistosa y la más importante: sin esto, el camino a «mover el pin de cualquiera» es una tarde intensa. Se cuentan **días** y no aportaciones porque las aportaciones se apilan en una sesión y los días no. |
+| Ninguna anulación por mala conducta en 90 días | Contenido denunciado o borrado. |
+
+Pasarse del **techo diario** no cuenta como mancha: es haber aportado mucho un día, no haber
+hecho nada malo, y castigarlo con la pérdida de permisos sería absurdo.
+
+Un solo requisito que falle deja todo cerrado —son puertas, no una media— y el motivo viaja
+en `grant.blockedBy`, porque «te faltan 300 gotas» es un mensaje útil y «no puedes» no lo es.
+
+Quien ha apagado la gamificación no recibe nada: darle poderes por un contador que ha pedido
+no tener sería contradecir el interruptor. Un admin las tiene todas por su rol, encendido el
+sistema o no.
+
+### Solo se abre una capacidad, y es la aburrida
+
+**Reubicar una fuente que no creaste** (nivel 5, *Riachuelo*). Es la que más falta hace y la
+menos peligrosa: las ~6.700 fuentes importadas no tienen creador, así que hoy solo un admin
+puede corregirles el pin — el mismo callejón sin salida que ya tenía la primera foto — y un
+movimiento queda en `FontInfoSnapshot` con lat/long, o sea que es **reversible** desde el
+panel.
+
+Lo que deliberadamente **no** se abre:
+
+- **Sustituir una foto existente.** Invita a la guerra de ediciones, que es un problema
+  social y no se arregla con un umbral.
+- **Borrar una fuente.** No se deshace. Nada irreversible debería colgar de un contador.
+
+### Tres cosas de la tabla de niveles que no se implementaron, y por qué
+
+- *«Confirmar reseñas ajenas»* (nivel 3): **ya lo puede hacer todo el mundo**. Ponerle un
+  nivel sería quitar una función que existe, no dar una nueva.
+- *«Las ediciones no hacen cola»* (nivel 7): **no hay cola de ediciones**. La edición es
+  abierta estilo wiki y el historial es posterior. No se puede saltar lo que no existe.
+- *«Marcar fuentes como desaparecidas»* (nivel 7): **la acción no existe** todavía. Lo que
+  hay desde la fase de estados es el testimonio `gone` en una reseña, que es la prueba en la
+  que apoyarla el día que se haga, no la decisión.
+
+Escribirlas en el plan fue barato; comprobar cuáles describían algo real, no. Queda una sola
+capacidad y está bien que así sea: el plan decía que los permisos de los niveles tenían que
+ser permisos de verdad.
+
+### Lo que sigue pendiente
+
+El plan pedía además un mínimo de aportaciones **verificadas in situ**, y eso **no se puede
+calcular**: no se guarda la posición de quien reseña, así que hoy todo cuenta como no
+verificado. Los 8 días distintos son el sustituto, y es más débil. Guardar la posición es un
+cambio de esquema con implicaciones de privacidad que merece decidirse aparte.
+
+Y el nivel 10 como *candidata a moderadora de su región* sigue siendo una propuesta que hace
+un humano, no un automatismo. Eso es a propósito.
 
 ---
 ---
@@ -990,7 +1070,8 @@ mapa. La frescor és útil encara que la gamificació es cancel·li: es va fer p
 `GET /zones/ranking`, la pàgina `/zones` i el bloc de cobertura al resum setmanal. El nom
 de les regions ja està resolt: es van passar al català a producció.
 
-**Fase 6 — Nivells amb permisos.** Les capacitats de manteniment, lligades al model
+**Fase 6 — Nivells amb permisos.** ✅ *Implementada i apagada per defecte:* `Capabilities`
++ `GAMIFICATION_CAPABILITIES`. S'obre una sola capacitat, la reubicació. Les capacitats de manteniment, lligades al model
 d'administradors per regió. L'últim a propòsit: donar permisos automàtics abans de veure com es
 comporta la gent és com es trenca un mapa obert.
 

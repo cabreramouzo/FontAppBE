@@ -1254,6 +1254,175 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    // MARK: - Capacidades por nivel (fase 6)
+
+    /// Deja a un usuario con gotas suficientes y repartidas en días distintos, sin
+    /// pasar por el baremo: aquí lo que se prueba son las **puertas**, no el cálculo.
+    private func grantGotes(_ userID: UUID, _ gotes: Int, days: Int, on db: any Database,
+                            status: ContributionEvent.Status = .settled,
+                            voidReason: String? = nil) async throws {
+        for i in 0..<days {
+            let cuando = Date().addingTimeInterval(-Double(i + 1) * 86_400)
+            let e = ContributionEvent()
+            e.$user.id = userID
+            e.source = "font"
+            e.subjectID = UUID()
+            e.detail = "test-\(i)"
+            e.kind = ContributionScore.Kind.fontCreated.rawValue
+            e.base = gotes / days
+            e.multiplier = 1
+            e.gotes = gotes / days
+            e.status = status
+            e.voidReason = voidReason
+            e.occurredAt = cuando
+            e.settlesAt = cuando
+            e.settledAt = cuando
+            try await e.save(on: db)
+        }
+    }
+
+    /// El interruptor por defecto está **apagado**, y sin él ningún nivel abre nada.
+    /// Es la propiedad que hace que desplegar la fase 6 no cambie nada por sí solo.
+    func testCapabilitiesAreOffUntilExplicitlyEnabled() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "nivelazo")
+            try await grantGotes(id, 100_000, days: 40, on: app.db)
+            let user = try await User.find(id, on: app.db)!
+
+            unsetenv("GAMIFICATION_CAPABILITIES")
+            unsetenv("GAMIFICATION_EPOCH")
+            var grant = try await Capabilities.of(user, on: app.db)
+            XCTAssertTrue(grant.capabilities.isEmpty, "Apagado por defecto, ni con 100.000 gotas.")
+            XCTAssertEqual(grant.blockedBy, ["disabled"])
+
+            // Encendido pero con puntos provisionales: tampoco. Conceder escritura sobre
+            // puntos que `--rescore` puede reescribir da permisos que desaparecen solos.
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            grant = try await Capabilities.of(user, on: app.db)
+            XCTAssertTrue(grant.capabilities.isEmpty)
+            XCTAssertEqual(grant.blockedBy, ["provisional"])
+            unsetenv("GAMIFICATION_CAPABILITIES")
+        }
+    }
+
+    /// Con los dos interruptores puestos, las gotas solas no bastan: hacen falta días
+    /// distintos. Si no, el camino a «mover el pin de cualquiera» es una tarde intensa.
+    func testCapabilityNeedsDaysAndNotJustGotes() async throws {
+        try await withApp { app in
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+
+            let prisa = try await register(app, username: "conprisa")
+            try await grantGotes(prisa, 50_000, days: 2, on: app.db)
+            let rapido = try await Capabilities.of(try await User.find(prisa, on: app.db)!, on: app.db)
+            XCTAssertTrue(rapido.capabilities.isEmpty)
+            XCTAssertEqual(rapido.blockedBy, ["activeDays"])
+
+            let constante = try await register(app, username: "constante")
+            try await grantGotes(constante, 5_000, days: 20, on: app.db)
+            let lento = try await Capabilities.of(try await User.find(constante, on: app.db)!, on: app.db)
+            XCTAssertTrue(lento.capabilities.contains(.relocateAnyFont))
+        }
+    }
+
+    /// Una anulación reciente por mala conducta cierra las puertas; pasarse del techo
+    /// diario NO, porque eso es haber aportado mucho, no haber hecho nada malo.
+    func testRecentMisconductClosesTheDoorButHittingTheDailyCapDoesNot() async throws {
+        try await withApp { app in
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+
+            let sancionada = try await register(app, username: "denunciada")
+            try await grantGotes(sancionada, 5_000, days: 20, on: app.db)
+            try await grantGotes(sancionada, 10, days: 1, on: app.db, status: .void,
+                                 voidReason: "contenido denunciado durante la ventana de liquidación")
+            let mala = try await Capabilities.of(try await User.find(sancionada, on: app.db)!, on: app.db)
+            XCTAssertEqual(mala.blockedBy, ["recentlyVoided"])
+
+            let generosa = try await register(app, username: "generosa")
+            try await grantGotes(generosa, 5_000, days: 20, on: app.db)
+            try await grantGotes(generosa, 10, days: 1, on: app.db, status: .void,
+                                 voidReason: "por encima del techo de 4000 gotas de ese día")
+            let buena = try await Capabilities.of(try await User.find(generosa, on: app.db)!, on: app.db)
+            XCTAssertTrue(buena.capabilities.contains(.relocateAnyFont),
+                          "Pasarse del techo diario no es mala conducta.")
+        }
+    }
+
+    /// La puerta de verdad: reubicar una fuente ajena por HTTP. Y lo que NO se abre —
+    /// sustituir la foto y borrar siguen siendo del creador o de un admin.
+    func testLevelLetsYouRelocateSomeoneElsesFountainButNotDeleteOrReplaceItsPhoto() async throws {
+        try await withApp { app in
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+
+            _ = try await register(app, username: "duena")
+            let tokenD = try await login(app, username: "duena")
+            let fontID = try await createFont(app, token: tokenD, name: "Font aliena", lat: 41.5, long: 2.0)
+            let f = try await Font.find(fontID, on: app.db)!
+            f.image = "/uploads/original.jpg"
+            try await f.save(on: app.db)
+
+            let veterana = try await register(app, username: "veterana")
+            let tokenV = try await login(app, username: "veterana")
+            try await grantGotes(veterana, 5_000, days: 20, on: app.db)
+
+            try await app.test(.PUT, "fonts/\(fontID)", headers: bearer(tokenV), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Font aliena", latitude: 41.6, longitude: 2.1,
+                                                     image: "/uploads/suplantada.jpg", description: nil,
+                                                     source: nil, drinkable: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+
+            let despues = try await Font.find(fontID, on: app.db)!
+            XCTAssertEqual(despues.latitude, 41.6, accuracy: 0.0001, "El nivel abre mover el pin.")
+            XCTAssertEqual(despues.image, "/uploads/original.jpg",
+                           "Pero NO sustituir la foto: eso invita a la guerra de ediciones.")
+
+            // Y borrar sigue cerrado.
+            try await app.test(.DELETE, "fonts/\(fontID)", headers: bearer(tokenV), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden, "Borrar no se abre por nivel: no se deshace.")
+            })
+
+            // El movimiento queda registrado y por tanto es reversible desde el panel.
+            let ediciones = try await FontEdit.query(on: app.db).filter(\.$font.$id == fontID).all()
+            XCTAssertEqual(ediciones.count, 1)
+            XCTAssertEqual(ediciones.first?.before.latitude ?? 0, 41.5, accuracy: 0.0001)
+        }
+    }
+
+    /// Quien apaga la gamificación no recibe poderes por un contador que ha pedido no
+    /// tener. Y un admin los tiene por su rol, con el sistema apagado o encendido.
+    func testOptedOutGetsNoPowersAndAdminsDoNotNeedThem() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "apagada")
+            try await grantGotes(id, 50_000, days: 30, on: app.db)
+            let u = try await User.find(id, on: app.db)!
+            u.gamificationOptOut = true
+            try await u.save(on: app.db)
+
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+
+            let grant = try await Capabilities.of(u, on: app.db)
+            XCTAssertEqual(grant.blockedBy, ["optedOut"])
+
+            let adminID = try await register(app, username: "jefa")
+            let admin = try await User.find(adminID, on: app.db)!
+            admin.role = .admin
+            try await admin.save(on: app.db)
+            unsetenv("GAMIFICATION_CAPABILITIES")
+            let suyas = try await Capabilities.of(admin, on: app.db)
+            XCTAssertTrue(suyas.capabilities.contains(.relocateAnyFont),
+                          "El admin ya lo puede por rol; el nivel no le quita nada.")
+        }
+    }
+
     // MARK: - Zonas (fase 5)
 
     /// Las barras cuentan fuentes de la zona, no reseñas: una fuente muy comentada no

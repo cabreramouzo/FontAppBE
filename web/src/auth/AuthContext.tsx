@@ -3,6 +3,7 @@ import type { UserResponse } from '../api/types'
 import { ApiError, apiFetch, getToken, loginRequest, setToken } from '../api/client'
 import { saveSessionForSync } from '../lib/outbox'
 import { storedSource } from '../lib/campaign'
+import { forgetCapabilities } from '../lib/capabilities'
 
 interface AuthState {
   user: UserResponse | null
@@ -97,6 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await loginRequest(username, password)
     setToken(res.token)
     setUser(res.user)
+    // Lo que abría el nivel de la sesión anterior no vale para esta.
+    forgetCapabilities()
     // El service worker necesita el token en IndexedDB para poder enviar la cola
     // en segundo plano (Android); no puede leer localStorage.
     void saveSessionForSync(res.token)
@@ -140,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setToken(null)
     setUser(null)
+    forgetCapabilities()
     void saveSessionForSync(null)
   }
 

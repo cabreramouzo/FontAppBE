@@ -196,6 +196,12 @@ export interface GamificationProfile {
   }
   /** Los puntos todavía se pueden recalcular; se avisa en la interfaz. */
   provisional: boolean
+  /** Fase 6: qué abre tu nivel y, si no abre nada, por qué. */
+  grant?: {
+    capabilities: string[]
+    /** `disabled` · `provisional` · `optedOut` · `activeDays` · `recentlyVoided` · `gotes` */
+    blockedBy: string[]
+  } | null
 }
 
 /** Una parada de una ruta propuesta (`GET /missions`). */

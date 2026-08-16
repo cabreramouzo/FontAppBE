@@ -532,6 +532,13 @@ cron sigue valiendo como red de seguridad: es el mismo código.
 |---|---|
 | `GAMIFICATION_WORKER=true` | Recuento en segundo plano dentro de la app. |
 | `GAMIFICATION_EPOCH=AAAA-MM-DD` | Fecha desde la que los puntos son definitivos. Sin definir, todo es provisional. |
+| `GAMIFICATION_CAPABILITIES=true` | Enciende los permisos por nivel (fase 6). **Apagado por defecto.** No basta con esto: hace falta además `GAMIFICATION_EPOCH` puesta y pasada, o no se concede nada. |
+
+> **Antes de encender `GAMIFICATION_CAPABILITIES`:** los permisos cuelgan de las gotas, y
+> mientras `GAMIFICATION_EPOCH` no esté puesta, `gamification-sync --rescore` puede
+> reescribirlas. Por eso el código exige las dos cosas: un permiso que aparece y desaparece
+> solo no es un permiso, es un error intermitente. El orden correcto es calibrar el baremo,
+> fijar la época, y solo entonces encender los permisos.
 
 Antes de la primera vez, conviene mirar qué haría:
 
