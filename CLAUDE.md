@@ -55,6 +55,11 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     no de las barras**, y hay un test que fija las dos mitades de la regla.
   - Diez niveles (`ContributionScore.levels`), de `drop` a `aquifer`. El nivel y las
     insignias viajan como **clave**, no como nombre: el rótulo lo traduce el navegador.
+  - Insignias de nivel: `web/public/levels/<clave>.png` (320 px, ~120 KB) vía
+    `scripts/prepara-insignias.py`; `LevelBadge` las pinta **junto al** nombre, no en su
+    lugar — el rótulo va dibujado dentro de la imagen y en castellano. `LEVEL_BADGES`
+    (`lib/levelBadges.ts`) lista cuáles existen: sin entrada no se pide nada y el nivel
+    sale solo con su nombre. Al redibujar una hay que subir `VERSION` de ese fichero.
   - Fase 6: capacidades por nivel (`Gamification/Capabilities.swift`). **Apagadas por
     defecto**: hacen falta `GAMIFICATION_CAPABILITIES=true` *y* `GAMIFICATION_EPOCH`
     pasada, porque conceder escritura sobre puntos que `--rescore` puede reescribir da

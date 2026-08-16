@@ -13,6 +13,7 @@ import { getGamification } from '../api/client'
 import type { GamificationProfile } from '../api/types'
 import { useTheme } from '@mui/material/styles'
 import { useI18n } from '../i18n/I18nContext'
+import { LevelBadge } from './LevelBadge'
 
 /**
  * Colores de los escalones, uno por tema. Bronce/plata/oro se reconocen sin leer la
@@ -91,6 +92,12 @@ export function GamificationCard() {
         </Box>
       )}
 
+      {/* La chapa a la izquierda y las cifras a la derecha. Va DESPUÉS del impacto y no
+          antes: por vistosa que sea, «17 fuentes tienen foto gracias a ti» sigue siendo lo
+          primero que hay que leer. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <LevelBadge levelKey={data.level} />
+        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
         <WaterDropOutlinedIcon fontSize="small" sx={{ color: 'primary.main', alignSelf: 'center' }} />
         <Typography sx={{ fontWeight: 800, fontSize: '1.25rem' }}>
@@ -121,6 +128,8 @@ export function GamificationCard() {
           </Typography>
         </Box>
       )}
+        </Box>
+      </Box>
 
       {/* Fase 6: qué abre el nivel. Solo se enseña si abre algo — anunciar una lista de
           permisos que no tienes convierte el marcador en una pantalla de bloqueos, y el
