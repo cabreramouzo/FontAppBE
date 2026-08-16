@@ -43,9 +43,12 @@ LADO = 320
 CLAVES = ["drop", "spring", "brook", "torrent", "stream",
           "river", "waterfall", "reservoir", "lake", "aquifer"]
 
-# Las de `ContributionScore.badgeFamilies` que son de **grado único**: una sola
-# imagen las representa entera. Las de bronce/plata/oro no están aquí a posta.
-FAMILIAS = ["pioneer"]
+# Las familias de `ContributionScore.badgeFamilies` que ya tienen dibujo.
+#
+# Las de bronce/plata/oro comparten **el mismo dibujo en los tres grados**, y el grado lo
+# lleva el aro de color que les pone `BadgeArt`. La alternativa —tres ficheros por
+# familia— son 24 imágenes que hay que redibujar cada vez que se toque el estilo.
+FAMILIAS = ["pioneer", "discoverer", "firstLight", "sentinel", "cartographer", "drySeason"]
 
 # Para poder pasar los ficheros tal como los escupe el generador.
 ALIAS = {
@@ -53,8 +56,15 @@ ALIAS = {
     "torrente": "torrent", "riachuelo": "stream", "rio": "river",
     "río": "river", "cascada": "waterfall", "embalse": "reservoir",
     "lago": "lake", "acuifero": "aquifer", "acuífero": "aquifer",
-    # El generador escupe el nombre en inglés y con la errata de siempre.
+    # El generador escupe el nombre a veces en inglés, a veces en castellano y a veces
+    # con una errata. Se aceptan los tres para no tener que renombrar a mano.
     "pionero": "pioneer", "pionera": "pioneer", "pionner": "pioneer",
+    "centinel": "sentinel", "centinela": "sentinel",
+    "estiaje": "drySeason", "dryseason": "drySeason",
+    "photographer": "firstLight", "firstlight": "firstLight", "primeraluz": "firstLight",
+    "descubridor": "discoverer", "cartografo": "cartographer", "cartógrafo": "cartographer",
+    "comarcas": "counties", "counties": "counties",
+    "cuatroestaciones": "fourSeasons", "fourseasons": "fourSeasons",
 }
 
 

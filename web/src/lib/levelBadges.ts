@@ -25,12 +25,16 @@ export function levelBadgeURL(levelKey: string): string | null {
 /**
  * Familias con insignia dibujada, en `public/badges/`.
  *
- * Solo pueden entrar aquí las de **grado único**: las de bronce/plata/oro son el
- * mismo dibujo en tres metales, tres ficheros por familia, y esa biblioteca no se
- * mantiene sola. Ésas siguen con el icono coloreado de `BadgeIcon`, donde el grado
- * lo lleva el color.
+ * Las de bronce/plata/oro usan **el mismo dibujo en los tres grados** y el grado lo
+ * lleva el aro de color que les pone `BadgeArt`. Tres ficheros por familia serían 24
+ * imágenes que hay que rehacer cada vez que se toque el estilo, y a 88 px la diferencia
+ * entre un escudo bronce y uno plata se ve en el marco mucho antes que en el dibujo.
+ *
+ * Sin entrada aquí, la familia sale con el icono coloreado de `BadgeIcon`.
  */
-export const BADGE_ART = new Set(['pioneer'])
+export const BADGE_ART = new Set([
+  'pioneer', 'discoverer', 'firstLight', 'sentinel', 'cartographer', 'drySeason',
+])
 
 export function badgeArtURL(family: string): string | null {
   if (!BADGE_ART.has(family)) return null

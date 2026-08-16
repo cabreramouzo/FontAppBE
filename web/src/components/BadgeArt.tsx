@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Box from '@mui/material/Box'
+import { useTheme } from '@mui/material/styles'
+import { TIER_COLOR } from '../lib/tierColors'
 import { badgeArtURL } from '../lib/levelBadges'
 import { useI18n } from '../i18n/I18nContext'
 import { APAGADA } from './LevelBadge'
@@ -20,17 +22,25 @@ export function BadgeArt({
   family,
   size = 88,
   locked = false,
+  tier = null,
 }: {
   family: string
   size?: number
   locked?: boolean
+  /** Grado conseguido. El dibujo es el mismo en los tres; lo que cambia es el aro. */
+  tier?: string | null
 }) {
   const { t } = useI18n()
+  const modo = useTheme().palette.mode === 'dark' ? 'dark' : 'light'
   const [roto, setRoto] = useState(false)
   const url = badgeArtURL(family)
   if (!url || roto) return null
 
-  return (
+  // El aro solo para las de tres grados: en las de grado único no distingue nada y solo
+  // añade un círculo alrededor de un escudo que ya tiene su propio marco dibujado.
+  const aro = !locked && tier && tier !== 'unique' ? TIER_COLOR[modo][tier] : null
+
+  const img = (
     <Box
       component="img"
       src={url}
@@ -43,5 +53,19 @@ export function BadgeArt({
       title={t(`game.badge.${family}`)}
       sx={{ width: size, height: size, flexShrink: 0, objectFit: 'contain', ...(locked ? APAGADA : null) }}
     />
+  )
+
+  if (!aro) return img
+  return (
+    <Box
+      sx={{
+        display: 'flex', borderRadius: '50%', p: '3px',
+        // Un aro y no un tinte sobre el dibujo: teñir un escudo de plata lo deja gris y
+        // apagado, que es justo como se pinta aquí lo que NO se ha conseguido.
+        border: '2px solid', borderColor: aro,
+      }}
+    >
+      {img}
+    </Box>
   )
 }

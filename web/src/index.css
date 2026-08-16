@@ -645,6 +645,37 @@ select:not([class*="Mui"]) {
 }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
+/* Zumbido del icono de Novedades (ver `lib/newsNudge.ts` y `Layout.tsx`).
+   Va aquí y NO dentro de un `sx`: Emotion reescribe el nombre de los @keyframes que se
+   declaran ahí dentro, así que `animation: 'fontapp-news-nudge …'` apuntaba a un nombre
+   inexistente y no se movía nada — con `animationName` diciendo lo contrario. */
+@keyframes fontapp-news-nudge {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(-14deg); }
+  30% { transform: rotate(11deg); }
+  45% { transform: rotate(-8deg); }
+  60% { transform: rotate(5deg); }
+  75% { transform: rotate(-2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fontapp-news-nudge { 0%, 100% { transform: none; } }
+}
+
+/* Visor de insignias a pantalla completa (`BadgeShowcase`). Mismos motivos que arriba
+   para vivir aquí y no en un `sx`. */
+@keyframes fontapp-badge-in {
+  from { transform: scale(0.72) rotate(-9deg); opacity: 0; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes fontapp-badge-sheen {
+  0% { background-position: 130% 0; }
+  55%, 100% { background-position: -30% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fontapp-badge-in { from { transform: none; opacity: 1; } to { transform: none; opacity: 1; } }
+  @keyframes fontapp-badge-sheen { 0%, 100% { background-position: -30% 0; } }
+}
+
 /* Página 404 */
 .notfound { text-align: center; padding-top: 48px; }
 .notfound-icon { font-size: 56px; }

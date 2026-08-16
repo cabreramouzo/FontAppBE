@@ -18,7 +18,8 @@ import { Skeleton } from '../components/Skeleton'
 import { LevelBadge, APAGADA } from '../components/LevelBadge'
 import { BadgeIcon } from '../components/BadgeIcon'
 import { BadgeArt } from '../components/BadgeArt'
-import { BADGE_ART } from '../lib/levelBadges'
+import { BadgeShowcase } from '../components/BadgeShowcase'
+import { BADGE_ART, LEVEL_BADGES } from '../lib/levelBadges'
 import { TIER_COLOR } from '../lib/tierColors'
 
 /**
@@ -40,6 +41,10 @@ export function BadgesPage() {
   const tier = TIER_COLOR[modo]
   const [data, setData] = useState<GamificationProfile | null>(null)
   const [estado, setEstado] = useState<'loading' | 'ok' | 'off' | 'error'>('loading')
+  // Qué insignia se está mirando en grande. `null` = ninguna.
+  const [mirando, setMirando] = useState<
+    { kind: 'level' | 'badge'; key: string; tier: string | null; subtitle?: string } | null
+  >(null)
 
   useEffect(() => { document.title = `${t('badges.title')} · FontApp` }, [t])
 
@@ -79,7 +84,16 @@ export function BadgesPage() {
           <Seccion titulo={t('badges.levels')} pie={t('badges.levelsHint')}>
             {data.levels.map((n) => (
               <Casilla key={n.key} destacada={n.current}>
-                <LevelBadge levelKey={n.key} size={88} locked={!n.reached} placeholder />
+                <Abrible
+                  puede={n.reached && LEVEL_BADGES.has(n.key)}
+                  nombre={t(`game.level.${n.key}`)}
+                  onOpen={() => setMirando({
+                    kind: 'level', key: n.key, tier: null,
+                    subtitle: n.from === 0 ? t('badges.start') : t('badges.fromGotes', { n: n.from.toLocaleString(lang) }),
+                  })}
+                >
+                  <LevelBadge levelKey={n.key} size={88} locked={!n.reached} placeholder />
+                </Abrible>
                 <Rotulo
                   nombre={t(`game.level.${n.key}`)}
                   apagado={!n.reached}
@@ -103,14 +117,23 @@ export function BadgesPage() {
                   {arte ? (
                     // Dibujada: el escudo ya trae su propio marco y su color, así que va
                     // suelto. El candado sigue encima, que es lo que dice «todavía no».
-                    <Box sx={{ position: 'relative', display: 'flex' }}>
-                      <BadgeArt family={b.family} size={88} locked={!conseguida} />
-                      {!conseguida && (
-                        <LockOutlinedIcon
-                          sx={{ position: 'absolute', bottom: 2, right: 2, fontSize: 16, color: 'text.disabled' }}
-                        />
-                      )}
-                    </Box>
+                    <Abrible
+                      puede={conseguida}
+                      nombre={t(`game.badge.${b.family}`)}
+                      onOpen={() => setMirando({
+                        kind: 'badge', key: b.family, tier: b.tier,
+                        subtitle: tope ? t('badges.maxed') : t('badges.progress', { n: String(b.progress), m: String(b.threshold) }),
+                      })}
+                    >
+                      <Box sx={{ position: 'relative', display: 'flex' }}>
+                        <BadgeArt family={b.family} size={88} locked={!conseguida} tier={b.tier} />
+                        {!conseguida && (
+                          <LockOutlinedIcon
+                            sx={{ position: 'absolute', bottom: 2, right: 2, fontSize: 16, color: 'text.disabled' }}
+                          />
+                        )}
+                      </Box>
+                    </Abrible>
                   ) : (
                     <Box
                       sx={{
@@ -162,6 +185,55 @@ export function BadgesPage() {
           </Seccion>
         </>
       )}
+
+      <BadgeShowcase
+        open={!!mirando}
+        onClose={() => setMirando(null)}
+        // `kind`/`key` con valores de relleno cuando está cerrado: el diálogo se
+        // desmonta igual, y así no hay que hacer opcional media firma del componente.
+        kind={mirando?.kind ?? 'badge'}
+        badgeKey={mirando?.key ?? ''}
+        tier={mirando?.tier ?? null}
+        subtitle={mirando?.subtitle}
+      />
+    </Box>
+  )
+}
+
+/**
+ * Hace que una insignia se pueda abrir en grande, si toca.
+ *
+ * **Solo lo conseguido se abre.** Enseñar en pantalla completa, con brillo y todo, una
+ * medalla que aún no tienes le quita justamente lo que la hace apetecible: en la vitrina
+ * la silueta gris dice «esto está por llegar», y el visor diría «tómala». Lo bloqueado se
+ * queda como estaba, sin cursor de mano ni foco de teclado, para que ni se intente.
+ *
+ * Cuando sí se puede, es un `button` de verdad y no un `div` con `onClick`: así se llega
+ * con el tabulador y se abre con Intro, que es lo que espera quien no usa ratón.
+ */
+function Abrible({ puede, nombre, onOpen, children }: {
+  puede: boolean
+  nombre: string
+  onOpen: () => void
+  children: React.ReactNode
+}) {
+  const { t } = useI18n()
+  if (!puede) return <>{children}</>
+  return (
+    <Box
+      component="button"
+      type="button"
+      onClick={onOpen}
+      aria-label={t('badges.view', { name: nombre })}
+      sx={{
+        p: 0, border: 0, background: 'none', cursor: 'pointer', display: 'flex',
+        borderRadius: '50%',
+        transition: 'transform 160ms ease',
+        '&:hover': { transform: 'scale(1.06)' },
+        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 3 },
+      }}
+    >
+      {children}
     </Box>
   )
 }

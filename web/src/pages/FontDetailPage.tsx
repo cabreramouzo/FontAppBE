@@ -632,13 +632,14 @@ export function FontDetailPage() {
             {t('detail.createdBy')}{' '}
             <Link component={RouterLink} to={`/users/${encodeURIComponent(creatorName)}`}>@{creatorName}</Link>
           </span>
-          {/* La medalla de Descubridor de quien la puso. A diferencia de la del pionero,
-              ésta tiene grado —bronce, plata, oro— y el grado lo lleva el color, así que
-              va con icono y no con dibujo: tres metales serían tres ficheros por familia. */}
+          {/* La medalla de Descubridor de quien la puso. El dibujo es el mismo en los
+              tres grados y el aro dice cuál es (ver `BadgeArt`). */}
           {creatorBadge && (
             <Tooltip title={`${t('game.badge.discoverer')} · ${t(`game.tier.${creatorBadge.tier}`)}`}>
               <Box component="span" sx={{ display: 'flex', color: tierColor[creatorBadge.tier] ?? 'text.secondary' }}>
-                <BadgeIcon family="discoverer" fontSize="small" />
+                {BADGE_ART.has('discoverer')
+                  ? <BadgeArt family="discoverer" size={26} tier={creatorBadge.tier} />
+                  : <BadgeIcon family="discoverer" fontSize="small" />}
               </Box>
             </Tooltip>
           )}

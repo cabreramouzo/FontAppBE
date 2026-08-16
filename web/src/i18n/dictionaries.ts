@@ -206,6 +206,7 @@ const ca: Dict = {
   'badges.hidden': 'Tens les gotes i els nivells amagats, així que no hi ha col·lecció a ensenyar.',
   'badges.needLogin': 'Entra per veure la teva col·lecció.',
   'badges.failed': 'No s’ha pogut carregar la col·lecció.',
+  'badges.view': 'Veure {name} en gran',
 
   'pulse.title': 'Qui puja',
   'pulse.promoted': 'Han pujat de nivell',
@@ -729,6 +730,7 @@ const es: Dict = {
   'badges.hidden': 'Tienes las gotas y los niveles ocultos, así que no hay colección que enseñar.',
   'badges.needLogin': 'Entra para ver tu colección.',
   'badges.failed': 'No se ha podido cargar la colección.',
+  'badges.view': 'Ver {name} en grande',
 
   'pulse.title': 'Quién sube',
   'pulse.promoted': 'Han subido de nivel',
@@ -1243,6 +1245,7 @@ const gl: Dict = {
   'badges.hidden': 'Tes as gotas e os niveis agochados, así que non hai colección que amosar.',
   'badges.needLogin': 'Entra para ver a túa colección.',
   'badges.failed': 'Non se puido cargar a colección.',
+  'badges.view': 'Ver {name} en grande',
 
   'pulse.title': 'Quen sobe',
   'pulse.promoted': 'Subiron de nivel',
@@ -1757,6 +1760,7 @@ const eu: Dict = {
   'badges.hidden': 'Tantak eta mailak ezkutatuta dituzu, beraz ez dago bildumarik erakusteko.',
   'badges.needLogin': 'Sartu zure bilduma ikusteko.',
   'badges.failed': 'Ezin izan da bilduma kargatu.',
+  'badges.view': 'Ikusi {name} handian',
 
   'pulse.title': 'Nor ari da igotzen',
   'pulse.promoted': 'Maila igo dute',
@@ -2271,6 +2275,7 @@ const en: Dict = {
   'badges.hidden': 'You have drops and levels hidden, so there is no collection to show.',
   'badges.needLogin': 'Log in to see your collection.',
   'badges.failed': 'Could not load the collection.',
+  'badges.view': 'View {name} large',
 
   'pulse.title': 'On the rise',
   'pulse.promoted': 'Levelled up',

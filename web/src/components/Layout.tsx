@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink, useLocation } from 'react-router-dom'
 import AppBar from '@mui/material/AppBar'
 import Toolbar from '@mui/material/Toolbar'
 import Button from '@mui/material/Button'
@@ -21,6 +21,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { getFlags, getNewUsers } from '../api/client'
 import { lastSeenAt } from '../lib/newUsers'
+import { marcarNovedadesVistas, programarZumbidos } from '../lib/newsNudge'
 import { Footer } from './Footer'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
@@ -36,6 +37,30 @@ export function Layout({ children }: { children: ReactNode }) {
   const [flagCount, setFlagCount] = useState(0)
   const [newUsers, setNewUsers] = useState(0)
   const [confirmLogout, setConfirmLogout] = useState(false)
+  // El icono de Novedades se mueve un momento para que se sepa que está ahí (ver
+  // `lib/newsNudge.ts`, que es quien decide si toca y lleva la cuenta).
+  // Un contador y no un booleano: con `zumbando: true/false`, el segundo zumbido vuelve
+  // a poner la misma clase CSS y el navegador no reinicia la animación — comprobado, solo
+  // se movía la primera vez de las tres. Con el contador de clave, el icono se vuelve a
+  // montar y la animación arranca de cero siempre.
+  const [zumbidos, setZumbidos] = useState(0)
+  const { pathname } = useLocation()
+  const enElMapa = pathname === '/'
+
+  useEffect(() => {
+    // Entrar a Novedades apaga el gesto para siempre: ya se ha descubierto la sección.
+    if (pathname.startsWith('/activity')) marcarNovedadesVistas()
+  }, [pathname])
+
+  useEffect(() => {
+    // Solo desde el mapa: es la pantalla donde la gente se queda, y el gesto pretende
+    // sacarla de ahí. En cualquier otra página ya está navegando por su cuenta.
+    if (!enElMapa) return
+    // Respetar la preferencia del sistema no es un detalle de cortesía: para quien tiene
+    // trastornos vestibulares, el movimiento inesperado marea de verdad.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    return programarZumbidos(() => setZumbidos((n) => n + 1))
+  }, [enElMapa])
   // Rol del equipo (admin/moderador/owner), o null si es una cuenta normal.
   const rol = staffRole(user)
 
@@ -115,8 +140,29 @@ export function Layout({ children }: { children: ReactNode }) {
               SOBRE el mapa (filtran, cambian la capa, te centran) y este navega a otra
               página. Mezclados, la columna del mapa se leía como un cajón de sastre. */}
           <Tooltip title={t('news.title')}>
-            <IconButton component={RouterLink} to="/activity" color="inherit" size="small" aria-label={t('news.title')}>
-              <NewspaperIcon />
+            <IconButton
+              component={RouterLink}
+              to="/activity"
+              color="inherit"
+              size="small"
+              aria-label={t('news.title')}
+            >
+              <NewspaperIcon
+                key={zumbidos}
+                sx={{
+                  // Un balanceo de campana, no un parpadeo ni un salto: el icono se queda
+                  // donde está y solo gira sobre su base, así que llama la atención por
+                  // el rabillo del ojo sin mover nada de sitio ni tapar lo de al lado.
+                  // Los fotogramas viven en `index.css`, no aquí: Emotion renombra los
+                  // @keyframes declarados dentro de `sx` y la animación no llegaba a
+                  // existir. Ver el comentario de esa hoja.
+                  ...(zumbidos > 0 && { animation: 'fontapp-news-nudge 900ms ease-in-out' }),
+                  // Cinturón y tirantes: el efecto ya se decide en JS mirando la
+                  // preferencia, pero si algún día se llega aquí por otro camino, no se
+                  // mueve igualmente.
+                  '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+                }}
+              />
             </IconButton>
           </Tooltip>
           {/* Zonas: mismo sitio y mismo criterio que Novedades — navega fuera del mapa.
