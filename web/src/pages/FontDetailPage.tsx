@@ -62,6 +62,7 @@ import { RelocateFont } from '../components/RelocateFont'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { DRINKABLE_EMOJI, DRINKABLE_OPTIONS, SOURCE_EMOJI, SOURCE_OPTIONS, drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
+import { FreshnessChip } from '../components/FreshnessChip'
 
 // Reseñas "Anteriores" que se muestran por tanda (el resto, tras "mostrar más").
 const REVIEWS_PAGE = 5
@@ -531,7 +532,7 @@ export function FontDetailPage() {
     <Box className="detail pad" sx={{ maxWidth: 720, mx: 'auto' }}>
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
 
-      <Stack direction="row" sx={{ my: 1, justifyContent: "space-between", alignItems: "center", gap: 1 }}>
+      <Stack direction="row" sx={{ mt: 1, justifyContent: "space-between", alignItems: "center", gap: 1 }}>
         <Typography variant="h4" sx={{ fontWeight: 800 }}>{font.name}</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           {/* Guardar en favoritos: visible siempre; sin sesión lleva a login. */}
@@ -560,6 +561,15 @@ export function FontDetailPage() {
         )}
         </Box>
       </Stack>
+
+      {/* Frescor, justo bajo el nombre. Siempre dice algo: en las miles de fuentes
+          importadas la respuesta es «ningú l'ha comprovada mai», que es precisamente la
+          que hacía falta y la que antes se quedaba en blanco. Va aquí y no junto al
+          estado del agua porque responde a otra pregunta —cuándo, no qué— y porque es lo
+          primero que quieres saber antes de fiarte del resto de la ficha. */}
+      <Box sx={{ mb: 1.5 }}>
+        <FreshnessChip lastCheck={latest?.lastConfirmedAt ?? latest?.createdAt ?? null} />
+      </Box>
 
       {creatorName && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

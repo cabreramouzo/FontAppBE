@@ -1,4 +1,4 @@
-import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, GamificationProfile, InterestStats, LoginResponse, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource } from './types'
+import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, GamificationProfile, InterestStats, LoginResponse, Missions, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -368,4 +368,11 @@ export async function getUserComments(id: string): Promise<MyComment[]> {
 export async function getGamification(): Promise<GamificationProfile | null> {
   // 204 (apagada) llega como `undefined` desde apiFetch; se normaliza a null.
   return (await apiFetch<GamificationProfile | undefined>('/gamification/me')) ?? null
+}
+
+/** Rutas propuestas alrededor de un punto. Lectura pública. */
+export async function getMissions(lat: number, long: number, km?: number): Promise<Missions> {
+  const q = new URLSearchParams({ lat: String(lat), long: String(long) })
+  if (km) q.set('km', String(km))
+  return apiFetch<Missions>(`/missions?${q}`)
 }

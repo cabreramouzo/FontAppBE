@@ -36,6 +36,7 @@ import RemoveIcon from '@mui/icons-material/Remove'
 import CloseIcon from '@mui/icons-material/Close'
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined'
 import TuneIcon from '@mui/icons-material/Tune'
+import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
@@ -56,6 +57,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { BaseLayerTile, LayerPicker, useBaseLayer } from '../components/BaseLayers'
+import { MissionsPanel } from '../components/MissionsPanel'
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
 import { enqueue, isOffline } from '../lib/outbox'
 import { ImagePicker } from '../components/ImagePicker'
@@ -676,6 +678,7 @@ export function MapPage() {
   const activeFilters = (onlyWithWater ? 1 : 0) + (showNonPotable ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
   const [showNearby, setShowNearby] = useState(false)
   const [selectedID, setSelectedID] = useState<string | null>(null)
+  const [missionsOpen, setMissionsOpen] = useState(false)
   const [place, setPlace] = useState<Place | null>(null)
   const [params, setParams] = useSearchParams()
   // Vista inicial: la última guardada (al volver del detalle) o el Moianès por defecto.
@@ -924,6 +927,17 @@ export function MapPage() {
         {/* Debajo del de herramientas: los filtros se despliegan más abajo, así que
             este no se mueve al abrirlos. */}
         <LayerPicker layer={layer} onChange={setLayer} />
+        {/* Rutas propuestas. Vive con los botones del mapa y no en la cabecera porque
+            lo que hace es SOBRE el mapa: te lleva de parada en parada. */}
+        <Fab
+          size="medium"
+          onClick={() => setMissionsOpen(true)}
+          aria-label={t('mission.title')}
+          title={t('mission.title')}
+          sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
+        >
+          <RouteOutlinedIcon />
+        </Fab>
         <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
         <Chip clickable variant="outlined" icon={<MyLocationIcon />} label={noEmoji(t('map.near'))} onClick={() => locate(true)} sx={chipSx(false)} />
         <Chip
@@ -1001,6 +1015,15 @@ export function MapPage() {
         </div>
       )}
       {placing && pos && <NewFontForm pos={pos} onCancel={cancel} onCreated={created} />}
+
+      {/* El punto de partida es donde está el usuario si el mapa ya lo sabe; si no, el
+          panel lo pide él (y solo en silencio si el permiso ya estaba dado). */}
+      <MissionsPanel
+        open={missionsOpen}
+        onClose={() => setMissionsOpen(false)}
+        center={me}
+        onFocus={(target) => { setGoto([target.latitude, target.longitude]); setSelectedID(target.id) }}
+      />
     </div>
   )
 }

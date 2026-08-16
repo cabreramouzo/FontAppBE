@@ -1022,6 +1022,71 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    // MARK: - Misiones (fase 4)
+
+    /// La ruta ciega propone fuentes **sin foto** y ordenadas por distancia, no por lo que
+    /// valen: una lista donde la primera parada está a 300 m y la segunda a 3 km no la
+    /// hace nadie.
+    func testBlindRouteListsPhotolessFountainsByDistance() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "rutero")
+            let token = try await login(app, username: "rutero")
+
+            // Tres cerca (una con foto) y una lejos, para comprobar los dos filtros.
+            let lejana = try await createFont(app, token: token, name: "Lluny", lat: 42.5, long: 2.0975)
+            let cerca1 = try await createFont(app, token: token, name: "A 100 m", lat: 41.8116, long: 2.0975)
+            let cerca2 = try await createFont(app, token: token, name: "A 1 km", lat: 41.8197, long: 2.0975)
+            let conFoto = try await createFont(app, token: token, name: "Ja té foto", lat: 41.8125, long: 2.0975)
+            if let f = try await Font.find(conFoto, on: app.db) {
+                f.image = "/uploads/ya-tiene.jpg"
+                try await f.save(on: app.db)
+            }
+
+            try await app.test(.GET, "missions?lat=41.8107&long=2.0975&km=4", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let m = try res.content.decode(MissionController.Response.self)
+                let ids = m.photoless.map { $0.id }
+                XCTAssertTrue(ids.contains(cerca1))
+                XCTAssertTrue(ids.contains(cerca2))
+                XCTAssertFalse(ids.contains(conFoto), "si ya tiene foto, no es una parada de la ruta ciega")
+                XCTAssertFalse(ids.contains(lejana), "fuera del radio")
+                XCTAssertEqual(m.photoless.map { $0.distanceKm }, m.photoless.map { $0.distanceKm }.sorted(),
+                               "las paradas van por distancia")
+            })
+        }
+    }
+
+    /// La ronda de comprobación son fuentes que **sí tienen foto** pero que nadie mira
+    /// desde hace medio año. No se solapan con la ruta ciega: repetir la misma parada en
+    /// dos rutas hace que ninguna de las dos parezca seria.
+    func testCheckupRoundPicksForgottenFountainsAndDoesNotRepeatTheBlindRoute() async throws {
+        try await withApp { app in
+            let userID = try await register(app, username: "rondador")
+            let token = try await login(app, username: "rondador")
+            let olvidada = try await createFont(app, token: token, name: "Oblidada", lat: 41.8116, long: 2.0975)
+            _ = try await createFont(app, token: token, name: "Sense foto", lat: 41.8120, long: 2.0975)
+
+            if let f = try await Font.find(olvidada, on: app.db) {
+                f.image = "/uploads/vieja.jpg"
+                try await f.save(on: app.db)
+            }
+            // Una reseña de hace un año. `createdAt` lo pone Fluent, así que se reescribe
+            // a mano: es la única forma de tener historia antigua en un test.
+            let vieja = FontComment(fontID: olvidada, userID: userID, body: "Rajava")
+            try await vieja.save(on: app.db)
+            vieja.createdAt = Date().addingTimeInterval(-365 * 86_400)
+            try await vieja.save(on: app.db)
+
+            try await app.test(.GET, "missions?lat=41.8107&long=2.0975&km=4", afterResponse: { res in
+                let m = try res.content.decode(MissionController.Response.self)
+                XCTAssertTrue(m.stale.contains { $0.id == olvidada }, "un año sin visitas es una ronda")
+                XCTAssertFalse(m.photoless.contains { $0.id == olvidada }, "ya tiene foto: no va en la ruta ciega")
+                let repetidas = Set(m.stale.map { $0.id }).intersection(m.photoless.map { $0.id })
+                XCTAssertTrue(repetidas.isEmpty, "una parada no puede salir en las dos rutas")
+            })
+        }
+    }
+
     // MARK: - Gamificación (fase 2: registro y liquidación)
 
     /// Lo esencial del registro: se puede volver a pasar cuantas veces haga falta sin

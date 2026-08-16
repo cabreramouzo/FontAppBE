@@ -42,6 +42,11 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   - Fase 3: `GET /gamification/me` + tarjeta en `/me` (`GamificationCard.tsx`). Solo lo
     propio y solo lo liquidado; lo pendiente sale como «en camino». No se pinta si el
     usuario la apagó (`users.gamification_opt_out`, 204) ni si aún no ha aportado nada.
+  - Fase 4: chip de frescura en la ficha (`FreshnessChip` + `lib/freshness.ts`; los cortes
+    de 7 y 30 días son los mismos de la curva del baremo, a propósito) y rutas propuestas
+    (`GET /missions?lat=&long=&km=`, pública con límite 120/h → `MissionsPanel` desde el
+    botón de rutas del mapa). Dos rutas de 6 paradas en 4 km, **ordenadas por distancia y
+    no por puntos**, y sin solaparse entre ellas.
   - `GAMIFICATION_EPOCH=AAAA-MM-DD`: fecha desde la que los puntos son **definitivos**.
     Antes de ella todo es provisional y `--rescore` lo reconstruye; a partir de ella se
     niega. No congela las anulaciones: borrar o denunciar una reseña anula igual, esté

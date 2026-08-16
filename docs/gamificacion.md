@@ -310,9 +310,10 @@ tarjeta en `/me`. Gotas, nivel, insignias e impacto personal. Sin rankings todav
 semana así enseña si la gente lo entiende sin explicaciones. El interruptor para ocultarlo
 está debajo de la tarjeta.
 
-**Fase 4 — Frescura en la ficha y misiones en el mapa.** El indicador de frescura y la ruta
-ciega. La parte que cambia el comportamiento. La frescura es útil aunque la gamificación se
-cancele: se hace primero por eso.
+**Fase 4 — Frescura en la ficha y misiones en el mapa.** ✅ *Implementada:* el chip de
+frescura bajo el nombre de cada fuente y el panel de rutas (`GET /missions`) desde el botón
+de rutas del mapa. La frescura es útil aunque la gamificación se cancele: se hizo primero
+por eso.
 
 **Fase 5 — Zona: barras colectivas y ranking mensual.** Cobertura por comarca y tabla mensual
 regional, en el resumen semanal por correo. Antes de esto hay que decidir el nombre de las
@@ -407,6 +408,48 @@ auditar nada, que es la mitad de su razón de ser.
 | `pending` | Dentro de la ventana de 72 h. Se enseña como «en camino», no suma al marcador. |
 | `settled` | Cobrada. La suma de estas es la puntuación. |
 | `void` | Anulada, con motivo: revertida, borrada, denunciada, o por encima del techo diario. |
+
+---
+
+## Apéndice: frescura y rutas (fase 4)
+
+### El chip de frescura
+
+Bajo el nombre de cada fuente, siempre visible: «comprobada esta semana / este mes / hace
+tiempo que nadie pasa / **nadie la ha comprobado nunca**». Los cortes son los mismos que usa
+la curva del baremo (7 y 30 días), para que lo que el usuario ve y lo que el sistema paga
+cuenten la misma historia.
+
+Hasta ahora solo había un aviso cuando el estado pasaba de 30 días. El caso mayoritario —las
+fuentes importadas que nadie ha comprobado— no decía nada, y un hueco en blanco se lee como
+«no hay problema», que es lo contrario de lo que sabemos.
+
+«Nunca» va en gris y no en rojo a propósito: no es un fallo de la fuente, es una tarea
+pendiente nuestra, y pintar de rojo media Catalunya convierte el mapa en una alarma que se
+deja de mirar.
+
+### Las rutas (`GET /missions?lat=&long=&km=`)
+
+Lectura pública con límite de 120/h, como `/activity`: son datos de fuentes que ya se ven
+uno a uno; lo que aporta esto es el orden.
+
+Devuelve dos rutas de hasta **6 paradas** en **4 km** por defecto:
+
+- **Ruta ciega** — fuentes sin ninguna foto. Ataca directamente el 0 % medido.
+- **Ronda de comprobación** — fuentes con foto que nadie mira desde hace más de 6 meses.
+
+No se solapan: una parada que ya sale en la ruta ciega no se repite en la ronda. Repetirla
+haría que ninguna de las dos pareciera seria.
+
+**Las paradas van por distancia, no por lo que valen.** Es la decisión que hace que esto sea
+una ruta y no una lista de tareas: ordenadas por puntos, la primera está a 300 m y la
+segunda a 3 km, y nadie la hace. Por lo mismo son 6 y no 20, y 4 km y no 15: una vuelta que
+no cabe en una tarde no se empieza.
+
+En la interfaz es un botón de rutas en la columna del mapa (no una brújula: ya hay una para
+volver al norte) que abre un panel. Tocar una parada centra el mapa en ella; el chevron abre
+su ficha. La posición solo se pide sola si el permiso ya estaba dado, igual que hace el mapa
+al abrirse.
 
 ### Recuento en segundo plano (`GAMIFICATION_WORKER=true`)
 
@@ -789,9 +832,9 @@ del que s'ha liquidat.
 targeta a `/me`. Gotes, nivell, insignies i impacte personal. Sense rànquings encara.
 L'interruptor per amagar-ho és sota la targeta.
 
-**Fase 4 — Frescor a la fitxa i missions al mapa.** L'indicador de frescor i la ruta cega. La
-part que canvia el comportament. La frescor és útil encara que la gamificació es cancel·li: es
-fa primer per això.
+**Fase 4 — Frescor a la fitxa i missions al mapa.** ✅ *Implementada:* el xip de frescor
+sota el nom de cada font i el panell de rutes (`GET /missions`) des del botó de rutes del
+mapa. La frescor és útil encara que la gamificació es cancel·li: es va fer primer per això.
 
 **Fase 5 — Zona: barres col·lectives i rànquing mensual.** Cobertura per comarca i taula mensual
 regional, al resum setmanal per correu. Abans d'això cal decidir el nom de les regions:

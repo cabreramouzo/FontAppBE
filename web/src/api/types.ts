@@ -197,3 +197,23 @@ export interface GamificationProfile {
   /** Los puntos todavía se pueden recalcular; se avisa en la interfaz. */
   provisional: boolean
 }
+
+/** Una parada de una ruta propuesta (`GET /missions`). */
+export interface MissionTarget {
+  id: string
+  name: string
+  latitude: number
+  longitude: number
+  distanceKm: number
+  /** Última comprobación, o null si no ha pasado nadie nunca. */
+  lastCheck?: string | null
+}
+
+/** Rutas propuestas alrededor de un punto. Fase 4 de la gamificación. */
+export interface Missions {
+  km: number
+  /** Ruta ciega: fuentes sin ninguna foto. */
+  photoless: MissionTarget[]
+  /** Ronda: sin comprobar desde hace más de medio año. */
+  stale: MissionTarget[]
+}
