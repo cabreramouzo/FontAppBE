@@ -50,40 +50,65 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="app">
       {rol && <StaffStripe role={rol} />}
       <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default', pt: 'env(safe-area-inset-top)' }}>
-        <Toolbar sx={{ gap: 1, pl: 'max(16px, env(safe-area-inset-left))', pr: 'max(16px, env(safe-area-inset-right))' }}>
-          {/* El nombre arriba y los distintivos DEBAJO, como un subíndice. En una sola
-              fila, "FontApp" + beta + el rol empujaban los botones de la derecha hasta
-              solaparse; apilados ocupan la mitad de ancho y la cabecera respira. */}
+        {/* En móvil los huecos bajan a la mitad: son cinco botones a la derecha y con 8 px
+            entre cada uno el nombre se quedaba 16 px corto y "beta" se metía encima del
+            de novedades. Los iconos ya traen su propio acolchado, así que 4 px de hueco
+            se siguen viendo separados. */}
+        <Toolbar sx={{ gap: { xs: 0.5, sm: 1 }, pl: 'max(16px, env(safe-area-inset-left))', pr: 'max(16px, env(safe-area-inset-right))' }}>
+          {/* "beta" va pegado al nombre como un subíndice tipográfico —alineado por abajo
+              y caído unos píxeles bajo la línea base—, no como una etiqueta más de la
+              barra: es una propiedad del producto, se lee junto al nombre.
+              El rol, en cambio, cuelga DEBAJO. Es lo ancho ("PROPIETARIO") y en la misma
+              fila empujaba los botones de la derecha hasta solaparse; en su propio
+              renglón no compite por el ancho con el nombre. */}
           <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
-            <Typography
-              component={RouterLink}
-              to="/"
-              variant="h6"
-              sx={{ fontWeight: 800, color: 'primary.main', textDecoration: 'none', whiteSpace: 'nowrap', lineHeight: 1.1 }}
-            >
-              💧 FontApp
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.25 }}>
+              <Typography
+                component={RouterLink}
+                to="/"
+                variant="h6"
+                sx={{
+                  fontWeight: 800, color: 'primary.main', textDecoration: 'none',
+                  whiteSpace: 'nowrap', lineHeight: 1.1,
+                  // Por debajo de 360 px (iPhone SE de 2016 y similares) el nombre a
+                  // tamaño completo ya no cabía y se metía bajo el botón de novedades.
+                  // Esto no lo trajo "beta": pasaba igual sin él.
+                  '@media (max-width:359.95px)': { fontSize: '1.05rem' },
+                }}
+              >
+                💧 FontApp
+              </Typography>
               <Chip
                 label="beta"
                 size="small"
                 color="warning"
                 variant="outlined"
                 sx={{
-                  height: 16,
-                  fontSize: 9,
+                  height: 11,
+                  fontSize: 6.5,
                   fontWeight: 700,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.2,
                   textTransform: 'uppercase',
-                  '& .MuiChip-label': { px: 0.5 },
-                  // Con rol, en móvil sobra: "beta" y "PROPIETARIO" seguidos empujan el
-                  // contador rojo hasta encima del botón de novedades. Manda el rol,
-                  // que es el que avisa de con qué cuenta estás actuando.
-                  display: rol ? { xs: 'none', sm: 'inline-flex' } : 'inline-flex',
+                  borderRadius: 0.75,
+                  borderWidth: 1,
+                  '& .MuiChip-label': { px: 0.3 },
+                  // El desplome que lo hace subíndice: alineado abajo con el nombre y
+                  // 3 px por debajo de su línea. Con `relative` no reserva ese hueco,
+                  // así que no engorda la fila.
+                  position: 'relative',
+                  top: 3,
+                  // En pantallas de menos de 360 px no hay sitio ni para el nombre solo:
+                  // el subíndice es lo primero que sobra.
+                  '@media (max-width:359.95px)': { display: 'none' },
                 }}
               />
-              {rol && <RoleChip role={rol} count={flagCount + newUsers} />}
             </Box>
+            {/* 4 px y no 2: "beta" cae 3 px bajo su renglón y con 2 rozaba el chip del rol. */}
+            {rol && (
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                <RoleChip role={rol} count={flagCount + newUsers} />
+              </Box>
+            )}
           </Box>
           {/* Novedades vive aquí y no sobre el mapa: los botones del mapa hacen cosas
               SOBRE el mapa (filtran, cambian la capa, te centran) y este navega a otra
