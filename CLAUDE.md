@@ -39,6 +39,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     controlador la menciona y crear una fuente no se entera (medido: 39 ms). Puntúa unos
     segundos después, fuera de la petición, con cerrojo de Postgres para que dos instancias
     no dupliquen el trabajo.
+  - Fase 3: `GET /gamification/me` + tarjeta en `/me` (`GamificationCard.tsx`). Solo lo
+    propio y solo lo liquidado; lo pendiente sale como «en camino». No se pinta si el
+    usuario la apagó (`users.gamification_opt_out`, 204) ni si aún no ha aportado nada.
   - `GAMIFICATION_EPOCH=AAAA-MM-DD`: fecha desde la que los puntos son **definitivos**.
     Antes de ella todo es provisional y `--rescore` lo reconstruye; a partir de ella se
     niega. No congela las anulaciones: borrar o denunciar una reseña anula igual, esté

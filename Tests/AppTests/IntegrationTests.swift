@@ -1107,6 +1107,68 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// El marcador del perfil solo cuenta lo liquidado. Lo pendiente se enseña aparte:
+    /// «120 gotas en camino» explica la espera; 120 gotas que luego desaparecen destruyen
+    /// la confianza.
+    func testProfileCountsOnlySettledGotes() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "perfil1")
+            let token = try await login(app, username: "perfil1")
+            let fontID = try await createFont(app, token: token, name: "Font del Perfil", lat: 41.84, long: 2.14)
+            _ = try await addComment(app, token: token, fontID: fontID, body: "Raja")
+            _ = try await ContributionLedger.sync(on: app.db)
+
+            // Recién aportado: todo en camino, nada cobrado.
+            try await app.test(.GET, "gamification/me", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let p = try res.content.decode(ContributionLedger.Profile.self)
+                XCTAssertEqual(p.gotes, 0)
+                XCTAssertGreaterThan(p.pending, 0)
+                XCTAssertTrue(p.provisional, "sin GAMIFICATION_EPOCH todo es provisional")
+            })
+
+            // Pasados los tres días, lo mismo pero ya cobrado.
+            _ = try await ContributionLedger.sync(
+                on: app.db, now: Date().addingTimeInterval(ContributionLedger.settlementWindow + 60))
+            try await app.test(.GET, "gamification/me", headers: bearer(token), afterResponse: { res in
+                let p = try res.content.decode(ContributionLedger.Profile.self)
+                XCTAssertGreaterThan(p.gotes, 0)
+                XCTAssertEqual(p.pending, 0)
+                XCTAssertEqual(p.impact.fontsYouPutOnTheMap, 1)
+                XCTAssertEqual(p.impact.fontsYouKeepFresh, 1, "su reseña es la última de esa fuente")
+            })
+        }
+    }
+
+    /// Apagar la gamificación devuelve 204, no un error: no es que falle, es que no hay
+    /// nada que enseñar. Y las aportaciones se siguen contando por debajo.
+    func testOptingOutHidesTheScoreButKeepsCounting() async throws {
+        try await withApp { app in
+            let userID = try await register(app, username: "perfil2")
+            let token = try await login(app, username: "perfil2")
+            let fontID = try await createFont(app, token: token, name: "Font Discreta", lat: 41.85, long: 2.15)
+            _ = try await addComment(app, token: token, fontID: fontID, body: "Bona")
+            _ = try await ContributionLedger.sync(on: app.db)
+
+            try await app.test(.PUT, "users/\(userID)", headers: bearer(token), beforeRequest: { req in
+                struct Patch: Content {
+                    let name: String, username: String, email: String, gamificationOptOut: Bool
+                }
+                try req.content.encode(Patch(name: "Perfil", username: "perfil2",
+                                             email: "perfil2@example.com", gamificationOptOut: true))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .ok) })
+
+            try await app.test(.GET, "gamification/me", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .noContent)
+            })
+
+            // Pero las aportaciones siguen registradas: apagar el marcador no borra nada.
+            let eventos = try await ContributionEvent.query(on: app.db)
+                .filter(\.$user.$id == userID).count()
+            XCTAssertGreaterThan(eventos, 0)
+        }
+    }
+
     /// Las gotas quedan congeladas con el valor del día en que se registraron. Si mañana
     /// se sube el baremo, el marcador de quien ya aportó no cambia de golpe.
     func testSettledGotesAreFrozenAgainstBaremoChanges() async throws {

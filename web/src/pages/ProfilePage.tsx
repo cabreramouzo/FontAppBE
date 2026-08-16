@@ -27,6 +27,7 @@ import { Skeleton } from '../components/Skeleton'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 import { canModerate } from '../lib/roles'
+import { GamificationCard } from '../components/GamificationCard'
 
 export function ProfilePage() {
   const { user, loading, logout, refresh } = useAuth()
@@ -50,7 +51,7 @@ export function ProfilePage() {
     getMyComments().then(setComments).catch(() => setComments([]))
   }, [user, loading, navigate])
 
-  async function savePrivacy(patch: { emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean }) {
+  async function savePrivacy(patch: { emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean }) {
     if (!user) return
     setSavingPrivacy(true)
     try {
@@ -61,6 +62,7 @@ export function ProfilePage() {
         emailPublic: user.emailPublic ?? false,
         namePublic: user.namePublic ?? true,
         weeklyDigest: user.weeklyDigest ?? true,
+        gamificationOptOut: user.gamificationOptOut ?? false,
         ...patch,
       })
       await refresh() // refresca el usuario para reflejar el nuevo estado
@@ -153,6 +155,27 @@ export function ProfilePage() {
       </Box>
 
       <Divider sx={{ mb: 3 }} />
+
+      {!user.gamificationOptOut && <GamificationCard />}
+
+      {/* El interruptor va DESPUÉS del marcador: "ocultar las gotas" antes de haber visto
+          ninguna no significa nada. Y queda fuera de la tarjeta a propósito, para que
+          apagarla no esconda también la forma de volver a encenderla. */}
+      <Box component="section" sx={{ mb: 3 }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={user.gamificationOptOut ?? false}
+              disabled={savingPrivacy}
+              onChange={(e) => savePrivacy({ gamificationOptOut: e.target.checked })}
+            />
+          }
+          label={t('game.optOut')}
+        />
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          {t('game.optOutHint')}
+        </Typography>
+      </Box>
 
       <Box component="section" sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{t('profile.myFavorites')}</Typography>

@@ -358,7 +358,7 @@ enum ContributionScore {
 
             scores.append(UserScore(
                 userID: uid, username: u.username, gotes: total, byKind: byKind,
-                badges: badges(for: mias, regions: regiones, fontsByID: fontsByID, comments: comments),
+                badges: badges(for: mias, regions: regiones, fontsByID: fontsByID),
                 regions: regiones, level: level(for: total)
             ))
         }
@@ -378,43 +378,63 @@ enum ContributionScore {
 
     // MARK: - Insignias
 
-    private static func badges(for mias: [Contribution], regions: Set<String>,
-                               fontsByID: [UUID: Font], comments: [FontComment]) -> [BadgeAward] {
-        func tier(_ n: Int, _ t: [Int]) -> String? {
-            if n >= t[2] { return "oro" }
-            if n >= t[1] { return "plata" }
-            if n >= t[0] { return "bronce" }
-            return nil
-        }
-        func award(_ familia: String, _ n: Int, _ t: [Int]) -> BadgeAward? {
-            guard let grado = tier(n, t) else { return nil }
-            let siguiente = t.first { $0 > n } ?? t[2]
-            return BadgeAward(family: familia, tier: grado, progress: n, threshold: siguiente)
-        }
+    /// Lo que hace falta contar para repartir insignias. Existe como tipo aparte porque
+    /// las insignias se calculan en dos sitios —sobre el cálculo en vivo (fase 1) y sobre
+    /// el registro ya liquidado (fase 3)— y tener dos copias del criterio sería tener dos
+    /// criterios que se separan a la primera de cambio.
+    struct BadgeTally: Sendable {
+        var fontsCreated = 0
+        var firstPhotos = 0
+        /// Actualizaciones sobre fuentes olvidadas 6 meses o más (base ≥ 50 en la curva).
+        var sentinelUpdates = 0
+        var mapFixes = 0
+        /// Reseñas hechas entre junio y septiembre, cuando las fuentes se secan.
+        var summerReviews = 0
+        var regions: Set<String> = []
+        /// Primera reseña de una fuente importada: convierte un punto en una fuente vista.
+        var pioneer = false
+    }
 
-        let creadas = mias.filter { $0.kind == .fontCreated }.count
-        let primerasFotos = mias.filter { $0.kind == .firstPhoto }.count
-        let centinela = mias.filter { $0.kind == .updateReview && $0.base >= 50 }.count
-        let cartografia = mias.filter { $0.kind == .relocation || $0.kind == .fieldCompleted }.count
-        let estiaje = mias.filter {
-            guard $0.kind == .firstReview || $0.kind == .updateReview else { return false }
-            let mes = Calendar(identifier: .gregorian).component(.month, from: $0.at)
-            return (6...9).contains(mes)
-        }.count
+    static func badges(for t: BadgeTally) -> [BadgeAward] {
+        func award(_ familia: String, _ n: Int, _ u: [Int]) -> BadgeAward? {
+            let grado: String
+            if n >= u[2] { grado = "oro" }
+            else if n >= u[1] { grado = "plata" }
+            else if n >= u[0] { grado = "bronce" }
+            else { return nil }
+            return BadgeAward(family: familia, tier: grado, progress: n, threshold: u.first { $0 > n } ?? u[2])
+        }
 
         var out: [BadgeAward] = []
-        out += [award("Descubridora", creadas, [10, 50, 200])].compactMap { $0 }
-        out += [award("Primera luz", primerasFotos, [5, 25, 100])].compactMap { $0 }
-        out += [award("Centinela", centinela, [15, 60, 250])].compactMap { $0 }
-        out += [award("Cartógrafa", cartografia, [10, 40, 150])].compactMap { $0 }
-        out += [award("Comarcas", regions.count, [3, 8, 20])].compactMap { $0 }
-        out += [award("Estiaje", estiaje, [10, 40, 120])].compactMap { $0 }
-
-        // Pionera: primera reseña de una fuente importada (sin creador). Es la insignia
-        // que mide exactamente lo que le falta al mapa.
-        let pionera = mias.contains { $0.kind == .firstReview && fontsByID[$0.fontID]?.$creator.id == nil }
-        if pionera { out.append(BadgeAward(family: "Pionera", tier: "única", progress: 1, threshold: 1)) }
-
+        out += [award("Descubridora", t.fontsCreated, [10, 50, 200])].compactMap { $0 }
+        out += [award("Primera luz", t.firstPhotos, [5, 25, 100])].compactMap { $0 }
+        out += [award("Centinela", t.sentinelUpdates, [15, 60, 250])].compactMap { $0 }
+        out += [award("Cartógrafa", t.mapFixes, [10, 40, 150])].compactMap { $0 }
+        out += [award("Comarcas", t.regions.count, [3, 8, 20])].compactMap { $0 }
+        out += [award("Estiaje", t.summerReviews, [10, 40, 120])].compactMap { $0 }
+        if t.pioneer { out.append(BadgeAward(family: "Pionera", tier: "única", progress: 1, threshold: 1)) }
         return out
+    }
+
+    static func isSummer(_ d: Date) -> Bool {
+        (6...9).contains(Calendar(identifier: .gregorian).component(.month, from: d))
+    }
+
+    private static func badges(for mias: [Contribution], regions: Set<String>,
+                               fontsByID: [UUID: Font]) -> [BadgeAward] {
+        var t = BadgeTally()
+        t.regions = regions
+        for c in mias {
+            switch c.kind {
+            case .fontCreated: t.fontsCreated += 1
+            case .firstPhoto: t.firstPhotos += 1
+            case .relocation, .fieldCompleted: t.mapFixes += 1
+            case .updateReview where c.base >= 50: t.sentinelUpdates += 1
+            default: break
+            }
+            if (c.kind == .firstReview || c.kind == .updateReview) && isSummer(c.at) { t.summerReviews += 1 }
+            if c.kind == .firstReview && fontsByID[c.fontID]?.$creator.id == nil { t.pioneer = true }
+        }
+        return badges(for: t)
     }
 }

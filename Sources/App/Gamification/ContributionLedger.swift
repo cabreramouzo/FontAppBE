@@ -283,6 +283,110 @@ enum ContributionLedger {
             pending: eventos.filter { $0.status == .pending }.reduce(0) { $0 + $1.gotes })
     }
 
+    /// Lo que ve una persona en su perfil. Fase 3.
+    struct Profile: Content {
+        struct Badge: Content { let family: String, tier: String; let progress: Int, threshold: Int }
+        struct KindTotal: Content { let kind: String, label: String; let count: Int, gotes: Int }
+        /// Las tres cifras de impacto. Son deliberadamente **sobre el mapa y no sobre la
+        /// persona**: «12 fuentes tienen foto gracias a ti» dice algo verdadero del mundo,
+        /// «llevas 1 240 puntos» solo dice algo del contador.
+        struct Impact: Content {
+            let fontsWithPhotoThanksToYou: Int
+            let fontsYouKeepFresh: Int
+            let fontsYouPutOnTheMap: Int
+        }
+        let gotes: Int
+        let pending: Int
+        let level: String
+        let nextLevel: String?
+        let gotesToNextLevel: Int?
+        let badges: [Badge]
+        let byKind: [KindTotal]
+        let impact: Impact
+        /// Si los puntos todavía se pueden recalcular. Se dice en la interfaz: prometer
+        /// que no cambian y que cambien es peor que avisar.
+        let provisional: Bool
+    }
+
+    /// Cuántas fuentes mantiene al día esta persona: aquellas cuya reseña más reciente es
+    /// suya y no ha caducado. Es la cifra que mejor describe lo que hace un colaborador
+    /// habitual, y no se puede inflar reseñando mucho la misma tarde.
+    static let freshnessHorizon: TimeInterval = 180 * 86_400
+
+    static func profile(for userID: UUID, on db: any Database, now: Date = Date()) async throws -> Profile {
+        let eventos = try await ContributionEvent.query(on: db)
+            .filter(\.$user.$id == userID)
+            .filter(\.$status != .void)
+            .all()
+        let liquidados = eventos.filter { $0.status == .settled }
+        let gotes = liquidados.reduce(0) { $0 + $1.gotes }
+        let pending = eventos.filter { $0.status == .pending }.reduce(0) { $0 + $1.gotes }
+
+        // Insignias y desglose, solo sobre lo cobrado: enseñar una insignia que luego se
+        // retira porque la aportación se anuló es peor que no enseñarla.
+        var tally = ContributionScore.BadgeTally()
+        var porTipo: [String: (count: Int, gotes: Int)] = [:]
+        let fontIDs = Array(Set(liquidados.compactMap { $0.$font.id }))
+        let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: db).filter(\.$id ~~ fontIDs).all()
+        let fontsByID = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f) } })
+
+        for e in liquidados {
+            let previo = porTipo[e.kind] ?? (0, 0)
+            porTipo[e.kind] = (previo.count + 1, previo.gotes + e.gotes)
+            if let r = e.$font.id.flatMap({ fontsByID[$0]?.region }) { tally.regions.insert(r) }
+            guard let kind = ContributionScore.Kind(rawValue: e.kind) else { continue }
+            switch kind {
+            case .fontCreated: tally.fontsCreated += 1
+            case .firstPhoto: tally.firstPhotos += 1
+            case .relocation, .fieldCompleted: tally.mapFixes += 1
+            case .updateReview where e.base >= 50: tally.sentinelUpdates += 1
+            default: break
+            }
+            if kind == .firstReview || kind == .updateReview {
+                if ContributionScore.isSummer(e.occurredAt) { tally.summerReviews += 1 }
+                if kind == .firstReview, let f = e.$font.id.flatMap({ fontsByID[$0] }), f.$creator.id == nil {
+                    tally.pioneer = true
+                }
+            }
+        }
+
+        // Fuentes que mantiene al día: su reseña es la última de esa fuente y es reciente.
+        var alDia = 0
+        if !fontIDs.isEmpty {
+            let comentarios = try await FontComment.query(on: db).filter(\.$font.$id ~~ fontIDs).all()
+            var ultimaPorFuente: [UUID: FontComment] = [:]
+            for c in comentarios {
+                let actual = ultimaPorFuente[c.$font.id]
+                if actual == nil || (c.createdAt ?? .distantPast) > (actual?.createdAt ?? .distantPast) {
+                    ultimaPorFuente[c.$font.id] = c
+                }
+            }
+            alDia = ultimaPorFuente.values.filter {
+                $0.$user.id == userID && now.timeIntervalSince($0.createdAt ?? .distantPast) <= freshnessHorizon
+            }.count
+        }
+
+        let nivel = ContributionScore.level(for: gotes)
+        let siguiente = ContributionScore.levels.last { $0.from > gotes }
+
+        return Profile(
+            gotes: gotes,
+            pending: pending,
+            level: nivel,
+            nextLevel: siguiente?.name,
+            gotesToNextLevel: siguiente.map { $0.from - gotes },
+            badges: ContributionScore.badges(for: tally)
+                .map { .init(family: $0.family, tier: $0.tier, progress: $0.progress, threshold: $0.threshold) },
+            byKind: ContributionScore.Kind.allCases.compactMap { k in
+                guard let d = porTipo[k.rawValue], d.count > 0 else { return nil }
+                return .init(kind: k.rawValue, label: k.label, count: d.count, gotes: d.gotes)
+            },
+            impact: .init(fontsWithPhotoThanksToYou: tally.firstPhotos,
+                          fontsYouKeepFresh: alDia,
+                          fontsYouPutOnTheMap: tally.fontsCreated),
+            provisional: epoch.map { now < $0 } ?? true)
+    }
+
     /// Marcador de todos, de más a menos. `since` acota a un periodo (los rankings del
     /// documento son mensuales a propósito: uno histórico lo gana para siempre quien llegó
     /// primero y nadie más juega).

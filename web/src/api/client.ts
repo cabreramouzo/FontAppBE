@@ -1,4 +1,4 @@
-import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, InterestStats, LoginResponse, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource } from './types'
+import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, GamificationProfile, InterestStats, LoginResponse, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -125,7 +125,7 @@ export async function setFontPhotoFromComment(fontID: string, commentID: string)
 }
 
 // Actualiza el perfil propio (self-only). Manda los campos actuales + los cambios.
-export async function updateProfile(id: string, data: { name: string; username: string; email: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean }): Promise<UserResponse> {
+export async function updateProfile(id: string, data: { name: string; username: string; email: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean }): Promise<UserResponse> {
   return apiFetch<UserResponse>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 }
 
@@ -359,4 +359,13 @@ export async function getUserFonts(id: string): Promise<Font[]> {
 
 export async function getUserComments(id: string): Promise<MyComment[]> {
   return apiFetch<MyComment[]>(`/users/${id}/comments`)
+}
+
+/**
+ * Marcador de gamificación. Devuelve `null` si el usuario la tiene apagada — el backend
+ * responde 204 y no es un error: es que no hay nada que enseñar.
+ */
+export async function getGamification(): Promise<GamificationProfile | null> {
+  // 204 (apagada) llega como `undefined` desde apiFetch; se normaliza a null.
+  return (await apiFetch<GamificationProfile | undefined>('/gamification/me')) ?? null
 }

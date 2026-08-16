@@ -271,6 +271,7 @@ struct UserController: RouteCollection {
         if let emailPublic = dto.emailPublic { user.emailPublic = emailPublic }
         if let namePublic = dto.namePublic { user.namePublic = namePublic }
         if let weeklyDigest = dto.weeklyDigest { user.weeklyDigest = weeklyDigest }
+        if let optOut = dto.gamificationOptOut { user.gamificationOptOut = optOut }
         if let password = dto.password {
             user.passwordHash = try req.password.hash(password)
         }
@@ -431,6 +432,8 @@ struct UpdateUserDTO: Content {
     let namePublic: Bool?
     /// Resumen semanal por correo. Opcional: si no viene, la preferencia no se toca.
     var weeklyDigest: Bool? = nil
+    /// Apagar la gamificación. Opcional, igual que la anterior.
+    var gamificationOptOut: Bool? = nil
 }
 
 extension UpdateUserDTO: Validatable {

@@ -29,6 +29,8 @@ export interface UserResponse {
   namePublic?: boolean | null
   /** Resumen semanal por correo (solo en respuestas propias). */
   weeklyDigest?: boolean | null
+  /** Si ha apagado la gamificación (solo en respuestas propias). */
+  gamificationOptOut?: boolean | null
   anonymized?: boolean
   createdAt?: string | null
 }
@@ -175,4 +177,23 @@ export interface Feedback {
   country: string | null
   email: string | null
   createdAt: string | null
+}
+
+/** Marcador de gamificación del usuario autenticado (`GET /gamification/me`). */
+export interface GamificationProfile {
+  gotes: number
+  /** Gotas en camino: aportadas pero aún dentro de la ventana de 72 h. */
+  pending: number
+  level: string
+  nextLevel?: string | null
+  gotesToNextLevel?: number | null
+  badges: { family: string; tier: string; progress: number; threshold: number }[]
+  byKind: { kind: string; label: string; count: number; gotes: number }[]
+  impact: {
+    fontsWithPhotoThanksToYou: number
+    fontsYouKeepFresh: number
+    fontsYouPutOnTheMap: number
+  }
+  /** Los puntos todavía se pueden recalcular; se avisa en la interfaz. */
+  provisional: boolean
 }

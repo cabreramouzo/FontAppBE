@@ -305,9 +305,10 @@ demás: ¿cuánta gente tendría algo el día 1?
 liquidada, anulada— y la ventana de 72 horas. Fuente única de verdad; los puntos son la suma
 de lo liquidado. Ver el apéndice de abajo.
 
-**Fase 3 — Visible en el perfil, y nada más.** Gotas, nivel, insignias e impacto personal en
-tu página. Sin rankings todavía. Una semana así enseña si la gente lo entiende sin
-explicaciones. Aquí entra el interruptor para ocultarlo todo.
+**Fase 3 — Visible en el perfil, y nada más.** ✅ *Implementada:* `GET /gamification/me` y la
+tarjeta en `/me`. Gotas, nivel, insignias e impacto personal. Sin rankings todavía. Una
+semana así enseña si la gente lo entiende sin explicaciones. El interruptor para ocultarlo
+está debajo de la tarjeta.
 
 **Fase 4 — Frescura en la ficha y misiones en el mapa.** El indicador de frescura y la ruta
 ciega. La parte que cambia el comportamiento. La frescura es útil aunque la gamificación se
@@ -461,6 +462,44 @@ borrar una reseña saldría gratis.
 swift run App gamification-sync --rescore          # pregunta antes
 swift run App gamification-sync --rescore --yes
 ```
+
+---
+
+## Apéndice: el perfil (fase 3)
+
+`GET /gamification/me` (token propio) y la tarjeta en `/me`. No hay endpoint para ver los
+puntos de otra persona: mientras no haya rankings no hace falta, y no publicar lo que no
+hace falta evita decidir hoy cuánto de esto es público, que es una de las decisiones
+pendientes.
+
+**El orden de lectura está elegido.** Primero el impacto sobre el mapa, después los puntos.
+«17 fuentes tienen foto gracias a ti» dice algo verdadero del mundo; «11.124 gotas» solo
+dice algo del contador. Quien no quiera jugar se queda con lo primero y no ha perdido nada.
+
+Las tres cifras de impacto son sobre el mapa, no sobre la persona: fuentes con foto gracias
+a ti, fuentes que mantienes al día (aquellas cuya reseña más reciente es tuya y tiene menos
+de 6 meses) y fuentes que has puesto en el mapa. La segunda es la que mejor describe a un
+colaborador habitual, y no se puede inflar reseñando mucho la misma tarde.
+
+**No se pinta nada** si el usuario la tiene apagada (204) ni si todavía no ha aportado nada:
+un marcador a cero el primer día no motiva, avisa de que vas último.
+
+**Solo cuenta lo liquidado.** Lo pendiente sale aparte, como «N en camino» con su
+explicación. Enseñar una insignia que luego se retira porque la aportación se anuló es peor
+que no enseñarla.
+
+Mientras no haya fecha de corte, la tarjeta avisa de que las cifras pueden cambiar.
+
+### El interruptor
+
+`users.gamification_opt_out`, apagado por defecto —visible— porque una función que nadie
+descubre no sirve de nada. Quien lo enciende deja de ver marcador, nivel e insignias, pero
+**sus aportaciones se siguen contando** y seguirá sumando a las barras colectivas por
+comarca, que son del territorio y no de nadie.
+
+Vive **debajo** de la tarjeta y fuera de ella: «ocultar las gotas» antes de haber visto
+ninguna no significa nada, y si estuviera dentro, apagarlo escondería también la forma de
+volver a encenderlo.
 
 ### Por qué la sincronización no duplica
 
@@ -746,9 +785,9 @@ tindria alguna cosa el dia 1?
 liquidada, anul·lada— i la finestra de 72 hores. Font única de veritat; els punts són la suma
 del que s'ha liquidat.
 
-**Fase 3 — Visible al perfil, i prou.** Gotes, nivell, insignies i impacte personal a la teva
-pàgina. Sense rànquings encara. Una setmana així ensenya si la gent ho entén sense
-explicacions. Aquí entra l'interruptor per amagar-ho tot.
+**Fase 3 — Visible al perfil, i prou.** ✅ *Implementada:* `GET /gamification/me` i la
+targeta a `/me`. Gotes, nivell, insignies i impacte personal. Sense rànquings encara.
+L'interruptor per amagar-ho és sota la targeta.
 
 **Fase 4 — Frescor a la fitxa i missions al mapa.** L'indicador de frescor i la ruta cega. La
 part que canvia el comportament. La frescor és útil encara que la gamificació es cancel·li: es

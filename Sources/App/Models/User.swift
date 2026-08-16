@@ -31,6 +31,8 @@ final class User: Model, @unchecked Sendable {
     // Preferencia de correo: resumen semanal de actividad (se puede desactivar en el
     // perfil o desde el enlace de baja del propio correo).
     @Field(key: "weekly_digest") var weeklyDigest: Bool
+    /// Si el usuario prefiere no ver puntos ni niveles. No deja de contar sus aportaciones.
+    @Field(key: "gamification_opt_out") var gamificationOptOut: Bool
     // Idioma con el que se registró, para los correos que no nacen de una petición suya.
     @OptionalField(key: "lang") var lang: String?
     // Código del cartel por el que llegó (`?p=castellcir`), si venía con uno.
@@ -42,7 +44,8 @@ final class User: Model, @unchecked Sendable {
     init(id: UUID? = nil, name: String, username: String, email: String? = nil, passwordHash: String, role: UserRole = .user,
          emailPublic: Bool = false, namePublic: Bool = true,
          signupCountry: String? = nil, signupRegion: String? = nil, signupCity: String? = nil,
-         weeklyDigest: Bool = true, lang: String? = nil, signupSource: String? = nil) {
+         weeklyDigest: Bool = true, lang: String? = nil, signupSource: String? = nil,
+         gamificationOptOut: Bool = false) {
         self.id = id
         self.name = name
         self.username = username
@@ -55,6 +58,7 @@ final class User: Model, @unchecked Sendable {
         self.signupRegion = signupRegion
         self.signupCity = signupCity
         self.weeklyDigest = weeklyDigest
+        self.gamificationOptOut = gamificationOptOut
         self.lang = lang
         self.signupSource = signupSource
     }
@@ -106,6 +110,8 @@ struct UserResponse: Content {
     let namePublic: Bool?
     /// Resumen semanal por correo (solo en respuestas propias).
     let weeklyDigest: Bool?
+    /// Si ha apagado la gamificación (solo en respuestas propias).
+    let gamificationOptOut: Bool?
     let anonymized: Bool
     let createdAt: Date?
 
@@ -123,6 +129,7 @@ struct UserResponse: Content {
         self.emailPublic = includeEmail ? user.emailPublic : nil
         self.namePublic = includeEmail ? user.namePublic : nil
         self.weeklyDigest = includeEmail ? user.weeklyDigest : nil
+        self.gamificationOptOut = includeEmail ? user.gamificationOptOut : nil
         self.anonymized = user.anonymizedAt != nil
         self.createdAt = user.createdAt
     }
