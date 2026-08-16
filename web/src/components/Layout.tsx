@@ -51,37 +51,39 @@ export function Layout({ children }: { children: ReactNode }) {
       {rol && <StaffStripe role={rol} />}
       <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default', pt: 'env(safe-area-inset-top)' }}>
         <Toolbar sx={{ gap: 1, pl: 'max(16px, env(safe-area-inset-left))', pr: 'max(16px, env(safe-area-inset-right))' }}>
-          {/* En móvil el distintivo baja bajo el título: "Propietario" es largo y en una
-              sola fila se comía el sitio de los demás botones. En pantallas anchas cabe
-              todo al lado. */}
-          <Box
-            sx={{
-              flexGrow: 1,
-              minWidth: 0,
-              display: 'flex',
-              flexDirection: rol ? { xs: 'column', sm: 'row' } : 'row',
-              alignItems: rol ? { xs: 'flex-start', sm: 'center' } : 'center',
-              gap: rol ? { xs: 0.25, sm: 0.75 } : 0.75,
-            }}
-          >
+          {/* El nombre arriba y los distintivos DEBAJO, como un subíndice. En una sola
+              fila, "FontApp" + beta + el rol empujaban los botones de la derecha hasta
+              solaparse; apilados ocupan la mitad de ancho y la cabecera respira. */}
+          <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
             <Typography
               component={RouterLink}
               to="/"
               variant="h6"
-              sx={{ fontWeight: 800, color: 'primary.main', textDecoration: 'none', whiteSpace: 'nowrap' }}
+              sx={{ fontWeight: 800, color: 'primary.main', textDecoration: 'none', whiteSpace: 'nowrap', lineHeight: 1.1 }}
             >
               💧 FontApp
             </Typography>
-            <Chip
-              label="beta"
-              size="small"
-              color="warning"
-              variant="outlined"
-              sx={{ height: 20, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', '& .MuiChip-label': { px: 0.75 }, display: rol ? { xs: 'none', sm: 'inline-flex' } : 'inline-flex' }}
-            />
-            {/* El rol, junto al nombre de la app: es lo primero que se lee. Lleva el
-                aviso de novedades del panel, que antes era un botón aparte. */}
-            {rol && <RoleChip role={rol} count={flagCount + newUsers} />}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
+              <Chip
+                label="beta"
+                size="small"
+                color="warning"
+                variant="outlined"
+                sx={{
+                  height: 16,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                  '& .MuiChip-label': { px: 0.5 },
+                  // Con rol, en móvil sobra: "beta" y "PROPIETARIO" seguidos empujan el
+                  // contador rojo hasta encima del botón de novedades. Manda el rol,
+                  // que es el que avisa de con qué cuenta estás actuando.
+                  display: rol ? { xs: 'none', sm: 'inline-flex' } : 'inline-flex',
+                }}
+              />
+              {rol && <RoleChip role={rol} count={flagCount + newUsers} />}
+            </Box>
           </Box>
           {/* Novedades vive aquí y no sobre el mapa: los botones del mapa hacen cosas
               SOBRE el mapa (filtran, cambian la capa, te centran) y este navega a otra
