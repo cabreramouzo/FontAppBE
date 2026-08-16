@@ -19,8 +19,8 @@ import { useI18n } from '../i18n/I18nContext'
  * oscuro — por debajo del 4,5 que pide la WCAG para texto normal. Dos juegos, no uno.
  */
 const TIER_COLOR: Record<'light' | 'dark', Record<string, string>> = {
-  light: { bronce: '#8A5A38', plata: '#5E6B77', oro: '#8F6D10', única: '#3F6E5D' },
-  dark: { bronce: '#D6A175', plata: '#B3BFCA', oro: '#E3BE58', única: '#84C4AC' },
+  light: { bronze: '#8A5A38', silver: '#5E6B77', gold: '#8F6D10', unique: '#3F6E5D' },
+  dark: { bronze: '#D6A175', silver: '#B3BFCA', gold: '#E3BE58', unique: '#84C4AC' },
 }
 
 /**
@@ -126,7 +126,7 @@ export function GamificationCard() {
           {data.badges.map((b) => (
             <Tooltip key={b.family} title={t('game.badgeProgress', { n: String(b.progress), m: String(b.threshold) })}>
               <Chip
-                label={`${b.family} · ${b.tier}`}
+                label={`${t(`game.badge.${b.family}`)} · ${t(`game.tier.${b.tier}`)}`}
                 size="small"
                 sx={{
                   fontWeight: 600,

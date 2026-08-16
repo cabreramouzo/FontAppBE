@@ -124,9 +124,29 @@ enum ContributionScore {
         var gotes: Int { Int((Double(base) * multiplier).rounded()) }
     }
 
+    /// Grado de una insignia. Viaja como clave, igual que el nivel; el rótulo lo pone el
+    /// navegador. `name` es solo para la salida de los comandos.
+    enum Tier: String, Sendable {
+        case bronze, silver, gold
+        /// Las que no tienen grados: se consiguen una vez y ya está.
+        case unique
+
+        var name: String {
+            switch self {
+            case .bronze: return "bronce"
+            case .silver: return "plata"
+            case .gold:   return "oro"
+            case .unique: return "única"
+            }
+        }
+    }
+
     struct BadgeAward: Sendable {
-        let family: String
-        let tier: String        // bronce · plata · oro, o "única"
+        /// Clave estable (`firstLight`), lo que se manda al cliente.
+        let key: String
+        /// Castellano, para la consola. La interfaz NO usa esto.
+        let name: String
+        let tier: Tier
         let progress: Int
         let threshold: Int
     }
@@ -443,26 +463,54 @@ enum ContributionScore {
         var regions: Set<String> = []
         /// Primera reseña de una fuente importada: convierte un punto en una fuente vista.
         var pioneer = false
+        /// Fuentes que esta persona ha reseñado en las **cuatro** estaciones.
+        ///
+        /// Es la única insignia que no se puede acelerar: hacen falta doce meses reales,
+        /// pase lo que pase. Y premia exactamente lo que la curva de frescura quiere —
+        /// volver a la misma fuente cuando ha pasado tiempo— en vez de premiar el volumen.
+        var fourSeasonFonts = 0
+    }
+
+    /// Estación meteorológica (0 invierno · 1 primavera · 2 verano · 3 otoño). Se usa el
+    /// corte meteorológico y no el astronómico porque los equinoccios se mueven de año en
+    /// año y aquí lo que importa es que una reseña de marzo y otra de junio cuenten como
+    /// dos estaciones distintas, no clavar el día exacto.
+    static func season(_ d: Date) -> Int {
+        let mes = Calendar(identifier: .gregorian).component(.month, from: d)
+        return (mes % 12) / 3
+    }
+
+    /// Cuántas fuentes tienen las cuatro estaciones cubiertas por esta persona.
+    static func fourSeasonFonts(from visitas: [(fontID: UUID, at: Date)]) -> Int {
+        var porFuente: [UUID: Set<Int>] = [:]
+        for v in visitas { porFuente[v.fontID, default: []].insert(season(v.at)) }
+        return porFuente.values.count { $0.count == 4 }
     }
 
     static func badges(for t: BadgeTally) -> [BadgeAward] {
-        func award(_ familia: String, _ n: Int, _ u: [Int]) -> BadgeAward? {
-            let grado: String
-            if n >= u[2] { grado = "oro" }
-            else if n >= u[1] { grado = "plata" }
-            else if n >= u[0] { grado = "bronce" }
+        func award(_ clave: String, _ nombre: String, _ n: Int, _ u: [Int]) -> BadgeAward? {
+            let grado: Tier
+            if n >= u[2] { grado = .gold }
+            else if n >= u[1] { grado = .silver }
+            else if n >= u[0] { grado = .bronze }
             else { return nil }
-            return BadgeAward(family: familia, tier: grado, progress: n, threshold: u.first { $0 > n } ?? u[2])
+            return BadgeAward(key: clave, name: nombre, tier: grado,
+                              progress: n, threshold: u.first { $0 > n } ?? u[2])
         }
 
         var out: [BadgeAward] = []
-        out += [award("Descubridora", t.fontsCreated, [10, 50, 200])].compactMap { $0 }
-        out += [award("Primera luz", t.firstPhotos, [5, 25, 100])].compactMap { $0 }
-        out += [award("Centinela", t.sentinelUpdates, [15, 60, 250])].compactMap { $0 }
-        out += [award("Cartógrafa", t.mapFixes, [10, 40, 150])].compactMap { $0 }
-        out += [award("Comarcas", t.regions.count, [3, 8, 20])].compactMap { $0 }
-        out += [award("Estiaje", t.summerReviews, [10, 40, 120])].compactMap { $0 }
-        if t.pioneer { out.append(BadgeAward(family: "Pionera", tier: "única", progress: 1, threshold: 1)) }
+        out += [award("discoverer", "Descubridora", t.fontsCreated, [10, 50, 200])].compactMap { $0 }
+        out += [award("firstLight", "Primera luz", t.firstPhotos, [5, 25, 100])].compactMap { $0 }
+        out += [award("sentinel", "Centinela", t.sentinelUpdates, [15, 60, 250])].compactMap { $0 }
+        out += [award("cartographer", "Cartógrafa", t.mapFixes, [10, 40, 150])].compactMap { $0 }
+        out += [award("counties", "Comarcas", t.regions.count, [3, 8, 20])].compactMap { $0 }
+        out += [award("drySeason", "Estiaje", t.summerReviews, [10, 40, 120])].compactMap { $0 }
+        // Umbrales bajos porque el precio ya lo pone el calendario: la de bronce cuesta
+        // un año entero de volver a la misma fuente, y no hay forma de acortarlo.
+        out += [award("fourSeasons", "Las cuatro estaciones", t.fourSeasonFonts, [1, 3, 10])].compactMap { $0 }
+        if t.pioneer {
+            out.append(BadgeAward(key: "pioneer", name: "Pionera", tier: .unique, progress: 1, threshold: 1))
+        }
         return out
     }
 
@@ -485,6 +533,9 @@ enum ContributionScore {
             if (c.kind == .firstReview || c.kind == .updateReview) && isSummer(c.at) { t.summerReviews += 1 }
             if c.kind == .firstReview && fontsByID[c.fontID]?.$creator.id == nil { t.pioneer = true }
         }
+        t.fourSeasonFonts = fourSeasonFonts(from: mias
+            .filter { $0.kind == .firstReview || $0.kind == .updateReview }
+            .map { (fontID: $0.fontID, at: $0.at) })
         return badges(for: t)
     }
 }

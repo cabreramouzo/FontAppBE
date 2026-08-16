@@ -52,7 +52,7 @@ struct ScoreContributionsCommand: AsyncCommand {
         for (i, u) in informe.users.prefix(signature.top ?? 25).enumerated() {
             let insignias = u.badges.isEmpty
                 ? "—"
-                : u.badges.map { "\($0.family) (\($0.tier))" }.joined(separator: ", ")
+                : u.badges.map { "\($0.name) (\($0.tier.name))" }.joined(separator: ", ")
             console.print(fila("\(i + 1)", u.username, "\(u.gotes)", u.level.name, insignias))
         }
 
@@ -95,7 +95,7 @@ struct ScoreContributionsCommand: AsyncCommand {
             console.print("  ninguna todavía")
         } else {
             for b in u.badges {
-                console.print("  \(b.family) — \(b.tier)  (\(b.progress) / \(b.threshold) para el siguiente)")
+                console.print("  \(b.name) — \(b.tier.name)  (\(b.progress) / \(b.threshold) para el siguiente)")
             }
         }
 
@@ -138,7 +138,7 @@ struct ScoreContributionsCommand: AsyncCommand {
 
         console.print("\n  a cuánta gente le tocaría cada insignia:")
         var cuenta: [String: Int] = [:]
-        for u in informe.users { for b in u.badges { cuenta[b.family, default: 0] += 1 } }
+        for u in informe.users { for b in u.badges { cuenta[b.name, default: 0] += 1 } }
         if cuenta.isEmpty {
             console.print("    a nadie — los umbrales están altos para los datos que hay")
         } else {
@@ -215,7 +215,7 @@ struct ScoreContributionsCommand: AsyncCommand {
         let salida = Salida(
             users: informe.users.map { u in
                 Salida.U(username: u.username, gotes: u.gotes, level: u.level.key,
-                         badges: u.badges.map { "\($0.family):\($0.tier)" },
+                         badges: u.badges.map { "\($0.key):\($0.tier.rawValue)" },
                          regions: u.regions.sorted(),
                          byKind: Dictionary(uniqueKeysWithValues: u.byKind.map { ($0.key.rawValue, $0.value.gotes) }))
             },

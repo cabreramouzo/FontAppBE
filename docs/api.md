@@ -49,7 +49,7 @@ Login con credenciales inválidas → **401**.
 
 // FontSummary  (Font + último estado; lo devuelven los listados del mapa)
 { ...campos de Font,
-  "lastWaterStatus": "flowing|trickle|dry|unknown|null",
+  "lastWaterStatus": "flowing|trickle|dry|broken|gone|unknown|null",
   "lastUpdate": "iso8601|null" }
 
 // UserResponse  (nunca incluye passwordHash; `email` solo en respuestas propias
@@ -65,11 +65,13 @@ Login con credenciales inválidas → **401**.
 // CommentResponse  (= actualización de estado / reseña)
 { "id": "uuid", "fontID": "uuid", "userID": "uuid|null", "username": "string|null",
   "body": "string", "rating": "1-5|null",
-  "waterStatus": "flowing|trickle|dry|unknown|null",
+  "waterStatus": "flowing|trickle|dry|broken|gone|unknown|null",
   "image": "url|null", "createdAt": "iso8601" }
 ```
 
-`waterStatus` (estado del agua): `flowing` (sale agua), `trickle` (poca), `dry` (seca), `unknown`.
+`waterStatus` (estado): `flowing` (sale agua), `trickle` (poca), `dry` (seca), `broken`
+(estropeada), `gone` (ya no está), `unknown`. Los dos últimos hablan de la fuente y no
+del agua; `gone` es un **testimonio**, no una decisión: no retira la fuente del mapa.
 
 ## Users
 

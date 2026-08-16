@@ -4,7 +4,16 @@ import Vapor
 // Actualizaciones de estado / reseñas sobre una fuente — ver definitions.md (comments).
 // Cada una lleva texto y, opcionalmente, estrellas, estado del agua y foto.
 struct FontCommentController: RouteCollection {
-    static let waterStatuses = ["flowing", "trickle", "dry", "unknown"]
+    /// Estados que puede dejar una reseña.
+    ///
+    /// `broken` y `gone` describen la fuente, no el agua: un caño roto o un pilón que ya
+    /// no está son la información más útil que puede traer alguien que ha ido hasta allí,
+    /// y hasta ahora solo cabían en el texto libre, donde no las lee ni el mapa ni nadie.
+    ///
+    /// Ojo: `gone` es un **testimonio**, no una decisión. Que alguien diga que la fuente
+    /// ya no existe no la borra del mapa — retirarla sigue siendo una capacidad de nivel,
+    /// y esto es justamente la prueba en la que apoyarla.
+    static let waterStatuses = ["flowing", "trickle", "dry", "broken", "gone", "unknown"]
 
     func boot(routes: RoutesBuilder) throws {
         let comments = routes.grouped("fonts", ":fontID", "comments")
@@ -186,7 +195,11 @@ extension CreateCommentDTO: Validatable {
         // Opcional: se puede publicar solo un estado. Si viene, máx 2000 chars.
         validations.add("body", as: String.self, is: .count(1...2000), required: false)
         validations.add("rating", as: Int.self, is: .range(1...5), required: false)
-        validations.add("waterStatus", as: String.self, is: .in("flowing", "trickle", "dry", "unknown"), required: false)
+        // Desde la constante y no repitiendo la lista: eran dos listas que podían
+        // separarse en silencio, y de hecho el estado nuevo habría pasado la validación
+        // en un sitio y no en el otro.
+        validations.add("waterStatus", as: String.self,
+                        is: .in(FontCommentController.waterStatuses), required: false)
     }
 }
 

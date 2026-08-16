@@ -285,6 +285,8 @@ enum ContributionLedger {
 
     /// Lo que ve una persona en su perfil. Fase 3.
     struct Profile: Content {
+        /// `family` y `tier` son **claves** (`firstLight`, `bronze`), no rótulos: los
+        /// traduce el navegador, igual que el nivel.
         struct Badge: Content { let family: String, tier: String; let progress: Int, threshold: Int }
         struct KindTotal: Content { let kind: String, label: String; let count: Int, gotes: Int }
         /// Las tres cifras de impacto. Son deliberadamente **sobre el mapa y no sobre la
@@ -353,6 +355,17 @@ enum ContributionLedger {
             }
         }
 
+        // Las cuatro estaciones. Sobre `occurredAt` y no sobre la fecha de liquidación:
+        // una reseña del 20 de marzo liquidada el 23 sigue siendo de primavera, y en los
+        // cambios de estación las dos fechas caen a lados distintos.
+        tally.fourSeasonFonts = ContributionScore.fourSeasonFonts(
+            from: liquidados.compactMap { e in
+                guard let kind = ContributionScore.Kind(rawValue: e.kind),
+                      kind == .firstReview || kind == .updateReview,
+                      let fid = e.$font.id else { return nil }
+                return (fontID: fid, at: e.occurredAt)
+            })
+
         // Fuentes que mantiene al día: su reseña es la última de esa fuente y es reciente.
         var alDia = 0
         if !fontIDs.isEmpty {
@@ -379,7 +392,7 @@ enum ContributionLedger {
             nextLevel: siguiente?.key,
             gotesToNextLevel: siguiente.map { $0.from - gotes },
             badges: ContributionScore.badges(for: tally)
-                .map { .init(family: $0.family, tier: $0.tier, progress: $0.progress, threshold: $0.threshold) },
+                .map { .init(family: $0.key, tier: $0.tier.rawValue, progress: $0.progress, threshold: $0.threshold) },
             byKind: ContributionScore.Kind.allCases.compactMap { k in
                 guard let d = porTipo[k.rawValue], d.count > 0 else { return nil }
                 return .init(kind: k.rawValue, label: k.label, count: d.count, gotes: d.gotes)

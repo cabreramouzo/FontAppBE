@@ -97,6 +97,33 @@ final class AppTests: XCTestCase {
         XCTAssertNil(ContributionScore.nextLevel(after: 60_000))
     }
 
+    /// Las cuatro estaciones es la única insignia que no se puede acelerar: hacen falta
+    /// doce meses reales. Lo que se comprueba aquí es que no se cuele por acumulación —
+    /// veinte visitas del mismo mes a la misma fuente no son cuatro estaciones.
+    func testFourSeasonsNeedsFourDifferentSeasonsOnTheSameFountain() throws {
+        let cal = Calendar(identifier: .gregorian)
+        func día(_ mes: Int, _ día: Int = 15) -> Date {
+            cal.date(from: DateComponents(timeZone: TimeZone(identifier: "UTC"), year: 2025, month: mes, day: día))!
+        }
+        let fuenteA = UUID(), fuenteB = UUID()
+
+        // Enero, abril, julio y octubre: una de cada.
+        XCTAssertEqual(ContributionScore.fourSeasonFonts(from: [1, 4, 7, 10].map { (fuenteA, día($0)) }), 1)
+
+        // Veinte visitas, todas del mismo verano: no cuenta ninguna.
+        XCTAssertEqual(ContributionScore.fourSeasonFonts(
+            from: (1...20).map { (fuenteA, día(7, $0)) }), 0)
+
+        // Cuatro estaciones repartidas entre DOS fuentes tampoco valen: la insignia es
+        // por fuente, o volver una vez a cuatro sitios distintos la conseguiría.
+        XCTAssertEqual(ContributionScore.fourSeasonFonts(
+            from: [(fuenteA, día(1)), (fuenteA, día(4)), (fuenteB, día(7)), (fuenteB, día(10))]), 0)
+
+        // Diciembre y enero son la misma estación (invierno), no dos.
+        XCTAssertEqual(ContributionScore.season(día(12)), ContributionScore.season(día(1)))
+        XCTAssertEqual(Set([1, 4, 7, 10].map { ContributionScore.season(día($0)) }).count, 4)
+    }
+
     /// La tabla se escribe a mano y un corte fuera de orden rompe `level(for:)` en
     /// silencio: devolvería un peldaño que no toca sin fallar por ningún lado.
     func testLevelTableIsWellFormed() throws {

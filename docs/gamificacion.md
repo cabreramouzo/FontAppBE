@@ -174,6 +174,17 @@ aquí son el punto de partida.
 | **Cartógrafa** | Reubicaciones y correcciones de ficha que sobreviven sin ser revertidas | 10 · 40 · 150 | Una reversión resta; es la única insignia que puede bajar |
 | **Comarcas** | Fuentes aportadas en zonas administrativas distintas | 3 · 8 · 20 regiones | Recompensa moverse, no acumular en el mismo pueblo |
 | **Estiaje** | Estados de agua registrados en plena sequía, entre junio y septiembre | 10 · 40 · 120 | Se reinicia cada verano: es estacional a propósito |
+| **Las cuatro estaciones** | Fuentes que has reseñado en las cuatro estaciones | 1 · 3 · 10 fuentes | Umbrales bajos porque el precio lo pone el calendario |
+
+**Las cuatro estaciones es la mejor insignia del conjunto y la única que no se puede
+acelerar.** Cuesta doce meses reales pase lo que pase: ni aportando más, ni saliendo más
+lejos, ni dedicándole un fin de semana entero. Y premia exactamente lo que la curva de
+frescura quiere —volver a la misma fuente cuando ha pasado tiempo— en vez de premiar el
+volumen, que es lo que premian casi todas las demás.
+
+Es por fuente y no por persona: cuatro visitas a cuatro sitios distintos, una por estación,
+no la consiguen. Se cuenta sobre la fecha en que ocurrió la reseña y no sobre la de
+liquidación, o una reseña del 20 de marzo liquidada el 23 cambiaría de estación sola.
 
 ### Insignias de un solo tiro
 
@@ -752,6 +763,7 @@ que ja segueix el mapa en obrir-se.
 | **Sentinella** | Ressenyes d'actualització sobre fonts oblidades des de fa 6 mesos o més | 15 · 60 · 250 | Només compten les verificades in situ |
 | **Cartògrafa** | Reubicacions i correccions de fitxa que sobreviuen sense ser revertides | 10 · 40 · 150 | Una reversió resta; és l'única insígnia que pot baixar |
 | **Comarques** | Fonts aportades en zones administratives diferents | 3 · 8 · 20 regions | Recompensa moure's, no acumular al mateix poble |
+| **Les quatre estacions** | Fonts que has ressenyat a les quatre estacions | 1 · 3 · 10 fonts | Llindars baixos perquè el preu el posa el calendari |
 | **Estiatge** | Estats d'aigua registrats en plena secada, entre juny i setembre | 10 · 40 · 120 | Es reinicia cada estiu: és estacional a posta |
 
 ### Insignies d'un sol tret
