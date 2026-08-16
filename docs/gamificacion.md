@@ -92,14 +92,30 @@ absolutos se pueden reescalar el día que se quiera.
 
 ### Multiplicadores
 
-Se aplican sobre el baremo base y se pueden acumular hasta un techo de **×3**.
+Se aplican sobre el baremo base y se pueden acumular hasta un techo de **×2,16**.
 
 | Condición | Razón | Factor |
 |---|---|---:|
-| Fuente a >10 km de cualquier fuente reseñada | Los desiertos de datos no se cubren solos; alguien tiene que ir expresamente. | ×1,5 |
-| Estado del agua entre junio y septiembre | Es cuando las fuentes se secan y cuando más gente las busca. | ×1,4 |
+| Fuente a >20 km de cualquier fuente reseñada | Los desiertos de datos no se cubren solos; alguien tiene que ir expresamente. | ×1,25 |
+| Estado del agua en julio o agosto | Es cuando las fuentes se secan y cuando más gente las busca. | ×1,15 |
 | Fuente marcada como «dudosa» por una incidencia abierta | Dirige a la gente hacia lo que está en disputa. | ×1,5 |
 | La fuente ya tiene 3+ reseñas frescas | Reducir, no premiar: no hace falta un cuarto testimonio de la misma semana. | ×0,2 |
+
+**Los dos primeros se recortaron después de medirlos, y esa es la lección de la fase 1.**
+Con >10 km y ×1,5, el desierto saltaba en el **46 %** de las aportaciones: en comarca rural,
+diez kilómetros sin una fuente reseñada es lo normal, no la excepción. Con junio–septiembre
+y ×1,4, el estiaje saltaba en el **79 %** de los estados de agua, porque cuatro meses de
+verano cubren casi toda la actividad de una app en la que se sale a caminar.
+
+Un multiplicador que se aplica a cuatro de cada cinco aportaciones no es un multiplicador:
+es el baremo base disfrazado, con la desventaja de que nadie entiende por qué su reseña
+vale 112 en vez de 80. Un bonus solo significa algo si **la mayoría de las veces no está**.
+Hay un test (`testCircumstanceMultipliersStayModest`) que impide que vuelvan a crecer sin
+que alguien lo decida a propósito.
+
+> Un candidato mejor que cualquiera de los dos sería la **altitud** (>1 500 m): es objetivo,
+> correlaciona con esfuerzo real y —lo importante— dispara poco. Está pendiente de tener una
+> fuente de datos de elevación; no se puede calcular con lo que hay guardado hoy.
 
 ---
 
@@ -176,18 +192,42 @@ principio para que «enganchen» enseña que no valen nada.
 
 ## 7. Niveles, y a dónde llevan
 
-Cinco niveles con nombres del vocabulario del agua. Lo que los hace valer algo no es el
-nombre: es que **abren capacidades reales de mantenimiento** del mapa. La gamificación es, a
-la vez, la *vía de entrada a la moderación* — que es la pieza que el proyecto ya tiene
-pendiente con el modelo de administradores por zona.
+Diez niveles con nombres del vocabulario del agua: **la misma agua haciéndose más grande**,
+de una gota al acuífero que alimenta todas las fuentes del mapa. Lo que los hace valer algo
+no es el nombre: es que **abren capacidades reales de mantenimiento** del mapa. La
+gamificación es, a la vez, la *vía de entrada a la moderación* — que es la pieza que el
+proyecto ya tiene pendiente con el modelo de administradores por zona.
 
-| Nivel | Gotas | Qué desbloquea |
-|---|---:|---|
-| Gota | 0 | Aportar: fuentes, reseñas, fotos, incidencias. |
-| Reguero | 300 | Confirmar reseñas ajenas. Proponer duplicados para fusionar. |
-| Arroyo | 1 200 | Reubicar fuentes que no has creado sin pasar por revisión. |
-| Río | 4 000 | Marcar fuentes como desaparecidas. Las ediciones no hacen cola. |
-| Acuífero | 12 000 | Candidata a moderadora de su región, a propuesta de un admin. |
+| # | Nivel | Gotas | Qué desbloquea |
+|---:|---|---:|---|
+| 1 | Gota | 0 | Aportar: fuentes, reseñas, fotos, incidencias. |
+| 2 | Manantial | 100 | — (el primer ascenso llega en una o dos aportaciones, para que se vea que existe) |
+| 3 | Arroyo | 350 | Confirmar reseñas ajenas. Proponer duplicados para fusionar. |
+| 4 | Torrente | 800 | — |
+| 5 | Riachuelo | 1 700 | Reubicar fuentes que no has creado sin pasar por revisión. |
+| 6 | Río | 3 500 | — |
+| 7 | Cascada | 7 000 | Marcar fuentes como desaparecidas. Las ediciones no hacen cola. |
+| 8 | Embalse | 14 000 | — |
+| 9 | Lago | 28 000 | — |
+| 10 | Acuífero | 60 000 | Candidata a moderadora de su región, a propuesta de un admin. |
+
+Eran cinco y se llegaba al tercero en una semana: medido sobre el usuario más activo,
+2 853 gotas y nivel 3 de 5 con 31 aportaciones. Un nivel alto alcanzado pronto deja de
+motivar, y con la escalera corta el resto del recorrido era una recta sin nada.
+
+Los cortes **doblan de peldaño en peldaño** a partir del tercero. Un factor constante hace
+que subir cueste siempre «el doble de lo que llevas», que es la única forma de que el
+escalón 9 signifique para quien está ahí lo mismo que el 3 para quien está abajo. Los dos
+primeros van más juntos a propósito.
+
+No todos los peldaños abren algo, y está bien: si cada nivel desbloqueara una capacidad,
+o hay diez capacidades que repartir —no las hay— o se acaban inventando permisos de
+adorno. Los intermedios son ritmo.
+
+> **El nivel viaja como clave, no como nombre.** El backend manda `river` y el rótulo lo
+> traduce el navegador. Cada idioma usa **su** palabra para la ranura, no una traducción
+> del castellano: la ranura *stream* es `Riera` en catalán y `Regato` en gallego. Durante
+> la fase 3 se mandaba el nombre ya hecho y un usuario con la app en euskera leía «Arroyo».
 
 > **Los permisos que abren los niveles son permisos de verdad.** Ninguno de ellos se debe
 > poder conseguir solo acumulando acciones baratas: todas las puertas de arriba exigen
@@ -648,14 +688,20 @@ guanyen col·laborant i no es gasten en res: són un marcador de contribució, n
 
 ### Multiplicadors
 
-S'apliquen sobre el barem base i es poden acumular fins a un sostre de **×3**.
+S'apliquen sobre el barem base i es poden acumular fins a un sostre de **×2,16**.
 
 | Condició | Raó | Factor |
 |---|---|---:|
-| Font a >10 km de qualsevol font ressenyada | Els deserts de dades no es cobreixen sols; algú hi ha d'anar expressament. | ×1,5 |
-| Estat d'aigua entre juny i setembre | És quan les fonts s'assequen i quan més gent les busca. | ×1,4 |
+| Font a >20 km de qualsevol font ressenyada | Els deserts de dades no es cobreixen sols; algú hi ha d'anar expressament. | ×1,25 |
+| Estat d'aigua al juliol o a l'agost | És quan les fonts s'assequen i quan més gent les busca. | ×1,15 |
 | Font marcada com a «dubtosa» per una incidència oberta | Dirigeix la gent cap a allò que està en disputa. | ×1,5 |
 | La font ja té 3+ ressenyes fresques | Reduir, no premiar: no cal un quart testimoni de la mateixa setmana. | ×0,2 |
+
+**Els dos primers es van retallar després de mesurar-los, i aquesta és la lliçó de la fase
+1.** Amb >10 km i ×1,5, el desert saltava al **46 %** de les aportacions; amb juny–setembre
+i ×1,4, l'estiatge saltava al **79 %** dels estats d'aigua. Un multiplicador que s'aplica a
+quatre de cada cinc aportacions no és un multiplicador: és el barem base disfressat. Un
+bonus només significa alguna cosa si **la major part de les vegades no hi és**.
 
 ---
 
@@ -725,13 +771,32 @@ principi perquè «enganxin» ensenya que no valen res.
 
 ## 7. Nivells, i on porten
 
-| Nivell | Gotes | Què desbloqueja |
-|---|---:|---|
-| Gota | 0 | Aportar: fonts, ressenyes, fotos, incidències. |
-| Reguerol | 300 | Confirmar ressenyes d'altri. Proposar duplicats per fusionar. |
-| Rierol | 1 200 | Reubicar fonts que no has creat sense passar per revisió. |
-| Riu | 4 000 | Marcar fonts com a desaparegudes. Les edicions no fan cua. |
-| Aqüífer | 12 000 | Candidata a moderadora de la seva regió, a proposta d'un admin. |
+Deu nivells amb noms del vocabulari de l'aigua: **la mateixa aigua fent-se més gran**, d'una
+gota a l'aqüífer que alimenta totes les fonts del mapa.
+
+| # | Nivell | Gotes | Què desbloqueja |
+|---:|---|---:|---|
+| 1 | Gota | 0 | Aportar: fonts, ressenyes, fotos, incidències. |
+| 2 | Deu | 100 | — (el primer ascens arriba en una o dues aportacions, perquè es vegi que hi és) |
+| 3 | Rierol | 350 | Confirmar ressenyes d'altri. Proposar duplicats per fusionar. |
+| 4 | Torrent | 800 | — |
+| 5 | Riera | 1 700 | Reubicar fonts que no has creat sense passar per revisió. |
+| 6 | Riu | 3 500 | — |
+| 7 | Cascada | 7 000 | Marcar fonts com a desaparegudes. Les edicions no fan cua. |
+| 8 | Pantà | 14 000 | — |
+| 9 | Llac | 28 000 | — |
+| 10 | Aqüífer | 60 000 | Candidata a moderadora de la seva regió, a proposta d'un admin. |
+
+N'eren cinc i s'arribava al tercer en una setmana: mesurat sobre l'usuari més actiu, 2 853
+gotes i nivell 3 de 5 amb 31 aportacions. Un nivell alt assolit aviat deixa de motivar.
+
+Els talls **dobles d'esglaó en esglaó** a partir del tercer, perquè pujar costi sempre «el
+doble del que portes». No tots obren res, i està bé: si cada nivell desbloquegés una
+capacitat, s'acabarien inventant permisos de fira. Els intermedis són ritme.
+
+> **El nivell viatja com a clau, no com a nom.** El backend envia `river` i el rètol el
+> tradueix el navegador. Cada idioma fa servir **la seva** paraula per a la ranura, no una
+> traducció del castellà.
 
 > **Els permisos que obren els nivells són permisos de veritat.** Cap d'ells no s'ha de poder
 > aconseguir només acumulant accions barates: totes les portes de dalt exigeixen també un

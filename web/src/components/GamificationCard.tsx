@@ -96,7 +96,9 @@ export function GamificationCard() {
           {data.gotes.toLocaleString(lang)}
         </Typography>
         <Typography color="text.secondary">{t('game.gotes')}</Typography>
-        <Chip label={data.level} size="small" sx={{ ml: 0.5, fontWeight: 700 }} />
+        {/* El backend manda la clave del nivel (`river`), no su nombre: el rótulo se
+            traduce aquí. Antes llegaba «Río» hecho y salía en castellano en las cinco. */}
+        <Chip label={t(`game.level.${data.level}`)} size="small" sx={{ ml: 0.5, fontWeight: 700 }} />
         {data.pending > 0 && (
           <Tooltip title={t('game.pendingHint')}>
             <Chip
@@ -111,7 +113,10 @@ export function GamificationCard() {
         <Box sx={{ mt: 1, maxWidth: 420 }}>
           <LinearProgress variant="determinate" value={progreso} sx={{ height: 6, borderRadius: 3 }} />
           <Typography variant="caption" color="text.secondary">
-            {t('game.toNext', { n: String(restan), level: data.nextLevel ?? '' })}
+            {t('game.toNext', {
+              n: restan.toLocaleString(lang),
+              level: data.nextLevel ? t(`game.level.${data.nextLevel}`) : '',
+            })}
           </Typography>
         </Box>
       )}

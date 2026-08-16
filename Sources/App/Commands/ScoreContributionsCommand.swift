@@ -53,7 +53,7 @@ struct ScoreContributionsCommand: AsyncCommand {
             let insignias = u.badges.isEmpty
                 ? "—"
                 : u.badges.map { "\($0.family) (\($0.tier))" }.joined(separator: ", ")
-            console.print(fila("\(i + 1)", u.username, "\(u.gotes)", u.level, insignias))
+            console.print(fila("\(i + 1)", u.username, "\(u.gotes)", u.level.name, insignias))
         }
 
         imprimeCalibrado(informe, console: console)
@@ -81,7 +81,7 @@ struct ScoreContributionsCommand: AsyncCommand {
             console.warning("«\(username)» no tiene ninguna aportación puntuable (o no existe).")
             return
         }
-        console.info("\n\(u.username) — \(u.gotes) gotas · nivel \(u.level)\n")
+        console.info("\n\(u.username) — \(u.gotes) gotas · nivel \(u.level.name)\n")
 
         console.print("Por tipo de aportación:")
         for kind in ContributionScore.Kind.allCases {
@@ -132,7 +132,7 @@ struct ScoreContributionsCommand: AsyncCommand {
 
         console.print("\n  reparto por nivel:")
         for nivel in ContributionScore.levels.reversed() {
-            let n = informe.users.filter { $0.level == nivel.name }.count
+            let n = informe.users.filter { $0.level.key == nivel.key }.count
             console.print("    \(nivel.name.padding(toLength: 12, withPad: " ", startingAt: 0))\(String(n).leftPad(4))")
         }
 
@@ -214,7 +214,7 @@ struct ScoreContributionsCommand: AsyncCommand {
         }
         let salida = Salida(
             users: informe.users.map { u in
-                Salida.U(username: u.username, gotes: u.gotes, level: u.level,
+                Salida.U(username: u.username, gotes: u.gotes, level: u.level.key,
                          badges: u.badges.map { "\($0.family):\($0.tier)" },
                          regions: u.regions.sorted(),
                          byKind: Dictionary(uniqueKeysWithValues: u.byKind.map { ($0.key.rawValue, $0.value.gotes) }))

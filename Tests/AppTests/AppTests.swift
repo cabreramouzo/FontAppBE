@@ -82,12 +82,41 @@ final class AppTests: XCTestCase {
     }
 
     func testLevelThresholds() throws {
-        XCTAssertEqual(ContributionScore.level(for: 0), "Gota")
-        XCTAssertEqual(ContributionScore.level(for: 299), "Gota")
-        XCTAssertEqual(ContributionScore.level(for: 300), "Reguero")
-        XCTAssertEqual(ContributionScore.level(for: 1_199), "Reguero")
-        XCTAssertEqual(ContributionScore.level(for: 4_000), "Río")
-        XCTAssertEqual(ContributionScore.level(for: 99_999), "Acuífero")
+        XCTAssertEqual(ContributionScore.level(for: 0).key, "drop")
+        XCTAssertEqual(ContributionScore.level(for: 99).key, "drop")
+        XCTAssertEqual(ContributionScore.level(for: 100).key, "spring")
+        XCTAssertEqual(ContributionScore.level(for: 349).key, "spring")
+        XCTAssertEqual(ContributionScore.level(for: 3_500).key, "river")
+        XCTAssertEqual(ContributionScore.level(for: 60_000).key, "aquifer")
+        XCTAssertEqual(ContributionScore.level(for: 9_999_999).key, "aquifer")
+
+        XCTAssertEqual(ContributionScore.nextLevel(after: 0)?.key, "spring")
+        XCTAssertEqual(ContributionScore.nextLevel(after: 99)?.key, "spring")
+        XCTAssertEqual(ContributionScore.nextLevel(after: 100)?.key, "brook")
+        // Arriba del todo no hay siguiente: la interfaz esconde la barra de progreso.
+        XCTAssertNil(ContributionScore.nextLevel(after: 60_000))
+    }
+
+    /// La tabla se escribe a mano y un corte fuera de orden rompe `level(for:)` en
+    /// silencio: devolvería un peldaño que no toca sin fallar por ningún lado.
+    func testLevelTableIsWellFormed() throws {
+        let levels = ContributionScore.levels
+        XCTAssertEqual(levels.count, 10)
+        XCTAssertEqual(levels.last?.from, 0, "Hace falta un nivel de partida en 0 o quien no ha aportado nada no tiene nivel.")
+        XCTAssertEqual(Set(levels.map(\.key)).count, levels.count, "Claves de nivel repetidas.")
+        for (mayor, menor) in zip(levels, levels.dropFirst()) {
+            XCTAssertGreaterThan(mayor.from, menor.from, "«\(mayor.name)» debe ir por encima de «\(menor.name)».")
+        }
+    }
+
+    /// Un multiplicador que se aplica a la mayoría de aportaciones es el baremo base
+    /// disfrazado. Estos dos saltaban al 46 % y al 79 % con los valores anteriores.
+    func testCircumstanceMultipliersStayModest() throws {
+        XCTAssertEqual(ContributionScore.dryMonths.count, 2, "El estiaje tiene que ser la excepción del calendario, no un tercio del año.")
+        XCTAssertLessThanOrEqual(ContributionScore.desertFactor, 1.3)
+        XCTAssertLessThanOrEqual(ContributionScore.dryFactor, 1.2)
+        XCTAssertLessThanOrEqual(ContributionScore.maxMultiplier, 2.2,
+                                 "El techo combinado no puede acercarse a duplicar el baremo.")
     }
 
     /// La primera foto tiene que pagar más que cualquier otra cosa: es el hueco medido

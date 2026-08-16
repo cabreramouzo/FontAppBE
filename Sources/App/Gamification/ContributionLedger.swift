@@ -266,7 +266,7 @@ enum ContributionLedger {
         let userID: UUID
         let settled: Int
         let pending: Int
-        var level: String { ContributionScore.level(for: settled) }
+        var level: ContributionScore.Level { ContributionScore.level(for: settled) }
     }
 
     /// Marcador de una persona: solo cuenta lo liquidado. Lo pendiente se enseña aparte,
@@ -297,6 +297,9 @@ enum ContributionLedger {
         }
         let gotes: Int
         let pending: Int
+        /// Clave del nivel (`drop`, `spring`, `brook`…), no su nombre: el rótulo lo
+        /// traduce el navegador. Mandar «Arroyo» a quien tiene la app en euskera era el
+        /// fallo de la fase 3.
         let level: String
         let nextLevel: String?
         let gotesToNextLevel: Int?
@@ -367,13 +370,13 @@ enum ContributionLedger {
         }
 
         let nivel = ContributionScore.level(for: gotes)
-        let siguiente = ContributionScore.levels.last { $0.from > gotes }
+        let siguiente = ContributionScore.nextLevel(after: gotes)
 
         return Profile(
             gotes: gotes,
             pending: pending,
-            level: nivel,
-            nextLevel: siguiente?.name,
+            level: nivel.key,
+            nextLevel: siguiente?.key,
             gotesToNextLevel: siguiente.map { $0.from - gotes },
             badges: ContributionScore.badges(for: tally)
                 .map { .init(family: $0.family, tier: $0.tier, progress: $0.progress, threshold: $0.threshold) },

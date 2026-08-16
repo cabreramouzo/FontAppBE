@@ -74,10 +74,23 @@ enum ContributionScore {
         }
     }
 
-    static let desertKm = 10.0
+    /// A qué distancia de la fuente reseñada más cercana empieza a contar como «desierto».
+    ///
+    /// Eran 10 km y saltaba en el 46 % de las aportaciones: en comarca rural, diez
+    /// kilómetros sin una fuente reseñada es lo normal, no la excepción. A 20 km la
+    /// condición vuelve a describir lo que decía describir.
+    static let desertKm = 20.0
+    static let desertFactor = 1.25
+    /// Estiaje: julio y agosto, no de junio a septiembre. Con cuatro meses saltaba en el
+    /// 79 % de los estados de agua —un tercio del calendario cubre casi toda la actividad,
+    /// porque es cuando la gente sale a caminar— y un multiplicador que se aplica a cuatro
+    /// de cada cinco aportaciones no es un multiplicador: es el baremo base disfrazado.
+    static let dryMonths = 7...8
+    static let dryFactor = 1.15
     static let doubtWindowDays = 90.0
+    static let doubtFactor = 1.5
     static let crowdedWindowDays = 30.0
-    static let maxMultiplier = 1.5 * 1.4 * 1.5   // el techo de ×3 del documento, sin llegar
+    static let maxMultiplier = desertFactor * dryFactor * doubtFactor
 
     // MARK: - Resultado
 
@@ -125,16 +138,53 @@ enum ContributionScore {
         var byKind: [Kind: (count: Int, gotes: Int)]
         var badges: [BadgeAward]
         var regions: Set<String>
-        var level: String
+        var level: Level
     }
 
     /// Niveles. En fase 1 son informativos: no desbloquean nada todavía.
-    static let levels: [(name: String, from: Int)] = [
-        ("Acuífero", 12_000), ("Río", 4_000), ("Arroyo", 1_200), ("Reguero", 300), ("Gota", 0),
+    ///
+    /// La escalera es **la misma agua haciéndose más grande**, de una gota al acuífero que
+    /// alimenta todas las fuentes del mapa. Diez peldaños y no cinco porque con cinco se
+    /// llegaba al tercero en una semana intensa (medido: 2 853 gotas y nivel 3 de 5 tras
+    /// 31 aportaciones), y un nivel alto alcanzado pronto deja de motivar.
+    ///
+    /// `key` es lo que viaja al cliente y a la base: `name` es solo para la consola. El
+    /// nombre traducido lo pone el navegador — mandar «Arroyo» a alguien que tiene la app
+    /// en catalán es el fallo que teníamos antes.
+    struct Level: Sendable {
+        let key: String
+        /// Castellano, para la salida de los comandos. La interfaz NO usa esto.
+        let name: String
+        let from: Int
+    }
+
+    /// De mayor a menor: `level(for:)` se queda con el primero que alcanzas.
+    ///
+    /// Los cortes doblan de peldaño en peldaño a partir del tercero. Un factor constante
+    /// hace que subir cueste siempre «el doble que lo que llevas», que es la única forma
+    /// de que el escalón 9 signifique lo mismo que el 3 para quien está ahí. Los dos
+    /// primeros van más juntos a propósito: el primer ascenso tiene que llegar en una o
+    /// dos aportaciones o nadie descubre que los niveles existen.
+    static let levels: [Level] = [
+        .init(key: "aquifer",   name: "Acuífero",  from: 60_000),
+        .init(key: "lake",      name: "Lago",      from: 28_000),
+        .init(key: "reservoir", name: "Embalse",   from: 14_000),
+        .init(key: "waterfall", name: "Cascada",   from: 7_000),
+        .init(key: "river",     name: "Río",       from: 3_500),
+        .init(key: "stream",    name: "Riachuelo", from: 1_700),
+        .init(key: "torrent",   name: "Torrente",  from: 800),
+        .init(key: "brook",     name: "Arroyo",    from: 350),
+        .init(key: "spring",    name: "Manantial", from: 100),
+        .init(key: "drop",      name: "Gota",      from: 0),
     ]
 
-    static func level(for gotes: Int) -> String {
-        levels.first { gotes >= $0.from }?.name ?? "Gota"
+    static func level(for gotes: Int) -> Level {
+        levels.first { gotes >= $0.from } ?? levels[levels.count - 1]
+    }
+
+    /// El siguiente peldaño, o `nil` si ya está arriba del todo.
+    static func nextLevel(after gotes: Int) -> Level? {
+        levels.last { $0.from > gotes }
     }
 
     // MARK: - Cálculo
@@ -194,15 +244,15 @@ enum ContributionScore {
             if let f = fontsByID[fontID], desertComputable {
                 let previas = reviewedFonts.prefix { $0.date < fecha }
                 let cerca = previas.contains { haversineKm(f.latitude, f.longitude, $0.lat, $0.long) <= desertKm }
-                if !previas.isEmpty && !cerca { m *= 1.5; razones.append("desierto") }
+                if !previas.isEmpty && !cerca { m *= desertFactor; razones.append("desierto") }
             }
             if isWaterStatus {
                 let mes = Calendar(identifier: .gregorian).component(.month, from: fecha)
-                if (6...9).contains(mes) { m *= 1.4; razones.append("estiaje") }
+                if dryMonths.contains(mes) { m *= dryFactor; razones.append("estiaje") }
             }
             if let incidencias = reportDates[fontID],
                incidencias.contains(where: { $0 < fecha && fecha.timeIntervalSince($0) <= doubtWindowDays * 86_400 }) {
-                m *= 1.5; razones.append("dudosa")
+                m *= doubtFactor; razones.append("dudosa")
             }
             // Amortiguación: si la fuente ya tiene 3+ reseñas frescas, un testimonio más
             // de la misma semana no añade casi nada.

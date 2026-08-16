@@ -72,7 +72,7 @@ struct GamificationSyncCommand: AsyncCommand {
                 return
             }
             let t = try await ContributionLedger.totals(for: uid, on: db)
-            console.info("\n\(username): \(t.settled) gotas · nivel \(t.level)")
+            console.info("\n\(username): \(t.settled) gotas · nivel \(t.level.name)")
             if t.pending > 0 {
                 console.print("  \(t.pending) gotas en camino (liquidan a las 72 h de cada aportación)")
             }
