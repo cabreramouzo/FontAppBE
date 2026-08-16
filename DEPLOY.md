@@ -521,6 +521,18 @@ fly ssh console -a fontapp -C "/app/App gamification-sync"
 Cada 15 minutos o cada hora vale igual: la ventana de liquidación es de 72 horas, así que la
 frecuencia solo decide cuánto tarda una aportación en aparecer como «en camino».
 
+**O mejor, sin cron:** con `GAMIFICATION_WORKER=true` la app lleva el recuento sola. Se
+suscribe a los cambios con un middleware de modelo, así que la petición del usuario solo
+marca un booleano (crear una fuente sigue tardando 39 ms) y el recuento va detrás. Medido en
+local: **16 segundos** desde crear la fuente hasta que la aportación está registrada. Con
+varias máquinas se coordinan con un cerrojo de Postgres, así que no duplican trabajo. El
+cron sigue valiendo como red de seguridad: es el mismo código.
+
+| Variable | Qué hace |
+|---|---|
+| `GAMIFICATION_WORKER=true` | Recuento en segundo plano dentro de la app. |
+| `GAMIFICATION_EPOCH=AAAA-MM-DD` | Fecha desde la que los puntos son definitivos. Sin definir, todo es provisional. |
+
 Antes de la primera vez, conviene mirar qué haría:
 
 ```bash

@@ -22,6 +22,12 @@ struct GamificationSyncCommand: AsyncCommand {
 
         @Option(name: "user", help: "Enseña también el marcador de este username.")
         var user: String?
+
+        @Flag(name: "rescore", help: "Recalcula el histórico provisional con el baremo de hoy. Destructivo.")
+        var rescore: Bool
+
+        @Flag(name: "yes", help: "No preguntar (para --rescore).")
+        var yes: Bool
     }
 
     let help = "Registra las aportaciones nuevas y liquida las que llevan 72 h sin incidencias."
@@ -29,6 +35,19 @@ struct GamificationSyncCommand: AsyncCommand {
     func run(using context: CommandContext, signature: Signature) async throws {
         let db = context.application.db
         let console = context.console
+
+        // Estado del baremo: es lo primero que hay que saber antes de mirar ninguna cifra.
+        if let linea = ContributionLedger.epoch {
+            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.timeZone = TimeZone(identifier: "UTC")
+            console.print("Puntos definitivos desde el \(f.string(from: linea)). Lo anterior sigue siendo provisional.")
+        } else {
+            console.print("GAMIFICATION_EPOCH sin definir: TODOS los puntos son provisionales y se pueden recalcular.")
+        }
+
+        if signature.rescore {
+            try await recalcula(db: db, console: console, sinPreguntar: signature.yes)
+            return
+        }
 
         let r = try await ContributionLedger.sync(on: db, dryRun: signature.dryRun)
 
@@ -61,6 +80,36 @@ struct GamificationSyncCommand: AsyncCommand {
 
         if signature.dryRun {
             console.warning("\nDry-run: no se ha escrito nada.")
+        }
+    }
+
+    /// Reconstruye lo provisional con el baremo de hoy. Borra filas, así que pregunta.
+    private func recalcula(db: any Database, console: any Console, sinPreguntar: Bool) async throws {
+        let provisionales: Int
+        if let linea = ContributionLedger.epoch {
+            provisionales = try await ContributionEvent.query(on: db).filter(\.$occurredAt < linea).count()
+            let protegidas = try await ContributionEvent.query(on: db).filter(\.$occurredAt >= linea).count()
+            console.warning("\nSe van a borrar y recalcular \(provisionales) aportaciones provisionales.")
+            console.print("\(protegidas) posteriores a la fecha de corte NO se tocan.")
+        } else {
+            provisionales = try await ContributionEvent.query(on: db).count()
+            console.warning("\nSe van a borrar y recalcular las \(provisionales) aportaciones del registro.")
+            console.print("No hay fecha de corte, así que no queda ninguna protegida.")
+        }
+        guard provisionales > 0 else {
+            console.print("No hay nada provisional que recalcular.")
+            return
+        }
+        if !sinPreguntar && !console.confirm("¿Continuar?") {
+            console.print("Cancelado.")
+            return
+        }
+
+        let r = try await ContributionLedger.rescore(on: db)
+        console.info("\nBorradas \(r.deleted) · protegidas \(r.protected) · recalculadas \(r.rebuilt)")
+        if r.deleted != r.rebuilt {
+            console.warning("Las cifras no cuadran: \(r.deleted) borradas frente a \(r.rebuilt) recalculadas.")
+            console.print("Es esperado si además cambió el contenido (reseñas borradas, ediciones revertidas).")
         }
     }
 }

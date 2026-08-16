@@ -135,6 +135,14 @@ public func configure(_ app: Application) async throws {
         try await app.autoMigrate()
     }
 
+    // Gamificación en segundo plano: se suscribe a los cambios con un middleware de modelo
+    // y puntúa unos segundos después, fuera de la petición. Ningún controlador la conoce.
+    // Sin GAMIFICATION_WORKER=true no arranca y el recuento se hace por cron
+    // (`gamification-sync`). Ver docs/gamificacion.md.
+    if Environment.get("GAMIFICATION_WORKER") == "true" {
+        GamificationWorker.shared.start(on: app)
+    }
+
     // Limpieza periódica de tokens de sesión caducados (cada 6 h). En memoria/sin deps.
     app.eventLoopGroup.next().scheduleRepeatedTask(initialDelay: .minutes(10), delay: .hours(6)) { _ in
         Task {

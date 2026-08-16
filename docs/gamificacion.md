@@ -407,6 +407,61 @@ auditar nada, que es la mitad de su razón de ser.
 | `settled` | Cobrada. La suma de estas es la puntuación. |
 | `void` | Anulada, con motivo: revertida, borrada, denunciada, o por encima del techo diario. |
 
+### Recuento en segundo plano (`GAMIFICATION_WORKER=true`)
+
+Con el cron solo, una aportación tarda hasta un ciclo en aparecer. Con el trabajador
+activado tarda **unos segundos**, y sin que ningún controlador sepa que la gamificación
+existe.
+
+La forma obvia de conseguirlo sería llamar al contador desde el `create` de cada
+controlador. Eso hace dos cosas malas: mete la gamificación en el camino crítico de guardar
+una fuente —si el contador falla o tarda, el usuario pierde su aportación por culpa de un
+marcador— y ensucia seis controladores con una responsabilidad que no es suya.
+
+En vez de eso la gamificación **se suscribe** a los cambios con un middleware de modelo de
+Fluent. Lo único que ocurre dentro de la petición es marcar un booleano en memoria; medido,
+crear una fuente sigue tardando 39 ms. El recuento lo hace después un bucle en segundo
+plano: mira cada 20 s si hay algo nuevo, y si no lo hay no hace nada. Cada media hora pasa
+igualmente, porque la liquidación de las 72 h ocurre por el paso del tiempo y no porque
+alguien aporte.
+
+Añadir un modelo puntuable es una línea en `GamificationWorker.start`. El middleware no
+mira *qué* cambió: decidir si algo puntúa es trabajo de `ContributionScore`, y duplicar aquí
+ese criterio sería garantizar que los dos se desincronizan.
+
+Con varias instancias, cada una tendría su bucle. El barrido es idempotente, así que
+solaparse no corrompe nada, pero sería recorrer el historial dos veces cada pocos minutos —
+y eso sí se nota. Por eso se toma antes un cerrojo de Postgres (`pg_try_advisory_lock`): la
+que no lo consigue se va sin hacer nada.
+
+El cron sigue valiendo y no estorba: son el mismo código.
+
+### La fecha de corte (`GAMIFICATION_EPOCH`)
+
+Mientras se calibra el baremo hace falta poder recalcularlo todo. Eso es aceptable con
+cuatro usuarios y deja de serlo en cuanto alguien se ha fijado en su marcador: ver que tus
+puntos bajan de un día para otro sin haber hecho nada es la forma más rápida de que a nadie
+le importen.
+
+`GAMIFICATION_EPOCH=AAAA-MM-DD` marca la línea:
+
+- **Antes**, todo es provisional. `gamification-sync --rescore` borra y reconstruye con el
+  baremo de hoy.
+- **A partir de la fecha**, intocable. `--rescore` se niega a borrarlo y lo dice.
+
+Sin definir, todo es provisional — que es el estado correcto hasta que se decida.
+
+Cuidado con lo que **no** congela: si una reseña se borra o se denuncia, su aportación se
+anula igual, esté al lado que esté de la línea. La fecha protege del baremo, no de que el
+contenido desaparezca. Es la distinción que hace que la promesa sea sostenible: «tus puntos
+no cambian porque cambiemos de idea» sí; «tus puntos no cambian nunca» no, porque entonces
+borrar una reseña saldría gratis.
+
+```bash
+swift run App gamification-sync --rescore          # pregunta antes
+swift run App gamification-sync --rescore --yes
+```
+
 ### Por qué la sincronización no duplica
 
 Cada aportación tiene una identidad estable —tabla de origen, fila y, cuando una misma fila

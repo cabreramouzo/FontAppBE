@@ -24,6 +24,33 @@ enum ContributionLedger {
     /// reversión, una denuncia o un borrado lleguen a tiempo de impedir el pago.
     static let settlementWindow: TimeInterval = 72 * 3_600
 
+    /// **Fecha desde la que los puntos son definitivos** (`GAMIFICATION_EPOCH`, en formato
+    /// `AAAA-MM-DD`).
+    ///
+    /// Mientras se calibra el baremo hace falta poder recalcularlo todo: cambiar cuánto
+    /// vale una primera foto y volver a pasar el histórico. Eso es aceptable con cuatro
+    /// usuarios y es inaceptable en cuanto alguien se ha fijado en su marcador — ver que
+    /// tus puntos bajan de un día para otro sin haber hecho nada es la forma más rápida de
+    /// que a nadie le importen.
+    ///
+    /// La línea separa las dos etapas. Antes de ella, todo es provisional y `--rescore` lo
+    /// reconstruye. A partir de ella, las aportaciones son intocables: `--rescore` se
+    /// niega a borrarlas.
+    ///
+    /// Ojo con lo que **no** congela: si una reseña se borra o se denuncia, su aportación
+    /// se anula igual, esté al lado que esté de la línea. La fecha protege del baremo, no
+    /// de que el contenido desaparezca.
+    ///
+    /// Sin definir, todo es provisional. Es el estado correcto hasta que se decida.
+    static var epoch: Date? {
+        guard let raw = Environment.get("GAMIFICATION_EPOCH")?.trimmingCharacters(in: .whitespaces),
+              !raw.isEmpty else { return nil }
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f.date(from: raw)
+    }
+
     /// Techo de gotas por persona y **día de la aportación**. Lo que pasa del techo en un
     /// mismo día no llega a cobrar nunca: se anula.
     ///
@@ -141,6 +168,37 @@ enum ContributionLedger {
         }
 
         return result
+    }
+
+    // MARK: - Recalcular el histórico
+
+    struct RescoreResult: Sendable {
+        var deleted = 0
+        var protected = 0
+        var rebuilt = 0
+    }
+
+    /// Tira las aportaciones **provisionales** y las vuelve a calcular con el baremo de
+    /// hoy. Es la única forma de reescalar el histórico, y es deliberadamente explícita:
+    /// no ocurre nunca sola.
+    ///
+    /// Lo ocurrido a partir de `epoch` no se toca. Si no hay `epoch`, todo es provisional
+    /// y se reconstruye entero.
+    static func rescore(on db: any Database, now: Date = Date()) async throws -> RescoreResult {
+        var r = RescoreResult()
+        let linea = epoch
+
+        let todos = try await ContributionEvent.query(on: db).all()
+        let protegidos = linea.map { l in todos.filter { $0.occurredAt >= l } } ?? []
+        r.protected = protegidos.count
+
+        let borrables = linea.map { l in todos.filter { $0.occurredAt < l } } ?? todos
+        for e in borrables { try await e.delete(on: db) }
+        r.deleted = borrables.count
+
+        let sync = try await self.sync(on: db, now: now)
+        r.rebuilt = sync.inserted
+        return r
     }
 
     // MARK: - Liquidación

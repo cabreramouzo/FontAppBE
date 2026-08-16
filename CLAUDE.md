@@ -32,8 +32,17 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     Puntúa el historial sin escribir nada; es la herramienta para calibrar el baremo.
   - Fase 2: `swift run App gamification-sync [--dry-run] [--user <u>]` — registra las
     aportaciones en `contribution_events` y liquida las que llevan 72 h sin incidencias.
-    Idempotente; pensado para un cron frecuente. Las gotas quedan **congeladas** con el valor
-    del baremo del día en que se registraron: reescalar el histórico exige vaciar la tabla.
+    Idempotente. Las gotas quedan **congeladas** con el valor del baremo del día en que se
+    registraron; para reescalar el histórico provisional, `--rescore`.
+  - `GAMIFICATION_WORKER=true` activa el recuento en segundo plano: la gamificación se
+    suscribe a los cambios con un **middleware de modelo** de Fluent, así que ningún
+    controlador la menciona y crear una fuente no se entera (medido: 39 ms). Puntúa unos
+    segundos después, fuera de la petición, con cerrojo de Postgres para que dos instancias
+    no dupliquen el trabajo.
+  - `GAMIFICATION_EPOCH=AAAA-MM-DD`: fecha desde la que los puntos son **definitivos**.
+    Antes de ella todo es provisional y `--rescore` lo reconstruye; a partir de ella se
+    niega. No congela las anulaciones: borrar o denunciar una reseña anula igual, esté
+    donde esté respecto a la línea.
 - Roles: `swift run App set-role <username> <user|moderator|admin|owner>` (owner solo por CLI).
 - Servidor: `swift run App serve` (`127.0.0.1:8080`). Cargar entorno: `export $(cat env.development | xargs)`.
 - Web (dev): `cd web && npm run dev` (proxy `/api` y `/uploads` → backend).
