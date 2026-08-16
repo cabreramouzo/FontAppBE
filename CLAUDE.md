@@ -55,6 +55,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     no de las barras**, y hay un test que fija las dos mitades de la regla.
   - Diez niveles (`ContributionScore.levels`), de `drop` a `aquifer`. El nivel y las
     insignias viajan como **clave**, no como nombre: el rótulo lo traduce el navegador.
+  - Vitrina en `/me/badges` (`BadgesPage`): los diez niveles y las ocho familias,
+    conseguidos o no; lo bloqueado va en **silueta gris con su progreso al lado** («3 de
+    5» invita, «bloqueada» no). `GET /gamification/me` devuelve `levels` y `collection`
+    para que la escalera y los umbrales existan **una sola vez** (`badgeFamilies`).
+    Ojo: `tier` nulo se serializa **explícitamente** como `null` — el codificador de
+    Swift omite los opcionales y en el cliente `undefined !== null` daba por conseguida
+    toda insignia bloqueada.
   - Insignias de nivel: `web/public/levels/<clave>.png` (320 px, ~120 KB) vía
     `scripts/prepara-insignias.py`; `LevelBadge` las pinta **junto al** nombre, no en su
     lugar — el rótulo va dibujado dentro de la imagen y en castellano. `LEVEL_BADGES`

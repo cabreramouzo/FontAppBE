@@ -124,6 +124,42 @@ final class AppTests: XCTestCase {
         XCTAssertEqual(Set([1, 4, 7, 10].map { ContributionScore.season(día($0)) }).count, 4)
     }
 
+    /// La vitrina enseña **todas** las familias, tenga o no la insignia, y el marcador
+    /// solo las conseguidas. Las dos salen de la misma tabla: si se separaran, una
+    /// casilla gris podría pedir un umbral que luego no es el que se cobra.
+    func testCatalogueShowsEveryFamilyAndBadgesOnlyTheEarnedOnes() throws {
+        var t = ContributionScore.BadgeTally()
+        t.fontsCreated = 12       // Descubridora: bronce (10), siguiente 50
+        t.firstPhotos = 0         // Primera luz: nada, primer umbral 5
+
+        let vitrina = ContributionScore.catalogue(for: t)
+        XCTAssertEqual(vitrina.count, ContributionScore.badgeFamilies.count)
+
+        let descubridora = vitrina.first { $0.family == "discoverer" }
+        XCTAssertEqual(descubridora?.tier, "bronze")
+        XCTAssertEqual(descubridora?.progress, 12)
+        XCTAssertEqual(descubridora?.threshold, 50, "El umbral que se persigue es el siguiente, no el ya pasado.")
+
+        let luz = vitrina.first { $0.family == "firstLight" }
+        XCTAssertNil(luz?.tier, "Sin conseguir, `tier` tiene que ser nulo: es lo que la pinta gris.")
+        XCTAssertEqual(luz?.threshold, 5)
+
+        // El marcador solo lleva la que se tiene.
+        let logradas = ContributionScore.badges(for: t)
+        XCTAssertEqual(logradas.map(\.key), ["discoverer"])
+    }
+
+    /// `tier` nulo tiene que viajar como `null` y no desaparecer del JSON: en el cliente
+    /// una clave ausente llega como `undefined`, y dar por conseguida una insignia
+    /// bloqueada es exactamente el fallo contrario al que se quiere evitar.
+    func testLockedBadgeSerialisesTierAsExplicitNull() throws {
+        let slot = ContributionScore.BadgeSlot(family: "sentinel", tier: nil, progress: 0,
+                                               threshold: 15, thresholds: [15, 60, 250])
+        let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(slot)) as? [String: Any]
+        XCTAssertTrue(json?.keys.contains("tier") ?? false, "La clave `tier` no puede omitirse.")
+        XCTAssertTrue(json?["tier"] is NSNull)
+    }
+
     /// La tabla se escribe a mano y un corte fuera de orden rompe `level(for:)` en
     /// silencio: devolvería un peldaño que no toca sin fallar por ningún lado.
     func testLevelTableIsWellFormed() throws {

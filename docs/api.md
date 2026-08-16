@@ -247,6 +247,27 @@ Las imágenes subidas se sirven como estáticos en `GET /uploads/<archivo>`.
 - Limpieza de tokens expirados y rate-limit en el login.
 - Paginación en reports/comments si una fuente acumula muchos.
 
+## Vitrina de insignias
+
+`GET /gamification/me` incluye además el catálogo completo, para poder pintar lo que
+falta y no solo lo conseguido:
+
+```json
+{
+  "levels": [ { "key": "drop", "from": 0, "reached": true, "current": false } ],
+  "collection": [
+    { "family": "discoverer", "tier": "bronze", "progress": 12, "threshold": 50,
+      "thresholds": [10, 50, 200] },
+    { "family": "sentinel", "tier": null, "progress": 0, "threshold": 15,
+      "thresholds": [15, 60, 250] }
+  ]
+}
+```
+
+`levels` va de abajo arriba y exactamente uno tiene `current`. En `collection`,
+**`tier: null` significa no conseguida** y la clave siempre viaja (nunca se omite);
+`threshold` es el umbral que se persigue ahora, o el último si ya se está al máximo.
+
 ## Capacidades por nivel
 
 `GET /gamification/me` incluye `grant` (fase 6):

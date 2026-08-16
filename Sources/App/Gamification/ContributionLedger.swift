@@ -314,6 +314,21 @@ enum ContributionLedger {
         /// Fase 6: qué abre el nivel. Lo rellena el controlador, no el cálculo — depende
         /// del rol y de la configuración del despliegue, no del historial de puntos.
         var grant: Capabilities.Grant?
+        /// La vitrina: los diez peldaños con su umbral y si están alcanzados. Va en la
+        /// respuesta y no escrito en el cliente para que la escalera exista **una sola
+        /// vez**; si mañana se recalibra, la vitrina la sigue sin tocar nada.
+        let levels: [LevelStanding]
+        /// Todas las familias de insignias, conseguidas o no. Las que no, con su progreso:
+        /// una casilla gris que dice «3 de 5» invita, y una que solo dice «bloqueada» no.
+        let collection: [ContributionScore.BadgeSlot]
+    }
+
+    struct LevelStanding: Content, Sendable {
+        let key: String
+        let from: Int
+        let reached: Bool
+        /// El que tienes ahora mismo. Exactamente uno lo es.
+        let current: Bool
     }
 
     /// Cuántas fuentes mantiene al día esta persona: aquellas cuya reseña más reciente es
@@ -403,7 +418,14 @@ enum ContributionLedger {
             impact: .init(fontsWithPhotoThanksToYou: tally.firstPhotos,
                           fontsYouKeepFresh: alDia,
                           fontsYouPutOnTheMap: tally.fontsCreated),
-            provisional: epoch.map { now < $0 } ?? true)
+            provisional: epoch.map { now < $0 } ?? true,
+            // De abajo arriba: la vitrina se lee como una escalera y `levels` viene
+            // ordenada de mayor a menor porque `level(for:)` necesita ese orden.
+            levels: ContributionScore.levels.reversed().map {
+                LevelStanding(key: $0.key, from: $0.from,
+                              reached: gotes >= $0.from, current: $0.key == nivel.key)
+            },
+            collection: ContributionScore.catalogue(for: tally))
     }
 
     /// Marcador de todos, de más a menos. `since` acota a un periodo (los rankings del

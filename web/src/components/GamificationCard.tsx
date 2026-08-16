@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
+import Button from '@mui/material/Button'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
@@ -14,16 +17,7 @@ import type { GamificationProfile } from '../api/types'
 import { useTheme } from '@mui/material/styles'
 import { useI18n } from '../i18n/I18nContext'
 import { LevelBadge } from './LevelBadge'
-
-/**
- * Colores de los escalones, uno por tema. Bronce/plata/oro se reconocen sin leer la
- * palabra, pero el bronce que funciona sobre papel se queda en 4,2:1 sobre el fondo
- * oscuro — por debajo del 4,5 que pide la WCAG para texto normal. Dos juegos, no uno.
- */
-const TIER_COLOR: Record<'light' | 'dark', Record<string, string>> = {
-  light: { bronze: '#8A5A38', silver: '#5E6B77', gold: '#8F6D10', unique: '#3F6E5D' },
-  dark: { bronze: '#D6A175', silver: '#B3BFCA', gold: '#E3BE58', unique: '#84C4AC' },
-}
+import { TIER_COLOR } from '../lib/tierColors'
 
 /**
  * El marcador de gamificación en el perfil. Fase 3 del plan (docs/gamificacion.md).
@@ -185,6 +179,18 @@ export function GamificationCard() {
           ))}
         </Box>
       )}
+
+      {/* La colección completa vive en su propia página: una rejilla de trofeos aquí
+          desplazaría el impacto sobre el mapa, que es lo que hay que leer primero. */}
+      <Button
+        component={RouterLink}
+        to="/me/badges"
+        size="small"
+        endIcon={<ChevronRightIcon />}
+        sx={{ textTransform: 'none', mt: 1, ml: -1 }}
+      >
+        {t('badges.seeAll')}
+      </Button>
 
       {/* Se avisa mientras el baremo se calibra. Prometer que los puntos no cambian y que
           cambien es peor que decir desde el principio que aún se están ajustando. */}

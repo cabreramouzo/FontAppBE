@@ -202,6 +202,26 @@ export interface GamificationProfile {
     /** `disabled` · `provisional` · `optedOut` · `activeDays` · `recentlyVoided` · `gotes` */
     blockedBy: string[]
   } | null
+  /** La vitrina: los diez peldaños de abajo arriba. */
+  levels: LevelStanding[]
+  /** Todas las familias de insignias, conseguidas o no. */
+  collection: BadgeSlot[]
+}
+
+export interface LevelStanding {
+  key: string
+  from: number
+  reached: boolean
+  current: boolean
+}
+
+export interface BadgeSlot {
+  family: string
+  /** `bronze` · `silver` · `gold` · `unique`, o null si aún no la tienes. */
+  tier: string | null
+  progress: number
+  threshold: number
+  thresholds: number[]
 }
 
 /** Una parada de una ruta propuesta (`GET /missions`). */

@@ -487,31 +487,93 @@ enum ContributionScore {
         return porFuente.values.count { $0.count == 4 }
     }
 
-    static func badges(for t: BadgeTally) -> [BadgeAward] {
-        func award(_ clave: String, _ nombre: String, _ n: Int, _ u: [Int]) -> BadgeAward? {
-            let grado: Tier
-            if n >= u[2] { grado = .gold }
-            else if n >= u[1] { grado = .silver }
-            else if n >= u[0] { grado = .bronze }
-            else { return nil }
-            return BadgeAward(key: clave, name: nombre, tier: grado,
-                              progress: n, threshold: u.first { $0 > n } ?? u[2])
-        }
+    /// Las familias de insignias, en un solo sitio.
+    ///
+    /// Está extraído aquí porque hay **dos** lecturas de la misma tabla: el marcador, que
+    /// solo enseña lo conseguido, y la vitrina de `/me/badges`, que enseña también lo que
+    /// falta. Con la tabla escrita dos veces, una silueta gris podría pedir un umbral que
+    /// no es el que luego se cobra.
+    struct BadgeFamily: Sendable {
+        let key: String
+        /// Castellano, para la consola. La interfaz traduce por `key`.
+        let name: String
+        /// Bronce · plata · oro. `Pionera` tiene uno solo y es `unique`.
+        let thresholds: [Int]
+        let unique: Bool
+        let count: @Sendable (BadgeTally) -> Int
+    }
 
-        var out: [BadgeAward] = []
-        out += [award("discoverer", "Descubridora", t.fontsCreated, [10, 50, 200])].compactMap { $0 }
-        out += [award("firstLight", "Primera luz", t.firstPhotos, [5, 25, 100])].compactMap { $0 }
-        out += [award("sentinel", "Centinela", t.sentinelUpdates, [15, 60, 250])].compactMap { $0 }
-        out += [award("cartographer", "Cartógrafa", t.mapFixes, [10, 40, 150])].compactMap { $0 }
-        out += [award("counties", "Comarcas", t.regions.count, [3, 8, 20])].compactMap { $0 }
-        out += [award("drySeason", "Estiaje", t.summerReviews, [10, 40, 120])].compactMap { $0 }
+    static let badgeFamilies: [BadgeFamily] = [
+        .init(key: "discoverer", name: "Descubridora", thresholds: [10, 50, 200], unique: false) { $0.fontsCreated },
+        .init(key: "firstLight", name: "Primera luz", thresholds: [5, 25, 100], unique: false) { $0.firstPhotos },
+        .init(key: "sentinel", name: "Centinela", thresholds: [15, 60, 250], unique: false) { $0.sentinelUpdates },
+        .init(key: "cartographer", name: "Cartógrafa", thresholds: [10, 40, 150], unique: false) { $0.mapFixes },
+        .init(key: "counties", name: "Comarcas", thresholds: [3, 8, 20], unique: false) { $0.regions.count },
+        .init(key: "drySeason", name: "Estiaje", thresholds: [10, 40, 120], unique: false) { $0.summerReviews },
         // Umbrales bajos porque el precio ya lo pone el calendario: la de bronce cuesta
         // un año entero de volver a la misma fuente, y no hay forma de acortarlo.
-        out += [award("fourSeasons", "Las cuatro estaciones", t.fourSeasonFonts, [1, 3, 10])].compactMap { $0 }
-        if t.pioneer {
-            out.append(BadgeAward(key: "pioneer", name: "Pionera", tier: .unique, progress: 1, threshold: 1))
+        .init(key: "fourSeasons", name: "Las cuatro estaciones", thresholds: [1, 3, 10], unique: false) { $0.fourSeasonFonts },
+        .init(key: "pioneer", name: "Pionera", thresholds: [1], unique: true) { $0.pioneer ? 1 : 0 },
+    ]
+
+    /// Una casilla de la vitrina: la familia, cómo va y si está conseguida.
+    struct BadgeSlot: Content, Sendable {
+        let family: String
+        /// `bronze` · `silver` · `gold` · `unique`, o **nulo si todavía no la tienes**.
+        /// Es lo que decide si la casilla se pinta en color o como silueta.
+        let tier: String?
+        let progress: Int
+        /// El umbral que persigues ahora. Al máximo, el último.
+        let threshold: Int
+        /// Los tres (o uno) escalones, para poder dibujar la escalera completa.
+        let thresholds: [Int]
+
+        /// `tier` se escribe **explícitamente como `null`** y no se omite.
+        ///
+        /// El codificador sintetizado de Swift usa `encodeIfPresent` para los opcionales,
+        /// así que una insignia sin conseguir salía del servidor *sin* la clave `tier`.
+        /// En el cliente eso llega como `undefined`, y `undefined !== null` es cierto: la
+        /// vitrina daba por conseguidas justo las que están bloqueadas. Un campo cuya
+        /// ausencia significa lo contrario de lo que quiere decir tiene que viajar.
+        func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(family, forKey: .family)
+            try c.encode(tier, forKey: .tier)
+            try c.encode(progress, forKey: .progress)
+            try c.encode(threshold, forKey: .threshold)
+            try c.encode(thresholds, forKey: .thresholds)
         }
-        return out
+    }
+
+    /// Grado alcanzado con `n` en una familia, o `nil`.
+    static func tier(_ f: BadgeFamily, _ n: Int) -> Tier? {
+        if f.unique { return n >= f.thresholds[0] ? .unique : nil }
+        if n >= f.thresholds[2] { return .gold }
+        if n >= f.thresholds[1] { return .silver }
+        if n >= f.thresholds[0] { return .bronze }
+        return nil
+    }
+
+    /// **Todas** las familias, conseguidas o no. Es lo que pinta la vitrina.
+    static func catalogue(for t: BadgeTally) -> [BadgeSlot] {
+        badgeFamilies.map { f in
+            let n = f.count(t)
+            return BadgeSlot(family: f.key,
+                             tier: tier(f, n)?.rawValue,
+                             progress: n,
+                             threshold: f.thresholds.first { $0 > n } ?? f.thresholds[f.thresholds.count - 1],
+                             thresholds: f.thresholds)
+        }
+    }
+
+    /// Solo las conseguidas. Lo usan el marcador y los comandos.
+    static func badges(for t: BadgeTally) -> [BadgeAward] {
+        badgeFamilies.compactMap { f in
+            let n = f.count(t)
+            guard let grado = tier(f, n) else { return nil }
+            return BadgeAward(key: f.key, name: f.name, tier: grado, progress: n,
+                              threshold: f.thresholds.first { $0 > n } ?? f.thresholds[f.thresholds.count - 1])
+        }
     }
 
     static func isSummer(_ d: Date) -> Bool {
