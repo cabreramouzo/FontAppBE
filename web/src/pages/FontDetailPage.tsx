@@ -58,6 +58,8 @@ import { ImagePicker } from '../components/ImagePicker'
 import { Skeleton } from '../components/Skeleton'
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
 import { BadgeIcon } from '../components/BadgeIcon'
+import { BadgeArt } from '../components/BadgeArt'
+import { BADGE_ART } from '../lib/levelBadges'
 import { enqueue, isOffline } from '../lib/outbox'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { compressImage } from '../lib/image'
@@ -620,8 +622,13 @@ export function FontDetailPage() {
           </span>
           {pioneerCountsAsBadge && (
             <Tooltip title={t('game.badge.pioneer')}>
+              {/* El escudo dibujado a 26 px: aquí la insignia es el premio, y el
+                  icono de línea al lado de un nombre no se lee como tal. Si algún
+                  día falta el fichero, `BadgeArt` devuelve null y queda el icono. */}
               <Box component="span" sx={{ display: 'flex', color: 'text.secondary' }}>
-                <BadgeIcon family="pioneer" fontSize="small" />
+                {BADGE_ART.has('pioneer')
+                  ? <BadgeArt family="pioneer" size={26} />
+                  : <BadgeIcon family="pioneer" fontSize="small" />}
               </Box>
             </Tooltip>
           )}

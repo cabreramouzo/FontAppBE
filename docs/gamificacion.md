@@ -770,6 +770,97 @@ Y el nivel 10 como *candidata a moderadora de su región* sigue siendo una propu
 un humano, no un automatismo. Eso es a propósito.
 
 ---
+
+## Apéndice: sacarlo a la calle (fase 7)
+
+Toda la gamificación descrita hasta aquí tiene un problema que no es de diseño sino de
+sitio: **vive detrás de `/me`, y casi nadie entra a su perfil**. Diez niveles, ocho
+familias de insignias y una vitrina entera que la mayoría de la gente no va a ver nunca.
+Un sistema de reconocimiento que nadie mira no reconoce nada.
+
+La fase 7 no añade nada que ganar. Mueve lo que ya se gana a donde la gente ya está.
+
+### El pionero en la ficha de la fuente
+
+`FontDetailPage` enseña quién fue el primero en reseñar una fuente, justo debajo de quién
+la creó, con el escudo de la insignia al lado. Es el «mayor» de Foursquare: un
+reconocimiento **público, concreto y ligado a un sitio**, que es lo que hace que alguien
+quiera ser el primero en llegar a la siguiente.
+
+Dos reglas que no son cosméticas:
+
+- El escudo solo aparece cuando la insignia **se ha ganado de verdad**, es decir en
+  fuentes sin creador (`font.creator == null`), que es exactamente la condición que cobra
+  `ContributionScore`. Si se pintara siempre, sería un adorno, y un adorno con forma de
+  premio devalúa el premio.
+- Si el pionero y el creador son la misma persona, **la línea no sale**. Quien añade una
+  fuente suele reseñarla en el mismo gesto; decirlo dos veces seguidas con dos rótulos
+  distintos parece un error de la app.
+
+El pionero se calcula en el cliente, sobre las reseñas ya cargadas (la más antigua por
+`createdAt`), y no se pide al servidor: el dato ya está en la respuesta y añadir un campo
+sería pedir dos veces lo mismo. Se deriva por fecha y no por la posición en el array, o
+un cambio de orden en el backend movería la insignia sin que nadie tocara nada.
+
+### El pulso, en novedades
+
+`Pulse` (backend) + `PulseStrip` (web) → tira sobre el mosaico de `/activity`: quién ha
+subido de nivel en los últimos 7 días y a quién le falta poco. `GET /activity/pulse`,
+pública, caché de 5 min, dentro del límite de 120/h de `/activity`.
+
+**En `/activity` y no en una `/competition` propia.** Una página aparte tendría el mismo
+problema que la vitrina —existir sin que nadie pase por delante— y obligaría a resolver
+otra vez el mezclado por fechas que este feed ya resuelve. La gente ya entra a novedades.
+
+**Tira aparte y no eventos mezclados en la rejilla**, que era la otra opción y parecía la
+más elegante. No lo es: cada pieza de la rejilla lleva a una ficha de fuente, y un
+ascenso de nivel no tiene fuente. Además `separaRepetidas` se apoya en el `fontID` para
+no pegar dos novedades de la misma fuente; meter ascensos dentro obligaría a inventarles
+un `fontID` falso a cada uno.
+
+Detalles que costaron una decisión cada uno:
+
+- **El corte va sobre `occurred_at`, no sobre `settled_at`.** Parece lo natural mirar
+  cuándo se liquidó, pero `settled_at` se rellena cuando pasa la sincronización: el día
+  que se importe el histórico, años de aportaciones quedarían liquidadas a la vez y la
+  app anunciaría que el censo entero acaba de subir de nivel.
+- **«A punto» se mide dentro del tramo, no sobre el umbral absoluto.** Con
+  `total / siguiente.from`, cualquiera de la mitad alta de la escalera saldría al 90 %
+  para siempre: entre Lago (28.000) y Acuífero (60.000) hay un salto enorme, y quien
+  acaba de llegar a Lago no está a punto de nada. Hay un test que fija esto.
+- **El corte del 75 % es el número a calibrar** cuando haya datos de verdad. Al 90 % el
+  que sale ya iba a subir esa semana y el aviso no cambia nada; por debajo del 70 % la
+  lista se llena de gente a la que le faltan meses.
+- **Quien acaba de subir no sale además como aspirante** del siguiente peldaño: sería la
+  misma persona dos veces en una tira de cuatro huecos, y la noticia es el ascenso.
+- **Global, no por zona**, a diferencia del resto de la página. El nivel sale del total de
+  gotas de toda la vida y en toda la geografía; recortarlo a una comarca daría un «subió
+  de nivel» que no cuadra con el nivel que se ve en el perfil de esa misma persona.
+- **Si no hay nada que contar, no se pinta nada.** Ni título ni caja vacía: una sección
+  permanentemente vacía enseña a saltársela, y las primeras semanas lo normal es que no
+  haya ascensos.
+- Respeta `gamification_opt_out` y `anonymized_at`, igual que el ranking mensual.
+
+**No lleva insignias todavía, y no es un olvido.** El nivel sale de una suma (`SUM(gotes)`)
+y se calcula para todo el mundo en una consulta; las insignias salen de recuentos por
+familia —fuentes creadas, primeras fotos, estaciones distintas por fuente— que hoy solo se
+saben usuario a usuario. Sacarlas aquí es recorrer el censo entero cada cinco minutos.
+Cuando el recuento viva en su propia tabla, entran.
+
+**Tampoco es un ranking**, y eso sí es una decisión. `ZoneStats.ranking` ya existe, es
+mensual, y lo es precisamente para que entrar hoy sea entrar a tiempo. Un «top» global en
+la portada desharía esa decisión por la puerta de atrás.
+
+### Insignias dibujadas
+
+`scripts/prepara-insignias.py` acepta ahora, además de los diez niveles, insignias de
+familia (`web/public/badges/<clave>.png`, registro `BADGE_ART`). Solo pueden entrar las de
+**grado único**: las de bronce/plata/oro son el mismo dibujo en tres metales, tres
+ficheros por familia, y esa biblioteca no se mantiene sola — ésas siguen con el icono
+coloreado de `BadgeIcon`, donde el grado lo lleva el color. Hoy solo está dibujada
+`pioneer`.
+
+---
 ---
 
 <a id="pla-de-gamificació-ca"></a>
@@ -956,6 +1047,13 @@ principi perquè «enganxin» ensenya que no valen res.
 
 Deu nivells amb noms del vocabulari de l'aigua: **la mateixa aigua fent-se més gran**, d'una
 gota a l'aqüífer que alimenta totes les fonts del mapa.
+
+> **Fase 7 — treure-ho al carrer.** Tot això vivia darrere de `/me`, i gairebé ningú entra
+> al seu perfil. Ara el **pioner** de cada font surt a la seva fitxa (amb l'escudet, i
+> només quan la insígnia s'ha guanyat de debò) i hi ha una tira a `/activity` amb qui ha
+> pujat de nivell aquesta setmana i a qui li falta poc. No és un rànquing: el rànquing és
+> el mensual per comarca, i ho és a posta. El detall complet, a l'apèndix de la fase 7 de
+> la versió en castellà.
 
 | # | Nivell | Gotes | Què desbloqueja |
 |---:|---|---:|---|

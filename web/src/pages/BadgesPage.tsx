@@ -17,6 +17,8 @@ import { useAuth } from '../auth/AuthContext'
 import { Skeleton } from '../components/Skeleton'
 import { LevelBadge, APAGADA } from '../components/LevelBadge'
 import { BadgeIcon } from '../components/BadgeIcon'
+import { BadgeArt } from '../components/BadgeArt'
+import { BADGE_ART } from '../lib/levelBadges'
 import { TIER_COLOR } from '../lib/tierColors'
 
 /**
@@ -95,25 +97,39 @@ export function BadgesPage() {
               // Al máximo, `progress` ya pasó del último umbral y la barra debe ir llena.
               const pct = Math.max(0, Math.min(100, (b.progress / b.threshold) * 100))
               const tope = b.progress >= b.thresholds[b.thresholds.length - 1]
+              const arte = BADGE_ART.has(b.family)
               return (
                 <Casilla key={b.family}>
-                  <Box
-                    sx={{
-                      width: 88, height: 88, borderRadius: '50%', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', position: 'relative',
-                      bgcolor: 'action.hover',
-                      border: '2px solid', borderColor: conseguida ? color : 'divider',
-                      color,
-                      ...(conseguida ? null : APAGADA),
-                    }}
-                  >
-                    <BadgeIcon family={b.family} sx={{ fontSize: 40 }} />
-                    {!conseguida && (
-                      <LockOutlinedIcon
-                        sx={{ position: 'absolute', bottom: 6, right: 6, fontSize: 16, color: 'text.disabled' }}
-                      />
-                    )}
-                  </Box>
+                  {arte ? (
+                    // Dibujada: el escudo ya trae su propio marco y su color, así que va
+                    // suelto. El candado sigue encima, que es lo que dice «todavía no».
+                    <Box sx={{ position: 'relative', display: 'flex' }}>
+                      <BadgeArt family={b.family} size={88} locked={!conseguida} />
+                      {!conseguida && (
+                        <LockOutlinedIcon
+                          sx={{ position: 'absolute', bottom: 2, right: 2, fontSize: 16, color: 'text.disabled' }}
+                        />
+                      )}
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        width: 88, height: 88, borderRadius: '50%', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', position: 'relative',
+                        bgcolor: 'action.hover',
+                        border: '2px solid', borderColor: conseguida ? color : 'divider',
+                        color,
+                        ...(conseguida ? null : APAGADA),
+                      }}
+                    >
+                      <BadgeIcon family={b.family} sx={{ fontSize: 40 }} />
+                      {!conseguida && (
+                        <LockOutlinedIcon
+                          sx={{ position: 'absolute', bottom: 6, right: 6, fontSize: 16, color: 'text.disabled' }}
+                        />
+                      )}
+                    </Box>
+                  )}
                   <Rotulo
                     nombre={t(`game.badge.${b.family}`)}
                     apagado={!conseguida}

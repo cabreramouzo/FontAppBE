@@ -75,6 +75,23 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     Se abre **una sola** capacidad, `relocateAnyFont` (nivel 5): reversible desde el panel
     y necesaria porque las fuentes importadas no tienen creador. Sustituir foto y borrar
     NO se abren por nivel.
+  - Fase 7, sacarlo de `/me`: toda la gamificación vivía detrás del perfil y casi nadie
+    entra ahí. Ahora el **pionero** (primero en reseñar) sale en la ficha de la fuente
+    bajo el creador, con el escudo **solo si la insignia se ha ganado de verdad** (fuentes
+    sin creador, misma condición que cobra `ContributionScore`) y sin la línea cuando
+    pionero y creador coinciden. Y el **pulso** (`Gamification/Pulse.swift` →
+    `GET /activity/pulse`, público, caché 5 min → `PulseStrip` sobre el mosaico de
+    `/activity`): quién subió de nivel en 7 días y a quién le falta poco. Tira aparte y no
+    mezclada en la rejilla porque un ascenso no tiene fuente y `separaRepetidas` se apoya
+    en `fontID`. El corte va sobre `occurred_at` y **no** sobre `settled_at`, o al importar
+    el histórico ascendería el censo entero a la vez; «a punto» se mide **dentro del
+    tramo** (con el umbral absoluto, media escalera sale al 90 % para siempre). Global y
+    no por zona: el nivel es del total de toda la vida. No es un ranking — ése es el
+    mensual por comarca, y lo es a posta. Sin insignias todavía: salen de recuentos por
+    familia que hoy solo se saben usuario a usuario.
+  - Insignias de familia dibujadas: `web/public/badges/<clave>.png` (`BADGE_ART` +
+    `BadgeArt.tsx`), mismo script que los niveles. Solo las de **grado único** — las de
+    bronce/plata/oro serían tres ficheros por familia y siguen con icono coloreado.
   - `GAMIFICATION_EPOCH=AAAA-MM-DD`: fecha desde la que los puntos son **definitivos**.
     Antes de ella todo es provisional y `--rescore` lo reconstruye; a partir de ella se
     niega. No congela las anulaciones: borrar o denunciar una reseña anula igual, esté

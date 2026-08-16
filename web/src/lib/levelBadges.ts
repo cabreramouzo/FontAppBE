@@ -21,3 +21,18 @@ export function levelBadgeURL(levelKey: string): string | null {
   if (!LEVEL_BADGES.has(levelKey)) return null
   return `/levels/${levelKey}.png?v=${VERSION}`
 }
+
+/**
+ * Familias con insignia dibujada, en `public/badges/`.
+ *
+ * Solo pueden entrar aquí las de **grado único**: las de bronce/plata/oro son el
+ * mismo dibujo en tres metales, tres ficheros por familia, y esa biblioteca no se
+ * mantiene sola. Ésas siguen con el icono coloreado de `BadgeIcon`, donde el grado
+ * lo lleva el color.
+ */
+export const BADGE_ART = new Set(['pioneer'])
+
+export function badgeArtURL(family: string): string | null {
+  if (!BADGE_ART.has(family)) return null
+  return `/badges/${family}.png?v=${VERSION}`
+}

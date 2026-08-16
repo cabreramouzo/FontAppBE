@@ -192,6 +192,70 @@ final class AppTests: XCTestCase {
         }
     }
 
+    /// El pulso reparte a la gente en dos listas, y las dos formas de equivocarse son
+    /// silenciosas: alguien que no ha subido anunciado como que sí, o el «a punto»
+    /// calculado sobre el umbral absoluto en vez de sobre el tramo.
+    func testPulseSplitsPromotionsFromClimbers() throws {
+        func fila(_ u: String, _ total: Int, _ antes: Int) -> Pulse.Row {
+            Pulse.Row(username: u, total: Int64(total), before: Int64(antes))
+        }
+
+        let s = Pulse.classify([
+            // Cruzó las 100 gotas esta semana: sube a Deu/Manantial.
+            fila("sube", 120, 80),
+            // Se mueve, pero dentro del mismo peldaño: ni ascenso ni nada.
+            fila("quieto", 90, 40),
+            // A 90 de 100: dentro del primer tramo, por encima del 75 %.
+            fila("apunto", 90, 90),
+        ])
+
+        XCTAssertEqual(s.promotions.map(\.username), ["sube"])
+        XCTAssertEqual(s.promotions.first?.level, "spring")
+
+        // «quieto» está al 90 % del tramo y también aspira; los dos, por cercanía.
+        XCTAssertEqual(s.climbers.map(\.username), ["apunto", "quieto"])
+        XCTAssertEqual(s.climbers.first?.remaining, 10)
+        XCTAssertEqual(s.climbers.first?.nextLevel, "spring")
+
+        // Quien acaba de subir NO sale además como aspirante del siguiente: sería la
+        // misma persona dos veces en una tira de cuatro huecos.
+        XCTAssertFalse(s.climbers.contains { $0.username == "sube" })
+    }
+
+    /// El progreso se mide **dentro del tramo**, no sobre el umbral absoluto. Con la
+    /// división ingenua (`total / siguiente.from`), cualquiera de la mitad alta de la
+    /// escalera aparecería «a punto» para siempre: los tramos de arriba son enormes.
+    func testPulseProgressIsRelativeToTheBandNotTheThreshold() throws {
+        let niveles = ContributionScore.levels.sorted { $0.from < $1.from }
+        // Dos peldaños consecutivos bien separados, tomados de la tabla real.
+        guard let alto = niveles.last, niveles.count >= 2 else { return XCTFail("tabla vacía") }
+        let previo = niveles[niveles.count - 2]
+
+        // Recién llegado al penúltimo: no está a punto de nada, aunque en términos
+        // absolutos ya lleve un buen porcentaje del umbral final.
+        let recien = Pulse.classify([Pulse.Row(username: "recien", total: Int64(previo.from), before: Int64(previo.from))])
+        XCTAssertTrue(recien.climbers.isEmpty,
+                      "Acabar de entrar en un tramo no puede contar como estar a punto de salir de él.")
+        XCTAssertGreaterThan(Double(previo.from) / Double(alto.from), 0.25,
+                             "Si el penúltimo no fuese una fracción apreciable del último, el test no probaría nada.")
+
+        // Al 80 % del tramo sí sale.
+        let casi = previo.from + Int(Double(alto.from - previo.from) * 0.8)
+        let s = Pulse.classify([Pulse.Row(username: "casi", total: Int64(casi), before: Int64(casi))])
+        XCTAssertEqual(s.climbers.map(\.username), ["casi"])
+        XCTAssertEqual(s.climbers.first?.nextLevel, alto.key)
+    }
+
+    /// Al final de la escalera no hay siguiente peldaño. Sin esto, `nextLevel` nulo
+    /// dejaría a quien está arriba del todo fuera por accidente o, peor, con un tramo
+    /// negativo.
+    func testPulseIgnoresTheTopOfTheLadder() throws {
+        let tope = ContributionScore.levels.map(\.from).max() ?? 0
+        let s = Pulse.classify([Pulse.Row(username: "arriba", total: Int64(tope + 5_000), before: Int64(tope + 5_000))])
+        XCTAssertTrue(s.climbers.isEmpty)
+        XCTAssertTrue(s.promotions.isEmpty)
+    }
+
     func testHaversineKnownDistance() throws {
         // Madrid (Puerta del Sol) -> Barcelona (Pl. Catalunya) ≈ 505 km.
         let d = haversineKm(40.4168, -3.7038, 41.3874, 2.1686)

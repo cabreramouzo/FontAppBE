@@ -246,6 +246,31 @@ export async function getActivity(
   return apiFetch(`/activity?${q}`)
 }
 
+/** El pulso de la competición: quién ha subido de nivel y quién lo tiene a tiro. */
+export interface PulsePromotion {
+  username: string
+  /** Clave de nivel; el rótulo lo pone el navegador. */
+  level: string
+  gotes: number
+}
+
+export interface PulseClimber {
+  username: string
+  nextLevel: string
+  gotes: number
+  remaining: number
+  pct: number
+}
+
+export interface PulseSnapshot {
+  promotions: PulsePromotion[]
+  climbers: PulseClimber[]
+}
+
+export async function getPulse(): Promise<PulseSnapshot> {
+  return apiFetch('/activity/pulse')
+}
+
 // Altas por código de cartel (?p=…). `source` nulo = llegaron sin código.
 export async function getSourceStats(): Promise<{ source: string | null; count: number }[]> {
   return apiFetch('/users/stats/sources')

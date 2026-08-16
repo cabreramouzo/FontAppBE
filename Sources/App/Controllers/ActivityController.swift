@@ -22,6 +22,29 @@ struct ActivityController: RouteCollection {
             // cuatro consultas. Un visitante de verdad hace unas pocas peticiones.
             .grouped(RateLimitMiddleware(scope: "activity", max: 120, window: 60 * 60))
         activity.get(use: index)
+        activity.get("pulse", use: pulse)
+    }
+
+    /// Compartida entre peticiones, como la de zonas: una agregación sobre la tabla de
+    /// aportaciones que vale igual durante minutos.
+    static let pulseCache = ZoneCache()
+
+    /// GET /activity/pulse — quién ha subido de nivel y quién está a punto.
+    ///
+    /// Cuelga de `/activity` y no de `/gamification` porque es donde se enseña y porque
+    /// hereda de aquí el límite de 120/h: `/gamification/me` es privado y de una sola
+    /// persona, y esto es una lectura pública y agregada, que es otro perfil de coste.
+    ///
+    /// **Global, no por zona**, a diferencia del resto de la página. El nivel sale del
+    /// total de gotas de toda la vida y en toda la geografía, así que recortarlo a una
+    /// comarca daría un «subió de nivel» que no cuadra con el nivel que se ve en el
+    /// perfil de esa misma persona. Una lista corta y honesta antes que una filtrada y
+    /// engañosa.
+    @Sendable func pulse(req: Request) async throws -> Pulse.Snapshot {
+        if let cacheada = await Self.pulseCache.get("pulse", as: Pulse.Snapshot.self) { return cacheada }
+        let out = try await Pulse.snapshot(on: req.db)
+        await Self.pulseCache.set("pulse", out)
+        return out
     }
 
     /// Radio por defecto de la vista "cerca de mí", en km. Una comarca larga: lo bastante
