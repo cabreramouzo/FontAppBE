@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Children, useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
@@ -6,7 +6,10 @@ import Typography from '@mui/material/Typography'
 import Link from '@mui/material/Link'
 import LinearProgress from '@mui/material/LinearProgress'
 import Tooltip from '@mui/material/Tooltip'
+import Button from '@mui/material/Button'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import { getPulse } from '../api/client'
 import type { PulseSnapshot } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
@@ -121,7 +124,30 @@ export function PulseStrip() {
   )
 }
 
+/**
+ * Cuántas filas se ven antes de tener que pedir el resto.
+ *
+ * Cinco: en un pueblo tranquilo la lista entera cabe ahí y el botón no llega a
+ * aparecer, y en una ciudad con movimiento corta antes de que la tira empuje el mosaico
+ * de novedades fuera de la pantalla — que es lo que se viene a ver. El servidor devuelve
+ * hasta 20 (`Pulse.limit`), así que desplegar no cuesta otra petición.
+ */
+const VISIBLES = 5
+
+/**
+ * Una de las dos listas, recortada a `VISIBLES` con un desplegable si hay más.
+ *
+ * El recorte lo hace la columna sobre sus propios hijos en vez de recibirlos ya
+ * cortados: así el estado de abierto/cerrado vive donde está el botón, y las dos listas
+ * se despliegan por separado. Son cosas distintas —quién ha llegado y quién está a
+ * punto— y hay poca razón para que abrir una obligue a abrir la otra.
+ */
 function Columna({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  const { t } = useI18n()
+  const [abierta, setAbierta] = useState(false)
+  const filas = Children.toArray(children)
+  const ocultas = filas.length - VISIBLES
+
   return (
     <Box>
       <Typography
@@ -131,7 +157,21 @@ function Columna({ titulo, children }: { titulo: string; children: React.ReactNo
       >
         {titulo}
       </Typography>
-      <Stack spacing={1.25}>{children}</Stack>
+      <Stack spacing={1.25}>{abierta ? filas : filas.slice(0, VISIBLES)}</Stack>
+      {ocultas > 0 && (
+        <Button
+          size="small"
+          onClick={() => setAbierta((v) => !v)}
+          endIcon={abierta ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          // Sin mayúsculas y alineado con el texto de las filas: es un enlace de
+          // «sigue leyendo», no una acción de la página.
+          sx={{ textTransform: 'none', mt: 0.5, ml: -1 }}
+        >
+          {/* Cerrar dice «ver menos» a secas; abrir dice cuántas faltan, porque saber si
+              son dos o quince es lo que decide si merece la pena pulsar. */}
+          {abierta ? t('pulse.less') : t('pulse.more', { n: String(ocultas) })}
+        </Button>
+      )}
     </Box>
   )
 }

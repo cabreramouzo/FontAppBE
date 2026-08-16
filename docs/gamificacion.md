@@ -832,10 +832,16 @@ Detalles que costaron una decisión cada uno:
   que sale ya iba a subir esa semana y el aviso no cambia nada; por debajo del 70 % la
   lista se llena de gente a la que le faltan meses.
 - **Quien acaba de subir no sale además como aspirante** del siguiente peldaño: sería la
-  misma persona dos veces en una tira de cuatro huecos, y la noticia es el ascenso.
+  misma persona dos veces en la misma tira, y la noticia es el ascenso.
 - **Global, no por zona**, a diferencia del resto de la página. El nivel sale del total de
   gotas de toda la vida y en toda la geografía; recortarlo a una comarca daría un «subió
   de nivel» que no cuadra con el nivel que se ve en el perfil de esa misma persona.
+- **Cinco filas visibles por lista, hasta 20 detrás de «ver más».** En un pueblo tranquilo
+  la lista entera cabe en cinco y el botón no llega a aparecer; en una ciudad con
+  movimiento, sin corte la tira empujaría el mosaico de novedades fuera de la pantalla, que
+  es justamente lo que se viene a ver. El servidor manda las 20 de una vez (`Pulse.limit`),
+  así que desplegar no cuesta otra petición. Las dos listas se abren **por separado**: son
+  cosas distintas y hay poca razón para que abrir una obligue a abrir la otra.
 - **Si no hay nada que contar, no se pinta nada.** Ni título ni caja vacía: una sección
   permanentemente vacía enseña a saltársela, y las primeras semanas lo normal es que no
   haya ascensos.

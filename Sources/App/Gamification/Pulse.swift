@@ -48,8 +48,18 @@ enum Pulse {
     /// meses, y entonces no significa nada estar en ella.
     static let nearlyThere = 0.75
 
-    /// Cuántos de cada. Cuatro y cuatro: es una tira sobre el feed, no una página.
-    static let limit = 4
+    /// Cuántos se devuelven de cada lista.
+    ///
+    /// Veinte y no cuatro: el techo tiene que estar por encima de lo que se enseña, o
+    /// «ver más» no tendría nada que desplegar. Quien corta a cinco es la interfaz
+    /// (`PulseStrip`), que es donde está el problema de sitio; aquí solo hace falta un
+    /// tope que impida que una zona con mucho movimiento devuelva una lista sin fin.
+    ///
+    /// Veinte es también el límite del ranking mensual (`ZoneStats.rankingLimit`), y por
+    /// la misma razón: más abajo no mira nadie.
+    /// Cuántas se enseñan de entrada las decide la interfaz, no esto: el problema de
+    /// sitio es suyo, y el «y N más» lo saca de las filas que ya tiene en la mano.
+    static let limit = 20
 
     struct Promotion: Content, Sendable {
         let username: String

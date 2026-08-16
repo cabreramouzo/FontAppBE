@@ -218,7 +218,7 @@ final class AppTests: XCTestCase {
         XCTAssertEqual(s.climbers.first?.nextLevel, "spring")
 
         // Quien acaba de subir NO sale además como aspirante del siguiente: sería la
-        // misma persona dos veces en una tira de cuatro huecos.
+        // misma persona dos veces en la misma tira.
         XCTAssertFalse(s.climbers.contains { $0.username == "sube" })
     }
 
