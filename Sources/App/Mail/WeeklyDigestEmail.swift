@@ -16,6 +16,13 @@ enum WeeklyDigestEmail {
         let activitySubtitle: String
         let nearbyTitle: String
         let nearbySubtitle: String
+        /// Cobertura de zona (fase 5). No se promete ningún «has pasado del 12 % al
+        /// 15 %»: no se guarda la fecha en que cada fuente ganó su foto, así que la
+        /// variación semanal habría que inventársela. Se dice el número de hoy.
+        let zoneTitle: (String) -> String       // "Cómo va Girona"
+        let zoneSubtitle: String
+        let zoneLine: (Int, Int, Int) -> String // hechas, total, %
+        let zoneMissing: (Int) -> String        // "Faltan 1.440 por fotografiar"
         let addedBy: String           // "añadida por"
         let editedBody: String        // texto para una edición (no tiene cuerpo propio)
         let cta: String
@@ -72,6 +79,34 @@ enum WeeklyDigestEmail {
             </td></tr>
             <tr><td style="padding:12px 28px 0;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">\(rows)</table>
+            </td></tr>
+            """
+        }
+
+        // La zona va DESPUÉS de la actividad y antes de las fuentes cercanas: primero lo
+        // que ha pasado, luego cómo va el sitio. Es una barra dibujada con dos celdas de
+        // tabla y anchos en porcentaje, porque los clientes de correo no pintan `<meter>`
+        // ni divs con `width` calculado por CSS.
+        if let z = digest.zone, z.fonts > 0 {
+            let lleno = max(z.photoPct, z.withPhoto > 0 ? 2 : 0)
+            let vacio = 100 - lleno
+            let faltan = z.fonts - z.withPhoto
+            sections += """
+            <tr><td style="padding:26px 28px 0;">
+              <p style="margin:0;font-size:16px;font-weight:800;color:#0f172a;">\(esc(c.zoneTitle(z.region)))</p>
+              <p style="margin:4px 0 0;font-size:13px;line-height:19px;color:#64748b;">\(esc(c.zoneSubtitle))</p>
+            </td></tr>
+            <tr><td style="padding:12px 28px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
+                <tr>
+                  <td width="\(lleno)%" height="10" style="background:#0ea5e9;border-radius:5px 0 0 5px;font-size:0;line-height:0;">&nbsp;</td>
+                  <td width="\(vacio)%" height="10" style="background:#e2e8f0;border-radius:0 5px 5px 0;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+              <p style="margin:8px 0 0;font-size:14px;line-height:20px;color:#334155;">\(esc(c.zoneLine(z.withPhoto, z.fonts, z.photoPct)))</p>
+              <p style="margin:6px 0 0;font-size:14px;line-height:20px;color:#64748b;">
+                <a href="\(base)/zones" style="color:#0ea5e9;text-decoration:none;font-weight:600;">\(esc(c.zoneMissing(faltan)))</a>
+              </p>
             </td></tr>
             """
         }
@@ -171,6 +206,11 @@ enum WeeklyDigestEmail {
                 out += "- \(a.fontName): \(body) — \(a.author) · \(c.daysAgo(daysSince(a.createdAt)))\n  \(base)/fonts/\(a.fontID)\n"
             }
         }
+        if let z = digest.zone, z.fonts > 0 {
+            out += "\n\(c.zoneTitle(z.region))\n"
+            out += "\(c.zoneLine(z.withPhoto, z.fonts, z.photoPct))\n"
+            out += "\(c.zoneMissing(z.fonts - z.withPhoto)) \(base)/zones\n"
+        }
         if !digest.nearby.isEmpty {
             out += "\n\(c.nearbyTitle)\n"
             for n in digest.nearby {
@@ -251,6 +291,10 @@ enum WeeklyDigestEmail {
                 activitySubtitle: "Fuentes que añadiste tú o en las que dejaste una reseña.",
                 nearbyTitle: "Nuevas fuentes cerca de las tuyas",
                 nearbySubtitle: "Añadidas esta semana en la zona por la que sueles moverte.",
+                zoneTitle: { "Cómo va \($0)" },
+                zoneSubtitle: "La foto es lo que más falta. Cada una la pone alguien que pasaba por allí.",
+                zoneLine: { "\($0) de \($1) fuentes ya tienen foto (\($2) %)." },
+                zoneMissing: { "Faltan \($0) por fotografiar →" },
                 addedBy: "añadida por",
                 editedBody: "Alguien ha editado la información de la fuente.",
                 cta: "Ver el mapa",
@@ -272,6 +316,10 @@ enum WeeklyDigestEmail {
                 activitySubtitle: "Fontes que engadiches ti ou nas que deixaches unha reseña.",
                 nearbyTitle: "Novas fontes preto das túas",
                 nearbySubtitle: "Engadidas esta semana na zona pola que adoitas moverte.",
+                zoneTitle: { "Como vai \($0)" },
+                zoneSubtitle: "A foto é o que máis falta. Cada unha ponna alguén que pasaba por alí.",
+                zoneLine: { "\($0) de \($1) fontes xa teñen foto (\($2) %)." },
+                zoneMissing: { "Faltan \($0) por fotografar →" },
                 addedBy: "engadida por",
                 editedBody: "Alguén editou a información da fonte.",
                 cta: "Ver o mapa",
@@ -293,6 +341,10 @@ enum WeeklyDigestEmail {
                 activitySubtitle: "Zuk gehitutako iturriak edo iritzia utzi duzunak.",
                 nearbyTitle: "Iturri berriak zureen ondoan",
                 nearbySubtitle: "Aste honetan gehituak zu ibiltzen zaren inguruan.",
+                zoneTitle: { "\($0) nola doan" },
+                zoneSubtitle: "Argazkia da gehien falta dena. Bakoitza handik pasatzen zen norbaitek jartzen du.",
+                zoneLine: { "\($1) iturritik \($0)k dute jada argazkia (% \($2))." },
+                zoneMissing: { "\($0) daude oraindik argazkirik gabe →" },
                 addedBy: "gehitzailea:",
                 editedBody: "Norbaitek iturriaren informazioa editatu du.",
                 cta: "Ikusi mapa",
@@ -314,6 +366,10 @@ enum WeeklyDigestEmail {
                 activitySubtitle: "Fountains you added, or where you left a review.",
                 nearbyTitle: "New fountains near yours",
                 nearbySubtitle: "Added this week around the area you usually walk.",
+                zoneTitle: { "How \($0) is doing" },
+                zoneSubtitle: "Photos are what is missing most. Each one is added by someone who walked past.",
+                zoneLine: { "\($0) of \($1) fountains already have a photo (\($2)%)." },
+                zoneMissing: { "\($0) still to photograph →" },
                 addedBy: "added by",
                 editedBody: "Someone edited the fountain's details.",
                 cta: "Open the map",
@@ -335,6 +391,10 @@ enum WeeklyDigestEmail {
                 activitySubtitle: "Fonts que vas afegir tu o on vas deixar una ressenya.",
                 nearbyTitle: "Fonts noves a prop de les teves",
                 nearbySubtitle: "Afegides aquesta setmana a la zona per on sols moure't.",
+                zoneTitle: { "Com va \($0)" },
+                zoneSubtitle: "La foto és el que més falta. Cada una la posa algú que hi passava.",
+                zoneLine: { "\($0) de \($1) fonts ja tenen foto (\($2) %)." },
+                zoneMissing: { "En falten \($0) per fotografiar →" },
                 addedBy: "afegida per",
                 editedBody: "Algú ha editat la informació de la font.",
                 cta: "Veure el mapa",

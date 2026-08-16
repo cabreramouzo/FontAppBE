@@ -40,6 +40,8 @@ export function Footer() {
         {t('donate.button')}
       </Button>
       <FeedbackButton />
+      {/* En móvil el icono de zonas no cabe en la barra: aquí es donde se llega. */}
+      <RouterLink to="/zones">{t('zones.title')}</RouterLink>
       <RouterLink to="/legal">{t('footer.legal')}</RouterLink>
       <span className="muted">
         {t('footer.dataPrefix')}{' '}

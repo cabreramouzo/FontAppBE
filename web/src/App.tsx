@@ -31,6 +31,7 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then((m) => (
 const AdminEditsPage = lazy(() => import('./pages/AdminEditsPage').then((m) => ({ default: m.AdminEditsPage })))
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })))
 const NewsPage = lazy(() => import('./pages/NewsPage').then((m) => ({ default: m.NewsPage })))
+const ZonesPage = lazy(() => import('./pages/ZonesPage').then((m) => ({ default: m.ZonesPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
                   <Route path="/" element={<MapPage />} />
                   <Route path="/fonts/:id" element={<FontDetailPage />} />
                   <Route path="/activity" element={<NewsPage />} />
+                  <Route path="/zones" element={<ZonesPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />

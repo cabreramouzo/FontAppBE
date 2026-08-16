@@ -217,3 +217,33 @@ export interface Missions {
   /** Ronda: sin comprobar desde hace más de medio año. */
   stale: MissionTarget[]
 }
+
+/** Cobertura colectiva de una zona. Fase 5 de la gamificación. */
+export interface ZoneCoverage {
+  country: string | null
+  region: string
+  fonts: number
+  withPhoto: number
+  checkedRecently: number
+  photoPct: number
+  freshPct: number
+}
+
+export interface ZoneCoverageResponse {
+  zones: ZoneCoverage[]
+  /** Corte de «comprobada hace poco», en días. */
+  freshDays: number
+}
+
+export interface ZoneRankingRow {
+  rank: number
+  username: string
+  gotes: number
+}
+
+export interface ZoneRanking {
+  region: string
+  /** AAAA-MM */
+  month: string
+  rows: ZoneRankingRow[]
+}

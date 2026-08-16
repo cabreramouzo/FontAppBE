@@ -47,6 +47,14 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     (`GET /missions?lat=&long=&km=`, pública con límite 120/h → `MissionsPanel` desde el
     botón de rutas del mapa). Dos rutas de 6 paradas en 4 km, **ordenadas por distancia y
     no por puntos**, y sin solaparse entre ellas.
+  - Fase 5: zonas (`ZoneStats` + `ZoneController` → `GET /zones` y `/zones/ranking`,
+    públicas con límite 120/h y caché de 5 min; página `/zones` y bloque en el correo
+    semanal). Primero **las barras de la comarca** y luego la tabla, plegada: la barra es
+    del territorio y no de nadie. El ranking es **mensual** a propósito — uno histórico lo
+    gana para siempre quien llegó primero. `gamification_opt_out` **saca de la tabla pero
+    no de las barras**, y hay un test que fija las dos mitades de la regla.
+  - Diez niveles (`ContributionScore.levels`), de `drop` a `aquifer`. El nivel y las
+    insignias viajan como **clave**, no como nombre: el rótulo lo traduce el navegador.
   - `GAMIFICATION_EPOCH=AAAA-MM-DD`: fecha desde la que los puntos son **definitivos**.
     Antes de ella todo es provisional y `--rescore` lo reconstruye; a partir de ella se
     niega. No congela las anulaciones: borrar o denunciar una reseña anula igual, esté

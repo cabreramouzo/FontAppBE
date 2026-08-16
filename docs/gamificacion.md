@@ -34,10 +34,12 @@ agua hoy, si se puede beber, qué cara tiene, y dónde está exactamente.
 La buena noticia es la última cifra: `fonts.region` ya está poblada en producción. Las
 clasificaciones por zona se pueden hacer desde el primer día sin trabajo previo.
 
-> **Detalle que saldrá en la primera tabla de clasificación:** las regiones vienen con el
-> exónimo castellano y a nivel de provincia — la muestra da `Barcelona` y `Gerona`, no
+> **Detalle que salía en la primera tabla de clasificación:** las regiones venían con el
+> exónimo castellano y a nivel de provincia — la muestra daba `Barcelona` y `Gerona`, no
 > «Girona» ni «Catalunya». En una app con el catalán por defecto, «Gerona» en una cabecera
-> se va a ver. Vale la pena decidirlo *antes* de publicar rankings por zona, no después.
+> se ve. **Resuelto antes de publicar la fase 5**, que es el momento en que había que
+> hacerlo: se migraron los nombres a catalán en producción. Cambiarlos después habría sido
+> migrar datos ya publicados.
 
 ---
 
@@ -366,9 +368,10 @@ frescura bajo el nombre de cada fuente y el panel de rutas (`GET /missions`) des
 de rutas del mapa. La frescura es útil aunque la gamificación se cancele: se hizo primero
 por eso.
 
-**Fase 5 — Zona: barras colectivas y ranking mensual.** Cobertura por comarca y tabla mensual
-regional, en el resumen semanal por correo. Antes de esto hay que decidir el nombre de las
-regiones: «Gerona» no puede salir en una cabecera.
+**Fase 5 — Zona: barras colectivas y ranking mensual.** ✅ *Implementada:* `GET /zones` y
+`GET /zones/ranking`, la página `/zones` y el bloque de cobertura en el resumen semanal.
+El nombre de las regiones ya está resuelto: se pasaron a catalán en producción («Gerona» →
+«Girona», «Lérida» → «Lleida»). Ver el apéndice de abajo.
 
 **Fase 6 — Niveles con permisos.** Las capacidades de mantenimiento, atadas al modelo de
 administradores por región. El último a propósito: dar permisos automáticos antes de ver cómo
@@ -378,10 +381,16 @@ se comporta la gente es como se rompe un mapa abierto.
 
 ## 13. Decisiones pendientes
 
-- **Nombres de región.** ¿Provincia con exónimo castellano («Gerona»), provincia en catalán, o
-  comunidad autónoma? Afecta a rankings, barras e insignias de comarca, y cambiarlo después es
-  migrar datos.
-- **Hasta dónde llega el seudónimo.** Un ranking público enseña quién aporta y desde dónde. Ya
+- ~~**Nombres de región.**~~ **Resuelto:** provincia en catalán. Se migraron en producción con
+  un `UPDATE` («Gerona» → «Girona», «Lérida» → «Lleida»; Barcelona y Tarragona ya coincidían).
+  Ojo: `populate-regions` lee los nombres del GeoJSON de fronteras, así que volver a pasarlo
+  con un fichero que traiga los exónimos castellanos **deshace la migración** y parte cada
+  zona en dos filas del ranking. Antes de reejecutarlo, comprobar qué trae el dataset.
+- ~~**Hasta dónde llega el seudónimo.**~~ **Resuelto para la tabla del mes:** sale el
+  `@username`, que es lo mismo que ya firma cada reseña en la ficha de una fuente — la tabla
+  dice estrictamente *menos*, porque agrupa por comarca en vez de decir en qué fuente exacta
+  estuviste. Y `gamification_opt_out` saca de la tabla sin dejar de contar en las barras.
+- **Hasta dónde llega el seudónimo (lo que queda).** Un ranking público enseña quién aporta y desde dónde. Ya
   existen `name_public` y `email_public`; hará falta el equivalente para los puntos, y decidir
   el valor por defecto.
 - **Los 100 m de verificación.** ¿Son suficientes bajo arbolado, donde el GPS se va? Quizá
@@ -602,6 +611,70 @@ genera varias (una edición que completa tres campos), cuál de ellas— con un 
 detrás. `detail` va `NOT NULL` con defecto `''` a propósito: en Postgres dos `NULL` se
 consideran distintos, así que con una columna nullable el índice único no habría impedido
 nada.
+
+---
+
+## Apéndice: las zonas (fase 5)
+
+`GET /zones` (cobertura de todas las zonas), `GET /zones/ranking?region=&month=` (la tabla
+del mes) y la página `/zones`. Públicas y con caché en memoria de 5 minutos: son
+agregaciones sobre las tablas grandes y el resultado no cambia de un minuto a otro.
+
+**El orden de la página es la mitad del diseño.** Primero las barras de la comarca, después
+la tabla, y la tabla **plegada**: hay que ir a buscarla. A mucha gente los rankings le dan
+reparo, y en una app de colaboración ciudadana espantarlos sale carísimo; quien no quiera
+competir se lleva igualmente lo que ha venido a ver, porque la barra es del territorio y no
+de nadie.
+
+**El ranking es mensual, y eso es lo que lo hace jugable.** Uno histórico global lo gana
+para siempre quien llegó primero y vive donde hay densidad; a partir de ahí nadie más juega.
+Cada mes empieza de cero, así que entrar hoy es entrar a tiempo. Un mes ilegible se contesta
+con un 400 en vez de servir el mes en curso: si se pide agosto y devolvemos septiembre sin
+decir nada, el fallo aparece como datos raros y no como un error.
+
+**Quien ha apagado la gamificación no sale en la tabla, pero sigue contando en las barras.**
+El interruptor del perfil dice que oculta puntos y tablas; si apagarlo te dejara igualmente
+en una tabla pública, no estaría diciendo la verdad. Las barras son otra cosa: son del
+territorio. Hay un test que fija las dos mitades de esta regla a la vez.
+
+El `@username` de la tabla es lo mismo que ya firma cada reseña en la ficha de una fuente.
+La tabla dice estrictamente **menos** que la ficha, porque agrupa por comarca en vez de
+decir en qué fuente exacta estuviste.
+
+Las fuentes sin `region` se quedan fuera en vez de agruparse en un «sin zona»: una barra de
+progreso sobre un cajón de sastre no mide nada, y el cajón sería el más grande de la lista
+mientras `populate-regions` no haya pasado por todas.
+
+### Dos detalles que solo se ven ejecutándolo
+
+El carril por defecto de la barra de MUI es el color primario aclarado, un azul bastante
+saturado. Con los porcentajes reales —del 0 al 2 %— **la barra vacía se leía como una barra
+llena**, que es exactamente lo contrario de lo que dice el dato. Carril neutro y relleno
+azul. Y al revés: un 0,4 % redondea a 0 y la barra desaparece del todo, que se lee como
+«esta comarca no existe»; se le deja un hilo visible mientras haya algo.
+
+La consulta agrupa los comentarios **antes** de unirlos a las fuentes. Sin eso, `COUNT(*)`
+cuenta una vez por reseña y una fuente muy comentada infla el total de su comarca: la barra
+diría «12 fuentes» habiendo 3. Hay un test con cuatro reseñas sobre la misma fuente.
+
+### En el correo semanal
+
+Un bloque con la barra de «con foto» de tu zona, dibujada con dos celdas de tabla y anchos
+en porcentaje porque los clientes de correo no pintan `<meter>` ni anchos calculados por
+CSS. «Cómo va tu comarca» es mejor correo que «has hecho 340 puntos».
+
+Tu zona es **donde más has aportado**, no la del registro: mucha gente se registró desde el
+sofá de una ciudad y aporta en otra comarca.
+
+Dos cosas que el bloque **no** hace, a propósito:
+
+- **No promete «has pasado del 12 % al 15 %».** No se guarda la fecha en que cada fuente
+  ganó su foto, así que la variación semanal habría que inventársela. Se dice el número de
+  hoy y cuántas faltan, que además es lo accionable.
+- **No justifica por sí solo el envío.** La cobertura se mueve de mes en mes, no de semana
+  en semana, y un correo semanal cuya única novedad es un número que no ha cambiado es
+  exactamente el correo que se aprende a ignorar. Viaja de acompañante cuando ya hay algo
+  que contar.
 
 ---
 ---
@@ -913,9 +986,9 @@ L'interruptor per amagar-ho és sota la targeta.
 sota el nom de cada font i el panell de rutes (`GET /missions`) des del botó de rutes del
 mapa. La frescor és útil encara que la gamificació es cancel·li: es va fer primer per això.
 
-**Fase 5 — Zona: barres col·lectives i rànquing mensual.** Cobertura per comarca i taula mensual
-regional, al resum setmanal per correu. Abans d'això cal decidir el nom de les regions:
-«Gerona» no pot sortir en una capçalera.
+**Fase 5 — Zona: barres col·lectives i rànquing mensual.** ✅ *Implementada:* `GET /zones` i
+`GET /zones/ranking`, la pàgina `/zones` i el bloc de cobertura al resum setmanal. El nom
+de les regions ja està resolt: es van passar al català a producció.
 
 **Fase 6 — Nivells amb permisos.** Les capacitats de manteniment, lligades al model
 d'administradors per regió. L'últim a propòsit: donar permisos automàtics abans de veure com es

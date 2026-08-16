@@ -17,6 +17,7 @@ final class IntegrationTests: XCTestCase {
             // La caché de /activity es estática y no se va con la app: si no se vacía,
             // un caso se lleva la respuesta que dejó el anterior sobre otra BD.
             await ActivityController.cache.clear()
+            await ZoneController.cache.clear()
             try await test(app)
             try await app.autoRevert()
         } catch {
@@ -1250,6 +1251,118 @@ final class IntegrationTests: XCTestCase {
             _ = try await ContributionLedger.sync(on: app.db)
             let despues = try await ContributionEvent.query(on: app.db).all().map { $0.gotes }.reduce(0, +)
             XCTAssertEqual(original, despues)
+        }
+    }
+
+    // MARK: - Zonas (fase 5)
+
+    /// Las barras cuentan fuentes de la zona, no reseñas: una fuente muy comentada no
+    /// puede inflar la cobertura de su comarca. Es el fallo clásico de un `JOIN` mal
+    /// agrupado y aquí se mediría como «esta comarca tiene 12 fuentes» teniendo 3.
+    func testZoneCoverageCountsFountainsAndNotReviews() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "zona1")
+            let token = try await login(app, username: "zona1")
+
+            let conFoto = try await createFont(app, token: token, name: "Amb foto", lat: 41.80, long: 2.10)
+            let sinFoto = try await createFont(app, token: token, name: "Sense foto", lat: 41.81, long: 2.11)
+            let fuera = try await createFont(app, token: token, name: "Fora de zona", lat: 40.00, long: 1.00)
+
+            // Las tres primeras en la misma región; la de fuera, en otra.
+            for id in [conFoto, sinFoto] {
+                let f = try await Font.find(id, on: app.db)!
+                f.region = "Osona"
+                f.country = "España"
+                if id == conFoto { f.image = "/uploads/x.jpg" }
+                try await f.save(on: app.db)
+            }
+            let otra = try await Font.find(fuera, on: app.db)!
+            otra.region = "Segrià"
+            try await otra.save(on: app.db)
+
+            // Cuatro reseñas sobre la MISMA fuente: no debe contar como cuatro fuentes.
+            for i in 0..<4 { _ = try await addComment(app, token: token, fontID: conFoto, body: "Ressenya \(i)") }
+
+            try await app.test(.GET, "zones", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let out = try res.content.decode(ZoneController.CoverageResponse.self)
+                let osona = out.zones.first { $0.region == "Osona" }
+                XCTAssertEqual(osona?.fonts, 2, "Cuatro reseñas sobre una fuente no son cuatro fuentes.")
+                XCTAssertEqual(osona?.withPhoto, 1)
+                XCTAssertEqual(osona?.photoPct, 50)
+                // Solo la reseñada cuenta como comprobada, aunque lo esté cuatro veces.
+                XCTAssertEqual(osona?.checkedRecently, 1)
+                XCTAssertEqual(out.zones.first { $0.region == "Segrià" }?.fonts, 1)
+            })
+        }
+    }
+
+    /// Quien apaga la gamificación desaparece de la tabla del mes pero **sigue contando
+    /// en las barras de la zona**. El interruptor dice que oculta puntos y tablas; si
+    /// apagarlo te dejara igualmente en una tabla pública, estaría mintiendo. Las barras
+    /// son del territorio y no de nadie, así que ahí no aplica.
+    func testOptingOutHidesYouFromTheRankingButNotFromTheZoneBars() async throws {
+        try await withApp { app in
+            let discreta = try await register(app, username: "discreta")
+            _ = try await register(app, username: "visible")
+            let tokenD = try await login(app, username: "discreta")
+            let tokenV = try await login(app, username: "visible")
+
+            let fontD = try await createFont(app, token: tokenD, name: "Font discreta", lat: 41.90, long: 2.20)
+            let fontV = try await createFont(app, token: tokenV, name: "Font visible", lat: 41.91, long: 2.21)
+            for id in [fontD, fontV] {
+                let f = try await Font.find(id, on: app.db)!
+                f.region = "Bages"
+                try await f.save(on: app.db)
+            }
+            _ = try await ContributionLedger.sync(on: app.db, now: Date().addingTimeInterval(96 * 3_600))
+
+            // Antes de apagarlo, las dos salen.
+            try await app.test(.GET, "zones/ranking?region=Bages", afterResponse: { res in
+                let r = try res.content.decode(ZoneStats.Ranking.self)
+                XCTAssertEqual(Set(r.rows.map(\.username)), ["discreta", "visible"])
+            })
+
+            let u = try await User.find(discreta, on: app.db)!
+            u.gamificationOptOut = true
+            try await u.save(on: app.db)
+            await ZoneController.cache.clear()
+
+            try await app.test(.GET, "zones/ranking?region=Bages", afterResponse: { res in
+                let r = try res.content.decode(ZoneStats.Ranking.self)
+                XCTAssertEqual(r.rows.map(\.username), ["visible"], "El opt-out tiene que sacarte de la tabla.")
+            })
+            try await app.test(.GET, "zones", afterResponse: { res in
+                let out = try res.content.decode(ZoneController.CoverageResponse.self)
+                XCTAssertEqual(out.zones.first { $0.region == "Bages" }?.fonts, 2,
+                               "Las barras son del territorio: el opt-out no descuenta la fuente.")
+            })
+        }
+    }
+
+    /// El ranking es MENSUAL: lo del mes pasado no se arrastra. Un ranking histórico lo
+    /// gana para siempre quien llegó primero y a partir de ahí nadie más juega.
+    func testRankingOnlyCountsTheMonthAsked() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "mensual")
+            let token = try await login(app, username: "mensual")
+            let fontID = try await createFont(app, token: token, name: "Font del mes", lat: 41.70, long: 2.05)
+            let f = try await Font.find(fontID, on: app.db)!
+            f.region = "Anoia"
+            try await f.save(on: app.db)
+            _ = try await ContributionLedger.sync(on: app.db, now: Date().addingTimeInterval(96 * 3_600))
+
+            // Un mes en el que no hubo nada sale vacío, no con lo de este mes.
+            try await app.test(.GET, "zones/ranking?region=Anoia&month=2001-01", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let r = try res.content.decode(ZoneStats.Ranking.self)
+                XCTAssertEqual(r.month, "2001-01")
+                XCTAssertTrue(r.rows.isEmpty)
+            })
+            // Y un mes ilegible es un error, no el mes en curso servido en silencio.
+            try await app.test(.GET, "zones/ranking?region=Anoia&month=agosto", afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest)
+            })
         }
     }
 }

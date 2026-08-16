@@ -1,4 +1,4 @@
-import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, GamificationProfile, InterestStats, LoginResponse, Missions, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource } from './types'
+import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, GamificationProfile, InterestStats, LoginResponse, Missions, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -375,4 +375,16 @@ export async function getMissions(lat: number, long: number, km?: number): Promi
   const q = new URLSearchParams({ lat: String(lat), long: String(long) })
   if (km) q.set('km', String(km))
   return apiFetch<Missions>(`/missions?${q}`)
+}
+
+/** Cobertura por zona (fase 5). Pública. */
+export async function getZones(): Promise<ZoneCoverageResponse> {
+  return apiFetch<ZoneCoverageResponse>('/zones')
+}
+
+/** Ranking mensual de una zona. `month` en AAAA-MM; si falta, el mes en curso. */
+export async function getZoneRanking(region: string, month?: string): Promise<ZoneRanking> {
+  const q = new URLSearchParams({ region })
+  if (month) q.set('month', month)
+  return apiFetch<ZoneRanking>(`/zones/ranking?${q}`)
 }

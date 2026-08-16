@@ -246,3 +246,38 @@ Las imágenes subidas se sirven como estáticos en `GET /uploads/<archivo>`.
 - Almacenamiento de imágenes en producción (hoy es disco local, no escala): migrar a S3/similar.
 - Limpieza de tokens expirados y rate-limit en el login.
 - Paginación en reports/comments si una fuente acumula muchos.
+
+## Zonas (`/zones`)
+
+Cobertura colectiva por región y ranking mensual. **Lectura pública**, límite de 120/h por
+IP y caché en memoria de 5 minutos (son agregaciones sobre las tablas grandes).
+
+`GET /zones`
+
+```json
+{
+  "zones": [
+    { "country": "España", "region": "Girona", "fonts": 1444, "withPhoto": 12,
+      "checkedRecently": 30, "photoPct": 1, "freshPct": 2 }
+  ],
+  "freshDays": 180
+}
+```
+
+Ordenadas de más fuentes a menos. Las fuentes sin `region` no salen: una barra de progreso
+sobre un cajón de sastre no mide nada. Los porcentajes vienen calculados para que la web y
+el correo semanal enseñen el mismo número redondeado.
+
+`GET /zones/ranking?region=<zona>&month=AAAA-MM`
+
+```json
+{ "region": "Girona", "month": "2026-08",
+  "rows": [ { "rank": 1, "username": "macma", "gotes": 348 } ] }
+```
+
+Sin `month`, el mes en curso. Un mes ilegible devuelve **400**, no el mes actual en
+silencio. El mes se corta en **UTC**, igual que se guarda `occurred_at`.
+
+Solo cuenta lo **liquidado** (`contribution_events.status = 'settled'`). **No salen** ni las
+cuentas anonimizadas ni quien tenga `gamification_opt_out` — aunque sus aportaciones sí
+siguen contando en la cobertura de `GET /zones`, que es del territorio y no de nadie.

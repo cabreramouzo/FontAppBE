@@ -24,4 +24,5 @@ func routes(_ app: Application) throws {
     try app.register(collection: FeedbackController())
     try app.register(collection: GamificationController())
     try app.register(collection: MissionController())
+    try app.register(collection: ZoneController())
 }

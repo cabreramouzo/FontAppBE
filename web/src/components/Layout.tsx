@@ -15,6 +15,7 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import NewspaperIcon from '@mui/icons-material/Newspaper'
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -116,6 +117,21 @@ export function Layout({ children }: { children: ReactNode }) {
           <Tooltip title={t('news.title')}>
             <IconButton component={RouterLink} to="/activity" color="inherit" size="small" aria-label={t('news.title')}>
               <NewspaperIcon />
+            </IconButton>
+          </Tooltip>
+          {/* Zonas: mismo sitio y mismo criterio que Novedades — navega fuera del mapa.
+              Se esconde en pantallas estrechas, donde la barra ya iba justa y esta es la
+              menos urgente de las dos; se llega igual desde el pie. */}
+          <Tooltip title={t('zones.title')}>
+            <IconButton
+              component={RouterLink}
+              to="/zones"
+              color="inherit"
+              size="small"
+              aria-label={t('zones.title')}
+              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+            >
+              <MapOutlinedIcon />
             </IconButton>
           </Tooltip>
           <ThemeToggle />

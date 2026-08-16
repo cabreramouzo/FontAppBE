@@ -36,8 +36,18 @@ struct WeeklyDigest {
     var activity: [Activity] = []
     var nearby: [Nearby] = []
 
+    /// Cobertura de la zona donde más aporta esta persona. Fase 5: «cómo va tu comarca»
+    /// es mejor correo que «has hecho 340 puntos», porque habla de un sitio de verdad y
+    /// no del contador de nadie.
+    var zone: ZoneStats.Coverage?
+
     /// ¿Merece la pena mandar el correo? Un resumen sin novedades solo enseña a
     /// ignorarlo, así que si no ha pasado nada NO se envía.
+    ///
+    /// La cobertura de zona **no cuenta** para esto a propósito: se mueve de mes en mes,
+    /// no de semana en semana, y un correo semanal cuya única novedad es un número que
+    /// no ha cambiado es exactamente el correo que se aprende a ignorar. Viaja de
+    /// acompañante cuando ya hay algo que contar.
     var isWorthSending: Bool { !activity.isEmpty || !nearby.isEmpty }
 
     var newsCount: Int { activity.count + nearby.count }
@@ -151,6 +161,25 @@ struct WeeklyDigest {
             }
         }
 
+        // --- Tu zona. La «tuya» es donde más has aportado y no la del registro: mucha
+        // gente se registró desde el sofá de una ciudad y aporta en otra comarca, y la
+        // barra tiene que hablar del sitio donde de verdad camina.
+        if let region = dominantRegion(of: myFonts) {
+            digest.zone = try await ZoneStats.coverage(ofRegion: region, on: db)
+        }
+
         return digest
+    }
+
+    /// La región más repetida entre las fuentes de esta persona, o `nil` si ninguna está
+    /// clasificada. Los empates se rompen por nombre para que el correo de una semana a
+    /// otra no cambie de comarca sin motivo.
+    static func dominantRegion(of fonts: [Font]) -> String? {
+        var cuenta: [String: Int] = [:]
+        for f in fonts {
+            guard let r = f.region, !r.isEmpty else { continue }
+            cuenta[r, default: 0] += 1
+        }
+        return cuenta.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.first?.key
     }
 }
