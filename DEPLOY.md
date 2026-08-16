@@ -507,6 +507,137 @@ donde todavía no hay ninguna fuente con región.
 fly ssh console -a fontapp -C "/app/App populate-regions /app/fronteres.geojson"
 ```
 
+## Cloudflare delante de la API (`api.fontapp.net`)
+
+### Por qué
+
+El navegador llama hoy directo a `https://fontapp.fly.dev`, así que cada petición depende
+de que el edge anycast de Fly sea alcanzable desde el operador del usuario. El 15 y 16 de
+agosto de 2026 no lo fue durante más de un día desde un ISP español, **y las dos familias
+se turnaban**: por la mañana IPv4 perdía el 40 % de los paquetes y IPv6 iba fino; por la
+tarde IPv4 iba 15/15 e IPv6 fallaba 6 de 8.
+
+No era la app (dos máquinas `started`, checks pasando, ~0,1 s de servicio real) ni la línea
+(IPv4 contra Cloudflare, GitHub y Neon, impecable). Y no era *nuestra* dirección: `fly.io`
+—su propia web, en `2a09:8280:1::a:791`— caía 0/6, mientras `api.fly.io`, en otro `/64`
+(`2a09:8280:1:f28::`), respondía 6/6. Lo roto era la subred del edge de Fly, así que
+**reasignar la IP no habría servido de nada**: cualquier anycast nueva cae en la misma.
+
+Cloudflare Pages, en las mismas tandas, hizo 25/25 a 0,12 s. La idea es que los usuarios
+entren por ahí y sea Cloudflare quien recorra el tramo flojo hasta Fly, por su backbone.
+
+Las imágenes ya son inmunes: salen de R2 (`R2_PUBLIC_URL`, un `pub-….r2.dev`), no del
+backend. Lo único que pasa por Fly es el JSON de la API.
+
+### El orden importa
+
+Si pones la nube naranja antes de que Fly tenga el certificado, Cloudflare llega al origen
+con SNI `api.fontapp.net`, Fly no tiene certificado para ese nombre y **todo devuelve 525 /
+526**. Los pasos van en este orden por eso.
+
+**1. Desplegar el backend con el soporte de IP de cliente (antes de tocar el DNS).**
+
+Detrás de Cloudflare, `Fly-Client-IP` deja de ser el usuario: es el edge de Cloudflare. Sin
+esto, todo el tráfico compartiría contador de rate-limit y el geo-IP del registro situaría a
+todo el mundo en el centro de datos de Cloudflare más cercano. Lo resuelve `ClientIP`, que
+solo cree a `CF-Connecting-IP` si viene acompañada de un secreto que Cloudflare inyecta y
+el navegador no conoce (a `fly.dev` se puede seguir llegando directo y falsificar la
+cabecera). **Sin `EDGE_SECRET` definido no cambia nada**, por eso este paso va el primero y
+es inofensivo.
+
+```bash
+fly secrets set EDGE_SECRET="$(openssl rand -hex 32)" -a fontapp
+```
+
+Guárdalo: hace falta literal en el paso 5.
+
+**2. Pedir el certificado a Fly, con la nube GRIS.**
+
+En Cloudflare → DNS, crea el registro **desactivando el proxy** (nube gris):
+
+| Tipo | Nombre | Contenido | Proxy |
+|---|---|---|---|
+| CNAME | `api` | `fontapp.fly.dev` | **DNS only (gris)** |
+
+Y entonces:
+
+```bash
+fly certs add api.fontapp.net -a fontapp
+fly certs show api.fontapp.net -a fontapp     # repetir hasta "Ready"
+```
+
+Tiene que decir `Ready` y listar el certificado emitido. Con la nube naranja desde el
+principio, la validación de Let's Encrypt no llega y este paso se queda colgado.
+
+**3. Comprobar que el origen funciona por su nombre nuevo, todavía sin proxy.**
+
+```bash
+curl -sS -o /dev/null -w "%{http_code} %{time_total}s\n" https://api.fontapp.net/health
+```
+
+Debe dar `200`. Si da error de TLS, el certificado aún no está listo: vuelve al paso 2.
+
+**4. Encender el proxy.**
+
+En Cloudflare → DNS, cambia ese CNAME a nube **naranja**. Y en SSL/TLS → Overview, modo
+**Full (strict)** — Fly tiene un certificado válido de Let's Encrypt, así que *strict* es
+correcto y cualquier modo inferior sería dejarse el tramo Cloudflare↔Fly sin verificar.
+**«Flexible» no**: haría peticiones HTTP al origen y entraría en bucle de redirección.
+
+**5. Inyectar el secreto desde Cloudflare.**
+
+Rules → Transform Rules → **Modify Request Header** → Create:
+
+- Nombre: `Identifica el edge ante el backend`
+- Si: `Hostname` `equals` `api.fontapp.net`
+- Acción: **Set static** → nombre `X-Edge-Secret`, valor = el `EDGE_SECRET` del paso 1.
+
+Sin esto el backend sigue funcionando, pero contando a todo el mundo como una sola IP.
+
+**6. Comprobar que la IP real llega.** Regístrate con una cuenta de prueba y mira en el
+panel que la ubicación deducida es la tuya y no Frankfurt/Ámsterdam. Si sale un centro de
+datos, la Transform Rule no está aplicando.
+
+**7. Caché: que la API NO se cachee.** Por defecto Cloudflare no cachea respuestas sin
+extensión de fichero, así que de entrada estás bien. Aun así, déjalo explícito —
+Rules → Cache Rules:
+
+- Si: `Hostname` `equals` `api.fontapp.net`
+- Entonces: **Bypass cache**
+
+Cachear la API serviría a un anónimo la respuesta de un admin. Es el mismo motivo por el
+que el ámbito entra en la clave de la caché de `/activity`.
+
+**8. Apuntar la web al nombre nuevo.** En `web/.env.production` y en la variable de
+entorno del proyecto de Cloudflare Pages:
+
+```
+VITE_API_URL=https://api.fontapp.net
+```
+
+Y redespliega Pages. Las dos cosas: el `.env` del repo es lo que usa el CI.
+
+**9. Ampliar `WEB_ORIGIN`** solo si aún no incluye el origen de la web. `api.fontapp.net`
+y `fontapp.net` son orígenes distintos, así que **el CORS sigue siendo necesario** (esto no
+lo elimina; para eso habría que servir la API bajo `fontapp.net/api/*`, que es otra
+reforma).
+
+```bash
+fly secrets set WEB_ORIGIN="https://fontapp.net,https://www.fontapp.net" -a fontapp
+```
+
+### Después
+
+- `fontapp.fly.dev` **sigue funcionando y sigue siendo un bypass**: quien la conozca puede
+  saltarse Cloudflare. Es aceptable (el rate-limit sigue actuando por `Fly-Client-IP`), pero
+  si quieres cerrarlo, una regla en Fly o un chequeo de `X-Edge-Secret` que rechace lo que
+  no venga del edge.
+- El service worker **no se entera**: solo intercepta peticiones del mismo origen
+  (`sw.js`), y la API era cross-origin antes y lo sigue siendo. No hay que subir la versión
+  del caché por esto.
+- Límites de Cloudflare que nos afectan: cuerpo de 100 MB (subimos 256 kB) y 100 s de
+  espera al origen (lo más lento medido son 0,43 s). Ninguno estorba.
+
 ## Límites de uso (anti-bot)
 
 Todos los endpoints de escritura llevan un límite por IP y ventana deslizante
@@ -518,7 +649,7 @@ Todos los endpoints de escritura llevan un límite por IP y ventana deslizante
 | Crear fuente | 30 / hora |
 | Reseña | 40 / hora |
 | Incidencia | 20 / hora |
-| Subir imagen | 60 / hora |
+| Subir imagen | 10 / hora |
 | Login | 10 / 5 min |
 | Recuperar contraseña | 5 / 15 min |
 | Sugerencias | 5 / 10 min |

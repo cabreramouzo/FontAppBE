@@ -55,18 +55,10 @@ struct RateLimitMiddleware: AsyncMiddleware {
         return try await next.respond(to: request)
     }
 
-    /// IP real del cliente.
-    ///
-    /// NO usamos `X-Forwarded-For`: el cliente puede enviarla falsificada y, como el
-    /// proxy añade la IP real *al final*, tomar el primer valor daría una IP que el
-    /// atacante controla → podría rotar IPs falsas para evadir el límite. En Fly usamos
-    /// `Fly-Client-IP`, que la pone el proxy de Fly y el cliente no puede sobrescribir.
-    /// Fuera de Fly (dev) caemos a la IP del socket TCP, que tampoco es falsificable.
+    /// IP real del cliente. El porqué de cada fuente y por qué no vale `X-Forwarded-For`
+    /// está en `ClientIP`, que es donde vive la decisión (la comparte el geo-IP del
+    /// registro: si las dos no miran lo mismo, una de las dos se equivoca).
     static func clientIP(_ req: Request) -> String {
-        if let fly = req.headers.first(name: "Fly-Client-IP")?.trimmingCharacters(in: .whitespaces),
-           !fly.isEmpty {
-            return fly
-        }
-        return req.remoteAddress?.ipAddress ?? "unknown"
+        ClientIP.of(req) ?? "unknown"
     }
 }

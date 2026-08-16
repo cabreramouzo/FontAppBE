@@ -51,14 +51,8 @@ extension Application {
 extension Request {
     var geoLocator: any GeoLocator { application.geoLocator }
 
-    /// IP del cliente real, teniendo en cuenta los proxies (Fly / balanceadores).
-    /// No se persiste; solo se usa para deducir la región y descartarla.
-    var clientIP: String? {
-        if let fly = headers.first(name: "Fly-Client-IP"), !fly.isEmpty { return fly }
-        if let xff = headers.first(name: "X-Forwarded-For"),
-           let first = xff.split(separator: ",").first {
-            return first.trimmingCharacters(in: .whitespaces)
-        }
-        return remoteAddress?.ipAddress
-    }
+    /// IP del cliente real, teniendo en cuenta los proxies (Fly, y Cloudflare si está
+    /// delante). No se persiste; solo se usa para deducir la región y descartarla.
+    /// La lógica es la misma que usa el rate-limit: ver `ClientIP`.
+    var clientIP: String? { ClientIP.of(self) }
 }
