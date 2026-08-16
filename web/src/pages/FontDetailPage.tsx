@@ -12,6 +12,7 @@ import Chip from '@mui/material/Chip'
 import Alert from '@mui/material/Alert'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
+import Tooltip from '@mui/material/Tooltip'
 import Divider from '@mui/material/Divider'
 import Collapse from '@mui/material/Collapse'
 import List from '@mui/material/List'
@@ -56,6 +57,7 @@ import { StarRating } from '../components/StarRating'
 import { ImagePicker } from '../components/ImagePicker'
 import { Skeleton } from '../components/Skeleton'
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
+import { BadgeIcon } from '../components/BadgeIcon'
 import { enqueue, isOffline } from '../lib/outbox'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { compressImage } from '../lib/image'
@@ -538,6 +540,24 @@ export function FontDetailPage() {
   // La foto ya está hecha — solo falta decir que sirve como principal.
   const puedeAscenderFoto = canManageFont || (!!user && !font.image)
 
+  // Quién fue el primero en dejar constancia de esta fuente. Por fecha y no por posición
+  // en el array: el endpoint las manda más recientes primero, pero apoyarse en el orden
+  // del servidor en vez de en el dato es lo que rompe el día que alguien pagina o cachea.
+  const pioneerComment = comments.length
+    ? comments.reduce((antigua, c) => (new Date(c.createdAt) < new Date(antigua.createdAt) ? c : antigua))
+    : null
+  // Cuentas anonimizadas se quedan sin username: no hay a quién enlazar ni felicitar.
+  const pioneerUsername = pioneerComment?.username ?? null
+  // La insignia de Pionero (fase de gamificación) solo se gana en fuentes IMPORTADAS —
+  // convierte un punto sin historia en una fuente vista por alguien. Si la fuente tiene
+  // creador, quien la reseñó primero es un dato curioso pero no cuenta para esa insignia,
+  // así que el icono no se enseña: prometer un logro que el servidor no ha dado sería peor
+  // que no decir nada.
+  const pioneerCountsAsBadge = !font.creator?.id
+  // Si el creador y quien reseñó primero son la misma persona, la segunda línea no dice
+  // nada que la primera no dijera ya.
+  const showPioneer = !!pioneerUsername && pioneerUsername !== creatorName
+
   return (
     <Box className="detail pad" sx={{ maxWidth: 720, mx: 'auto' }}>
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
@@ -582,9 +602,29 @@ export function FontDetailPage() {
       </Box>
 
       {creatorName && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: showPioneer ? 0.25 : 1 }}>
           {t('detail.createdBy')}{' '}
           <Link component={RouterLink} to={`/users/${encodeURIComponent(creatorName)}`}>@{creatorName}</Link>
+        </Typography>
+      )}
+
+      {/* El "Mayor" de Foursquare, sin el nombre: quién fue el primero en dejar
+          constancia de esta fuente. Va justo bajo el creador porque contesta la misma
+          pregunta ("¿de quién es esta ficha?") desde otro ángulo, y la insignia solo
+          aparece cuando de verdad se ha ganado (fuentes sin creador) — no como adorno. */}
+      {showPioneer && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <span>
+            {t('detail.pioneerBy')}{' '}
+            <Link component={RouterLink} to={`/users/${encodeURIComponent(pioneerUsername!)}`}>@{pioneerUsername}</Link>
+          </span>
+          {pioneerCountsAsBadge && (
+            <Tooltip title={t('game.badge.pioneer')}>
+              <Box component="span" sx={{ display: 'flex', color: 'text.secondary' }}>
+                <BadgeIcon family="pioneer" fontSize="small" />
+              </Box>
+            </Tooltip>
+          )}
         </Typography>
       )}
 

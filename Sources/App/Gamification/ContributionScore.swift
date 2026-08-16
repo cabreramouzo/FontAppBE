@@ -504,16 +504,16 @@ enum ContributionScore {
     }
 
     static let badgeFamilies: [BadgeFamily] = [
-        .init(key: "discoverer", name: "Descubridora", thresholds: [10, 50, 200], unique: false) { $0.fontsCreated },
+        .init(key: "discoverer", name: "Descubridor", thresholds: [10, 50, 200], unique: false) { $0.fontsCreated },
         .init(key: "firstLight", name: "Primera luz", thresholds: [5, 25, 100], unique: false) { $0.firstPhotos },
         .init(key: "sentinel", name: "Centinela", thresholds: [15, 60, 250], unique: false) { $0.sentinelUpdates },
-        .init(key: "cartographer", name: "Cartógrafa", thresholds: [10, 40, 150], unique: false) { $0.mapFixes },
+        .init(key: "cartographer", name: "Cartógrafo", thresholds: [10, 40, 150], unique: false) { $0.mapFixes },
         .init(key: "counties", name: "Comarcas", thresholds: [3, 8, 20], unique: false) { $0.regions.count },
         .init(key: "drySeason", name: "Estiaje", thresholds: [10, 40, 120], unique: false) { $0.summerReviews },
         // Umbrales bajos porque el precio ya lo pone el calendario: la de bronce cuesta
         // un año entero de volver a la misma fuente, y no hay forma de acortarlo.
         .init(key: "fourSeasons", name: "Las cuatro estaciones", thresholds: [1, 3, 10], unique: false) { $0.fourSeasonFonts },
-        .init(key: "pioneer", name: "Pionera", thresholds: [1], unique: true) { $0.pioneer ? 1 : 0 },
+        .init(key: "pioneer", name: "Pionero", thresholds: [1], unique: true) { $0.pioneer ? 1 : 0 },
     ]
 
     /// Una casilla de la vitrina: la familia, cómo va y si está conseguida.

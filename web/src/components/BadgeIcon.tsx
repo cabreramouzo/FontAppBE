@@ -5,7 +5,7 @@ import EditLocationAltOutlinedIcon from '@mui/icons-material/EditLocationAltOutl
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
 import WbSunnyOutlinedIcon from '@mui/icons-material/WbSunnyOutlined'
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined'
-import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined'
+import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined'
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined'
 import type { SvgIconProps } from '@mui/material/SvgIcon'
 
@@ -28,7 +28,10 @@ const ICONS: Record<string, React.ComponentType<SvgIconProps>> = {
   counties: PublicOutlinedIcon,
   drySeason: WbSunnyOutlinedIcon,
   fourSeasons: CalendarMonthOutlinedIcon,
-  pioneer: FlagOutlinedIcon,
+  // Una brújula y no una bandera: la ficha de la fuente tiene banderas de verdad para
+  // denunciar reseñas, unos centímetros más abajo. Con la misma forma, la insignia se
+  // leería como "esto está reportado" en vez de "fuiste el primero en llegar".
+  pioneer: ExploreOutlinedIcon,
 }
 
 export function BadgeIcon({ family, ...props }: { family: string } & SvgIconProps) {

@@ -129,7 +129,7 @@ final class AppTests: XCTestCase {
     /// casilla gris podría pedir un umbral que luego no es el que se cobra.
     func testCatalogueShowsEveryFamilyAndBadgesOnlyTheEarnedOnes() throws {
         var t = ContributionScore.BadgeTally()
-        t.fontsCreated = 12       // Descubridora: bronce (10), siguiente 50
+        t.fontsCreated = 12       // Descubridor: bronce (10), siguiente 50
         t.firstPhotos = 0         // Primera luz: nada, primer umbral 5
 
         let vitrina = ContributionScore.catalogue(for: t)

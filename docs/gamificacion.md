@@ -168,12 +168,25 @@ Seis familias, cada una apuntando a un hueco real de los datos. Dentro de cada f
 tres escalones: bronce · plata · oro. Los umbrales son para calibrar con datos reales; los de
 aquí son el punto de partida.
 
+> **Nombres en masculino genérico.** Empezaron escritos en femenino sin que nadie lo
+> decidiera a propósito — quedó así por inercia de cómo se fue redactando la primera
+> insignia, y las siguientes copiaron el género. Se pasaron a la forma masculina genérica
+> del castellano y el catalán (Descubridor, Cartógrafo, Pionero); Centinela y el resto ya
+> eran epicenos y no cambian. En euskera e inglés no hacía falta tocar nada: ninguno de los
+> dos marca género en estos sustantivos.
+>
+> **Pendiente de decidir, no implementado:** un desplegable de sexo/género en el perfil que
+> adapte el nombre de la insignia a quien la gana, en vez de un genérico fijo para todos. Es
+> más trabajo del que parece — no son dos formas, son cinco idiomas × la insignia, y euskera
+> no tiene el problema que se le pediría resolver. Se deja anotado aquí para no perder la
+> idea, no para hacerlo ya.
+
 | Familia | Qué mide | Umbrales | Nota |
 |---|---|---|---|
-| **Descubridora** | Fuentes nuevas que no existían en el mapa | 10 · 50 · 200 | Oro: también hace falta que 20 hayan sido confirmadas por otro |
+| **Descubridor** | Fuentes nuevas que no existían en el mapa | 10 · 50 · 200 | Oro: también hace falta que 20 hayan sido confirmadas por otro |
 | **Primera luz** | Primeras fotos de fuentes que no tenían ninguna | 5 · 25 · 100 | Es la insignia que ataca el 0 % |
 | **Centinela** | Reseñas de actualización sobre fuentes olvidadas desde hace 6 meses o más | 15 · 60 · 250 | Solo cuentan las verificadas in situ |
-| **Cartógrafa** | Reubicaciones y correcciones de ficha que sobreviven sin ser revertidas | 10 · 40 · 150 | Una reversión resta; es la única insignia que puede bajar |
+| **Cartógrafo** | Reubicaciones y correcciones de ficha que sobreviven sin ser revertidas | 10 · 40 · 150 | Una reversión resta; es la única insignia que puede bajar |
 | **Comarcas** | Fuentes aportadas en zonas administrativas distintas | 3 · 8 · 20 regiones | Recompensa moverse, no acumular en el mismo pueblo |
 | **Estiaje** | Estados de agua registrados en plena sequía, entre junio y septiembre | 10 · 40 · 120 | Se reinicia cada verano: es estacional a propósito |
 | **Las cuatro estaciones** | Fuentes que has reseñado en las cuatro estaciones | 1 · 3 · 10 fuentes | Umbrales bajos porque el precio lo pone el calendario |
@@ -190,7 +203,7 @@ liquidación, o una reseña del 20 de marzo liquidada el 23 cambiaría de estaci
 
 ### Insignias de un solo tiro
 
-- **Pionera** — la primera persona que reseña una fuente importada. Una vez por fuente, para
+- **Pionero** — la primera persona que reseña una fuente importada. Una vez por fuente, para
   siempre; queda escrito en la ficha.
 - **Mala noticia** — la primera incidencia confirmada de una fuente que constaba como buena.
   Nadie quiere darla y hace falta que alguien la dé.
@@ -909,19 +922,24 @@ que ja segueix el mapa en obrir-se.
 
 ## 6. Insignies
 
+> **Noms en masculí genèric.** Van començar escrits en femení sense que ningú ho decidís a
+> propòsit; es van passar a la forma masculina genèrica (Descobridor, Cartògraf, Pioner).
+> **Pendent de decidir, no implementat:** un desplegable de gènere al perfil que adapti el
+> nom. Veure la nota en castellà, a la secció 6, per al detall complet.
+
 | Família | Què mesura | Llindars | Nota |
 |---|---|---|---|
-| **Descobridora** | Fonts noves que no existien al mapa | 10 · 50 · 200 | Or: també cal que 20 hagin estat confirmades per algú altre |
+| **Descobridor** | Fonts noves que no existien al mapa | 10 · 50 · 200 | Or: també cal que 20 hagin estat confirmades per algú altre |
 | **Primera llum** | Primeres fotos de fonts que no en tenien cap | 5 · 25 · 100 | És la insígnia que ataca el 0 % |
 | **Sentinella** | Ressenyes d'actualització sobre fonts oblidades des de fa 6 mesos o més | 15 · 60 · 250 | Només compten les verificades in situ |
-| **Cartògrafa** | Reubicacions i correccions de fitxa que sobreviuen sense ser revertides | 10 · 40 · 150 | Una reversió resta; és l'única insígnia que pot baixar |
+| **Cartògraf** | Reubicacions i correccions de fitxa que sobreviuen sense ser revertides | 10 · 40 · 150 | Una reversió resta; és l'única insígnia que pot baixar |
 | **Comarques** | Fonts aportades en zones administratives diferents | 3 · 8 · 20 regions | Recompensa moure's, no acumular al mateix poble |
 | **Les quatre estacions** | Fonts que has ressenyat a les quatre estacions | 1 · 3 · 10 fonts | Llindars baixos perquè el preu el posa el calendari |
 | **Estiatge** | Estats d'aigua registrats en plena secada, entre juny i setembre | 10 · 40 · 120 | Es reinicia cada estiu: és estacional a posta |
 
 ### Insignies d'un sol tret
 
-- **Pionera** — la primera persona que ressenya una font importada. Un cop per font, per
+- **Pioner** — la primera persona que ressenya una font importada. Un cop per font, per
   sempre; queda escrit a la fitxa.
 - **Mala notícia** — la primera incidència confirmada d'una font que constava com a bona.
   Ningú vol donar-la i cal que algú la doni.
