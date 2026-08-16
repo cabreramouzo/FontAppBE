@@ -27,6 +27,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Resumen semanal por correo: `swift run App send-weekly-digest [--dry-run] [--user <username>]`
   (pensado para un cron semanal; ver DEPLOY.md). También a mano desde el panel de
   administración (solo owner): vista previa + enviar, con el mismo código (`WeeklyDigestSender`).
+- Gamificación (fase 1, **solo lectura**): `swift run App score-contributions [--user <username>] [--detail] [--json]`.
+  Puntúa el historial existente sin escribir nada; sirve para calibrar el baremo antes de crear
+  ninguna tabla. Plan completo en [docs/gamificacion.md](docs/gamificacion.md) (ES + CA).
 - Roles: `swift run App set-role <username> <user|moderator|admin|owner>` (owner solo por CLI).
 - Servidor: `swift run App serve` (`127.0.0.1:8080`). Cargar entorno: `export $(cat env.development | xargs)`.
 - Web (dev): `cd web && npm run dev` (proxy `/api` y `/uploads` → backend).
@@ -40,6 +43,8 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - `Sources/App/Controllers/` — un `RouteCollection` por recurso (User, Font, Report, Comment, Auth, Image).
 - `Sources/App/Commands/SeedCommand.swift` · `Sources/App/Utils/Geo.swift` (haversine).
 - `Sources/App/Storage/` — abstracción `ImageStorage` (disco local / Cloudflare R2 vía Soto).
+- `Sources/App/Gamification/ContributionScore.swift` — baremo y cálculo de puntos/insignias
+  sobre el historial. Puro y sin escrituras: el comando solo lo imprime.
 - `Tests/AppTests/` — XCTVapor (smoke + integración con DB).
 - `web/` — frontend (mapa, detalle, auth, reseñas); ver `web/README.md`.
 

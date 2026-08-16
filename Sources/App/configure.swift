@@ -148,6 +148,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(PopulateRegionsCommand(), as: "populate-regions")
     app.asyncCommands.use(SetRoleCommand(), as: "set-role")
     app.asyncCommands.use(WeeklyDigestCommand(), as: "send-weekly-digest")
+    app.asyncCommands.use(ScoreContributionsCommand(), as: "score-contributions")
 
     // Rutas.
     try routes(app)

@@ -1,0 +1,665 @@
+# Gamificación de FontApp
+
+> Documento de trabajo · agosto de 2026
+> Versión en catalán al final: [Pla de gamificació](#pla-de-gamificació-ca)
+
+## Pagar por información, no por actividad
+
+Un plan de gamificación para una base de datos que ya tiene decenas de miles de fuentes
+y casi ningún dato humano dentro. El diseño entero sale de esa asimetría.
+
+---
+
+## 1. De dónde partimos
+
+Muestra aleatoria de **49 fuentes reales de producción** en la Catalunya central,
+consultadas una a una contra la API el 16 de agosto de 2026:
+
+| Campo | Cobertura |
+|---|---|
+| Con fotografía | **0 / 49 — 0 %** |
+| Con descripción escrita por alguien | 2 / 49 — 4 % |
+| Con potabilidad indicada | 4 / 49 — 8 % |
+| Creadas por un usuario | 0 / 49 |
+| Con región asignada | 49 / 49 — 100 % |
+
+Y las dos «descripciones escritas» de la muestra decían las dos `Manantial (OpenStreetMap)`,
+generadas por el importador. En la práctica, **cero contenido humano**.
+
+Esto no es un fracaso: es el resultado esperado de haber importado OSM y el WFS de la ACA.
+Pero cambia radicalmente qué tiene que comprar la gamificación. No hace falta más cobertura
+geográfica — hay de sobra. Hace falta **la capa que ningún importador puede dar**: si sale
+agua hoy, si se puede beber, qué cara tiene, y dónde está exactamente.
+
+La buena noticia es la última cifra: `fonts.region` ya está poblada en producción. Las
+clasificaciones por zona se pueden hacer desde el primer día sin trabajo previo.
+
+> **Detalle que saldrá en la primera tabla de clasificación:** las regiones vienen con el
+> exónimo castellano y a nivel de provincia — la muestra da `Barcelona` y `Gerona`, no
+> «Girona» ni «Catalunya». En una app con el catalán por defecto, «Gerona» en una cabecera
+> se va a ver. Vale la pena decidirlo *antes* de publicar rankings por zona, no después.
+
+---
+
+## 2. El principio
+
+> Los puntos se pagan por el **valor informativo marginal** de la aportación, no por el
+> esfuerzo ni por el número de acciones.
+>
+> Una reseña de una fuente que nadie ha visitado en un año vale mucho. La misma reseña, de
+> la misma fuente, tres días después de que otro haya pasado, no vale casi nada — porque no
+> dice nada que no supiéramos.
+
+Casi toda la gamificación que se ve por ahí fuera paga por actividad: tantos puntos por
+comentario, tantos por foto. Eso funciona cuando lo que quieres es volumen. Aquí el volumen
+ya lo tienes y el problema es otro — tienes *una foto por cada mil fuentes*. Pagar plano por
+reseña haría que la gente reseñara las cuatro fuentes de su pueblo una vez por semana, que
+es exactamente lo que no necesitas.
+
+Tres corolarios que atraviesan todo el documento:
+
+- **La frescura es la mercancía.** «¿Hay agua?» es una pregunta sobre hoy, no sobre 2024.
+- **El hueco vale más que lo lleno.** El primero de cualquier cosa —foto, estado,
+  potabilidad— cobra prima.
+- **Nada se cobra si no es comprobable.** Sin GPS cerca o sin que nadie lo confirme, los
+  puntos quedan pendientes.
+
+---
+
+## 3. La moneda: gotas
+
+**Gotas** (CA *gotes*, EN *drops*). Una sola moneda, sin mercados ni monedas premium. Se
+ganan colaborando y no se gastan en nada: son un marcador de contribución, no una economía.
+
+Los valores de abajo son la escala relativa, que es la única parte que importa. Los números
+absolutos se pueden reescalar el día que se quiera.
+
+### Baremo base
+
+| Aportación | Por qué vale lo que vale | Gotas |
+|---|---|---:|
+| **Primera foto** de una fuente que no tenía | Es el hueco más grande que hay, y es irrepetible: solo se puede hacer una vez por fuente. | 120 |
+| **Fuente nueva** que no existía | Amplía el mapa. Alto, pero no el más alto: ya hay decenas de miles de fuentes y ninguna foto. | 100 |
+| **Primera reseña** de una fuente nunca visitada | Convierte un punto importado en una fuente verificada por una persona. | 80 |
+| **Reubicar** una fuente (aceptada) | Bajo arbolado el GPS se va decenas de metros; una fuente mal situada no se encuentra. | 60 |
+| **Reseña de actualización** | Escalada por antigüedad de la última — ver la curva de frescura. | 5–70 |
+| **Completar la ficha** (potabilidad, tipo, descripción real) | Por campo que pasa de vacío a lleno. No se paga dos veces el mismo campo. | 25 |
+| **Incidencia** (fuente seca, rota, desaparecida) | Una noticia negativa es tan útil como una positiva, y nadie la da por gusto. | 40 |
+| **Confirmar** la reseña de otro | Barato de hacer y barato de pagar, pero convierte un testimonio en dos. | 10 |
+| **Sustituir una foto** existente por una mejor | Mejora marginal, y tiene riesgo de guerra de ediciones. | 15 |
+| Guardar una fuente en favoritos | Es para ti, no para el común. No se paga. | 0 |
+| Registrarse, abrir la app, tener racha | No aporta ningún dato. No se paga. | 0 |
+
+### Multiplicadores
+
+Se aplican sobre el baremo base y se pueden acumular hasta un techo de **×3**.
+
+| Condición | Razón | Factor |
+|---|---|---:|
+| Fuente a >10 km de cualquier fuente reseñada | Los desiertos de datos no se cubren solos; alguien tiene que ir expresamente. | ×1,5 |
+| Estado del agua entre junio y septiembre | Es cuando las fuentes se secan y cuando más gente las busca. | ×1,4 |
+| Fuente marcada como «dudosa» por una incidencia abierta | Dirige a la gente hacia lo que está en disputa. | ×1,5 |
+| La fuente ya tiene 3+ reseñas frescas | Reducir, no premiar: no hace falta un cuarto testimonio de la misma semana. | ×0,2 |
+
+---
+
+## 4. La curva de frescura
+
+El núcleo del sistema. Una reseña de actualización vale en función del tiempo transcurrido
+desde la última: cuanto más olvidada esté la fuente, más vale volver.
+
+| Días desde la última reseña | Gotas |
+|---|---:|
+| 0 – 7 | 5 |
+| 8 – 30 | 15 |
+| 31 – 90 | 35 |
+| 91 – 180 | 50 |
+| 181 – 365 | 60 |
+| > 365 (o nunca) | 70 |
+
+La curva es plana en los extremos a propósito. A la izquierda, para no pagar el pisoteo
+repetido de un mismo grupo de habituales. A la derecha, porque a partir del año el dato está
+igual de caducado tanto si hace trece meses como si hace cuarenta.
+
+El mismo reloj alimenta un **indicador de frescura** en la ficha de cada fuente —verificada
+esta semana / este mes / hace tiempo / nunca— que es útil por sí solo, aunque nadie mire
+nunca los puntos. Esta es la prueba de si la gamificación está bien planteada: **las señales
+que genera tienen que servir a quien pasa de ella.**
+
+---
+
+## 5. Verificación: qué cuenta como «he estado allí»
+
+La app ya tiene la posición continua y el filtro anti-temblor. Una reseña hecha **a menos de
+100 m de la fuente** se marca como *verificada in situ* y cobra entera; hecha desde casa,
+cobra un tercio y no cuenta para las insignias de campo.
+
+No es una barrera antifraude perfecta —el GPS se puede falsear— y no hace falta que lo sea.
+Es una distinción honesta entre «he ido» y «lo he oído decir», que es información que el
+lector quiere ver igualmente.
+
+Si el permiso de posición no está dado, no se pide: la reseña se acepta sin el sello. Vale
+más perder el sello que lanzar un diálogo de permisos a bocajarro, que es el criterio que ya
+sigue el mapa al abrirse.
+
+---
+
+## 6. Insignias
+
+Seis familias, cada una apuntando a un hueco real de los datos. Dentro de cada familia hay
+tres escalones: bronce · plata · oro. Los umbrales son para calibrar con datos reales; los de
+aquí son el punto de partida.
+
+| Familia | Qué mide | Umbrales | Nota |
+|---|---|---|---|
+| **Descubridora** | Fuentes nuevas que no existían en el mapa | 10 · 50 · 200 | Oro: también hace falta que 20 hayan sido confirmadas por otro |
+| **Primera luz** | Primeras fotos de fuentes que no tenían ninguna | 5 · 25 · 100 | Es la insignia que ataca el 0 % |
+| **Centinela** | Reseñas de actualización sobre fuentes olvidadas desde hace 6 meses o más | 15 · 60 · 250 | Solo cuentan las verificadas in situ |
+| **Cartógrafa** | Reubicaciones y correcciones de ficha que sobreviven sin ser revertidas | 10 · 40 · 150 | Una reversión resta; es la única insignia que puede bajar |
+| **Comarcas** | Fuentes aportadas en zonas administrativas distintas | 3 · 8 · 20 regiones | Recompensa moverse, no acumular en el mismo pueblo |
+| **Estiaje** | Estados de agua registrados en plena sequía, entre junio y septiembre | 10 · 40 · 120 | Se reinicia cada verano: es estacional a propósito |
+
+### Insignias de un solo tiro
+
+- **Pionera** — la primera persona que reseña una fuente importada. Una vez por fuente, para
+  siempre; queda escrito en la ficha.
+- **Mala noticia** — la primera incidencia confirmada de una fuente que constaba como buena.
+  Nadie quiere darla y hace falta que alguien la dé.
+- **Fuera de casa** — una aportación a más de 300 km de tu región de registro.
+- **Sin cobertura** — una aportación salida de la bandeja de salida, creada sin red. Un guiño
+  a quien usa la app donde realmente hace falta.
+
+Ninguna insignia por registrarse, por abrir la app ni por completar el perfil. Regalarlas al
+principio para que «enganchen» enseña que no valen nada.
+
+---
+
+## 7. Niveles, y a dónde llevan
+
+Cinco niveles con nombres del vocabulario del agua. Lo que los hace valer algo no es el
+nombre: es que **abren capacidades reales de mantenimiento** del mapa. La gamificación es, a
+la vez, la *vía de entrada a la moderación* — que es la pieza que el proyecto ya tiene
+pendiente con el modelo de administradores por zona.
+
+| Nivel | Gotas | Qué desbloquea |
+|---|---:|---|
+| Gota | 0 | Aportar: fuentes, reseñas, fotos, incidencias. |
+| Reguero | 300 | Confirmar reseñas ajenas. Proponer duplicados para fusionar. |
+| Arroyo | 1 200 | Reubicar fuentes que no has creado sin pasar por revisión. |
+| Río | 4 000 | Marcar fuentes como desaparecidas. Las ediciones no hacen cola. |
+| Acuífero | 12 000 | Candidata a moderadora de su región, a propuesta de un admin. |
+
+> **Los permisos que abren los niveles son permisos de verdad.** Ninguno de ellos se debe
+> poder conseguir solo acumulando acciones baratas: todas las puertas de arriba exigen
+> también un mínimo de aportaciones *verificadas in situ* y ninguna reversión reciente. Si
+> no, el camino a «marcar fuentes como desaparecidas» es confirmar trescientas reseñas desde
+> el sofá.
+
+---
+
+## 8. Misiones: convertir el hueco en un paseo
+
+La pieza con más recorrido de todo el plan, y la que mejor aprovecha lo que la app ya hace
+bien. El mapa sabe dónde estás y sabe qué fuentes de alrededor están vacías. Con eso se puede
+proponer una **ruta**, no una tarea.
+
+- **Ruta ciega** (semanal) — «Seis fuentes sin ninguna foto en 4 km a tu alrededor.» Se
+  dibuja en el mapa y se va tachando. Ataca directamente el 0 % de fotos, y es una excusa
+  para salir a caminar, que es lo que la gente ya hace con la app.
+- **Ronda de verano** (estacional) — «Cinco fuentes que nadie comprueba desde abril.» Sale en
+  junio y se cierra en septiembre. Es cuando la información caduca más rápido y cuando más se
+  consulta.
+- **Reto de comarca** (colectivo) — «El Moianès está al 12 % de fuentes con foto. ¿Llegamos
+  al 25 % antes de Navidad?» No compite nadie contra nadie: la barra es de todos. Es la única
+  forma de participar que no excluye a quien no quiere jugar.
+
+Las misiones se generan solas con consultas que ya existen —proximidad por bounding box y
+haversine, y el filtro por zona— y caducan. Una misión que no caduca es una lista de tareas, y
+una lista de tareas da pereza.
+
+---
+
+## 9. La mitad que no compite
+
+A mucha gente los rankings le dan reparo, y en una app de colaboración ciudadana espantarlos
+sale carísimo. Todo el sistema tiene que tener una lectura no competitiva:
+
+- **Impacto personal** — «tus fotos se han visto 1 240 veces», «mantienes 12 fuentes al día».
+  Es más motivador que un puesto en una tabla, y es cierto.
+- **Cobertura por zona** — barras de progreso por comarca. La unidad es el territorio, no la
+  persona.
+- **Rankings mensuales y regionales**, nunca globales de todos los tiempos. Un ranking
+  histórico global lo gana para siempre quien llegó primero y vive donde hay densidad; nadie
+  más juega.
+- **Salirse** — un interruptor en el perfil que oculta puntos, niveles y tablas sin dejar de
+  contar las aportaciones. Quien lo activa sigue saliendo en las barras colectivas.
+
+El resumen semanal por correo ya existe y es el canal natural: «esta semana tu pueblo ha
+pasado del 12 % al 15 % de fuentes con foto» es mejor correo que «has hecho 340 puntos».
+
+---
+
+## 10. Contra el fraude
+
+Poner puntos sobre un mapa abierto invita a inflarlo. El proyecto ya tiene límites por IP,
+denuncias y roles; falta atarles los puntos.
+
+- **Las gotas no se cobran al momento: se liquidan a las 72 horas.** Es la pieza central. Si
+  en esa ventana la aportación se revierte, se denuncia o se borra, no llega a pagar nunca.
+  Evita el grueso del problema sin tener que detectar nada.
+- **No te puedes confirmar a ti misma**, ni confirmar dos veces la misma fuente, ni confirmar
+  reseñas de quien confirma las tuyas por encima de un umbral.
+- **Rendimientos decrecientes por fuente**: la segunda aportación tuya a la misma fuente en un
+  mes vale una fracción.
+- **Techo diario de gotas**, lo bastante alto para no molestar un día de ruta y lo bastante
+  bajo para no premiar un guion automatizado.
+- **Una foto retirada resta** lo que cobró. Sin esto, subir basura sale gratis.
+- Los límites por hora que ya hay —10 imágenes, 30 fuentes, 40 reseñas— son el suelo. La
+  gamificación no los debe tocar.
+
+---
+
+## 11. Qué no haría
+
+Vale la pena dejarlo escrito, porque son cosas que aparecen solas en la segunda reunión.
+
+**Rachas diarias.** Una racha premia aparecer, no aportar. En una app que depende de salir a
+caminar, la racha diaria empuja a inventarse una reseña un martes por la noche para no
+perderla — ruido pagado con tus propios puntos. Si se quiere cadencia, que sea **mensual** y
+que solo cuente si el mes trae alguna aportación verificada in situ.
+
+**Ranking global de todos los tiempos.** Lo gana quien llegó primero y vive en una zona densa,
+y se queda congelado. Mensual y por región se puede ganar, y por tanto se juega.
+
+**Puntos por reseñar sin haber ido.** Barato de hacer y sin valor informativo. Se puede dejar
+escribir —no toda reseña hecha de memoria es falsa— pero cobrando un tercio y sin sello de
+verificación.
+
+**Monedas, tiendas, cosméticos.** Añade una economía entera que mantener a cambio de nada. La
+recompensa aquí es que el mapa de tu pueblo esté bien y que se sepa quién lo ha puesto.
+
+**Insignias por registrarse o completar el perfil.** Enseña el primer día que las insignias se
+regalan. Después ninguna significa ya nada.
+
+---
+
+## 12. Cómo desplegarlo
+
+El orden importa porque hay una oportunidad que solo se tiene una vez: **todo el historial se
+puede puntuar hacia atrás**. Las tablas de ahora ya guardan quién, qué y cuándo — fuentes con
+`created_by` y `created_at`, reseñas, confirmaciones, incidencias, ediciones con su antes y
+después. El día que se abra, nadie empieza en cero.
+
+**Fase 1 — Calculadora, sin escribir nada.** ✅ *Implementada:*
+`swift run App score-contributions`. Recorre el historial y escupe puntos e insignias por
+usuario. Nada en la interfaz, ninguna tabla nueva. Sirve para **calibrar el baremo con datos
+reales** antes de comprometerse con ningún número, y contesta la pregunta que decide todo lo
+demás: ¿cuánta gente tendría algo el día 1?
+
+**Fase 2 — Registro de eventos y liquidación.** Una tabla de aportaciones con su estado
+—pendiente, liquidada, anulada— y la ventana de 72 horas. Fuente única de verdad; los puntos
+se derivan de ahí y se pueden recalcular. Se rellena con el comando de la fase 1.
+
+**Fase 3 — Visible en el perfil, y nada más.** Gotas, nivel, insignias e impacto personal en
+tu página. Sin rankings todavía. Una semana así enseña si la gente lo entiende sin
+explicaciones. Aquí entra el interruptor para ocultarlo todo.
+
+**Fase 4 — Frescura en la ficha y misiones en el mapa.** El indicador de frescura y la ruta
+ciega. La parte que cambia el comportamiento. La frescura es útil aunque la gamificación se
+cancele: se hace primero por eso.
+
+**Fase 5 — Zona: barras colectivas y ranking mensual.** Cobertura por comarca y tabla mensual
+regional, en el resumen semanal por correo. Antes de esto hay que decidir el nombre de las
+regiones: «Gerona» no puede salir en una cabecera.
+
+**Fase 6 — Niveles con permisos.** Las capacidades de mantenimiento, atadas al modelo de
+administradores por región. El último a propósito: dar permisos automáticos antes de ver cómo
+se comporta la gente es como se rompe un mapa abierto.
+
+---
+
+## 13. Decisiones pendientes
+
+- **Nombres de región.** ¿Provincia con exónimo castellano («Gerona»), provincia en catalán, o
+  comunidad autónoma? Afecta a rankings, barras e insignias de comarca, y cambiarlo después es
+  migrar datos.
+- **Hasta dónde llega el seudónimo.** Un ranking público enseña quién aporta y desde dónde. Ya
+  existen `name_public` y `email_public`; hará falta el equivalente para los puntos, y decidir
+  el valor por defecto.
+- **Los 100 m de verificación.** ¿Son suficientes bajo arbolado, donde el GPS se va? Quizá
+  valen más 150.
+- **Si se hace algo.** La fase 1 no es irreversible: da los números para decidir con datos y no
+  compromete nada.
+
+---
+
+## Apéndice: la calculadora (fase 1)
+
+```bash
+swift run App score-contributions                 # tabla de todos los usuarios
+swift run App score-contributions --user miguel   # desglose de una persona
+swift run App score-contributions --detail        # cada aportación, línea a línea
+swift run App score-contributions --json          # para volcarlo a una hoja de cálculo
+```
+
+Es **solo lectura**: no escribe nada en la base de datos, ni siquiera con `--detail`. Se puede
+lanzar contra producción sin miedo.
+
+Lo que el comando **no puede saber, y por qué**:
+
+- **Quién puso la foto de una fuente.** `fonts.image` no guarda autor. Se atribuye a la reseña
+  con foto más antigua de esa fuente, y a las ediciones que cambiaron el campo `image`
+  (`FontInfoSnapshot` sí lo guarda). Las fotos puestas antes de que el snapshot llevara
+  `image` quedan sin dueño y no las cobra nadie.
+- **Si una reseña se hizo en la fuente o desde casa.** No se guarda la posición del autor al
+  reseñar. El comando lo asume todo como no verificado, así que el multiplicador de
+  verificación no se aplica en la fase 1 y las cifras salen **conservadoras**.
+- **Si una edición fue revertida.** Se detecta por el historial de `FontEdit`, pero solo
+  aproximadamente: se cuenta como revertida la edición cuya siguiente edición sobre la misma
+  fuente devuelve el valor anterior.
+
+Todo eso lo arregla la fase 2, que sí registra el evento en el momento en que ocurre. Los
+números de la fase 1 son para calibrar, no para publicar.
+
+---
+---
+
+<a id="pla-de-gamificació-ca"></a>
+
+# Gamificació de FontApp (CA)
+
+> Document de treball · agost de 2026
+> Versió en castellà a dalt.
+
+## Pagar per informació, no per activitat
+
+Un pla de gamificació per a una base de dades que ja té desenes de milers de fonts i gairebé
+cap dada humana a dins. El disseny sencer surt d'aquesta asimetria.
+
+---
+
+## 1. D'on partim
+
+Mostra aleatòria de **49 fonts reals de producció** a la Catalunya central, consultades una a
+una contra l'API el 16 d'agost de 2026:
+
+| Camp | Cobertura |
+|---|---|
+| Amb fotografia | **0 / 49 — 0 %** |
+| Amb descripció escrita per algú | 2 / 49 — 4 % |
+| Amb potabilitat indicada | 4 / 49 — 8 % |
+| Creades per un usuari | 0 / 49 |
+| Amb regió assignada | 49 / 49 — 100 % |
+
+I les dues «descripcions escrites» de la mostra deien totes dues `Manantial (OpenStreetMap)`,
+generades per l'importador. A la pràctica, **zero contingut humà**.
+
+Això no és un fracàs: és el resultat esperat d'haver importat OSM i el WFS de l'ACA. Però
+canvia radicalment què ha de comprar la gamificació. No cal més cobertura geogràfica — n'hi ha
+de sobres. Cal **la capa que cap importador pot donar**: si en surt aigua avui, si es pot
+beure, quina cara fa, i on és exactament.
+
+La bona notícia és la darrera xifra: `fonts.region` ja està poblada en producció. Les
+classificacions per zona es poden fer des del primer dia sense feina prèvia.
+
+> **Detall que sortirà a la primera taula de classificació:** les regions vénen amb l'exònim
+> castellà i a nivell de província — la mostra dóna `Barcelona` i `Gerona`, no «Girona» ni
+> «Catalunya». En una app amb el català per defecte, «Gerona» en una capçalera es veurà. Val
+> la pena decidir-ho *abans* de publicar rànquings per zona, no després.
+
+---
+
+## 2. El principi
+
+> Els punts es paguen pel **valor informatiu marginal** de l'aportació, no per l'esforç ni pel
+> nombre d'accions.
+>
+> Una ressenya d'una font que ningú ha visitat en un any val molt. La mateixa ressenya, de la
+> mateixa font, tres dies després que un altre hi hagi passat, no val gairebé res — perquè no
+> diu res que no sabéssim.
+
+Gairebé tota la gamificació que es veu per aquí fora paga per activitat: tants punts per
+comentari, tants per foto. Això funciona quan el que vols és volum. Aquí el volum ja el tens i
+el problema és un altre — tens *una foto per cada mil fonts*. Pagar pla per ressenya faria que
+la gent ressenyés les quatre fonts del seu poble un cop per setmana, que és exactament el que
+no necessites.
+
+Tres corol·laris que travessen tot el document:
+
+- **La frescor és la mercaderia.** «Hi ha aigua?» és una pregunta sobre avui, no sobre 2024.
+- **El buit val més que el ple.** El primer de qualsevol cosa —foto, estat, potabilitat—
+  cobra prima.
+- **Res no es cobra si no és comprovable.** Sense GPS a prop o sense que ningú ho confirmi,
+  els punts queden pendents.
+
+---
+
+## 3. La moneda: gotes
+
+**Gotes** (ES *gotas*, EN *drops*). Una sola moneda, sense mercats ni monedes premium. Es
+guanyen col·laborant i no es gasten en res: són un marcador de contribució, no una economia.
+
+### Barem base
+
+| Aportació | Per què val el que val | Gotes |
+|---|---|---:|
+| **Primera foto** d'una font que no en tenia | És el buit més gran que hi ha, i és irrepetible: només es pot fer una vegada per font. | 120 |
+| **Font nova** que no existia | Amplia el mapa. Alt, però no el més alt: ja hi ha desenes de milers de fonts i cap foto. | 100 |
+| **Primera ressenya** d'una font mai visitada | Converteix un punt importat en una font verificada per una persona. | 80 |
+| **Reubicar** una font (acceptada) | Sota arbrat el GPS se'n va desenes de metres; una font mal situada no es troba. | 60 |
+| **Ressenya d'actualització** | Escalada per antiguitat de l'última — vegeu la corba de frescor. | 5–70 |
+| **Completar la fitxa** (potabilitat, tipus, descripció real) | Per camp que passa de buit a ple. No es paga dues vegades el mateix camp. | 25 |
+| **Incidència** (font seca, trencada, desapareguda) | Una notícia negativa és tan útil com una de positiva, i ningú la dóna per gust. | 40 |
+| **Confirmar** la ressenya d'algú altre | Barat de fer i barat de pagar, però converteix un testimoni en dos. | 10 |
+| **Substituir una foto** existent per una de millor | Millora marginal, i té risc de guerra d'edicions. | 15 |
+| Desar una font a preferits | És per a tu, no per al comú. No es paga. | 0 |
+| Registrar-se, obrir l'app, tenir ratxa | No aporta cap dada. No es paga. | 0 |
+
+### Multiplicadors
+
+S'apliquen sobre el barem base i es poden acumular fins a un sostre de **×3**.
+
+| Condició | Raó | Factor |
+|---|---|---:|
+| Font a >10 km de qualsevol font ressenyada | Els deserts de dades no es cobreixen sols; algú hi ha d'anar expressament. | ×1,5 |
+| Estat d'aigua entre juny i setembre | És quan les fonts s'assequen i quan més gent les busca. | ×1,4 |
+| Font marcada com a «dubtosa» per una incidència oberta | Dirigeix la gent cap a allò que està en disputa. | ×1,5 |
+| La font ja té 3+ ressenyes fresques | Reduir, no premiar: no cal un quart testimoni de la mateixa setmana. | ×0,2 |
+
+---
+
+## 4. La corba de frescor
+
+| Dies des de l'última ressenya | Gotes |
+|---|---:|
+| 0 – 7 | 5 |
+| 8 – 30 | 15 |
+| 31 – 90 | 35 |
+| 91 – 180 | 50 |
+| 181 – 365 | 60 |
+| > 365 (o mai) | 70 |
+
+La corba és plana als extrems a propòsit. A l'esquerra, per no pagar el trepig repetit d'un
+mateix grup d'habituals. A la dreta, perquè a partir de l'any la dada és igual de caducada
+tant si fa tretze mesos com si en fa quaranta.
+
+El mateix rellotge alimenta un **indicador de frescor** a la fitxa de cada font —verificada
+aquesta setmana / aquest mes / fa temps / mai— que és útil per si sol, encara que ningú miri
+mai els punts. Aquesta és la prova de si la gamificació està ben plantejada: **els senyals que
+genera han de servir a qui passa d'ella.**
+
+---
+
+## 5. Verificació: què compta com a «hi he estat»
+
+L'app ja té la posició contínua i el filtre anti-tremolor. Una ressenya feta **a menys de
+100 m de la font** es marca com a *verificada in situ* i cobra sencera; feta des de casa,
+cobra un terç i no compta per a les insignies de camp.
+
+No és una barrera antifrau perfecta —el GPS es pot falsejar— i no cal que ho sigui. És una
+distinció honesta entre «hi he anat» i «ho he sentit a dir», que és informació que el lector
+vol veure igualment.
+
+Si el permís de posició no està donat, no es demana: la ressenya s'accepta sense el segell.
+Val més perdre el segell que llançar un diàleg de permisos a boca de canó, que és el criteri
+que ja segueix el mapa en obrir-se.
+
+---
+
+## 6. Insignies
+
+| Família | Què mesura | Llindars | Nota |
+|---|---|---|---|
+| **Descobridora** | Fonts noves que no existien al mapa | 10 · 50 · 200 | Or: també cal que 20 hagin estat confirmades per algú altre |
+| **Primera llum** | Primeres fotos de fonts que no en tenien cap | 5 · 25 · 100 | És la insígnia que ataca el 0 % |
+| **Sentinella** | Ressenyes d'actualització sobre fonts oblidades des de fa 6 mesos o més | 15 · 60 · 250 | Només compten les verificades in situ |
+| **Cartògrafa** | Reubicacions i correccions de fitxa que sobreviuen sense ser revertides | 10 · 40 · 150 | Una reversió resta; és l'única insígnia que pot baixar |
+| **Comarques** | Fonts aportades en zones administratives diferents | 3 · 8 · 20 regions | Recompensa moure's, no acumular al mateix poble |
+| **Estiatge** | Estats d'aigua registrats en plena secada, entre juny i setembre | 10 · 40 · 120 | Es reinicia cada estiu: és estacional a posta |
+
+### Insignies d'un sol tret
+
+- **Pionera** — la primera persona que ressenya una font importada. Un cop per font, per
+  sempre; queda escrit a la fitxa.
+- **Mala notícia** — la primera incidència confirmada d'una font que constava com a bona.
+  Ningú vol donar-la i cal que algú la doni.
+- **Fora de casa** — una aportació a més de 300 km de la teva regió de registre.
+- **Sense cobertura** — una aportació sortida de la safata de sortida, creada sense xarxa. Un
+  ullet a qui fa servir l'app on realment fa falta.
+
+Cap insígnia per registrar-se, per obrir l'app ni per completar el perfil. Regalar-ne al
+principi perquè «enganxin» ensenya que no valen res.
+
+---
+
+## 7. Nivells, i on porten
+
+| Nivell | Gotes | Què desbloqueja |
+|---|---:|---|
+| Gota | 0 | Aportar: fonts, ressenyes, fotos, incidències. |
+| Reguerol | 300 | Confirmar ressenyes d'altri. Proposar duplicats per fusionar. |
+| Rierol | 1 200 | Reubicar fonts que no has creat sense passar per revisió. |
+| Riu | 4 000 | Marcar fonts com a desaparegudes. Les edicions no fan cua. |
+| Aqüífer | 12 000 | Candidata a moderadora de la seva regió, a proposta d'un admin. |
+
+> **Els permisos que obren els nivells són permisos de veritat.** Cap d'ells no s'ha de poder
+> aconseguir només acumulant accions barates: totes les portes de dalt exigeixen també un
+> mínim d'aportacions *verificades in situ* i cap reversió recent. Si no, el camí a «marcar
+> fonts com a desaparegudes» és confirmar tres-centes ressenyes des del sofà.
+
+---
+
+## 8. Missions: convertir el forat en una passejada
+
+- **Ruta cega** (setmanal) — «Sis fonts sense cap foto en 4 km al teu voltant.» Es dibuixa al
+  mapa i es va ratllant. Ataca directament el 0 % de fotos, i és una excusa per sortir a
+  caminar, que és el que la gent ja fa amb l'app.
+- **Ronda d'estiu** (estacional) — «Cinc fonts que ningú comprova des de l'abril.» Surt al juny
+  i es tanca al setembre. És quan la informació caduca més ràpid i quan més se la consulta.
+- **Repte de comarca** (col·lectiu) — «El Moianès és al 12 % de fonts amb foto. Arribem al 25 %
+  abans de Nadal?» No competeix ningú contra ningú: la barra és de tots. És l'única forma de
+  participar que no exclou qui no vol jugar.
+
+Les missions es generen soles amb consultes que ja existeixen —proximitat per bounding box i
+haversine, i el filtre per zona— i cadueixen. Una missió que no cadueix és una llista de
+tasques, i una llista de tasques fa mandra.
+
+---
+
+## 9. La meitat que no competeix
+
+- **Impacte personal** — «les teves fotos s'han vist 1 240 vegades», «mantens 12 fonts al
+  dia». És més motivador que un lloc en una taula, i és cert.
+- **Cobertura per zona** — barres de progrés per comarca. La unitat és el territori, no la
+  persona.
+- **Rànquings mensuals i regionals**, mai globals de tots els temps. Un rànquing històric
+  global el guanya per sempre qui va arribar primer i viu on hi ha densitat; ningú més hi
+  juga.
+- **Sortir-ne** — un interruptor al perfil que amaga punts, nivells i taules sense deixar de
+  comptar les aportacions. Qui l'activa segueix sortint a les barres col·lectives.
+
+El resum setmanal per correu ja existeix i és el canal natural: «aquesta setmana el teu poble
+ha passat del 12 % al 15 % de fonts amb foto» és millor correu que «has fet 340 punts».
+
+---
+
+## 10. Contra el frau
+
+- **Les gotes no es cobren al moment: es liquiden a les 72 hores.** És la peça central. Si en
+  aquesta finestra l'aportació es reverteix, es denuncia o s'esborra, no arriba a pagar mai.
+  Evita el gruix del problema sense haver de detectar res.
+- **No et pots confirmar a tu mateixa**, ni confirmar dues vegades la mateixa font, ni
+  confirmar ressenyes de qui confirma les teves per damunt d'un llindar.
+- **Rendiments decreixents per font**: la segona aportació teva a la mateixa font en un mes val
+  una fracció.
+- **Sostre diari de gotes**, prou alt per no molestar un dia de ruta i prou baix per no premiar
+  un guió automatitzat.
+- **Una foto retirada resta** el que va cobrar. Sense això, pujar brossa surt gratis.
+- Els límits per hora que ja hi ha —10 imatges, 30 fonts, 40 ressenyes— són el terra. La
+  gamificació no els ha de tocar.
+
+---
+
+## 11. Què no faria
+
+**Ratxes diàries.** Una ratxa premia aparèixer, no aportar. En una app que depèn de sortir a
+caminar, la ratxa diària empeny a inventar-se una ressenya un dimarts a la nit per no
+perdre-la — soroll pagat amb els teus propis punts. Si es vol cadència, que sigui **mensual** i
+que només compti si el mes duu alguna aportació verificada in situ.
+
+**Rànquing global de tots els temps.** El guanya qui va arribar primer i viu en una zona densa,
+i es queda congelat. Mensual i per regió es pot guanyar, i per tant es juga.
+
+**Punts per ressenyar sense haver-hi anat.** Barat de fer i sense valor informatiu. Es pot
+deixar escriure —no tota ressenya feta de memòria és falsa— però cobrant un terç i sense segell
+de verificació.
+
+**Monedes, botigues, cosmètics.** Afegeix una economia sencera per mantenir a canvi de res. La
+recompensa aquí és que el mapa del teu poble estigui bé i que se sàpiga qui l'hi ha posat.
+
+**Insignies per registrar-se o completar el perfil.** Ensenya el primer dia que les insignies
+es regalen. Després cap ja no significa res.
+
+---
+
+## 12. Com desplegar-ho
+
+**Fase 1 — Calculadora, sense escriure res.** ✅ *Implementada:*
+`swift run App score-contributions`. Recorre l'historial i escup punts i insignies per usuari.
+Res a la interfície, cap taula nova. Serveix per **calibrar el barem amb dades reals** abans de
+comprometre's amb cap número, i contesta la pregunta que decideix tota la resta: quanta gent
+tindria alguna cosa el dia 1?
+
+**Fase 2 — Registre d'esdeveniments i liquidació.** Una taula d'aportacions amb el seu estat
+—pendent, liquidada, anul·lada— i la finestra de 72 hores. Font única de veritat; els punts es
+deriven d'aquí i es poden recalcular. Es reomple amb la comanda de la fase 1.
+
+**Fase 3 — Visible al perfil, i prou.** Gotes, nivell, insignies i impacte personal a la teva
+pàgina. Sense rànquings encara. Una setmana així ensenya si la gent ho entén sense
+explicacions. Aquí entra l'interruptor per amagar-ho tot.
+
+**Fase 4 — Frescor a la fitxa i missions al mapa.** L'indicador de frescor i la ruta cega. La
+part que canvia el comportament. La frescor és útil encara que la gamificació es cancel·li: es
+fa primer per això.
+
+**Fase 5 — Zona: barres col·lectives i rànquing mensual.** Cobertura per comarca i taula mensual
+regional, al resum setmanal per correu. Abans d'això cal decidir el nom de les regions:
+«Gerona» no pot sortir en una capçalera.
+
+**Fase 6 — Nivells amb permisos.** Les capacitats de manteniment, lligades al model
+d'administradors per regió. L'últim a propòsit: donar permisos automàtics abans de veure com es
+comporta la gent és com es trenca un mapa obert.
+
+---
+
+## 13. Decisions pendents
+
+- **Noms de regió.** Província amb exònim castellà («Gerona»), província en català, o comunitat
+  autònoma? Afecta rànquings, barres i insignies de comarca, i canviar-ho després és migrar
+  dades.
+- **Fins on arriba el pseudònim.** Un rànquing públic ensenya qui aporta i des d'on. Ja hi ha
+  `name_public` i `email_public`; caldrà l'equivalent per als punts, i decidir el valor per
+  defecte.
+- **Els 100 m de verificació.** És prou sota arbrat, on el GPS se'n va? Potser val més 150.
+- **Si es fa gens.** La fase 1 no és irreversible: dóna els números per decidir amb dades i no
+  compromet res.
