@@ -51,8 +51,68 @@ def clave_de(ruta: Path) -> str | None:
     return ALIAS.get(tallo)
 
 
+def recorta_fondo(img: Image.Image) -> Image.Image:
+    """Vuelve transparente el fondo blanco, si lo tiene.
+
+    El generador a veces devuelve la insignia sobre un blanco opaco y a veces con
+    alfa. Sobre el tema oscuro, la opaca sale como un **recuadro blanco** alrededor
+    del escudo, que es de lo primero que se ve.
+
+    Es un relleno por inundación **desde el borde**, no un «haz transparente todo lo
+    blanco»: dentro del dibujo hay blancos legítimos —las nubes del acuífero, la
+    espuma de la cascada, los brillos del agua— y un filtro por color les haría
+    agujeros. Inundando desde fuera, lo cerrado por el escudo no se toca.
+    """
+    if img.getchannel("A").getextrema()[0] < 250:
+        return img  # ya trae transparencia: no hay nada que recortar
+
+    ancho, alto = img.size
+    pix = img.load()
+
+    def es_fondo(p: tuple[int, int, int, int]) -> bool:
+        r, g, b, _ = p
+        # Casi blanco y casi gris: el fondo del generador es 251-253 en los tres canales.
+        return min(r, g, b) >= 232 and max(r, g, b) - min(r, g, b) <= 14
+
+    visto = bytearray(ancho * alto)
+    pila = []
+    for x in range(ancho):
+        for y in (0, alto - 1):
+            pila.append((x, y))
+    for y in range(alto):
+        for x in (0, ancho - 1):
+            pila.append((x, y))
+
+    while pila:
+        x, y = pila.pop()
+        if x < 0 or y < 0 or x >= ancho or y >= alto:
+            continue
+        i = y * ancho + x
+        if visto[i]:
+            continue
+        if not es_fondo(pix[x, y]):
+            continue
+        visto[i] = 1
+        pila += [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+
+    borrados = sum(visto)
+    if borrados == 0:
+        return img
+    for y in range(alto):
+        fila = y * ancho
+        for x in range(ancho):
+            if visto[fila + x]:
+                r, g, b, _ = pix[x, y]
+                pix[x, y] = (r, g, b, 0)
+    return img
+
+
 def prepara(origen: Path, clave: str) -> None:
     img = Image.open(origen).convert("RGBA")
+    # El recorte va ANTES de reducir: al escalar con LANCZOS, el canal alfa se
+    # suaviza con el resto y el borde del escudo queda limpio. Recortando después,
+    # sobre 320 px, se queda un halo blanco de un píxel.
+    img = recorta_fondo(img)
     img.thumbnail((LADO, LADO), Image.LANCZOS)
 
     # Cuantizar a 256 colores baja el peso a menos de la mitad y en un dibujo con

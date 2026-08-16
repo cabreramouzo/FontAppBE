@@ -8,7 +8,7 @@
  *
  * Al añadir una nueva (ver `scripts/prepara-insignias.py`), añade aquí su clave.
  */
-export const LEVEL_BADGES = new Set(['drop'])
+export const LEVEL_BADGES = new Set(['drop','spring', 'brook', 'torrent', 'stream', 'river', 'waterfall', 'reservoir', 'lake', 'aquifer'])
 
 /**
  * Los ficheros viven en `public/`, así que **no llevan hash en el nombre** y el
