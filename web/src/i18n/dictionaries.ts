@@ -167,6 +167,9 @@ const ca: Dict = {
   'game.badge.drySeason': 'Estiatge',
   'game.badge.fourSeasons': 'Les quatre estacions',
   'game.badge.pioneer': 'Pioner',
+  'game.badge.incidents': 'Vigia',
+  'game.badge.farAway': 'Llunyania',
+  'game.badge.offline': 'Sense cobertura',
     // Graus.
   'game.tier.bronze': 'bronze',
   'game.tier.silver': 'plata',
@@ -250,6 +253,9 @@ const ca: Dict = {
   'game.badgeAbout.drySeason': 'Per comprovar fonts als mesos d’estiatge, quan més fàcil és que estiguin seques.',
   'game.badgeAbout.fourSeasons': 'Per tornar a la mateixa font a les quatre estacions. Aquesta demana un any sencer.',
   'game.badgeAbout.pioneer': 'Per ser el primer a ressenyar una font que ningú havia comprovat.',
+  'game.badgeAbout.incidents': 'Per avisar d’incidències: fonts espatllades, seques o desaparegudes.',
+  'game.badgeAbout.farAway': 'Per fer aportacions en zones remotes, lluny de qualsevol altra font ja ressenyada.',
+  'game.badgeAbout.offline': 'Per afegir fonts o ressenyes sense cobertura, des de la safata de sortida.',
 
   'pulse.title': 'Qui puja',
   'pulse.promoted': 'Han pujat de nivell',
@@ -734,6 +740,9 @@ const es: Dict = {
   'game.badge.drySeason': 'Estiaje',
   'game.badge.fourSeasons': 'Las cuatro estaciones',
   'game.badge.pioneer': 'Pionero',
+  'game.badge.incidents': 'Vigía',
+  'game.badge.farAway': 'Lejanía',
+  'game.badge.offline': 'Sin cobertura',
     // Graus.
   'game.tier.bronze': 'bronce',
   'game.tier.silver': 'plata',
@@ -817,6 +826,9 @@ const es: Dict = {
   'game.badgeAbout.drySeason': 'Por comprobar fuentes en los meses de estiaje, cuando es más fácil que estén secas.',
   'game.badgeAbout.fourSeasons': 'Por volver a la misma fuente en las cuatro estaciones. Ésta pide un año entero.',
   'game.badgeAbout.pioneer': 'Por ser el primero en reseñar una fuente que nadie había comprobado.',
+  'game.badgeAbout.incidents': 'Por avisar de incidencias: fuentes rotas, secas o desaparecidas.',
+  'game.badgeAbout.farAway': 'Por aportar en zonas remotas, lejos de cualquier otra fuente ya reseñada.',
+  'game.badgeAbout.offline': 'Por añadir fuentes o reseñas sin cobertura, desde la bandeja de salida.',
 
   'pulse.title': 'Quién sube',
   'pulse.promoted': 'Han subido de nivel',
@@ -1292,6 +1304,9 @@ const gl: Dict = {
   'game.badge.drySeason': 'Estiaxe',
   'game.badge.fourSeasons': 'As catro estacións',
   'game.badge.pioneer': 'Pioneiro',
+  'game.badge.incidents': 'Vixía',
+  'game.badge.farAway': 'Lonxanía',
+  'game.badge.offline': 'Sen cobertura',
     // Graus.
   'game.tier.bronze': 'bronce',
   'game.tier.silver': 'prata',
@@ -1375,6 +1390,9 @@ const gl: Dict = {
   'game.badgeAbout.drySeason': 'Por comprobar fontes nos meses de estiaxe, cando é máis doado que estean secas.',
   'game.badgeAbout.fourSeasons': 'Por volver á mesma fonte nas catro estacións. Esta pide un ano enteiro.',
   'game.badgeAbout.pioneer': 'Por seres o primeiro en reseñar unha fonte que ninguén comprobara.',
+  'game.badgeAbout.incidents': 'Por avisar de incidencias: fontes avariadas, secas ou desaparecidas.',
+  'game.badgeAbout.farAway': 'Por achegar información en zonas remotas, lonxe de calquera outra fonte xa reseñada.',
+  'game.badgeAbout.offline': 'Por engadir fontes ou reseñas sen cobertura, desde a caixa de saída.',
 
   'pulse.title': 'Quen sobe',
   'pulse.promoted': 'Subiron de nivel',
@@ -1850,6 +1868,9 @@ const eu: Dict = {
   'game.badge.drySeason': 'Agorraldia',
   'game.badge.fourSeasons': 'Lau urtaroak',
   'game.badge.pioneer': 'Aitzindaria',
+  'game.badge.incidents': 'Jagolea',
+  'game.badge.farAway': 'Urruntasuna',
+  'game.badge.offline': 'Estaldurarik gabe',
     // Graus.
   'game.tier.bronze': 'brontzea',
   'game.tier.silver': 'zilarra',
@@ -1933,6 +1954,9 @@ const eu: Dict = {
   'game.badgeAbout.drySeason': 'Agorraldiko hilabeteetan iturriak egiaztatzeagatik, lehorrago egoten diren garaian.',
   'game.badgeAbout.fourSeasons': 'Iturri berera lau urtaroetan itzultzeagatik. Honek urte oso bat eskatzen du.',
   'game.badgeAbout.pioneer': 'Inork egiaztatu gabeko iturri bat balioztatzen lehena izateagatik.',
+  'game.badgeAbout.incidents': 'Gorabeheren berri emateagatik: hondatutako, lehortutako edo desagertutako iturriak.',
+  'game.badgeAbout.farAway': 'Urruneko eremuetan ekarpenak egiteagatik, lehendik balioztatutako beste edozein iturritatik urrun.',
+  'game.badgeAbout.offline': 'Estaldurarik gabe iturriak edo balorazioak gehitzeagatik, irteerako ontzitik.',
 
   'pulse.title': 'Nor ari da igotzen',
   'pulse.promoted': 'Maila igo dute',
@@ -2408,6 +2432,9 @@ const en: Dict = {
   'game.badge.drySeason': 'Dry season',
   'game.badge.fourSeasons': 'The four seasons',
   'game.badge.pioneer': 'Pioneer',
+  'game.badge.incidents': 'Watchkeeper',
+  'game.badge.farAway': 'Remoteness',
+  'game.badge.offline': 'No signal',
     // Graus.
   'game.tier.bronze': 'bronze',
   'game.tier.silver': 'silver',
@@ -2491,6 +2518,9 @@ const en: Dict = {
   'game.badgeAbout.drySeason': 'For checking fountains in the dry months, when they are likeliest to have run dry.',
   'game.badgeAbout.fourSeasons': 'For returning to the same fountain in all four seasons. This one takes a whole year.',
   'game.badgeAbout.pioneer': 'For being the first to review a fountain nobody had checked.',
+  'game.badgeAbout.incidents': 'For reporting incidents: broken, dry or missing fountains.',
+  'game.badgeAbout.farAway': 'For contributing in remote areas, far from any other fountain already reviewed.',
+  'game.badgeAbout.offline': 'For adding fountains or reviews with no signal, from the outbox.',
 
   'pulse.title': 'On the rise',
   'pulse.promoted': 'Levelled up',

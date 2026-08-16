@@ -149,6 +149,15 @@ final class AppTests: XCTestCase {
         XCTAssertEqual(logradas.map(\.key), ["discoverer"])
     }
 
+    func testDemoBadgeViewUnlocksEveryFamilyAtMaximumTier() {
+        let (badges, catalogue) = ContributionScore.allBadgesUnlocked()
+        XCTAssertEqual(badges.count, ContributionScore.badgeFamilies.count)
+        XCTAssertEqual(catalogue.count, ContributionScore.badgeFamilies.count)
+        XCTAssertTrue(catalogue.allSatisfy { $0.tier != nil && $0.progress == $0.threshold })
+        XCTAssertEqual(badges.first { $0.key == "pioneer" }?.tier, .unique)
+        XCTAssertTrue(badges.filter { $0.key != "pioneer" }.allSatisfy { $0.tier == .gold })
+    }
+
     /// `tier` nulo tiene que viajar como `null` y no desaparecer del JSON: en el cliente
     /// una clave ausente llega como `undefined`, y dar por conseguida una insignia
     /// bloqueada es exactamente el fallo contrario al que se quiere evitar.

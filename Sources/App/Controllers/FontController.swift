@@ -70,7 +70,10 @@ struct FontController: RouteCollection {
         let user = try req.auth.require(User.self)
         try CreateFontDTO.validate(content: req)
         let dto = try req.content.decode(CreateFontDTO.self)
-        let font = Font(name: dto.name, latitude: dto.latitude, longitude: dto.longitude, image: dto.image, description: dto.description, source: dto.source, drinkable: dto.drinkable, creatorID: try user.requireID())
+        let font = Font(name: dto.name, latitude: dto.latitude, longitude: dto.longitude,
+                        image: dto.image, description: dto.description, source: dto.source,
+                        drinkable: dto.drinkable, creatorID: try user.requireID(),
+                        queuedOffline: req.headers.first(name: "X-FontApp-Queued-Offline") == "1")
         try await font.save(on: req.db)
 
         // País y región, heredados de la fuente conocida más cercana (ver `inheritZone`).

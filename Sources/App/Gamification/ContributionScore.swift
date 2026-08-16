@@ -469,6 +469,16 @@ enum ContributionScore {
         /// pase lo que pase. Y premia exactamente lo que la curva de frescura quiere —
         /// volver a la misma fuente cuando ha pasado tiempo— en vez de premiar el volumen.
         var fourSeasonFonts = 0
+        /// Incidencias avisadas: fuentes rotas, secas o que ya no están.
+        ///
+        /// Avisar de un problema es la aportación más ingrata que hay —no añade nada
+        /// bonito a la ficha, la estropea— y es de las más útiles: una fuente que ya no
+        /// existe en el mapa manda a alguien a andar para nada.
+        var incidents = 0
+        /// Aportaciones en zona sin datos (el multiplicador «desierto»).
+        var farAwayContributions = 0
+        /// Aportaciones creadas **sin cobertura**, desde la bandeja de salida.
+        var offlineContributions = 0
     }
 
     /// Estación meteorológica (0 invierno · 1 primavera · 2 verano · 3 otoño). Se usa el
@@ -514,6 +524,18 @@ enum ContributionScore {
         // un año entero de volver a la misma fuente, y no hay forma de acortarlo.
         .init(key: "fourSeasons", name: "Las cuatro estaciones", thresholds: [1, 3, 10], unique: false) { $0.fourSeasonFonts },
         .init(key: "pioneer", name: "Pionero", thresholds: [1], unique: true) { $0.pioneer ? 1 : 0 },
+        // Umbrales más bajos que los de crear o fotografiar: avisar de que una fuente está
+        // rota es raro por definición —la mayoría funcionan— y quien lo hace no está
+        // coleccionando, está avisando. Pedirle 200 sería pedirle que ojalá se rompan más.
+        .init(key: "incidents", name: "Vigía", thresholds: [3, 15, 50], unique: false) { $0.incidents },
+        // Lejanía: el multiplicador de desierto ya marca estas aportaciones, así que el
+        // umbral es alto a propósito. En comarca rural saltaría constantemente y sería la
+        // insignia de vivir en el campo, no la de haberse desviado a buscar algo.
+        .init(key: "farAway", name: "Lejanía", thresholds: [10, 40, 150], unique: false) { $0.farAwayContributions },
+        // Sin cobertura: es un dato que afirma el móvil y el servidor no puede comprobar,
+        // así que **no da gotas, solo la insignia**. Falsear la cabecera daría una medalla
+        // y ni un punto de ventaja, que es justo el incentivo que se busca.
+        .init(key: "offline", name: "Sin cobertura", thresholds: [1, 10, 40], unique: false) { $0.offlineContributions },
     ]
 
     /// Una casilla de la vitrina: la familia, cómo va y si está conseguida.
@@ -574,6 +596,21 @@ enum ContributionScore {
             return BadgeAward(key: f.key, name: f.name, tier: grado, progress: n,
                               threshold: f.thresholds.first { $0 > n } ?? f.thresholds[f.thresholds.count - 1])
         }
+    }
+
+    /// Vista de demostración: todas las familias en su grado máximo, sin fabricar
+    /// aportaciones ni tocar el total de gotas de la cuenta.
+    static func allBadgesUnlocked() -> ([BadgeAward], [BadgeSlot]) {
+        let awards = badgeFamilies.map { f in
+            BadgeAward(key: f.key, name: f.name, tier: f.unique ? .unique : .gold,
+                       progress: f.thresholds.last!, threshold: f.thresholds.last!)
+        }
+        let slots = badgeFamilies.map { f in
+            BadgeSlot(family: f.key, tier: (f.unique ? Tier.unique : Tier.gold).rawValue,
+                      progress: f.thresholds.last!, threshold: f.thresholds.last!,
+                      thresholds: f.thresholds)
+        }
+        return (awards, slots)
     }
 
     static func isSummer(_ d: Date) -> Bool {

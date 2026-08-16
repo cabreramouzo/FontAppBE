@@ -167,17 +167,17 @@ export async function flushOutbox(): Promise<number> {
       try {
         const image = item.photo ? await uploadImage(toFile(item.photo, item.photoName)) : undefined
         if (item.kind === 'font') {
-          const font = await createFont({ ...item.data, image: image ?? item.data.image })
+          const font = await createFont({ ...item.data, image: image ?? item.data.image }, true)
           // El estado que se indicó al crearla, como primera actualización.
           if (item.waterStatus) {
             try {
-              await createComment(font.id, { waterStatus: item.waterStatus })
+              await createComment(font.id, { waterStatus: item.waterStatus }, true)
             } catch {
               /* la fuente ya está creada: no la reencolamos por esto */
             }
           }
         } else {
-          await createComment(item.fontID, { ...item.data, image: image ?? item.data.image })
+          await createComment(item.fontID, { ...item.data, image: image ?? item.data.image }, true)
         }
         await tx('readwrite', (s) => s.delete(item.id))
         sent++

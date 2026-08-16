@@ -94,7 +94,8 @@ struct FontCommentController: RouteCollection {
             body: body,
             rating: dto.rating,
             waterStatus: dto.waterStatus,
-            image: dto.image
+            image: dto.image,
+            queuedOffline: req.headers.first(name: "X-FontApp-Queued-Offline") == "1"
         )
         try await comment.save(on: req.db)
 

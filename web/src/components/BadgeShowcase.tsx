@@ -41,10 +41,9 @@ import { TIER_COLOR } from '../lib/tierColors'
 /**
  * Hace que una insignia se pueda abrir en el visor, si toca.
  *
- * **Solo lo conseguido se abre.** Enseñar en pantalla completa, con brillo y todo, una
- * medalla que aún no tienes le quita justamente lo que la hace apetecible: en la vitrina
- * la silueta gris dice «esto está por llegar», y el visor diría «tómala». Lo bloqueado se
- * queda como estaba, sin cursor de mano ni foco de teclado, para que ni se intente.
+ * La vitrina también abre lo bloqueado para explicar cómo se consigue. En ese caso el
+ * visor mantiene la medalla en gris: se puede entender el objetivo sin confundirlo con
+ * algo ya ganado. Fuera de la vitrina, `puede` sigue permitiendo desactivar la apertura.
  *
  * Cuando sí se puede, es un `button` de verdad y no un `div` con `onClick`: así se llega
  * con el tabulador y se abre con Intro, que es lo que espera quien no usa ratón.
@@ -87,6 +86,7 @@ export function BadgeShowcase({
   kind,
   badgeKey,
   tier = null,
+  locked = false,
   subtitle,
 }: {
   open: boolean
@@ -95,6 +95,8 @@ export function BadgeShowcase({
   kind: 'level' | 'badge'
   badgeKey: string
   tier?: string | null
+  /** La vitrina puede abrir lo pendiente para explicar cómo se consigue. */
+  locked?: boolean
   /** Línea de apoyo: «Desde 800 gotas», «3 de 5»… La pone quien abre el visor. */
   subtitle?: string
 }) {
@@ -235,7 +237,10 @@ export function BadgeShowcase({
                 component="img"
                 src={url}
                 alt={nombre}
-                sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                sx={{
+                  width: '100%', height: '100%', objectFit: 'contain', display: 'block',
+                  ...(locked ? { filter: 'grayscale(1)', opacity: 0.48 } : null),
+                }}
               />
             ) : (
               // Sin dibujo todavía: el visor sigue teniendo sentido con el nombre en

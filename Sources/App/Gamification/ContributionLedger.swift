@@ -108,7 +108,7 @@ enum ContributionLedger {
                 source: c.source.rawValue, subjectID: c.subjectID, detail: c.detail,
                 kind: c.kind.rawValue, base: c.base, multiplier: c.multiplier, gotes: c.gotes,
                 occurredAt: c.at, settlesAt: c.at.addingTimeInterval(settlementWindow),
-                status: .pending))
+                status: .pending, reasons: c.reasons.joined(separator: ",")))
         }
 
         // Lo que estaba registrado y ya no sale del cálculo ha desaparecido: reseña
@@ -336,7 +336,8 @@ enum ContributionLedger {
     /// habitual, y no se puede inflar reseñando mucho la misma tarde.
     static let freshnessHorizon: TimeInterval = 180 * 86_400
 
-    static func profile(for userID: UUID, on db: any Database, now: Date = Date()) async throws -> Profile {
+    static func profile(for userID: UUID, on db: any Database, now: Date = Date(),
+                        unlockAllBadges: Bool = false) async throws -> Profile {
         let eventos = try await ContributionEvent.query(on: db)
             .filter(\.$user.$id == userID)
             .filter(\.$status != .void)
@@ -353,6 +354,19 @@ enum ContributionLedger {
         let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: db).filter(\.$id ~~ fontIDs).all()
         let fontsByID = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f) } })
 
+        // Reseñas creadas sin cobertura. Se buscan por `subject_id` —la fila de origen del
+        // evento— y no por fuente: una misma fuente puede tener una reseña dejada en el
+        // monte y otra escrita en casa, y solo la primera cuenta.
+        let commentIDs = Array(Set(liquidados
+            .filter { $0.source == ContributionScore.Source.comment.rawValue }
+            .map { $0.subjectID }))
+        let offlineComments: Set<UUID> = commentIDs.isEmpty ? [] : Set(
+            try await FontComment.query(on: db)
+                .filter(\.$id ~~ commentIDs)
+                .filter(\.$queuedOffline == true)
+                .all(\.$id)
+                .compactMap { $0 })
+
         for e in liquidados {
             let previo = porTipo[e.kind] ?? (0, 0)
             porTipo[e.kind] = (previo.count + 1, previo.gotes + e.gotes)
@@ -363,7 +377,24 @@ enum ContributionLedger {
             case .firstPhoto: tally.firstPhotos += 1
             case .relocation, .fieldCompleted: tally.mapFixes += 1
             case .updateReview where e.base >= 50: tally.sentinelUpdates += 1
+            case .report: tally.incidents += 1
             default: break
+            }
+            // Las razones se guardan desde `AddReasonsToContributionEvent`. Las filas
+            // anteriores llevan la cadena vacía, que aquí significa «no se sabe» y no
+            // «ninguna»: hasta que pase un `--rescore`, esas aportaciones no cuentan para
+            // Lejanía. Es el error correcto — quedarse corto y no regalar la insignia.
+            if e.reasons.split(separator: ",").contains("desierto") {
+                tally.farAwayContributions += 1
+            }
+            // Sin cobertura: la fuente creada en el monte y la reseña dejada allí mismo.
+            // Solo `fontCreated` por el lado de la fuente, o una fuente creada offline
+            // sumaría también por cada campo que se completara después desde casa.
+            if kind == .fontCreated, let f = e.$font.id.flatMap({ fontsByID[$0] }), f.queuedOffline {
+                tally.offlineContributions += 1
+            } else if e.source == ContributionScore.Source.comment.rawValue,
+                      offlineComments.contains(e.subjectID) {
+                tally.offlineContributions += 1
             }
             if kind == .firstReview || kind == .updateReview {
                 if ContributionScore.isSummer(e.occurredAt) { tally.summerReviews += 1 }
@@ -403,13 +434,17 @@ enum ContributionLedger {
         let nivel = ContributionScore.level(for: gotes)
         let siguiente = ContributionScore.nextLevel(after: gotes)
 
+        let badgeView = unlockAllBadges
+            ? ContributionScore.allBadgesUnlocked()
+            : (ContributionScore.badges(for: tally), ContributionScore.catalogue(for: tally))
+
         return Profile(
             gotes: gotes,
             pending: pending,
             level: nivel.key,
             nextLevel: siguiente?.key,
             gotesToNextLevel: siguiente.map { $0.from - gotes },
-            badges: ContributionScore.badges(for: tally)
+            badges: badgeView.0
                 .map { .init(family: $0.key, tier: $0.tier.rawValue, progress: $0.progress, threshold: $0.threshold) },
             byKind: ContributionScore.Kind.allCases.compactMap { k in
                 guard let d = porTipo[k.rawValue], d.count > 0 else { return nil }
@@ -425,7 +460,7 @@ enum ContributionLedger {
                 LevelStanding(key: $0.key, from: $0.from,
                               reached: gotes >= $0.from, current: $0.key == nivel.key)
             },
-            collection: ContributionScore.catalogue(for: tally))
+            collection: badgeView.1)
     }
 
     /// Marcador de todos, de más a menos. `since` acota a un periodo (los rankings del

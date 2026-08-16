@@ -107,8 +107,11 @@ export interface NewFont {
   drinkable?: Drinkable
 }
 
-export async function createFont(data: NewFont): Promise<Font> {
-  return apiFetch<Font>('/fonts', { method: 'POST', body: JSON.stringify(data) })
+export async function createFont(data: NewFont, queuedOffline = false): Promise<Font> {
+  return apiFetch<Font>('/fonts', {
+    method: 'POST', body: JSON.stringify(data),
+    headers: queuedOffline ? { 'X-FontApp-Queued-Offline': '1' } : undefined,
+  })
 }
 
 export async function updateFont(id: string, data: NewFont): Promise<Font> {
@@ -136,10 +139,11 @@ export interface NewComment {
   image?: string
 }
 
-export async function createComment(fontID: string, data: NewComment): Promise<CommentResponse> {
+export async function createComment(fontID: string, data: NewComment, queuedOffline = false): Promise<CommentResponse> {
   return apiFetch<CommentResponse>(`/fonts/${fontID}/comments`, {
     method: 'POST',
     body: JSON.stringify(data),
+    headers: queuedOffline ? { 'X-FontApp-Queued-Offline': '1' } : undefined,
   })
 }
 

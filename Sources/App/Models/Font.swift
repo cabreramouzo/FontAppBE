@@ -40,6 +40,11 @@ final class Font: Model, Content, @unchecked Sendable {
     @OptionalField(key: "region") var region: String?
     // Quién la creó (null para las importadas de OSM). setNull al borrar el usuario.
     @OptionalParent(key: "created_by") var creator: User?
+
+    /// Creada sin cobertura y enviada después por la bandeja de salida. Lo afirma el
+    /// cliente y no se puede verificar: por eso solo paga insignia, nunca gotas.
+    @Field(key: "queued_offline") var queuedOffline: Bool
+
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
@@ -55,7 +60,8 @@ final class Font: Model, Content, @unchecked Sendable {
         drinkable: Drinkable? = nil,
         country: String? = nil,
         region: String? = nil,
-        creatorID: UUID? = nil
+        creatorID: UUID? = nil,
+        queuedOffline: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -68,5 +74,6 @@ final class Font: Model, Content, @unchecked Sendable {
         self.country = country
         self.region = region
         self.$creator.id = creatorID
+        self.queuedOffline = queuedOffline
     }
 }

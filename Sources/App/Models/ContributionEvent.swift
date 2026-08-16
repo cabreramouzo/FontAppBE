@@ -43,6 +43,10 @@ final class ContributionEvent: Model, @unchecked Sendable {
     @Field(key: "multiplier") var multiplier: Double
     @Field(key: "gotes") var gotes: Int
 
+    /// Qué multiplicadores saltaron, separados por comas (`desierto,estiaje`). Vacío =
+    /// ninguno, o una fila anterior a que esto se guardara (ver la migración).
+    @Field(key: "reasons") var reasons: String
+
     @Field(key: "status") var status: Status
     /// Cuándo ocurrió la aportación (no cuándo se registró: el histórico se importa a
     /// posteriori y las fechas tienen que ser las de verdad).
@@ -57,7 +61,7 @@ final class ContributionEvent: Model, @unchecked Sendable {
 
     init(userID: UUID, fontID: UUID?, source: String, subjectID: UUID, detail: String,
          kind: String, base: Int, multiplier: Double, gotes: Int,
-         occurredAt: Date, settlesAt: Date, status: Status) {
+         occurredAt: Date, settlesAt: Date, status: Status, reasons: String = "") {
         self.$user.id = userID
         self.$font.id = fontID
         self.source = source
@@ -70,5 +74,6 @@ final class ContributionEvent: Model, @unchecked Sendable {
         self.occurredAt = occurredAt
         self.settlesAt = settlesAt
         self.status = status
+        self.reasons = reasons
     }
 }

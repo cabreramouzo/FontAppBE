@@ -48,7 +48,8 @@ CLAVES = ["drop", "spring", "brook", "torrent", "stream",
 # Las de bronce/plata/oro comparten **el mismo dibujo en los tres grados**, y el grado lo
 # lleva el aro de color que les pone `BadgeArt`. La alternativa —tres ficheros por
 # familia— son 24 imágenes que hay que redibujar cada vez que se toque el estilo.
-FAMILIAS = ["pioneer", "discoverer", "firstLight", "sentinel", "cartographer", "drySeason"]
+FAMILIAS = ["pioneer", "discoverer", "firstLight", "sentinel", "cartographer", "drySeason",
+            "incidents", "farAway", "offline"]
 
 # Para poder pasar los ficheros tal como los escupe el generador.
 ALIAS = {
@@ -64,6 +65,9 @@ ALIAS = {
     "photographer": "firstLight", "firstlight": "firstLight", "primeraluz": "firstLight",
     "descubridor": "discoverer", "cartografo": "cartographer", "cartógrafo": "cartographer",
     "comarcas": "counties", "counties": "counties",
+    "incidence": "incidents", "incidencia": "incidents", "incidents": "incidents",
+    # El generador lo llamó «farway»; la familia es `farAway`.
+    "farway": "farAway", "faraway": "farAway", "outside": "farAway", "lejos": "farAway",
     "cuatroestaciones": "fourSeasons", "fourseasons": "fourSeasons",
 }
 

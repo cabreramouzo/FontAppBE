@@ -14,6 +14,15 @@ struct GamificationController: RouteCollection {
     /// misma ficha se abre muchas veces. Mismo TTL que zonas y pulso.
     static let badgeCache = ZoneCache()
 
+    /// Cuentas de demostración que ven todas las insignias en oro. Es una lista de
+    /// usernames separada por comas y no cambia sus aportaciones ni sus gotas.
+    static func unlockAllBadges(for user: User) -> Bool {
+        let names = Environment.get("BADGES_UNLOCK_ALL_USERS")?
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() } ?? []
+        return names.contains(user.username.lowercased())
+    }
+
     func boot(routes: any RoutesBuilder) throws {
         let g = routes.grouped("gamification").grouped(UserToken.authenticator(), User.guardMiddleware())
         g.get("me", use: me)
@@ -154,7 +163,8 @@ struct GamificationController: RouteCollection {
         // la verdad. Una cuenta anonimizada tampoco luce medallas.
         var out = PublicBadges(badges: [])
         if !user.gamificationOptOut && user.anonymizedAt == nil {
-            let perfil = try await ContributionLedger.profile(for: userID, on: req.db)
+            let perfil = try await ContributionLedger.profile(
+                for: userID, on: req.db, unlockAllBadges: Self.unlockAllBadges(for: user))
             out = PublicBadges(badges: perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) })
         }
         await Self.badgeCache.set(clave, out)
@@ -169,7 +179,9 @@ struct GamificationController: RouteCollection {
     @Sendable func me(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
         guard !user.gamificationOptOut else { return Response(status: .noContent) }
-        var perfil = try await ContributionLedger.profile(for: try user.requireID(), on: req.db)
+        var perfil = try await ContributionLedger.profile(
+            for: try user.requireID(), on: req.db,
+            unlockAllBadges: Self.unlockAllBadges(for: user))
         // Fase 6: qué abre el nivel, y si no abre nada, por qué. Un botón desactivado sin
         // explicación se lee como una avería.
         perfil.grant = try await Capabilities.of(user, on: req.db)

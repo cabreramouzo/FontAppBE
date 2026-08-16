@@ -13,6 +13,11 @@ final class FontComment: Model, Content, @unchecked Sendable {
     @OptionalField(key: "rating") var rating: Int?
     @OptionalField(key: "water_status") var waterStatus: String?
     @OptionalField(key: "image") var image: String?
+
+    /// Creada sin cobertura y enviada después por la bandeja de salida. Lo afirma el
+    /// cliente y no se puede verificar: por eso solo paga insignia, nunca gotas.
+    @Field(key: "queued_offline") var queuedOffline: Bool
+
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
@@ -24,7 +29,8 @@ final class FontComment: Model, Content, @unchecked Sendable {
         body: String,
         rating: Int? = nil,
         waterStatus: String? = nil,
-        image: String? = nil
+        image: String? = nil,
+        queuedOffline: Bool = false
     ) {
         self.id = id
         self.$font.id = fontID
@@ -33,5 +39,6 @@ final class FontComment: Model, Content, @unchecked Sendable {
         self.rating = rating
         self.waterStatus = waterStatus
         self.image = image
+        self.queuedOffline = queuedOffline
     }
 }

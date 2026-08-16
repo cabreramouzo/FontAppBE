@@ -43,7 +43,7 @@ export function BadgesPage() {
   const [estado, setEstado] = useState<'loading' | 'ok' | 'off' | 'error'>('loading')
   // Qué insignia se está mirando en grande. `null` = ninguna.
   const [mirando, setMirando] = useState<
-    { kind: 'level' | 'badge'; key: string; tier: string | null; subtitle?: string } | null
+    { kind: 'level' | 'badge'; key: string; tier: string | null; locked?: boolean; subtitle?: string } | null
   >(null)
 
   useEffect(() => { document.title = `${t('badges.title')} · FontApp` }, [t])
@@ -118,10 +118,10 @@ export function BadgesPage() {
                     // Dibujada: el escudo ya trae su propio marco y su color, así que va
                     // suelto. El candado sigue encima, que es lo que dice «todavía no».
                     <Abrible
-                      puede={conseguida}
+                      puede
                       nombre={t(`game.badge.${b.family}`)}
                       onOpen={() => setMirando({
-                        kind: 'badge', key: b.family, tier: b.tier,
+                        kind: 'badge', key: b.family, tier: b.tier, locked: !conseguida,
                         subtitle: tope ? t('badges.maxed') : t('badges.progress', { n: String(b.progress), m: String(b.threshold) }),
                       })}
                     >
@@ -135,23 +135,32 @@ export function BadgesPage() {
                       </Box>
                     </Abrible>
                   ) : (
-                    <Box
-                      sx={{
-                        width: 88, height: 88, borderRadius: '50%', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', position: 'relative',
-                        bgcolor: 'action.hover',
-                        border: '2px solid', borderColor: conseguida ? color : 'divider',
-                        color,
-                        ...(conseguida ? null : APAGADA),
-                      }}
+                    <Abrible
+                      puede
+                      nombre={t(`game.badge.${b.family}`)}
+                      onOpen={() => setMirando({
+                        kind: 'badge', key: b.family, tier: b.tier, locked: !conseguida,
+                        subtitle: tope ? t('badges.maxed') : t('badges.progress', { n: String(b.progress), m: String(b.threshold) }),
+                      })}
                     >
-                      <BadgeIcon family={b.family} sx={{ fontSize: 40 }} />
-                      {!conseguida && (
-                        <LockOutlinedIcon
-                          sx={{ position: 'absolute', bottom: 6, right: 6, fontSize: 16, color: 'text.disabled' }}
-                        />
-                      )}
-                    </Box>
+                      <Box
+                        sx={{
+                          width: 88, height: 88, borderRadius: '50%', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', position: 'relative',
+                          bgcolor: 'action.hover',
+                          border: '2px solid', borderColor: conseguida ? color : 'divider',
+                          color,
+                          ...(conseguida ? null : APAGADA),
+                        }}
+                      >
+                        <BadgeIcon family={b.family} sx={{ fontSize: 40 }} />
+                        {!conseguida && (
+                          <LockOutlinedIcon
+                            sx={{ position: 'absolute', bottom: 6, right: 6, fontSize: 16, color: 'text.disabled' }}
+                          />
+                        )}
+                      </Box>
+                    </Abrible>
                   )}
                   <Rotulo
                     nombre={t(`game.badge.${b.family}`)}
@@ -194,6 +203,7 @@ export function BadgesPage() {
         kind={mirando?.kind ?? 'badge'}
         badgeKey={mirando?.key ?? ''}
         tier={mirando?.tier ?? null}
+        locked={mirando?.locked ?? false}
         subtitle={mirando?.subtitle}
       />
     </Box>

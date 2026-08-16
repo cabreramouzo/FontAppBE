@@ -1206,6 +1206,43 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Solo las peticiones que salen de la bandeja offline llevan la marca. Tiene que
+    /// persistir en el contenido y alimentar la insignia incluso después de resincronizar.
+    func testQueuedOfflineHeaderFeedsOfflineBadge() async throws {
+        try await withApp { app in
+            let userID = try await register(app, username: "offlinebadge")
+            let token = try await login(app, username: "offlinebadge")
+            var headers = bearer(token)
+            headers.add(name: "X-FontApp-Queued-Offline", value: "1")
+
+            var fontID = UUID()
+            try await app.test(.POST, "fonts", headers: headers, beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Font sense senyal", latitude: 41.9,
+                                                     longitude: 2.2, image: nil, description: nil,
+                                                     source: nil, drinkable: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+                fontID = try res.content.decode(Font.self).id ?? fontID
+            })
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: headers, beforeRequest: { req in
+                try req.content.encode(CreateCommentDTO(body: "Raja", rating: nil,
+                                                        waterStatus: nil, image: nil))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+
+            let storedFont = try await Font.find(fontID, on: app.db)
+            let storedComment = try await FontComment.query(on: app.db)
+                .filter(\.$font.$id == fontID).first()
+            XCTAssertTrue(storedFont?.queuedOffline == true)
+            XCTAssertTrue(storedComment?.queuedOffline == true)
+
+            _ = try await ContributionLedger.sync(on: app.db)
+            _ = try await ContributionLedger.sync(
+                on: app.db, now: Date().addingTimeInterval(ContributionLedger.settlementWindow + 60))
+            let profile = try await ContributionLedger.profile(for: userID, on: app.db)
+            XCTAssertEqual(profile.collection.first { $0.family == "offline" }?.progress, 2)
+        }
+    }
+
     /// Apagar la gamificación devuelve 204, no un error: no es que falle, es que no hay
     /// nada que enseñar. Y las aportaciones se siguen contando por debajo.
     func testOptingOutHidesTheScoreButKeepsCounting() async throws {
@@ -1535,4 +1572,3 @@ final class IntegrationTests: XCTestCase {
         }
     }
 }
-

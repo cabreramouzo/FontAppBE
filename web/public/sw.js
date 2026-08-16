@@ -5,7 +5,7 @@
 // - Navegación SPA: network-first con respaldo en el shell.
 const SHELL_CACHE = 'fontapp-shell-v3'
 const TILE_CACHE = 'fontapp-tiles-v1'
-const API_CACHE = 'fontapp-api-v1'
+const API_CACHE = 'fontapp-api-v2'
 // El shell NO se pide a `/index.html`: en Cloudflare Pages esa ruta responde 308 hacia
 // `/`, y `cache.addAll` guardaría la respuesta redirigida bajo esa misma clave — que es
 // justo la que sirve el respaldo sin conexión. Se pide `/` y se guarda bajo las dos.
@@ -113,6 +113,14 @@ self.addEventListener('fetch', (event) => {
 
   // API (proxy /api en dev o backend en el mismo origen): stale-while-revalidate.
   if (url.pathname.startsWith('/api')) {
+    // El perfil de gamificación es privado y cambia en cuanto se liquida una aportación
+    // o se despliega una familia nueva. Servir primero una copia antigua deja la vitrina
+    // congelada hasta la siguiente visita y, además, una respuesta autenticada no debe
+    // sobrevivir en una caché compartida entre sesiones del navegador.
+    if (url.pathname === '/api/gamification/me') {
+      event.respondWith(fetch(req))
+      return
+    }
     event.respondWith(staleWhileRevalidate(req, API_CACHE))
     return
   }
@@ -191,9 +199,10 @@ function idb(db, store, mode, run) {
 }
 
 // Lanza un error si la respuesta no es 2xx, distinguiendo lo transitorio.
-async function post(url, token, body, isForm) {
+async function post(url, token, body, isForm, queuedOffline = false) {
   const headers = { Authorization: `Bearer ${token}` }
   if (!isForm) headers['Content-Type'] = 'application/json'
+  if (queuedOffline) headers['X-FontApp-Queued-Offline'] = '1'
   const res = await fetch(url, { method: 'POST', headers, body: isForm ? body : JSON.stringify(body) })
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status}`)
@@ -222,14 +231,14 @@ async function syncOutbox() {
         image = (await post(`${base}/images`, session.token, form, true)).url
       }
       if (item.kind === 'font') {
-        const font = await post(`${base}/fonts`, session.token, { ...item.data, image })
+        const font = await post(`${base}/fonts`, session.token, { ...item.data, image }, false, true)
         if (item.waterStatus) {
           try {
-            await post(`${base}/fonts/${font.id}/comments`, session.token, { waterStatus: item.waterStatus })
+            await post(`${base}/fonts/${font.id}/comments`, session.token, { waterStatus: item.waterStatus }, false, true)
           } catch (_) { /* la fuente ya está creada */ }
         }
       } else {
-        await post(`${base}/fonts/${item.fontID}/comments`, session.token, { ...item.data, image })
+        await post(`${base}/fonts/${item.fontID}/comments`, session.token, { ...item.data, image }, false, true)
       }
       await idb(db, 'items', 'readwrite', (s) => s.delete(item.id))
     } catch (e) {

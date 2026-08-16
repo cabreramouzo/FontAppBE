@@ -59,6 +59,14 @@ export $(cat env.development | xargs)
 swift run App seed --force --demo       # usuarios demo con contraseña: demo12345
 ```
 
+Para que una o varias cuentas de demostración vean todas las insignias desbloqueadas,
+sin alterar sus aportaciones ni sus gotas, arranca el backend con sus nombres separados
+por comas:
+
+```bash
+BADGES_UNLOCK_ALL_USERS=demo,alice swift run App serve
+```
+
 ## Verlo desde el móvil (misma wifi)
 Expón la web y el backend a la red local:
 
