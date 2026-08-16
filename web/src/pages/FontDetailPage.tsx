@@ -31,6 +31,7 @@ import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
 import HideImageIcon from '@mui/icons-material/HideImageOutlined'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import type { CommentResponse, Drinkable, FavoriteStatus, Font, ReportResponse, WaterSource } from '../api/types'
+import type { PublicBadge } from '../api/client'
 import {
   apiFetch,
   assetUrl,
@@ -44,6 +45,7 @@ import {
   describeError,
   getFavoriteStatus,
   getUser,
+  getUserBadges,
   setFavorite,
   setFontPhotoFromComment,
   updateComment,
@@ -57,7 +59,9 @@ import { StarRating } from '../components/StarRating'
 import { ImagePicker } from '../components/ImagePicker'
 import { Skeleton } from '../components/Skeleton'
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
+import { useTheme } from '@mui/material/styles'
 import { BadgeIcon } from '../components/BadgeIcon'
+import { TIER_COLOR } from '../lib/tierColors'
 import { BadgeArt } from '../components/BadgeArt'
 import { BADGE_ART } from '../lib/levelBadges'
 import { enqueue, isOffline } from '../lib/outbox'
@@ -436,6 +440,12 @@ export function FontDetailPage() {
   const [confirming, setConfirming] = useState(false)
   const [updating, setUpdating] = useState(false) // formulario de nueva actualización desplegado
   const [creatorName, setCreatorName] = useState<string | null>(null)
+  // Insignia de creador (familia `discoverer`): se pide aparte porque es un dato de la
+  // persona y no de la fuente, y porque no debe hacer esperar a la ficha.
+  const [creatorBadge, setCreatorBadge] = useState<PublicBadge | null>(null)
+  // Dos juegos de bronce/plata/oro, uno por tema: el bronce que funciona sobre papel se
+  // queda por debajo del contraste que pide la WCAG sobre fondo oscuro (ver `tierColors`).
+  const tierColor = TIER_COLOR[useTheme().palette.mode === 'dark' ? 'dark' : 'light']
   const [favorite, setFavState] = useState<FavoriteStatus | null>(null)
   const [savingFavorite, setSavingFavorite] = useState(false)
   // Cuántas reseñas "Anteriores" se muestran (se amplía con "mostrar más").
@@ -454,8 +464,17 @@ export function FontDetailPage() {
     // Estado de favorito (recuento público; "guardada por mí" si hay sesión).
     getFavoriteStatus(id).then(setFavState).catch(() => setFavState(null))
     // Nombre del creador (las importadas de OSM no tienen), para enlazar a su perfil.
-    if (f.creator?.id) getUser(f.creator.id).then((u) => setCreatorName(u.username)).catch(() => setCreatorName(null))
-    else setCreatorName(null)
+    if (f.creator?.id) {
+      getUser(f.creator.id).then((u) => setCreatorName(u.username)).catch(() => setCreatorName(null))
+      // Solo la de creador: en la ficha de una fuente lo que viene a cuento es cuántas
+      // ha puesto en el mapa quien puso ésta. El resto de su colección está en su perfil.
+      getUserBadges(f.creator.id)
+        .then((bs) => setCreatorBadge(bs.find((b) => b.family === 'discoverer') ?? null))
+        .catch(() => setCreatorBadge(null))
+    } else {
+      setCreatorName(null)
+      setCreatorBadge(null)
+    }
   }, [id])
 
   useEffect(() => {
@@ -604,9 +623,25 @@ export function FontDetailPage() {
       </Box>
 
       {creatorName && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: showPioneer ? 0.25 : 1 }}>
-          {t('detail.createdBy')}{' '}
-          <Link component={RouterLink} to={`/users/${encodeURIComponent(creatorName)}`}>@{creatorName}</Link>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ mb: showPioneer ? 0.25 : 1, display: 'flex', alignItems: 'center', gap: 0.5 }}
+        >
+          <span>
+            {t('detail.createdBy')}{' '}
+            <Link component={RouterLink} to={`/users/${encodeURIComponent(creatorName)}`}>@{creatorName}</Link>
+          </span>
+          {/* La medalla de Descubridor de quien la puso. A diferencia de la del pionero,
+              ésta tiene grado —bronce, plata, oro— y el grado lo lleva el color, así que
+              va con icono y no con dibujo: tres metales serían tres ficheros por familia. */}
+          {creatorBadge && (
+            <Tooltip title={`${t('game.badge.discoverer')} · ${t(`game.tier.${creatorBadge.tier}`)}`}>
+              <Box component="span" sx={{ display: 'flex', color: tierColor[creatorBadge.tier] ?? 'text.secondary' }}>
+                <BadgeIcon family="discoverer" fontSize="small" />
+              </Box>
+            </Tooltip>
+          )}
         </Typography>
       )}
 

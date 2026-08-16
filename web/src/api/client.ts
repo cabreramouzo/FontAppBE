@@ -271,6 +271,22 @@ export async function getPulse(): Promise<PulseSnapshot> {
   return apiFetch('/activity/pulse')
 }
 
+/**
+ * Insignias conseguidas por alguien. Público, y solo lo conseguido: familia y grado,
+ * sin el progreso que sí lleva la vitrina propia.
+ *
+ * Lista vacía si esa persona ha apagado la gamificación o está anonimizada.
+ */
+export interface PublicBadge {
+  family: string
+  tier: 'bronze' | 'silver' | 'gold' | 'unique'
+}
+
+export async function getUserBadges(userID: string): Promise<PublicBadge[]> {
+  const r = await apiFetch<{ badges: PublicBadge[] }>(`/users/${encodeURIComponent(userID)}/badges`)
+  return r.badges
+}
+
 // Altas por código de cartel (?p=…). `source` nulo = llegaron sin código.
 export async function getSourceStats(): Promise<{ source: string | null; count: number }[]> {
   return apiFetch('/users/stats/sources')
