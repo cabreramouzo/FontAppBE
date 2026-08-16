@@ -17,6 +17,8 @@ import type { GamificationProfile } from '../api/types'
 import { useTheme } from '@mui/material/styles'
 import { useI18n } from '../i18n/I18nContext'
 import { LevelBadge } from './LevelBadge'
+import { Abrible, BadgeShowcase } from './BadgeShowcase'
+import { LEVEL_BADGES } from '../lib/levelBadges'
 import { TIER_COLOR } from '../lib/tierColors'
 
 /**
@@ -35,6 +37,12 @@ export function GamificationCard() {
   const tier = TIER_COLOR[useTheme().palette.mode === 'dark' ? 'dark' : 'light']
   const [data, setData] = useState<GamificationProfile | null>(null)
   const [cargando, setCargando] = useState(true)
+  // Qué insignia se está mirando en grande, o `null`. Mismo visor que la vitrina:
+  // se llega a las medallas antes desde aquí que desde `/me/badges`, así que si se
+  // pueden abrir allí y aquí no, lo que parece es que aquí está roto.
+  const [mirando, setMirando] = useState<
+    { kind: 'level' | 'badge'; key: string; tier: string | null; subtitle?: string } | null
+  >(null)
 
   useEffect(() => {
     getGamification()
@@ -90,7 +98,13 @@ export function GamificationCard() {
           antes: por vistosa que sea, «17 fuentes tienen foto gracias a ti» sigue siendo lo
           primero que hay que leer. */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <LevelBadge levelKey={data.level} />
+        <Abrible
+          puede={LEVEL_BADGES.has(data.level)}
+          nombre={t(`game.level.${data.level}`)}
+          onOpen={() => setMirando({ kind: 'level', key: data.level, tier: null })}
+        >
+          <LevelBadge levelKey={data.level} />
+        </Abrible>
         <Box sx={{ minWidth: 0, flexGrow: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
         <WaterDropOutlinedIcon fontSize="small" sx={{ color: 'primary.main', alignSelf: 'center' }} />
@@ -155,16 +169,31 @@ export function GamificationCard() {
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5 }}>
           {data.badges.map((b) => (
             <Tooltip key={b.family} title={t('game.badgeProgress', { n: String(b.progress), m: String(b.threshold) })}>
-              <Chip
-                label={`${t(`game.badge.${b.family}`)} · ${t(`game.tier.${b.tier}`)}`}
-                size="small"
-                sx={{
-                  fontWeight: 600,
-                  color: tier[b.tier] ?? 'text.primary',
-                  borderColor: tier[b.tier] ?? 'divider',
-                }}
-                variant="outlined"
-              />
+              {/* Los chips también abren el visor, y no solo la chapa de nivel: aquí las
+                  insignias son texto y es donde menos se ven, así que es justo donde más
+                  se agradece poder mirarlas en grande. Los que no tienen dibujo abren
+                  igual — el visor cae al nombre en grande y no deja un hueco negro. */}
+              <Abrible
+                puede
+                redondo={false}
+                nombre={t(`game.badge.${b.family}`)}
+                onOpen={() => setMirando({
+                  kind: 'badge', key: b.family, tier: b.tier,
+                  subtitle: t('game.badgeProgress', { n: String(b.progress), m: String(b.threshold) }),
+                })}
+              >
+                <Chip
+                  label={`${t(`game.badge.${b.family}`)} · ${t(`game.tier.${b.tier}`)}`}
+                  size="small"
+                  sx={{
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: tier[b.tier] ?? 'text.primary',
+                    borderColor: tier[b.tier] ?? 'divider',
+                  }}
+                  variant="outlined"
+                />
+              </Abrible>
             </Tooltip>
           ))}
         </Box>
@@ -199,6 +228,15 @@ export function GamificationCard() {
           {t('game.provisional')}
         </Typography>
       )}
+
+      <BadgeShowcase
+        open={!!mirando}
+        onClose={() => setMirando(null)}
+        kind={mirando?.kind ?? 'badge'}
+        badgeKey={mirando?.key ?? ''}
+        tier={mirando?.tier ?? null}
+        subtitle={mirando?.subtitle}
+      />
     </Box>
   )
 }

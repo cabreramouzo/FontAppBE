@@ -38,6 +38,49 @@ import { TIER_COLOR } from '../lib/tierColors'
  * El bloqueo del cuerpo mientras está abierto lo hace `Dialog` de MUI, igual que el
  * resto de modales de la app; no hay que gestionarlo aquí.
  */
+/**
+ * Hace que una insignia se pueda abrir en el visor, si toca.
+ *
+ * **Solo lo conseguido se abre.** Enseñar en pantalla completa, con brillo y todo, una
+ * medalla que aún no tienes le quita justamente lo que la hace apetecible: en la vitrina
+ * la silueta gris dice «esto está por llegar», y el visor diría «tómala». Lo bloqueado se
+ * queda como estaba, sin cursor de mano ni foco de teclado, para que ni se intente.
+ *
+ * Cuando sí se puede, es un `button` de verdad y no un `div` con `onClick`: así se llega
+ * con el tabulador y se abre con Intro, que es lo que espera quien no usa ratón.
+ *
+ * Vive aquí, al lado del visor, porque lo usan la vitrina (`/me/badges`) y el marcador
+ * del perfil: si se pudiera abrir en un sitio y en el otro no, el otro parecería roto.
+ */
+export function Abrible({ puede, nombre, onOpen, redondo = true, children }: {
+  puede: boolean
+  nombre: string
+  onOpen: () => void
+  /** Los chips no son redondos; las chapas y los escudos sí. */
+  redondo?: boolean
+  children: React.ReactNode
+}) {
+  const { t } = useI18n()
+  if (!puede) return <>{children}</>
+  return (
+    <Box
+      component="button"
+      type="button"
+      onClick={onOpen}
+      aria-label={t('badges.view', { name: nombre })}
+      sx={{
+        p: 0, border: 0, background: 'none', cursor: 'pointer', display: 'flex',
+        borderRadius: redondo ? '50%' : 999,
+        transition: 'transform 160ms ease',
+        '&:hover': { transform: 'scale(1.06)' },
+        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 3 },
+      }}
+    >
+      {children}
+    </Box>
+  )
+}
+
 export function BadgeShowcase({
   open,
   onClose,
@@ -72,6 +115,13 @@ export function BadgeShowcase({
   const url = kind === 'level' ? levelBadgeURL(badgeKey) : badgeArtURL(badgeKey)
   const nombre = t(kind === 'level' ? `game.level.${badgeKey}` : `game.badge.${badgeKey}`)
   const aro = tier && tier !== 'unique' ? TIER_COLOR[modo][tier] : null
+
+  // Qué es y por qué se tiene. `t()` devuelve la clave cruda cuando falta la traducción,
+  // así que una familia nueva sin descripción enseñaría `game.badgeAbout.loQueSea` en
+  // mitad del diálogo. Mejor no pintar el párrafo que pintar el nombre de una variable.
+  const claveExplicacion = kind === 'level' ? 'game.levelAbout' : `game.badgeAbout.${badgeKey}`
+  const traducida = t(claveExplicacion)
+  const explicacion = traducida === claveExplicacion ? null : traducida
 
   /** Inclina la medalla hacia el punto tocado, con el centro como reposo. */
   function mover(clientX: number, clientY: number) {
@@ -215,6 +265,25 @@ export function BadgeShowcase({
         {subtitle && (
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.72)', mt: 1.5 }}>
             {subtitle}
+          </Typography>
+        )}
+
+        {/* Qué es y por qué se tiene. Va DEBAJO del progreso y en un tono más apagado:
+            quien abre la medalla ya sabe cuál es, y lo que viene a mirar es el dibujo.
+            La explicación está para quien se pregunte «¿y esto de qué me ha salido?»,
+            que es justo lo que no contaba ninguna otra parte de la interfaz — la vitrina
+            enseña un número («60 de 200») sin decir de qué son esos 60. */}
+        {explicacion && (
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'rgba(255,255,255,0.58)', mt: 1.5, mx: 'auto',
+              // Ancho de lectura: a pantalla completa, una línea suelta cruzaría todo el
+              // diálogo y se leería peor que centrada y estrecha.
+              maxWidth: 320, lineHeight: 1.5,
+            }}
+          >
+            {explicacion}
           </Typography>
         )}
       </Box>

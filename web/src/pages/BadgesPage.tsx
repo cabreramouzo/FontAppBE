@@ -18,7 +18,7 @@ import { Skeleton } from '../components/Skeleton'
 import { LevelBadge, APAGADA } from '../components/LevelBadge'
 import { BadgeIcon } from '../components/BadgeIcon'
 import { BadgeArt } from '../components/BadgeArt'
-import { BadgeShowcase } from '../components/BadgeShowcase'
+import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 import { BADGE_ART, LEVEL_BADGES } from '../lib/levelBadges'
 import { TIER_COLOR } from '../lib/tierColors'
 
@@ -196,44 +196,6 @@ export function BadgesPage() {
         tier={mirando?.tier ?? null}
         subtitle={mirando?.subtitle}
       />
-    </Box>
-  )
-}
-
-/**
- * Hace que una insignia se pueda abrir en grande, si toca.
- *
- * **Solo lo conseguido se abre.** Enseñar en pantalla completa, con brillo y todo, una
- * medalla que aún no tienes le quita justamente lo que la hace apetecible: en la vitrina
- * la silueta gris dice «esto está por llegar», y el visor diría «tómala». Lo bloqueado se
- * queda como estaba, sin cursor de mano ni foco de teclado, para que ni se intente.
- *
- * Cuando sí se puede, es un `button` de verdad y no un `div` con `onClick`: así se llega
- * con el tabulador y se abre con Intro, que es lo que espera quien no usa ratón.
- */
-function Abrible({ puede, nombre, onOpen, children }: {
-  puede: boolean
-  nombre: string
-  onOpen: () => void
-  children: React.ReactNode
-}) {
-  const { t } = useI18n()
-  if (!puede) return <>{children}</>
-  return (
-    <Box
-      component="button"
-      type="button"
-      onClick={onOpen}
-      aria-label={t('badges.view', { name: nombre })}
-      sx={{
-        p: 0, border: 0, background: 'none', cursor: 'pointer', display: 'flex',
-        borderRadius: '50%',
-        transition: 'transform 160ms ease',
-        '&:hover': { transform: 'scale(1.06)' },
-        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 3 },
-      }}
-    >
-      {children}
     </Box>
   )
 }
