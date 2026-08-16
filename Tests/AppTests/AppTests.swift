@@ -256,6 +256,54 @@ final class AppTests: XCTestCase {
         XCTAssertTrue(s.promotions.isEmpty)
     }
 
+    /// La pantalla de ayuda enseña el baremo, y lo enseña con lo que devuelve
+    /// `/gamification/scale`. Si esa respuesta y el código real se separan, la ayuda
+    /// miente **en silencio**: no falla nada, simplemente explica un sistema que ya no es
+    /// el que puntúa. Aquí se comprueba que los tramos de frescura que se publican son
+    /// exactamente los de la función, corte a corte.
+    func testPublishedScaleMatchesTheRealOne() async throws {
+        let app = try await Application.make(.testing)
+        defer { Task { try? await app.asyncShutdown() } }
+
+        let escala = try await GamificationController().scale(
+            req: Request(application: app, method: .GET, url: "/gamification/scale",
+                         on: app.eventLoopGroup.next()))
+
+        // Cada tramo publicado dice lo mismo que la función en su primer día…
+        for tramo in escala.freshness {
+            XCTAssertEqual(tramo.gotes,
+                           ContributionScore.freshness(daysSincePrevious: tramo.fromDays),
+                           "El tramo desde \(tramo.fromDays.map(String.init) ?? "nunca") no cuadra.")
+        }
+        // …y no falta ninguno: recorriendo el año día a día, todo valor que devuelve la
+        // curva tiene que estar publicado. Sin esto, añadir un escalón nuevo al `switch`
+        // dejaría la ayuda con un hueco que nadie notaría.
+        let publicados = Set(escala.freshness.map(\.gotes))
+        let reales = Set((0...400).map { ContributionScore.freshness(daysSincePrevious: $0) })
+            .union([ContributionScore.freshness(daysSincePrevious: nil)])
+        XCTAssertEqual(publicados, reales, "Hay tramos de la curva que la ayuda no enseña.")
+
+        // Las bases van todas: una aportación que puntúa y no sale en la ayuda es
+        // justamente la que hace pensar que los puntos salen de la nada.
+        XCTAssertEqual(escala.kinds.count, ContributionScore.Kind.allCases.count)
+        XCTAssertEqual(escala.maxMultiplier, ContributionScore.maxMultiplier)
+        XCTAssertEqual(escala.dailyCap, ContributionLedger.dailyCap)
+        XCTAssertEqual(escala.settleHours, 72)
+    }
+
+    /// El tramo «nunca reseñada» viaja con `fromDays: null` y **no sin la clave**.
+    ///
+    /// Mismo fallo que ya tuvimos con `tier`: el codificador sintetizado omite los
+    /// opcionales nulos, en el cliente llega `undefined`, y como aquí el nulo distingue
+    /// el tramo mejor pagado de la curva, la comprobación `=== null` fallaba y se caía la
+    /// pantalla de ayuda entera. Dos veces el mismo error merecen dos tests.
+    func testFreshnessStepSerialisesNullDaysExplicitly() throws {
+        let paso = GamificationController.Scale.FreshnessStep(fromDays: nil, gotes: 70)
+        let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(paso)) as? [String: Any]
+        XCTAssertTrue(json?.keys.contains("fromDays") ?? false, "La clave `fromDays` no puede omitirse.")
+        XCTAssertTrue(json?["fromDays"] is NSNull)
+    }
+
     func testHaversineKnownDistance() throws {
         // Madrid (Puerta del Sol) -> Barcelona (Pl. Catalunya) ≈ 505 km.
         let d = haversineKm(40.4168, -3.7038, 41.3874, 2.1686)

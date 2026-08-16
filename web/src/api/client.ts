@@ -282,6 +282,29 @@ export interface PublicBadge {
   tier: 'bronze' | 'silver' | 'gold' | 'unique'
 }
 
+/**
+ * El baremo, tal cual está en el backend. Lo pinta la pantalla de ayuda.
+ *
+ * Viene del servidor y no está escrito aquí a propósito: copiado, el día que se
+ * recalibre una base la ayuda seguiría enseñando la vieja, y una explicación que no
+ * cuadra con tu marcador es peor que no dar ninguna.
+ */
+export interface GamificationScale {
+  kinds: { kind: string; base: number }[]
+  multipliers: { key: string; factor: number }[]
+  maxMultiplier: number
+  desertKm: number
+  dryMonths: number[]
+  crowdedFrom: number
+  dailyCap: number
+  settleHours: number
+  freshness: { fromDays: number | null; gotes: number }[]
+}
+
+export async function getGamificationScale(): Promise<GamificationScale> {
+  return apiFetch('/gamification/scale')
+}
+
 export async function getUserBadges(userID: string): Promise<PublicBadge[]> {
   const r = await apiFetch<{ badges: PublicBadge[] }>(`/users/${encodeURIComponent(userID)}/badges`)
   return r.badges

@@ -89,6 +89,16 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     no por zona: el nivel es del total de toda la vida. No es un ranking — ése es el
     mensual por comarca, y lo es a posta. Sin insignias todavía: salen de recuentos por
     familia que hoy solo se saben usuario a usuario.
+  - Ayuda del sistema (`GamificationHelpButton`, botón (?) junto al título de la tarjeta):
+    qué paga y cuánto, multiplicadores, la curva de frescura, un ejemplo y las dos reglas
+    (72 h y techo diario). El texto sale del que ya imprimía `score-contributions`, que
+    era la mejor explicación y solo la veía quien usa la consola. **Ninguna cifra está
+    escrita en el cliente**: vienen de `GET /gamification/scale` (pública, sin BD), porque
+    el baremo se ha recalibrado varias veces y una ayuda que no cuadra con tu marcador es
+    peor que no dar ninguna. Un test compara lo publicado contra la función real, tramo a
+    tramo. Ojo otra vez con los opcionales: `fromDays` nulo («nunca reseñada») se serializa
+    **explícitamente** como `null` — omitido, el cliente leía `undefined` y la pantalla se
+    caía entera, el mismo fallo que ya tuvimos con `tier`.
   - Insignias de familia dibujadas: `web/public/badges/<clave>.png` (`BADGE_ART` +
     `BadgeArt.tsx`), mismo script que los niveles. Solo las de **grado único** — las de
     bronce/plata/oro serían tres ficheros por familia y siguen con icono coloreado.

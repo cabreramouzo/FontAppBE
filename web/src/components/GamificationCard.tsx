@@ -18,6 +18,7 @@ import { useTheme } from '@mui/material/styles'
 import { useI18n } from '../i18n/I18nContext'
 import { LevelBadge } from './LevelBadge'
 import { Abrible, BadgeShowcase } from './BadgeShowcase'
+import { GamificationHelpButton } from './GamificationHelp'
 import { LEVEL_BADGES } from '../lib/levelBadges'
 import { TIER_COLOR } from '../lib/tierColors'
 
@@ -70,7 +71,12 @@ export function GamificationCard() {
 
   return (
     <Box component="section" sx={{ mb: 3 }}>
-      <Typography variant="h6" gutterBottom>{t('game.title')}</Typography>
+      {/* El (?) al lado del título y no al final de la tarjeta: la duda («¿de dónde
+          salen estas gotas?») nace al leer el encabezado, no después de las cifras. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+        <Typography variant="h6">{t('game.title')}</Typography>
+        <GamificationHelpButton />
+      </Box>
 
       {impactos.length > 0 && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>

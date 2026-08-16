@@ -18,12 +18,104 @@ struct GamificationController: RouteCollection {
         let g = routes.grouped("gamification").grouped(UserToken.authenticator(), User.guardMiddleware())
         g.get("me", use: me)
 
+        // El baremo es público y no depende de quién pregunte: sin autenticar, para que
+        // la pantalla de ayuda la pueda leer también quien todavía no tiene cuenta —
+        // que es justo a quien hay que convencer de que el sistema es entendible.
+        routes.grouped("gamification").get("scale", use: scale)
+
         // Cuelga de `users` porque es un dato **de la persona**, no del sistema de puntos:
         // así vive al lado de `/users/:id/fonts` y `/users/:id/comments`, que es donde se
         // va a buscar. Pública y con el mismo límite que el resto de rutas públicas caras.
         routes.grouped("users")
             .grouped(RateLimitMiddleware(scope: "badges", max: 120, window: 60 * 60))
             .get(":userID", "badges", use: badges)
+    }
+
+    /// El baremo, tal cual está en el código.
+    ///
+    /// Existe para que la pantalla de ayuda **no tenga que repetir los números**. Copiados
+    /// al cliente, el día que se recalibre una base o un multiplicador la ayuda seguiría
+    /// enseñando los viejos, y una explicación que no cuadra con lo que ves en tu marcador
+    /// es peor que no dar ninguna: enseña que el sistema no se entiende.
+    ///
+    /// Los rótulos NO viajan aquí: van por clave y los traduce el navegador, igual que los
+    /// niveles y las insignias. Lo que viaja son las cifras.
+    struct Scale: Content, Sendable {
+        struct KindValue: Content, Sendable {
+            let kind: String
+            let base: Int
+        }
+        struct Multiplier: Content, Sendable {
+            /// `desert` · `dry` · `doubt` · `crowded`, para que el cliente ponga el texto.
+            let key: String
+            let factor: Double
+        }
+        let kinds: [KindValue]
+        let multipliers: [Multiplier]
+        let maxMultiplier: Double
+        /// Kilómetros sin ninguna fuente reseñada cerca para que cuente como desierto.
+        let desertKm: Double
+        /// Meses de estiaje, 1–12.
+        let dryMonths: [Int]
+        /// Reseñas frescas a partir de las cuales una más apenas suma.
+        let crowdedFrom: Int
+        /// Tope de gotas por día.
+        let dailyCap: Int
+        /// Horas hasta que una aportación se cobra.
+        let settleHours: Int
+        /// La curva de frescura, como pares (días desde la última reseña, gotas).
+        /// El primer tramo empieza en 0; `nil` en `days` = nunca reseñada.
+        struct FreshnessStep: Content, Sendable {
+            let fromDays: Int?
+            let gotes: Int
+
+            /// `fromDays` se escribe **explícitamente como `null`**, igual que `tier` en
+            /// `BadgeSlot` y por el mismo motivo: el codificador sintetizado usa
+            /// `encodeIfPresent` y omite la clave, así que en el cliente llega `undefined`
+            /// en vez de `null`. Aquí el nulo **significa algo** —«nunca reseñada», el
+            /// tramo mejor pagado de la curva—, y sin la clave la comparación `=== null`
+            /// falla y se cae la pantalla entera. Ya pasó una vez con las insignias.
+            func encode(to encoder: any Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(fromDays, forKey: .fromDays)
+                try c.encode(gotes, forKey: .gotes)
+            }
+        }
+        let freshness: [FreshnessStep]
+    }
+
+    /// GET /gamification/scale — el baremo. Pública y sin base de datos.
+    @Sendable func scale(req: Request) async throws -> Scale {
+        Scale(
+            kinds: ContributionScore.Kind.allCases.map {
+                .init(kind: $0.rawValue, base: $0.base)
+            },
+            multipliers: [
+                .init(key: "desert", factor: ContributionScore.desertFactor),
+                .init(key: "dry", factor: ContributionScore.dryFactor),
+                .init(key: "doubt", factor: ContributionScore.doubtFactor),
+                .init(key: "crowded", factor: 0.2),
+            ],
+            maxMultiplier: ContributionScore.maxMultiplier,
+            desertKm: ContributionScore.desertKm,
+            dryMonths: Array(ContributionScore.dryMonths),
+            crowdedFrom: 3,
+            dailyCap: ContributionLedger.dailyCap,
+            settleHours: Int(ContributionLedger.settlementWindow / 3_600),
+            // Los cortes son los mismos de `ContributionScore.freshness`. Se escriben
+            // aquí porque la función es un `switch` y no una tabla recorrible; si algún
+            // día se separan, el test `testFreshnessCurveRewardsForgottenFountains`
+            // seguiría pasando y la ayuda mentiría en silencio — por eso hay un test
+            // propio que compara esta lista contra la función.
+            freshness: [
+                .init(fromDays: 0, gotes: ContributionScore.freshness(daysSincePrevious: 0)),
+                .init(fromDays: 8, gotes: ContributionScore.freshness(daysSincePrevious: 8)),
+                .init(fromDays: 31, gotes: ContributionScore.freshness(daysSincePrevious: 31)),
+                .init(fromDays: 91, gotes: ContributionScore.freshness(daysSincePrevious: 91)),
+                .init(fromDays: 181, gotes: ContributionScore.freshness(daysSincePrevious: 181)),
+                .init(fromDays: 366, gotes: ContributionScore.freshness(daysSincePrevious: 366)),
+                .init(fromDays: nil, gotes: ContributionScore.freshness(daysSincePrevious: nil)),
+            ])
     }
 
     /// Lo que se publica de otra persona: la familia y el grado, nada más.
