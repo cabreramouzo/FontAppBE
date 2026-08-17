@@ -89,6 +89,17 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     no por zona: el nivel es del total de toda la vida. No es un ranking — ése es el
     mensual por comarca, y lo es a posta. Sin insignias todavía: salen de recuentos por
     familia que hoy solo se saben usuario a usuario.
+  - **Insignias de la ficha** (`FontBadges.tsx`, al final de la fuente): las que se ganan
+    **en esta fuente** y nada más — «Internacional» o «Constancia» salen del conjunto de
+    lo que aportas y aquí no dirían nada. Cada línea nombra a quien se la llevó o invita
+    a llevársela («todavía no tiene ni una foto»), que es la mitad interesante. Se calcula
+    con lo que ya tiene la ficha, **sin endpoint nuevo**, y por eso se calla lo que no
+    puede afirmar: Pionero no aparece si la fuente tiene creador (allí no se gana),
+    Primera luz se atribuye por la reseña con foto más antigua y dice «no consta quién»
+    cuando la foto llegó por una edición, y Centinela solo sale **en juego** (más de 90
+    días sin comprobar, el mismo corte de la curva que paga esa insignia) porque
+    reconstruir quién la despertó en el pasado pide los huecos entre reseñas.
+    Todos los escudos de la ficha abren el visor a pantalla completa, igual que en `/me`.
   - Ayuda del sistema (`GamificationHelpButton`, botón (?) junto al título de la tarjeta):
     qué paga y cuánto, multiplicadores, la curva de frescura, un ejemplo y las dos reglas
     (72 h y techo diario). El texto sale del que ya imprimía `score-contributions`, que
@@ -99,6 +110,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     tramo. Ojo otra vez con los opcionales: `fromDays` nulo («nunca reseñada») se serializa
     **explícitamente** como `null` — omitido, el cliente leía `undefined` y la pantalla se
     caía entera, el mismo fallo que ya tuvimos con `tier`.
+  - **Página pública `/gamification`** (`GamificationPage.tsx`): la explicación completa,
+    **sin sesión y sin BD** — se sirve entera de `GET /gamification/scale`, que ahora
+    publica también `levels` y `families`. Existe porque el (?) colgaba de la tarjeta de
+    `/me`, y esa tarjeta **no se pinta hasta que has aportado algo**: la única explicación
+    del sistema estaba detrás de haberlo entendido ya. Se enlaza desde el pie, desde el
+    (?) («Niveles e insignias») y desde la vitrina. El diálogo y la página comparten el
+    texto del baremo (`ExplicacionBaremo`); duplicarlo garantizaba que la copia pública
+    —la que lee quien no entiende nada— se quedara vieja. Las cifras siguen viniendo
+    todas del servidor, umbrales incluidos, y el test las compara con las reales.
   - Insignias de familia dibujadas: `web/public/badges/<clave>.png` (`BADGE_ART` +
     `BadgeArt.tsx`), mismo script que los niveles. Solo las de **grado único** — las de
     bronce/plata/oro serían tres ficheros por familia y siguen con icono coloreado.
@@ -129,6 +149,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Un `RouteCollection` por recurso, registrado en `routes.swift`.
 - Config sensible sólo vía `Environment.get(...)`, nunca hardcodeada.
 - Salida vía DTOs `Content` cuando difieran del modelo (nunca serializar `passwordHash`).
+  `Font` lleva su propio `encode(to:)` con la lista de campos públicos: Fluent serializa
+  **todas** las columnas y `queued_offline` se estaba colando en cada `GET /fonts`. Al
+  añadir una columna hay que decidir allí si sale. Lo fija `testFontJSONHidesInternalColumns`,
+  que además comprueba que `creator` sigue saliendo como `{"id": null}` y no como `{}`.
 - Auth: token Bearer respaldado en BD (`UserToken`); escrituras protegidas, edición/borrado self-only.
 - Cercanía: bounding box + haversine. A escala → PostGIS + índice GiST.
 

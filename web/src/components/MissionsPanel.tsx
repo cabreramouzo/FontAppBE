@@ -81,8 +81,8 @@ export function MissionsPanel({
     {
       key: 'photoless',
       icon: <NoPhotographyOutlinedIcon fontSize="small" />,
-      title: t('mission.blindRoute'),
-      hint: t('mission.blindRouteHint'),
+      title: t('mission.photoless'),
+      hint: t('mission.photolessHint'),
       stops: data?.photoless ?? [],
     },
     {

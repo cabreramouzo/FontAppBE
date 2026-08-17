@@ -32,6 +32,7 @@ const AdminEditsPage = lazy(() => import('./pages/AdminEditsPage').then((m) => (
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })))
 const NewsPage = lazy(() => import('./pages/NewsPage').then((m) => ({ default: m.NewsPage })))
 const ZonesPage = lazy(() => import('./pages/ZonesPage').then((m) => ({ default: m.ZonesPage })))
+const GamificationPage = lazy(() => import('./pages/GamificationPage').then((m) => ({ default: m.GamificationPage })))
 const BadgesPage = lazy(() => import('./pages/BadgesPage').then((m) => ({ default: m.BadgesPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
@@ -50,6 +51,7 @@ export default function App() {
                   <Route path="/fonts/:id" element={<FontDetailPage />} />
                   <Route path="/activity" element={<NewsPage />} />
                   <Route path="/zones" element={<ZonesPage />} />
+                  <Route path="/gamification" element={<GamificationPage />} />
                   <Route path="/me/badges" element={<BadgesPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />

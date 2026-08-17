@@ -72,6 +72,9 @@ import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { DRINKABLE_EMOJI, DRINKABLE_OPTIONS, SOURCE_EMOJI, SOURCE_OPTIONS, drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 import { FreshnessChip } from '../components/FreshnessChip'
+import { freshnessOf } from '../lib/freshness'
+import { FontBadges } from '../components/FontBadges'
+import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 
 // Reseñas "Anteriores" que se muestran por tanda (el resto, tras "mostrar más").
 const REVIEWS_PAGE = 5
@@ -450,6 +453,12 @@ export function FontDetailPage() {
   const [savingFavorite, setSavingFavorite] = useState(false)
   // Cuántas reseñas "Anteriores" se muestran (se amplía con "mostrar más").
   const [shownRest, setShownRest] = useState(REVIEWS_PAGE)
+  // Qué insignia se está mirando en grande, o `null`. Un solo visor para toda la ficha:
+  // lo abren tanto los escudos de las líneas de creador y pionero como la sección de
+  // abajo, y nunca hay dos abiertos a la vez.
+  const [mirando, setMirando] = useState<
+    { key: string; tier: string | null; locked: boolean; subtitle?: string } | null
+  >(null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -579,6 +588,18 @@ export function FontDetailPage() {
   // nada que la primera no dijera ya.
   const showPioneer = !!pioneerUsername && pioneerUsername !== creatorName
 
+  // Quién puso la foto, si se puede saber desde aquí: la reseña con foto más antigua. Si
+  // la foto llegó por una edición no hay rastro en esta pantalla y queda `null` — la
+  // sección lo dice con esas palabras en vez de atribuírsela a nadie.
+  const photoAuthor = comments
+    .filter((c) => c.image)
+    .reduce<typeof comments[number] | null>(
+      (antigua, c) => (!antigua || new Date(c.createdAt) < new Date(antigua.createdAt) ? c : antigua), null)
+    ?.username ?? null
+
+  const ultimaComprobacion = latest?.lastConfirmedAt ?? latest?.createdAt ?? null
+  const frescor = freshnessOf(ultimaComprobacion)
+
   return (
     <Box className="detail pad" sx={{ maxWidth: 720, mx: 'auto' }}>
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
@@ -635,13 +656,26 @@ export function FontDetailPage() {
           {/* La medalla de Descubridor de quien la puso. El dibujo es el mismo en los
               tres grados y el aro dice cuál es (ver `BadgeArt`). */}
           {creatorBadge && (
-            <Tooltip title={`${t('game.badge.discoverer')} · ${t(`game.tier.${creatorBadge.tier}`)}`}>
-              <Box component="span" sx={{ display: 'flex', color: tierColor[creatorBadge.tier] ?? 'text.secondary' }}>
-                {BADGE_ART.has('discoverer')
-                  ? <BadgeArt family="discoverer" size={26} tier={creatorBadge.tier} />
-                  : <BadgeIcon family="discoverer" fontSize="small" />}
-              </Box>
-            </Tooltip>
+            // El tooltip va DENTRO del botón y no al revés: `Abrible` no reenvía la
+            // referencia que `Tooltip` necesita en su hijo, y montado al contrario el
+            // globo no se coloca. Se queda el tooltip (dice el grado de un vistazo) y
+            // encima se puede abrir en grande, que era lo que faltaba.
+            <Abrible
+              puede
+              nombre={t('game.badge.discoverer')}
+              onOpen={() => setMirando({
+                key: 'discoverer', tier: creatorBadge.tier, locked: false,
+                subtitle: creatorName ? `@${creatorName}` : undefined,
+              })}
+            >
+              <Tooltip title={`${t('game.badge.discoverer')} · ${t(`game.tier.${creatorBadge.tier}`)}`}>
+                <Box component="span" sx={{ display: 'flex', color: tierColor[creatorBadge.tier] ?? 'text.secondary' }}>
+                  {BADGE_ART.has('discoverer')
+                    ? <BadgeArt family="discoverer" size={26} tier={creatorBadge.tier} />
+                    : <BadgeIcon family="discoverer" fontSize="small" />}
+                </Box>
+              </Tooltip>
+            </Abrible>
           )}
         </Typography>
       )}
@@ -657,16 +691,22 @@ export function FontDetailPage() {
             <Link component={RouterLink} to={`/users/${encodeURIComponent(pioneerUsername!)}`}>@{pioneerUsername}</Link>
           </span>
           {pioneerCountsAsBadge && (
-            <Tooltip title={t('game.badge.pioneer')}>
-              {/* El escudo dibujado a 26 px: aquí la insignia es el premio, y el
-                  icono de línea al lado de un nombre no se lee como tal. Si algún
-                  día falta el fichero, `BadgeArt` devuelve null y queda el icono. */}
-              <Box component="span" sx={{ display: 'flex', color: 'text.secondary' }}>
-                {BADGE_ART.has('pioneer')
-                  ? <BadgeArt family="pioneer" size={26} />
-                  : <BadgeIcon family="pioneer" fontSize="small" />}
-              </Box>
-            </Tooltip>
+            <Abrible
+              puede
+              nombre={t('game.badge.pioneer')}
+              onOpen={() => setMirando({ key: 'pioneer', tier: null, locked: false, subtitle: `@${pioneerUsername}` })}
+            >
+              <Tooltip title={t('game.badge.pioneer')}>
+                {/* El escudo dibujado a 26 px: aquí la insignia es el premio, y el
+                    icono de línea al lado de un nombre no se lee como tal. Si algún
+                    día falta el fichero, `BadgeArt` devuelve null y queda el icono. */}
+                <Box component="span" sx={{ display: 'flex', color: 'text.secondary' }}>
+                  {BADGE_ART.has('pioneer')
+                    ? <BadgeArt family="pioneer" size={26} />
+                    : <BadgeIcon family="pioneer" fontSize="small" />}
+                </Box>
+              </Tooltip>
+            </Abrible>
           )}
         </Typography>
       )}
@@ -817,6 +857,31 @@ export function FontDetailPage() {
           <Typography color="text.secondary"><Link href="/login">{t('nav.enter')}</Link> {t('report.loginToReport')}</Typography>
         )}
       </Box>
+
+      {/* Va al final y no arriba: es lo último que se mira, después de haber leído si hay
+          agua. Puesto antes competiría con la información de la fuente, que es a lo que
+          viene la gente. */}
+      <FontBadges
+        creatorName={creatorName}
+        creatorTier={creatorBadge?.tier ?? null}
+        pioneerUsername={pioneerUsername}
+        pioneerCounts={pioneerCountsAsBadge}
+        hasPhoto={!!font.image}
+        photoAuthor={photoAuthor}
+        daysSinceLastCheck={frescor.days}
+        neverChecked={frescor.level === 'never'}
+        onOpen={(key, tier, locked, subtitle) => setMirando({ key, tier, locked, subtitle })}
+      />
+
+      <BadgeShowcase
+        open={!!mirando}
+        onClose={() => setMirando(null)}
+        kind="badge"
+        badgeKey={mirando?.key ?? ''}
+        tier={mirando?.tier ?? null}
+        locked={mirando?.locked ?? false}
+        subtitle={mirando?.subtitle}
+      />
     </Box>
   )
 }

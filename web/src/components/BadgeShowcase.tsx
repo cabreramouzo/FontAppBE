@@ -121,7 +121,12 @@ export function BadgeShowcase({
   // Qué es y por qué se tiene. `t()` devuelve la clave cruda cuando falta la traducción,
   // así que una familia nueva sin descripción enseñaría `game.badgeAbout.loQueSea` en
   // mitad del diálogo. Mejor no pintar el párrafo que pintar el nombre de una variable.
-  const claveExplicacion = kind === 'level' ? 'game.levelAbout' : `game.badgeAbout.${badgeKey}`
+  // Un nivel que todavía no has alcanzado se explica al revés que uno ganado: no «de
+  // dónde salió» sino «qué falta». Las familias no lo necesitan porque su texto ya está
+  // escrito en infinitivo («Por poner fuentes nuevas…»), que sirve para las dos caras.
+  const claveExplicacion = kind === 'level'
+    ? (locked ? 'game.levelAboutLocked' : 'game.levelAbout')
+    : `game.badgeAbout.${badgeKey}`
   const traducida = t(claveExplicacion)
   const explicacion = traducida === claveExplicacion ? null : traducida
 

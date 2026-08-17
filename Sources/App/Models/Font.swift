@@ -76,4 +76,57 @@ final class Font: Model, Content, @unchecked Sendable {
         self.$creator.id = creatorID
         self.queuedOffline = queuedOffline
     }
+
+    // MARK: - Salida
+
+    /// Qué sale por la API. Fluent serializa **todas** las columnas del modelo, así que
+    /// `queued_offline` —un dato interno de gamificación— se estaba colando en cada
+    /// `GET /fonts`. Aquí se escribe la lista a mano: lo que no esté nombrado no sale.
+    ///
+    /// Es un codificador y no un DTO aparte porque el modelo ya se devuelve tal cual
+    /// desde media docena de sitios y la forma del JSON **no cambia** — ni un campo, ni
+    /// un nombre, ni un `null`. Los opcionales van con `encode` y no `encodeIfPresent`
+    /// justamente por eso: omitirlos los convertiría en `undefined` en el cliente, que es
+    /// el fallo que ya nos costó dos pantallas en blanco (`tier`, `fromDays`).
+    ///
+    /// No se llama `CodingKeys` a posta: con ese nombre el compilador puede intentar
+    /// sintetizar también el `init(from:)`, y quien sabe decodificar un modelo de Fluent
+    /// con sus envoltorios de propiedad es Fluent, no la síntesis.
+    ///
+    /// Al añadir una columna nueva hay que decidir aquí si es pública. Ese es el punto.
+    private enum PublicKey: String, CodingKey {
+        case id, name, latitude, longitude, image, description
+        case source, drinkable, country, region, creator, createdAt
+    }
+
+    /// El padre opcional sale como `{"id": …}`, igual que lo serializaba Fluent.
+    ///
+    /// Con el codificador sintetizado salía `{}` cuando no hay creador: los opcionales
+    /// se escriben con `encodeIfPresent` y `nil` desaparece. Es el mismo tropiezo de
+    /// `tier` y `fromDays`, y aquí habría roto las ~6.700 fuentes importadas —
+    /// justamente las que no tienen creador. De ahí el `encode` explícito.
+    private struct CreatorRef: Encodable {
+        let id: UUID?
+        func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: Key.self)
+            try c.encode(id, forKey: .id)
+        }
+        private enum Key: String, CodingKey { case id }
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: PublicKey.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(latitude, forKey: .latitude)
+        try c.encode(longitude, forKey: .longitude)
+        try c.encode(image, forKey: .image)
+        try c.encode(description, forKey: .description)
+        try c.encode(source, forKey: .source)
+        try c.encode(drinkable, forKey: .drinkable)
+        try c.encode(country, forKey: .country)
+        try c.encode(region, forKey: .region)
+        try c.encode(CreatorRef(id: $creator.id), forKey: .creator)
+        try c.encode(createdAt, forKey: .createdAt)
+    }
 }

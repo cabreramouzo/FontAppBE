@@ -107,7 +107,17 @@ export function GamificationCard() {
         <Abrible
           puede={LEVEL_BADGES.has(data.level)}
           nombre={t(`game.level.${data.level}`)}
-          onOpen={() => setMirando({ kind: 'level', key: data.level, tier: null })}
+          // Misma línea de apoyo que la vitrina («Desde 800 gotas»). Sin ella el visor
+          // del nivel salía con el nombre a secas mientras el de una insignia decía
+          // «3 de 5», y desde aquí parecía que al nivel le faltaba media pantalla.
+          onOpen={() => setMirando({
+            kind: 'level', key: data.level, tier: null,
+            subtitle: (() => {
+              const n = data.levels.find((l) => l.key === data.level)
+              if (!n) return undefined
+              return n.from === 0 ? t('badges.start') : t('badges.fromGotes', { n: n.from.toLocaleString(lang) })
+            })(),
+          })}
         >
           <LevelBadge levelKey={data.level} />
         </Abrible>

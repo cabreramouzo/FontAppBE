@@ -42,6 +42,9 @@ export function Footer() {
       <FeedbackButton />
       {/* En móvil el icono de zonas no cabe en la barra: aquí es donde se llega. */}
       <RouterLink to="/zones">{t('zones.title')}</RouterLink>
+      {/* La explicación del juego, en el pie y no en la barra: no es algo que se busque
+          a diario, pero tiene que estar donde se mira cuando surge la duda. */}
+      <RouterLink to="/gamification">{t('gamePage.title')}</RouterLink>
       <RouterLink to="/legal">{t('footer.legal')}</RouterLink>
       <span className="muted">
         {t('footer.dataPrefix')}{' '}

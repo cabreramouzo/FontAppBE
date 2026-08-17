@@ -54,13 +54,26 @@ final class IntegrationTests: XCTestCase {
         return token
     }
 
+    /// La fuente **tal como sale por la API**, que ya no es el modelo.
+    ///
+    /// `Font` tiene columnas que no se publican (`queued_offline`), así que decodificar
+    /// el modelo desde una respuesta fallaba: faltaba un campo obligatorio. Es la señal
+    /// correcta —el contrato de salida y la tabla son cosas distintas— y esto lo fija.
+    struct FontJSON: Content {
+        let id: UUID?
+        let name: String
+        let latitude: Double
+        let longitude: Double
+        let image: String?
+    }
+
     private func createFont(_ app: Application, token: String, name: String, lat: Double, long: Double) async throws -> UUID {
         var id = UUID()
         try await app.test(.POST, "fonts", headers: bearer(token), beforeRequest: { req in
             try req.content.encode(CreateFontDTO(name: name, latitude: lat, longitude: long, image: nil, description: nil, source: nil, drinkable: nil))
         }, afterResponse: { res in
             XCTAssertEqual(res.status, .created)
-            id = try res.content.decode(Font.self).id ?? id
+            id = try res.content.decode(FontJSON.self).id ?? id
         })
         return id
     }
@@ -292,10 +305,10 @@ final class IntegrationTests: XCTestCase {
             // El admin revierte y la fuente vuelve a su nombre original.
             try await app.test(.POST, "fonts/edits/\(editID)/revert", headers: bearer(adminTok)) { res in
                 XCTAssertEqual(res.status, .ok)
-                XCTAssertEqual(try res.content.decode(Font.self).name, "Original")
+                XCTAssertEqual(try res.content.decode(FontJSON.self).name, "Original")
             }
             try await app.test(.GET, "fonts/\(fontID)") { res in
-                XCTAssertEqual(try res.content.decode(Font.self).name, "Original")
+                XCTAssertEqual(try res.content.decode(FontJSON.self).name, "Original")
             }
         }
     }
@@ -422,6 +435,41 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Qué campos publica una fuente. Fija el contrato en las dos direcciones.
+    ///
+    /// Hacia fuera: `queued_offline` es un dato interno de gamificación —lo afirma el
+    /// cliente y solo sirve para contar una insignia— y no tiene por qué viajar en cada
+    /// `GET /fonts`. Fluent serializa el modelo entero, así que sin este test la próxima
+    /// columna se cuela igual y nadie se entera.
+    ///
+    /// Hacia dentro: `creator` tiene que seguir saliendo como `{"id": null}` y no como
+    /// `{}` en las fuentes importadas, que son la mayoría. Un opcional omitido llega al
+    /// navegador como `undefined`, y ese ya nos ha roto dos pantallas.
+    func testFontJSONHidesInternalColumns() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "shape")
+            let tok = try await login(app, username: "shape")
+            _ = try await createFont(app, token: tok, name: "Con dueño", lat: 41, long: 2)
+
+            // Una importada: sin creador, que es el caso donde el `null` importa.
+            try await Font(name: "Importada", latitude: 41.5, longitude: 2.5).create(on: app.db)
+
+            try await app.test(.GET, "fonts") { res in
+                XCTAssertEqual(res.status, .ok)
+                let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                let items = json?["items"] as? [[String: Any]] ?? []
+                XCTAssertFalse(items.isEmpty)
+                for f in items {
+                    XCTAssertNil(f["queuedOffline"], "columna interna publicada en /fonts")
+                    let creator = f["creator"] as? [String: Any]
+                    XCTAssertNotNil(creator, "creator debe salir siempre, aunque sea sin id")
+                    XCTAssertTrue(creator?.keys.contains("id") == true,
+                                  "creator sin la clave `id`: en el cliente eso es `undefined`, no `null`")
+                }
+            }
+        }
+    }
+
     /// "Borrar" la cuenta la anonimiza: las fuentes se conservan, los datos
     /// personales se eliminan y el login deja de funcionar.
     func testDeleteAccountAnonymizes() async throws {
@@ -531,7 +579,7 @@ final class IntegrationTests: XCTestCase {
             // Aparece en la lista del usuario.
             try await app.test(.GET, "auth/me/favorites", headers: bearer(token)) { res in
                 XCTAssertEqual(res.status, .ok)
-                let fonts = try res.content.decode([Font].self)
+                let fonts = try res.content.decode([FontJSON].self)
                 XCTAssertEqual(fonts.map { $0.id }, [fontID])
             }
 
@@ -543,7 +591,7 @@ final class IntegrationTests: XCTestCase {
                 XCTAssertEqual(s.count, 0)
             }
             try await app.test(.GET, "auth/me/favorites", headers: bearer(token)) { res in
-                let fonts = try res.content.decode([Font].self)
+                let fonts = try res.content.decode([FontJSON].self)
                 XCTAssertTrue(fonts.isEmpty)
             }
         }
@@ -1014,12 +1062,12 @@ final class IntegrationTests: XCTestCase {
             }
             try await app.test(.GET, "fonts?per=100000", afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)
-                let page = try res.content.decode(Page<Font>.self)
+                let page = try res.content.decode(Page<FontJSON>.self)
                 XCTAssertLessThanOrEqual(page.metadata.per, SafePage.maxPer)
             })
             // Y una búsqueda con comodines busca el carácter literal, no todo.
             try await app.test(.GET, "fonts?search=%25", afterResponse: { res in
-                XCTAssertEqual(try res.content.decode(Page<Font>.self).metadata.total, 0)
+                XCTAssertEqual(try res.content.decode(Page<FontJSON>.self).metadata.total, 0)
             })
         }
     }
@@ -1223,7 +1271,7 @@ final class IntegrationTests: XCTestCase {
                                                      source: nil, drinkable: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .created)
-                fontID = try res.content.decode(Font.self).id ?? fontID
+                fontID = try res.content.decode(FontJSON.self).id ?? fontID
             })
             try await app.test(.POST, "fonts/\(fontID)/comments", headers: headers, beforeRequest: { req in
                 try req.content.encode(CreateCommentDTO(body: "Raja", rating: nil,

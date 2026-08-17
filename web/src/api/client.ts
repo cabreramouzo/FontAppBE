@@ -303,6 +303,10 @@ export interface GamificationScale {
   dailyCap: number
   settleHours: number
   freshness: { fromDays: number | null; gotes: number }[]
+  /** La escalera de niveles, de abajo arriba. Sin sesión: la usa `/gamification`. */
+  levels: { key: string; from: number }[]
+  /** Las familias de insignias con sus umbrales (uno solo si son de grado único). */
+  families: { key: string; thresholds: number[]; unique: boolean }[]
 }
 
 export async function getGamificationScale(): Promise<GamificationScale> {

@@ -69,7 +69,12 @@ export function BadgesPage() {
         {t('nav.profile')}
       </Button>
       <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>🏅 {t('badges.title')}</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{t('badges.intro')}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('badges.intro')}</Typography>
+      {/* La vitrina enseña los umbrales pero no de dónde salen las gotas: eso está en
+          la página, y sin este enlace cada mitad remitía a la otra sin decirlo. */}
+      <Button component={RouterLink} to="/gamification" size="small" sx={{ textTransform: 'none', ml: -1, mb: 2 }}>
+        {t('gameHelp.readMore')}
+      </Button>
 
       {estado === 'loading' && <Skeleton lines={8} />}
       {estado === 'error' && <Alert severity="warning">{t('badges.failed')}</Alert>}
@@ -85,10 +90,14 @@ export function BadgesPage() {
             {data.levels.map((n) => (
               <Casilla key={n.key} destacada={n.current}>
                 <Abrible
-                  puede={n.reached && LEVEL_BADGES.has(n.key)}
+                  // También los peldaños que aún no has pisado, igual que las familias
+                  // bloqueadas: enseñar a dónde vas es la mitad de la gracia de la
+                  // escalera. El visor los mantiene en gris, así que no se confunden
+                  // con los ganados.
+                  puede={LEVEL_BADGES.has(n.key)}
                   nombre={t(`game.level.${n.key}`)}
                   onOpen={() => setMirando({
-                    kind: 'level', key: n.key, tier: null,
+                    kind: 'level', key: n.key, tier: null, locked: !n.reached,
                     subtitle: n.from === 0 ? t('badges.start') : t('badges.fromGotes', { n: n.from.toLocaleString(lang) }),
                   })}
                 >

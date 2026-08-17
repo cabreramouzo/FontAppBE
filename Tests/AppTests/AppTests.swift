@@ -317,6 +317,22 @@ final class AppTests: XCTestCase {
         XCTAssertEqual(escala.maxMultiplier, ContributionScore.maxMultiplier)
         XCTAssertEqual(escala.dailyCap, ContributionLedger.dailyCap)
         XCTAssertEqual(escala.settleHours, 72)
+
+        // La escalera y las familias también se publican: son lo que enseña la página
+        // pública `/gamification`, que es la única explicación que puede leer alguien
+        // que todavía no se ha registrado.
+        XCTAssertEqual(escala.levels.map(\.key),
+                       ContributionScore.levels.reversed().map(\.key),
+                       "La escalera tiene que ir de abajo arriba, como se lee.")
+        XCTAssertEqual(escala.levels.first?.from, 0, "El primer peldaño empieza en cero.")
+        XCTAssertEqual(escala.families.count, ContributionScore.badgeFamilies.count,
+                       "Una familia que existe y no se publica es una insignia que nadie sabe que puede conseguir.")
+        for f in escala.families {
+            let real = ContributionScore.badgeFamilies.first { $0.key == f.key }
+            XCTAssertEqual(f.thresholds, real?.thresholds, "Umbrales de \(f.key) fuera de sitio.")
+            XCTAssertEqual(f.unique, real?.unique)
+            XCTAssertFalse(f.thresholds.isEmpty, "\(f.key) sin umbrales: la página divide por el primero.")
+        }
     }
 
     /// El tramo «nunca reseñada» viaja con `fromDays: null` y **no sin la clave**.

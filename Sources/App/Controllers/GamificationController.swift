@@ -91,6 +91,25 @@ struct GamificationController: RouteCollection {
             }
         }
         let freshness: [FreshnessStep]
+
+        /// La escalera, de abajo arriba. Sin nombres: la clave la traduce el navegador.
+        ///
+        /// Va aquí y no solo en `/gamification/me` porque la página pública tiene que
+        /// poder enseñarla **sin sesión**, y quien más necesita ver a dónde lleva esto es
+        /// justamente quien todavía no ha aportado nada.
+        struct LevelStep: Content, Sendable {
+            let key: String
+            let from: Int
+        }
+        let levels: [LevelStep]
+
+        /// Las familias de insignias con sus tres umbrales (uno si es de grado único).
+        struct Family: Content, Sendable {
+            let key: String
+            let thresholds: [Int]
+            let unique: Bool
+        }
+        let families: [Family]
     }
 
     /// GET /gamification/scale — el baremo. Pública y sin base de datos.
@@ -124,7 +143,13 @@ struct GamificationController: RouteCollection {
                 .init(fromDays: 181, gotes: ContributionScore.freshness(daysSincePrevious: 181)),
                 .init(fromDays: 366, gotes: ContributionScore.freshness(daysSincePrevious: 366)),
                 .init(fromDays: nil, gotes: ContributionScore.freshness(daysSincePrevious: nil)),
-            ])
+            ],
+            // De abajo arriba: `ContributionScore.levels` está al revés porque `level(for:)`
+            // busca el primero que se alcanza, y una escalera se lee subiendo.
+            levels: ContributionScore.levels.reversed().map { .init(key: $0.key, from: $0.from) },
+            families: ContributionScore.badgeFamilies.map {
+                .init(key: $0.key, thresholds: $0.thresholds, unique: $0.unique)
+            })
     }
 
     /// Lo que se publica de otra persona: la familia y el grado, nada más.
