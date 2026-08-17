@@ -28,6 +28,7 @@ import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
+import { capabilitiesEnabled } from '../lib/capabilities'
 
 export function ProfilePage() {
   const { user, loading, logout, refresh } = useAuth()
@@ -39,6 +40,9 @@ export function ProfilePage() {
   const [savingPrivacy, setSavingPrivacy] = useState(false)
   const [dangerOpen, setDangerOpen] = useState(false)
   const [error, setError] = useState('')
+  // Si los niveles no conceden nada (el sistema nace apagado), no se avisa de que
+  // apagarlos te quita permisos: sería amenazar con algo que no existe.
+  const [capsOn, setCapsOn] = useState(false)
 
   useEffect(() => {
     if (loading) return // esperamos a que se restaure la sesión antes de decidir
@@ -49,6 +53,7 @@ export function ProfilePage() {
     getMyFonts().then(setFonts).catch(() => setFonts([]))
     getMyFavorites().then(setFavorites).catch(() => setFavorites([]))
     getMyComments().then(setComments).catch(() => setComments([]))
+    capabilitiesEnabled().then(setCapsOn)
   }, [user, loading, navigate])
 
   async function savePrivacy(patch: { emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean }) {
@@ -172,9 +177,24 @@ export function ProfilePage() {
           }
           label={t('game.optOut')}
         />
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-          {t('game.optOutHint')}
-        </Typography>
+        {/* Tres frases y no una porque el interruptor hace tres cosas distintas, y la
+            que decía «solo dejas de ver el marcador» era falsa: también te borra de lo
+            que ven los demás y, si los permisos están activos, te los quita. Quien
+            apaga esto está tomando una decisión sobre su privacidad y necesita saber
+            qué sigue siendo público —sus fuentes y reseñas lo son— y qué no. */}
+        <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5, color: 'text.secondary' }}>
+          <Typography component="li" variant="caption" sx={{ display: 'list-item' }}>
+            {t('game.optOutKeeps')}
+          </Typography>
+          <Typography component="li" variant="caption" sx={{ display: 'list-item' }}>
+            {t('game.optOutHidesOthers')}
+          </Typography>
+          {capsOn && (
+            <Typography component="li" variant="caption" sx={{ display: 'list-item' }}>
+              {t('game.optOutCaps')}
+            </Typography>
+          )}
+        </Box>
       </Box>
 
       <Box component="section" sx={{ mb: 3 }}>

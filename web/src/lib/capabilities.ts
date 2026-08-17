@@ -48,13 +48,24 @@ export function forgetCapabilities() {
  * ha recalibrado varias veces, y un aviso que promete un nivel equivocado es peor que uno
  * genérico. Se pide una vez y se comparte con toda la sesión.
  */
-let escala: Promise<{ key: string; level: string; gotes: number }[]> | null = null
+let escala: ReturnType<typeof getGamificationScale> | null = null
+
+function scale() {
+  if (!escala) escala = getGamificationScale()
+  return escala
+}
 
 export function capabilityLevels(): Promise<{ key: string; level: string; gotes: number }[]> {
-  if (!escala) {
-    escala = getGamificationScale()
-      .then((e) => e.capabilities ?? [])
-      .catch(() => [])
-  }
-  return escala
+  return scale().then((e) => e.capabilities ?? []).catch(() => [])
+}
+
+/**
+ * ¿Los niveles conceden permisos hoy, o son solo un rótulo?
+ *
+ * Hace falta para no prometer ni amenazar con permisos que no existen: el sistema nace
+ * apagado (`GAMIFICATION_CAPABILITIES`) y el aviso de «al ocultar tu nivel dejas de
+ * recibir los permisos» sería falso en una instalación donde nunca se han concedido.
+ */
+export function capabilitiesEnabled(): Promise<boolean> {
+  return scale().then((e) => e.capabilitiesEnabled === true).catch(() => false)
 }
