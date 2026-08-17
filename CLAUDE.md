@@ -95,8 +95,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     a llevársela («todavía no tiene ni una foto»), que es la mitad interesante. Se calcula
     con lo que ya tiene la ficha, **sin endpoint nuevo**, y por eso se calla lo que no
     puede afirmar: Pionero no aparece si la fuente tiene creador (allí no se gana),
-    Primera luz se atribuye por la reseña con foto más antigua y dice «no consta quién»
-    cuando la foto llegó por una edición, y Centinela solo sale **en juego** (más de 90
+    Primera luz sale de la reseña con foto más antigua **o del creador si la fuente nació
+    con foto** (la del formulario de crear no deja rastro: ni reseña ni edición, la columna
+    nace puesta — se le escapaba el caso más normal, quien añade una fuente estando delante
+    de ella), y Centinela solo sale **en juego** (más de 90
     días sin comprobar, el mismo corte de la curva que paga esa insignia) porque
     reconstruir quién la despertó en el pasado pide los huecos entre reseñas.
     Todos los escudos de la ficha abren el visor a pantalla completa, igual que en `/me`.

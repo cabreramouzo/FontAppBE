@@ -588,14 +588,23 @@ export function FontDetailPage() {
   // nada que la primera no dijera ya.
   const showPioneer = !!pioneerUsername && pioneerUsername !== creatorName
 
-  // Quién puso la foto, si se puede saber desde aquí: la reseña con foto más antigua. Si
-  // la foto llegó por una edición no hay rastro en esta pantalla y queda `null` — la
-  // sección lo dice con esas palabras en vez de atribuírsela a nadie.
-  const photoAuthor = comments
+  // Quién puso la foto. Dos caminos, y el segundo se nos había olvidado:
+  //
+  // 1. Una reseña con foto — la más antigua de las que la traen.
+  // 2. **El formulario de crear la fuente.** La foto va en la propia creación, así que no
+  //    hay reseña ni edición que lo cuente: la columna nace con la imagen puesta. Es el
+  //    caso normal de quien añade una fuente estando delante de ella, y salía como «no
+  //    consta quién la puso» teniendo al autor escrito dos líneas más arriba.
+  //
+  // Lo que no se ve desde aquí son las ediciones: si la foto la puso alguien después por
+  // el formulario de editar, esto se la atribuye al creador. Es el caso raro —el
+  // frecuente con diferencia es (1) o (2)— y el servidor puntúa igual, así que la ficha
+  // dice lo mismo que paga el marcador.
+  const primeraResenaConFoto = comments
     .filter((c) => c.image)
     .reduce<typeof comments[number] | null>(
       (antigua, c) => (!antigua || new Date(c.createdAt) < new Date(antigua.createdAt) ? c : antigua), null)
-    ?.username ?? null
+  const photoAuthor = primeraResenaConFoto?.username ?? (font.image ? creatorName : null)
 
   const ultimaComprobacion = latest?.lastConfirmedAt ?? latest?.createdAt ?? null
   const frescor = freshnessOf(ultimaComprobacion)

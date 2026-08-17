@@ -343,15 +343,33 @@ enum ContributionScore {
             photoEvents[e.$font.id, default: []].append(
                 PhotoEvent(userID: e.$editor.id, at: d, source: .edit, subject: e.id))
         }
+        // La foto que se sube **en el formulario de crear la fuente** no deja ninguno de
+        // los dos rastros: no hay reseña y no hay edición, la columna nace con la imagen
+        // puesta. Sin esto, quien crea una fuente con su foto —el caso normal cuando
+        // alguien añade una fuente nueva estando delante de ella— no cobraba la primera
+        // foto y en la ficha salía «no consta quién la puso», teniendo el autor delante.
+        //
+        // La condición es que la fuente tenga imagen y **ningún** rastro: si hay una
+        // reseña con foto o una edición que la puso, la foto llegó después y el mérito es
+        // de quien la trajo, no del creador. Queda un caso que sigue sin poderse decidir
+        // —una edición antigua, de cuando el snapshot todavía no guardaba `image`— y ahí
+        // esto atribuye al creador algo que quizá hizo otro; es un fallo menos malo que
+        // el anterior, que era no pagárselo a nadie, pero es un fallo.
+        for f in fonts {
+            guard let id = f.id, f.image != nil, photoEvents[id] == nil else { continue }
+            guard let d = f.createdAt else { continue }
+            photoEvents[id] = [PhotoEvent(userID: f.$creator.id, at: d, source: .font, subject: id)]
+        }
         for (fontID, eventos) in photoEvents {
             for (i, ev) in eventos.sorted(by: { $0.at < $1.at }).enumerated() {
                 add(ev.userID, i == 0 ? .firstPhoto : .photoReplaced, fontID: fontID, at: ev.at,
                     from: ev.source, subject: ev.subject, detail: "foto")
             }
         }
-        let conFotoSinAutor = fonts.filter { $0.image != nil && photoEvents[$0.id ?? UUID()] == nil }.count
+        // Lo que queda sin dueño son las importadas: tienen foto y no tienen creador.
+        let conFotoSinAutor = fonts.filter { $0.image != nil && $0.$creator.id == nil }.count
         if conFotoSinAutor > 0 {
-            caveats.append("\(conFotoSinAutor) fuentes tienen foto sin rastro de quién la puso (anteriores a que el snapshot guardara `image`): no las cobra nadie.")
+            caveats.append("\(conFotoSinAutor) fuentes tienen foto y no tienen creador: no las cobra nadie.")
         }
 
         // --- Ediciones: reubicación y campos completados -----------------------

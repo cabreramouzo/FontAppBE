@@ -435,6 +435,59 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// La foto que va en el formulario de crear la fuente también la cobra alguien.
+    ///
+    /// No deja rastro: no hay reseña con foto ni edición que toque `image`, la columna
+    /// nace con la imagen puesta. El cálculo reconstruía la autoría solo con esos dos
+    /// rastros, así que quien añade una fuente nueva con su foto —el caso normal de
+    /// quien está delante de ella— no cobraba la primera foto y en la ficha salía «no
+    /// consta quién la puso» con el autor escrito dos líneas más arriba.
+    func testPhotoUploadedWhenCreatingTheFountainCreditsTheCreator() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "shooter")
+            let tok = try await login(app, username: "shooter")
+            try await app.test(.POST, "fonts", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(
+                    name: "Con foto de fábrica", latitude: 41, longitude: 2,
+                    image: "/uploads/creacion.jpg", description: nil, source: nil, drinkable: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+            })
+
+            let informe = try await ContributionScore.compute(on: app.db)
+            let suyas = informe.contributions.filter { $0.userID == id }
+            XCTAssertTrue(suyas.contains { $0.kind == .firstPhoto },
+                          "la foto subida al crear la fuente no se la cobra nadie")
+            XCTAssertFalse(suyas.contains { $0.kind == .photoReplaced },
+                           "es la primera foto de la fuente, no una sustitución")
+        }
+    }
+
+    /// …pero solo cuando la foto llegó **con** la fuente. Si la trajo una reseña
+    /// posterior, la primera foto es de quien la trajo y el creador no la toca.
+    func testPhotoFromAReviewBeatsTheCreator() async throws {
+        try await withApp { app in
+            let creador = try await register(app, username: "founder")
+            let tokCreador = try await login(app, username: "founder")
+            let fontID = try await createFont(app, token: tokCreador, name: "Sin foto", lat: 41, long: 2)
+
+            let fotografo = try await register(app, username: "lens")
+            let tokFoto = try await login(app, username: "lens")
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tokFoto), beforeRequest: { req in
+                try req.content.encode(CreateCommentDTO(
+                    body: "Mana", rating: 5, waterStatus: "flowing", image: "/uploads/resena.jpg"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+            })
+
+            let informe = try await ContributionScore.compute(on: app.db)
+            XCTAssertTrue(informe.contributions.contains { $0.userID == fotografo && $0.kind == .firstPhoto },
+                          "la primera foto es de quien la trajo")
+            XCTAssertFalse(informe.contributions.contains { $0.userID == creador && $0.kind == .firstPhoto },
+                           "el creador no puso ninguna foto")
+        }
+    }
+
     /// Qué campos publica una fuente. Fija el contrato en las dos direcciones.
     ///
     /// Hacia fuera: `queued_offline` es un dato interno de gamificación —lo afirma el
