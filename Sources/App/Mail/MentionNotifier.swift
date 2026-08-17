@@ -21,9 +21,10 @@ import Vapor
 /// - Solo a quien lo tenga encendido y tenga correo (es opcional en esta app).
 /// - En **su** idioma (`users.lang`), no en el de quien escribe: el correo no nace de una
 ///   petición suya. Es la regla que ya siguen la bienvenida y el resumen semanal.
-/// - Y no puede romper nada aguas arriba: se lanza **después** de guardar y con todo
-///   envuelto en `try?`. Perder un aviso es molesto; perder la reseña por no poder
-///   mandarlo sería absurdo.
+/// - Y no puede romper nada aguas arriba: se lanza **después** de guardar, en una tarea
+///   suelta. Perder un aviso es molesto; perder la reseña por no poder mandarlo sería
+///   absurdo. Pero lo que falle **se registra**: un aviso perdido en silencio no deja
+///   rastro y depurarlo después es adivinar.
 enum MentionNotifier {
 
     /// Cuánto del mensaje se cita en el correo. Lo bastante para saber si urge sin
@@ -43,8 +44,15 @@ enum MentionNotifier {
         // que la respuesta sale sin esperar al correo y un fallo de red del proveedor no
         // llega nunca al usuario.
         Task.detached {
-            try? await enviar(nombres: nombres, autorNombre: autorNombre, autorID: autorID,
-                              fontID: fontID, excerpt: extracto, app: app)
+            do {
+                try await enviar(nombres: nombres, autorNombre: autorNombre, autorID: autorID,
+                                 fontID: fontID, excerpt: extracto, app: app)
+            } catch {
+                // Se registra en vez de tragárselo con `try?`. Falle lo que falle aquí, la
+                // reseña ya está guardada y el usuario no se entera — pero si esto revienta
+                // en silencio, un aviso perdido no deja ni rastro y depurarlo es adivinar.
+                app.logger.error("No s'han pogut enviar els avisos de menció: \(error)")
+            }
         }
     }
 
