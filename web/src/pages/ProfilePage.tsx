@@ -17,6 +17,9 @@ import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
+import TextField from '@mui/material/TextField'
+import Stack from '@mui/material/Stack'
+import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ShieldIcon from '@mui/icons-material/GppMaybeOutlined'
 import type { Font, MyComment } from '../api/types'
@@ -30,6 +33,13 @@ import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
 import { capabilitiesEnabled } from '../lib/capabilities'
 
+/**
+ * La misma regla que `Mentions.isMentionable` en el servidor, y por eso está escrita al
+ * lado de un comentario que lo dice: un nombre que aquí pase y allí no da un 400 que el
+ * usuario no puede interpretar, y al revés deja crear nombres que nadie puede mencionar.
+ */
+const USERNAME_OK = /^[a-zA-Z0-9_.-]{3,30}$/
+
 export function ProfilePage() {
   const { user, loading, logout, refresh } = useAuth()
   const { t } = useI18n()
@@ -38,6 +48,9 @@ export function ProfilePage() {
   const [favorites, setFavorites] = useState<Font[] | null>(null)
   const [comments, setComments] = useState<MyComment[] | null>(null)
   const [savingPrivacy, setSavingPrivacy] = useState(false)
+  const [editando, setEditando] = useState(false)
+  const [nombre, setNombre] = useState('')
+  const [usuario, setUsuario] = useState('')
   const [dangerOpen, setDangerOpen] = useState(false)
   const [error, setError] = useState('')
   // Si los niveles no conceden nada (el sistema nace apagado), no se avisa de que
@@ -56,9 +69,31 @@ export function ProfilePage() {
     capabilitiesEnabled().then(setCapsOn)
   }, [user, loading, navigate])
 
-  async function savePrivacy(patch: { emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean; mentionEmails?: boolean }) {
-    if (!user) return
+  function empezarEdicion() {
+    setNombre(user?.name ?? '')
+    setUsuario(user?.username ?? '')
+    setError('')
+    setEditando(true)
+  }
+
+  /**
+   * Guarda nombre y usuario. Reusa `savePrivacy` porque el endpoint es uno solo y manda
+   * el perfil entero: separar los dos caminos era duplicar la lista de campos y
+   * garantizar que un día uno de los dos se dejara alguno por el camino.
+   */
+  async function guardarIdentidad(e: React.FormEvent) {
+    e.preventDefault()
+    const limpio = usuario.trim()
+    if (!nombre.trim()) { setError(t('profile.nameEmpty')); return }
+    if (!USERNAME_OK.test(limpio)) { setError(t('profile.usernameRules')); return }
+    const ok = await savePrivacy({ name: nombre.trim(), username: limpio })
+    if (ok) setEditando(false)
+  }
+
+  async function savePrivacy(patch: { name?: string; username?: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean; mentionEmails?: boolean }): Promise<boolean> {
+    if (!user) return false
     setSavingPrivacy(true)
+    setError('')
     try {
       await updateProfile(user.id, {
         name: user.name,
@@ -72,8 +107,10 @@ export function ProfilePage() {
         ...patch,
       })
       await refresh() // refresca el usuario para reflejar el nuevo estado
+      return true
     } catch (e) {
       setError(describeError(e, t))
+      return false
     } finally {
       setSavingPrivacy(false)
     }
@@ -114,12 +151,52 @@ export function ProfilePage() {
         sx={{ mb: 3, p: 2, border: 1, borderColor: 'divider', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}
       >
         <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, fontSize: 22 }}>{initials(user.name)}</Avatar>
-        <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{user.name}</Typography>
           <Typography color="text.secondary">@{user.username}</Typography>
           {user.email && <Typography variant="body2" color="text.secondary" noWrap>{user.email}</Typography>}
         </Box>
+        {!editando && (
+          <Button size="small" startIcon={<EditIcon />} onClick={empezarEdicion} sx={{ flexShrink: 0 }}>
+            {t('form.edit')}
+          </Button>
+        )}
       </Box>
+
+      {/* Nombre y usuario, editables. El backend ya lo permitía desde siempre —
+          `PUT /users/:id` manda los dos— pero no había por dónde: quien se dejaba una
+          errata al registrarse se quedaba con ella para siempre. */}
+      {editando && (
+        <Box
+          component="form"
+          onSubmit={guardarIdentidad}
+          sx={{ mb: 3, p: 2, border: 1, borderColor: 'divider', borderRadius: 2 }}
+        >
+          <TextField
+            label={t('profile.name')} value={nombre} onChange={(e) => setNombre(e.target.value)}
+            size="small" fullWidth sx={{ mb: 1.5 }} slotProps={{ htmlInput: { maxLength: 80 } }}
+          />
+          <TextField
+            label={t('profile.username')} value={usuario} onChange={(e) => setUsuario(e.target.value)}
+            size="small" fullWidth
+            slotProps={{ htmlInput: { maxLength: 30, autoCapitalize: 'none', spellCheck: false } }}
+            error={!!usuario && !USERNAME_OK.test(usuario)}
+            helperText={t('profile.usernameRules')}
+          />
+          {/* Cambiar de nombre no es gratis y conviene decirlo ANTES, no en un error
+              después: el enlace a tu perfil es `/users/<nombre>`, así que el viejo deja
+              de funcionar y las menciones ya escritas apuntan a donde ya no estás. */}
+          <Alert severity="info" sx={{ mt: 1.5 }}>{t('profile.usernameWarning')}</Alert>
+          <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+            <Button type="submit" variant="contained" disableElevation size="small" disabled={savingPrivacy}>
+              {t('form.save')}
+            </Button>
+            <Button size="small" onClick={() => setEditando(false)} disabled={savingPrivacy}>
+              {t('form.cancel')}
+            </Button>
+          </Stack>
+        </Box>
+      )}
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 

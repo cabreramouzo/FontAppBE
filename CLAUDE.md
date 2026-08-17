@@ -395,6 +395,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   días y no tres horas porque esta app se usa cuando sales al monte, no a diario.
   Ojo: `users.mention_emails` es del **correo**, no de la campana — colarlo en la consulta
   de destinatarios dejaba sin avisos a quien solo había pedido no recibir correos.
+- El **nombre de usuario se puede corregir** desde `/me` (`PUT /users/:id` ya lo permitía
+  desde siempre; lo que faltaba era el formulario, y quien se dejaba una errata al
+  registrarse se quedaba con ella). La regla de caracteres es
+  `Mentions.isMentionable` —la **misma** que reconoce las menciones, o se podrían crear
+  nombres a los que nadie puede responder— y **solo se aplica cuando el nombre cambia**:
+  exigirla siempre dejaría a las cuentas antiguas sin poder guardar ni un interruptor de
+  su perfil por un campo que no han tocado. Hay test de las dos mitades. El aviso de la
+  interfaz dice lo que cuesta: el enlace viejo al perfil deja de funcionar, las menciones
+  ya escritas apuntan a donde ya no estás, y es el nombre con el que entras.
 - **Menciones** (`Utils/Mentions.swift`): `@nombre` en una reseña o incidencia se pinta
   como enlace al perfil (`AuthorLine.tsx`) y avisa por correo. La regla del servidor y la
   del cliente tienen que decir lo mismo o se subraya a quien no se avisa; las dos llevan

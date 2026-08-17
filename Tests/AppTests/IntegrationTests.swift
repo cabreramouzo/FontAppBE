@@ -2021,6 +2021,72 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Se puede corregir una errata en el nombre de usuario, pero no ponerse cualquier
+    /// cosa: lo que no encaja en una mención no vale.
+    ///
+    /// Y la regla solo se aplica **al cambiarlo**. Las cuentas antiguas se registraron sin
+    /// ella, y exigirla siempre dejaría a quien tenga un nombre raro sin poder guardar ni
+    /// un interruptor de su perfil, por un campo que ni ha tocado.
+    func testUsernameCanBeFixedButOnlyToAMentionableOne() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "erratta")
+            let token = try await login(app, username: "erratta")
+
+            func guarda(_ username: String, _ name: String = "Test") async throws -> HTTPStatus {
+                var status = HTTPStatus.ok
+                try await app.test(.PUT, "users/\(id)", headers: bearer(token), beforeRequest: { req in
+                    try req.content.encode(UpdateUserDTO(
+                        name: name, username: username, email: "erratta@example.com", password: nil,
+                        emailPublic: nil, namePublic: nil))
+                }, afterResponse: { res in status = res.status })
+                return status
+            }
+
+            // Corregir la errata: adelante.
+            var status = try await guarda("errata")
+            XCTAssertEqual(status, .ok)
+            let corregido = try await User.find(id, on: app.db)
+            XCTAssertEqual(corregido?.username, "errata")
+            // Y el perfil público responde por el nombre nuevo.
+            try await app.test(.GET, "users/errata", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+
+            // Lo que no se puede mencionar, no se puede poner.
+            status = try await guarda("con espacio"); XCTAssertEqual(status, .badRequest)
+            status = try await guarda("acentuado");   XCTAssertEqual(status, .ok, "sin acentos, pasa")
+            status = try await guarda("Ñandú");       XCTAssertEqual(status, .badRequest)
+            status = try await guarda(String(repeating: "a", count: 31))
+            XCTAssertEqual(status, .badRequest)
+
+            // Y el que ya se tiene se puede reenviar tal cual aunque no cumpliera: es lo
+            // que hace cualquier guardado del perfil que no toque el nombre.
+            let raro = try await User.find(id, on: app.db)!
+            raro.username = "nom rar amb espais"
+            try await raro.save(on: app.db)
+            status = try await guarda("nom rar amb espais", "Nombre nuevo")
+            XCTAssertEqual(status, .ok)
+            let final = try await User.find(id, on: app.db)
+            XCTAssertEqual(final?.name, "Nombre nuevo")
+        }
+    }
+
+    /// Dos personas no pueden acabar con el mismo nombre.
+    func testUsernameChangeRejectsOneAlreadyTaken() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "ocupado")
+            let id = try await register(app, username: "libre")
+            let token = try await login(app, username: "libre")
+            try await app.test(.PUT, "users/\(id)", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(UpdateUserDTO(
+                    name: "Test", username: "ocupado", email: "libre@example.com", password: nil,
+                    emailPublic: nil, namePublic: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .conflict)
+            })
+        }
+    }
+
     // MARK: - Campana
 
     /// La bandeja cuenta lo no leído, **no** lo marca al pedirlo, y al marcar conserva

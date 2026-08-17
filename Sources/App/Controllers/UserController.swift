@@ -263,6 +263,13 @@ struct UserController: RouteCollection {
            clash.id != user.id {
             throw Abort(.conflict, reason: "El username '\(dto.username)' ya está en uso")
         }
+        // Los caracteres solo se comprueban **cuando el nombre cambia**. Las cuentas
+        // antiguas se registraron sin esta regla, y aplicarla siempre dejaría a quien
+        // tenga un nombre raro sin poder guardar ni un interruptor de su perfil: el
+        // formulario le devolvería un error sobre un campo que no ha tocado.
+        if dto.username != user.username, !Mentions.isMentionable(dto.username) {
+            throw Abort(.badRequest, reason: "El nombre de usuario solo puede llevar letras sin acentos, números, punto, guion y guion bajo (3-30 caracteres)")
+        }
         let email = dto.email.lowercased()
         if let clash = try await User.query(on: req.db).filter(\.$email == email).first(),
            clash.id != user.id {

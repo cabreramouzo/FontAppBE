@@ -15,6 +15,16 @@ enum Mentions {
     /// uso real —contestar a alguien, o a dos— y convierte el spam en trabajo manual.
     static let maxPerMessage = 3
 
+    /// ¿Este nombre se puede escribir en una mención?
+    ///
+    /// Vive aquí y no en el controlador de usuarios **a propósito**: es la misma regla que
+    /// usa `names(in:)` para reconocerlas, y separarlas deja crear nombres a los que nadie
+    /// puede responder. Un usuario con espacios o acentos no se puede mencionar nunca, y
+    /// además queda raro en la URL de su perfil (`/users/<nombre>`).
+    static func isMentionable(_ name: String) -> Bool {
+        name.range(of: "^[a-zA-Z0-9_.-]{3,30}$", options: .regularExpression) != nil
+    }
+
     /// Nombres mencionados, sin la `@`, en orden y sin repetir.
     ///
     /// El `(?<![\w@.])` es la parte que importa: sin él, `hola@fontapp.net` menciona a un
