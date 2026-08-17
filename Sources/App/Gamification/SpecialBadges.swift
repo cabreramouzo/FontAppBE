@@ -31,6 +31,11 @@ enum SpecialBadges {
 
     static func find(_ key: String) -> Special? { catalogue.first { $0.key == key } }
 
+    /// Los tipos de aportación que son «una reseña». Lo usan las dos insignias, y por
+    /// eso vive aquí arriba y no dentro de una: si mañana se añade un tipo de reseña,
+    /// las dos tienen que enterarse a la vez o dirán cosas distintas de lo mismo.
+    static let reviewKinds = ["firstReview", "updateReview"]
+
     // MARK: - Catalunya
 
     /// Las cuatro demarcaciones catalanas, **con sus dos grafías**.
@@ -54,21 +59,33 @@ enum SpecialBadges {
         "Tarragona": "Tarragona",
     ]
 
-    /// Quién ha aportado en las cuatro, y cuándo completó la cuarta.
+    /// Quién ha **reseñado** en las cuatro, y cuándo completó la cuarta.
     ///
-    /// La fecha es la de la aportación que cerró el conjunto, no la de la última de todas:
+    /// Reseñas y no cualquier aportación (`reviewKinds`): crear una fuente en Lleida es
+    /// ponerla en el mapa, no haber estado a comprobarla, y esta insignia es de haber
+    /// recorrido el país. Abrirla a todo tipo de aportación es quitar el filtro de
+    /// `kind` de aquí abajo, pero entonces se gana desde el sofá editando fichas.
+    ///
+    /// El `country` va en la condición aunque los cuatro nombres parezcan inconfundibles:
+    /// `region` es la primera división administrativa **de cualquier país** y el día que
+    /// entren fuentes de otro sitio con una demarcación homónima, esto las contaría.
+    ///
+    /// La fecha es la de la reseña que cerró el conjunto, no la de la última de todas:
     /// es el momento en que se ganó, y es lo que se enseña.
     static func catalanCompleters(on db: any SQLDatabase) async throws -> [UUID: Date] {
         struct Fila: Decodable { let user_id: UUID; let region: String; let at: Date }
         let nombres = Array(catalanRegions.keys)
-        // Una fila por (persona, demarcación) con la primera vez que aportó allí. Son
+        // Una fila por (persona, demarcación) con la primera vez que reseñó allí. Son
         // pocas por definición —como mucho seis por persona— así que el conjunto se cierra
         // en Swift, donde además se puede unificar Girona/Gerona sin un CASE en el SQL.
         let filas = try await db.raw("""
             SELECT e.user_id, f.region, MIN(e.occurred_at) AS at
             FROM contribution_events e
             JOIN fonts f ON f.id = e.font_id
-            WHERE e.status = 'settled' AND f.region = ANY(\(bind: nombres))
+            WHERE e.status = 'settled'
+              AND e.kind = ANY(\(bind: reviewKinds))
+              AND f.country = 'Spain'
+              AND f.region = ANY(\(bind: nombres))
             GROUP BY e.user_id, f.region
             """).all(decoding: Fila.self)
 
@@ -85,8 +102,6 @@ enum SpecialBadges {
 
     /// Reseñas que hacen falta para entrar en la carrera.
     static let betatesterReviews = 15
-    /// Los tipos de aportación que son «una reseña».
-    static let reviewKinds = ["firstReview", "updateReview"]
 
     /// Quién ha llegado a 15 reseñas liquidadas, y **cuándo llegó a la decimoquinta**.
     ///

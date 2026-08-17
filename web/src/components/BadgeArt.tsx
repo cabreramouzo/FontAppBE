@@ -36,9 +36,13 @@ export function BadgeArt({
   const url = badgeArtURL(family)
   if (!url || roto) return null
 
-  // El aro solo para las de tres grados: en las de grado único no distingue nada y solo
-  // añade un círculo alrededor de un escudo que ya tiene su propio marco dibujado.
-  const aro = !locked && tier && tier !== 'unique' ? TIER_COLOR[modo][tier] : null
+  // El aro solo para las de tres grados: en las de grado único —y en las especiales, que
+  // tampoco tienen metal— no distingue nada y solo añade un círculo alrededor de un
+  // escudo que ya trae su propio marco dibujado. `special` va nombrado y no se deja caer
+  // en el `?? undefined` de la tabla: el día que alguien le dé un color a las especiales,
+  // esto dibujaría dos anillos concéntricos sin que nadie lo hubiera pedido.
+  const sinAro = tier === 'unique' || tier === 'special'
+  const aro = !locked && tier && !sinAro ? TIER_COLOR[modo][tier] : null
 
   const img = (
     <Box

@@ -19,6 +19,11 @@ export const LEVEL_BADGES = new Set(['drop','spring', 'brook', 'torrent', 'strea
  * entre 700 KB y 2,5 MB cada una a 585-640 px. Reprocesadas a 320 px: la carpeta pasa
  * de 13 MB a 3,2 MB. Se notaba — en un perfil con siete insignias, dos tardaban en
  * aparecer.
+ *
+ * **Añadir** una insignia no pide subir la versión: nadie tiene en caché un fichero que
+ * no existía. Solo la pide **redibujar** una que ya se estaba sirviendo. Subirla por
+ * añadir invalida las treinta que no han cambiado, que es justo el gasto que el `?v=`
+ * intenta evitar.
  */
 const VERSION = 2
 
@@ -42,6 +47,11 @@ export const BADGE_ART = new Set([
   'fourSeasons', 'counties', 'incidents', 'farAway', 'offline',
   'guardianLocal', 'waterRecovered', 'routes', 'verifier', 'fountainRescued',
   'international', 'consistency', 'reunion', 'teamwork', 'incidentResolved',
+  // Las especiales (`SpecialBadges.catalogue`). Se piden igual que las familias, por
+  // clave, así que viven en el mismo conjunto. Ojo: el dibujo llegó como
+  // `catalunya.png` y la clave es `catalonia` — el fichero se renombra al prepararlo,
+  // no aquí, o el `?v=` pediría una imagen que no existe.
+  'catalonia', 'betatester',
 ])
 
 export function badgeArtURL(family: string): string | null {

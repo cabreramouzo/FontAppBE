@@ -152,24 +152,37 @@ export function BadgesPage() {
                         subtitle: detalleEspecial(s, conseguida, agotada),
                       })}
                     >
-                      <Box
-                        sx={{
-                          width: 88, height: 88, borderRadius: '50%', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center', position: 'relative',
-                          bgcolor: 'action.hover',
-                          border: '2px solid',
-                          borderColor: conseguida ? 'secondary.main' : 'divider',
-                          color: conseguida ? 'secondary.main' : 'text.disabled',
-                          ...(conseguida ? null : APAGADA),
-                        }}
-                      >
-                        <BadgeIcon family={s.key} sx={{ fontSize: 40 }} />
-                        {!conseguida && (
-                          <LockOutlinedIcon
-                            sx={{ position: 'absolute', bottom: 6, right: 6, fontSize: 16, color: 'text.disabled' }}
-                          />
-                        )}
-                      </Box>
+                      {/* Con dibujo va suelto —el escudo trae su marco— y sin él, el
+                          icono dentro del círculo, igual que las familias. */}
+                      {BADGE_ART.has(s.key) ? (
+                        <Box sx={{ position: 'relative', display: 'flex' }}>
+                          <BadgeArt family={s.key} size={88} locked={!conseguida} tier="special" />
+                          {!conseguida && (
+                            <LockOutlinedIcon
+                              sx={{ position: 'absolute', bottom: 2, right: 2, fontSize: 16, color: 'text.disabled' }}
+                            />
+                          )}
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{
+                            width: 88, height: 88, borderRadius: '50%', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', position: 'relative',
+                            bgcolor: 'action.hover',
+                            border: '2px solid',
+                            borderColor: conseguida ? 'secondary.main' : 'divider',
+                            color: conseguida ? 'secondary.main' : 'text.disabled',
+                            ...(conseguida ? null : APAGADA),
+                          }}
+                        >
+                          <BadgeIcon family={s.key} sx={{ fontSize: 40 }} />
+                          {!conseguida && (
+                            <LockOutlinedIcon
+                              sx={{ position: 'absolute', bottom: 6, right: 6, fontSize: 16, color: 'text.disabled' }}
+                            />
+                          )}
+                        </Box>
+                      )}
                     </Abrible>
                     <Rotulo
                       nombre={t(`game.badge.${s.key}`)}

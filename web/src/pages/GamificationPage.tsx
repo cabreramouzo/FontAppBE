@@ -183,7 +183,9 @@ export function GamificationPage() {
                       nombre={t(`game.badge.${e.key}`)}
                       onOpen={() => setMirando({ kind: 'badge', key: e.key })}
                     >
-                      <BadgeIcon family={e.key} sx={{ fontSize: 34, color: 'secondary.main' }} />
+                      {BADGE_ART.has(e.key)
+                        ? <BadgeArt family={e.key} size={44} tier="special" />
+                        : <BadgeIcon family={e.key} sx={{ fontSize: 34, color: 'secondary.main' }} />}
                     </Abrible>
                     <Box sx={{ minWidth: 0 }}>
                       <Typography sx={{ fontWeight: 700, lineHeight: 1.25 }}>

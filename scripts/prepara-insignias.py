@@ -53,6 +53,14 @@ FAMILIAS = ["pioneer", "discoverer", "firstLight", "sentinel", "cartographer", "
             "guardianLocal", "waterRecovered", "routes", "verifier", "fountainRescued",
             "international", "consistency", "reunion", "teamwork", "incidentResolved"]
 
+# Las especiales de `SpecialBadges.catalogue`. Van a la misma carpeta que las familias
+# —el cliente las pide igual, por clave— pero se listan aparte porque no salen de
+# `badgeFamilies` y buscarlas ahí cuando falte alguna sería perder el rato.
+#
+# Éstas sí pueden tener dibujo propio sin discusión: no tienen bronce/plata/oro, así que
+# una imagen es exactamente lo que hace falta.
+ESPECIALES = ["catalonia", "betatester"]
+
 # Para poder pasar los ficheros tal como los escupe el generador.
 ALIAS = {
     "gota": "drop", "manantial": "spring", "arroyo": "brook",
@@ -71,6 +79,11 @@ ALIAS = {
     # El generador lo llamó «farway»; la familia es `farAway`.
     "farway": "farAway", "faraway": "farAway", "outside": "farAway", "lejos": "farAway",
     "cuatroestaciones": "fourSeasons", "fourseasons": "fourSeasons",
+    # La insignia se dibujó como «catalunya» y la clave del catálogo es `catalonia`
+    # (el resto de claves están en inglés). Se acepta el nombre del dibujo para no
+    # tener que renombrar a mano cada vez que se rehaga.
+    "catalunya": "catalonia", "cataluña": "catalonia", "catalonia": "catalonia",
+    "betatester": "betatester", "beta": "betatester",
 }
 
 
@@ -78,16 +91,20 @@ def destino_de(clave: str) -> Path:
     return NIVELES if clave in CLAVES else FAMILIAS_DIR
 
 
+def conocidas() -> list[str]:
+    return CLAVES + FAMILIAS + ESPECIALES
+
+
 def clave_de(ruta: Path) -> str | None:
     tallo = ruta.stem.lower()
     for prefijo in ("nivel_", "nivel-", "badge_", "badge-", "insignia_", "insignia-"):
         tallo = tallo.replace(prefijo, "")
-    if tallo in CLAVES or tallo in FAMILIAS:
+    if tallo in conocidas():
         return tallo
     # Las claves en camelCase (`guardianLocal`, `waterRecovered`) no sobreviven al
     # `.lower()` de arriba. Se comparan de nuevo sin distinguir mayúsculas, o reprocesar
     # una insignia ya guardada —que es como se llama el fichero— falla sin motivo.
-    for clave in CLAVES + FAMILIAS:
+    for clave in conocidas():
         if clave.lower() == tallo:
             return clave
     return ALIAS.get(tallo)
