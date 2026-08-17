@@ -91,9 +91,12 @@ export function UserProfilePage() {
       {juego && (juego.level || juego.badges.length > 0) && (
         <Box component="section" sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>{t('user.gamification')}</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
+            {/* El nombre debajo del escudo y no al lado: puesto en horizontal quedaba
+                entre la chapa y la fila de insignias, y se leía como si fuera el rótulo
+                de la primera insignia en vez del nivel. */}
             {juego.level && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ textAlign: 'center' }}>
                 <Abrible
                   puede
                   nombre={t(`game.level.${juego.level}`)}
@@ -101,7 +104,9 @@ export function UserProfilePage() {
                 >
                   <LevelBadge levelKey={juego.level} size={56} />
                 </Abrible>
-                <Typography sx={{ fontWeight: 800 }}>{t(`game.level.${juego.level}`)}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                  {t(`game.level.${juego.level}`)}
+                </Typography>
               </Box>
             )}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>

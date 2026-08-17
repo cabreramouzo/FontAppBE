@@ -68,7 +68,12 @@ export function Abrible({ puede, nombre, onOpen, redondo = true, children }: {
       onClick={onOpen}
       aria-label={t('badges.view', { name: nombre })}
       sx={{
-        p: 0, border: 0, background: 'none', cursor: 'pointer', display: 'flex',
+        // `inline-flex` y no `flex`: como bloque, el botón ocupa todo el ancho de su
+        // columna y la insignia se queda pegada al borde izquierdo mientras el rótulo,
+        // que sí es texto, va centrado — se veían descuadrados en `/gamification`. En
+        // línea se ajusta al dibujo y el `text-align: center` del contenedor lo centra.
+        // Donde el padre ya es flex no cambia nada: los hijos de un flex se bloquean.
+        p: 0, border: 0, background: 'none', cursor: 'pointer', display: 'inline-flex',
         borderRadius: redondo ? '50%' : 999,
         transition: 'transform 160ms ease',
         '&:hover': { transform: 'scale(1.06)' },
