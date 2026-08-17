@@ -239,7 +239,10 @@ Las imágenes subidas se sirven como estáticos en `GET /uploads/<archivo>`.
 ## Datos de ejemplo (dev)
 
 `swift run App seed [--force]` inserta ~67 fuentes **reales** de la comarca del
-**Moianès** (datos de OpenStreetMap, licencia ODbL) para maquetar el frontend.
+**Moianès** (datos de OpenStreetMap, licencia ODbL), clasificadas como Catalunya para
+que aparezcan en `GET /zones`. Con `--demo` añade usuarios, fotos, reseñas recientes y
+antiguas y sincroniza sus aportaciones liquidadas, de modo que también se pueda abrir el
+ranking mensual de la página `/zones` sin ejecutar otro comando.
 
 ## Pendiente (no implementado)
 

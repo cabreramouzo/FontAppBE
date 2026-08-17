@@ -479,6 +479,26 @@ enum ContributionScore {
         var farAwayContributions = 0
         /// Aportaciones creadas **sin cobertura**, desde la bandeja de salida.
         var offlineContributions = 0
+        /// Fuentes cuya última reseña reciente y liquidada pertenece a la persona.
+        var fountainsKeptFresh = 0
+        /// Fuentes distintas que volvieron a constar como `flowing` después de `dry`.
+        var recoveredFountains = 0
+        /// Jornadas con reseñas liquidadas en tres fuentes distintas como mínimo.
+        var routeDays = 0
+        /// Confirmaciones de reseñas ajenas.
+        var verifications = 0
+        /// Fuentes completas a las que la persona aportó alguno de los datos que faltaban.
+        var rescuedFountains = 0
+        /// Países distintos en los que hay aportaciones liquidadas.
+        var countries: Set<String> = []
+        /// Días UTC distintos con al menos una aportación liquidada.
+        var activeDays = 0
+        /// Reseñas tras más de un año sin que nadie actualizara la fuente.
+        var reunions = 0
+        /// Fuentes recientes de otra persona a las que se aportó durante sus primeros 30 días.
+        var teamworkFountains = 0
+        /// Incidencias propias tras las que consta una reseña liquidada de recuperación.
+        var resolvedIncidents = 0
     }
 
     /// Estación meteorológica (0 invierno · 1 primavera · 2 verano · 3 otoño). Se usa el
@@ -536,6 +556,16 @@ enum ContributionScore {
         // así que **no da gotas, solo la insignia**. Falsear la cabecera daría una medalla
         // y ni un punto de ventaja, que es justo el incentivo que se busca.
         .init(key: "offline", name: "Sin cobertura", thresholds: [1, 10, 40], unique: false) { $0.offlineContributions },
+        .init(key: "guardianLocal", name: "Guardián local", thresholds: [5, 20, 75], unique: false) { $0.fountainsKeptFresh },
+        .init(key: "waterRecovered", name: "Agua recuperada", thresholds: [1, 5, 20], unique: false) { $0.recoveredFountains },
+        .init(key: "routes", name: "Ruta de fuentes", thresholds: [3, 10, 30], unique: false) { $0.routeDays },
+        .init(key: "verifier", name: "Verificador", thresholds: [10, 50, 200], unique: false) { $0.verifications },
+        .init(key: "fountainRescued", name: "Fuente rescatada", thresholds: [5, 20, 75], unique: false) { $0.rescuedFountains },
+        .init(key: "international", name: "Explorador internacional", thresholds: [2, 5, 10], unique: false) { $0.countries.count },
+        .init(key: "consistency", name: "Constancia", thresholds: [7, 30, 100], unique: false) { $0.activeDays },
+        .init(key: "reunion", name: "Reencuentro", thresholds: [1, 10, 40], unique: false) { $0.reunions },
+        .init(key: "teamwork", name: "Trabajo en equipo", thresholds: [5, 25, 100], unique: false) { $0.teamworkFountains },
+        .init(key: "incidentResolved", name: "Incidencia resuelta", thresholds: [1, 5, 20], unique: false) { $0.resolvedIncidents },
     ]
 
     /// Una casilla de la vitrina: la familia, cómo va y si está conseguida.
@@ -617,16 +647,31 @@ enum ContributionScore {
         (6...9).contains(Calendar(identifier: .gregorian).component(.month, from: d))
     }
 
+    /// Clave de día UTC: la misma frontera temporal que usan rankings y liquidaciones.
+    static func utcDay(_ d: Date) -> String {
+        let c = ZoneStats.utcCalendar.dateComponents([.year, .month, .day], from: d)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    /// Número de jornadas que pueden llamarse ruta: tres fuentes distintas o más.
+    static func routeDays(from visits: [(fontID: UUID, at: Date)], minimumFonts: Int = 3) -> Int {
+        var byDay: [String: Set<UUID>] = [:]
+        for visit in visits { byDay[utcDay(visit.at), default: []].insert(visit.fontID) }
+        return byDay.values.count { $0.count >= minimumFonts }
+    }
+
     private static func badges(for mias: [Contribution], regions: Set<String>,
                                fontsByID: [UUID: Font]) -> [BadgeAward] {
         var t = BadgeTally()
         t.regions = regions
         for c in mias {
+            if let country = fontsByID[c.fontID]?.country { t.countries.insert(country) }
             switch c.kind {
             case .fontCreated: t.fontsCreated += 1
             case .firstPhoto: t.firstPhotos += 1
             case .relocation, .fieldCompleted: t.mapFixes += 1
             case .updateReview where c.base >= 50: t.sentinelUpdates += 1
+            case .confirmation: t.verifications += 1
             default: break
             }
             if (c.kind == .firstReview || c.kind == .updateReview) && isSummer(c.at) { t.summerReviews += 1 }
@@ -635,6 +680,18 @@ enum ContributionScore {
         t.fourSeasonFonts = fourSeasonFonts(from: mias
             .filter { $0.kind == .firstReview || $0.kind == .updateReview }
             .map { (fontID: $0.fontID, at: $0.at) })
+        let reviews = mias.filter { $0.kind == .firstReview || $0.kind == .updateReview }
+        t.routeDays = routeDays(from: reviews.map { (fontID: $0.fontID, at: $0.at) })
+        t.activeDays = Set(mias.map { utcDay($0.at) }).count
+        t.reunions = mias.count { $0.kind == .updateReview && $0.base >= 70 }
+        t.teamworkFountains = Set(mias.compactMap { c -> UUID? in
+            guard c.kind != .fontCreated, let f = fontsByID[c.fontID],
+                  let creator = f.$creator.id, creator != c.userID,
+                  let created = f.createdAt,
+                  c.at >= created, c.at.timeIntervalSince(created) <= 30 * 86_400
+            else { return nil }
+            return c.fontID
+        }).count
         return badges(for: t)
     }
 }

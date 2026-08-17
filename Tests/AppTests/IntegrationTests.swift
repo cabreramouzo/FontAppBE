@@ -1,5 +1,6 @@
 import Fluent
 import Foundation
+import SQLKit
 import XCTVapor
 @testable import App
 
@@ -1457,6 +1458,75 @@ final class IntegrationTests: XCTestCase {
             let suyas = try await Capabilities.of(admin, on: app.db)
             XCTAssertTrue(suyas.capabilities.contains(.relocateAnyFont),
                           "El admin ya lo puede por rol; el nivel no le quita nada.")
+        }
+    }
+
+    /// Los nuevos retos se reconstruyen desde el historial liquidado: una secuencia seca
+    /// → incidencia → vuelve a manar, tres fuentes el mismo día y una confirmación ajena.
+    /// Este caso evita que el catálogo pueda crecer mientras todos los contadores reales
+    /// se quedan accidentalmente en cero.
+    func testContextualBadgesProgressFromSettledHistory() async throws {
+        try await withApp { app in
+            let ownerID = try await register(app, username: "badgeowner")
+            let explorerID = try await register(app, username: "badgeexplorer")
+            let ownerToken = try await login(app, username: "badgeowner")
+            let explorerToken = try await login(app, username: "badgeexplorer")
+
+            let oldFontID = try await createFont(app, token: ownerToken, name: "Antiga", lat: 41, long: 2)
+            let secondID = try await createFont(app, token: ownerToken, name: "Segona", lat: 42, long: 1)
+            let thirdID = try await createFont(app, token: ownerToken, name: "Tercera", lat: 43, long: 0)
+            let countries = [(oldFontID, "España"), (secondID, "Francia"), (thirdID, "Portugal")]
+            for (id, country) in countries {
+                let f = try await Font.find(id, on: app.db)!
+                f.country = country
+                f.region = country
+                try await f.save(on: app.db)
+            }
+
+            let now = Date()
+            let dryAt = now.addingTimeInterval(-400 * 86_400)
+            let reportAt = now.addingTimeInterval(-10 * 86_400)
+            let routeAt = now.addingTimeInterval(-5 * 86_400)
+
+            let dry = FontComment(fontID: oldFontID, userID: ownerID, body: "Seca", waterStatus: "dry")
+            try await dry.save(on: app.db)
+            let report = FontReport(fontID: oldFontID, userID: explorerID, message: "Continua seca")
+            try await report.save(on: app.db)
+            let recovered = FontComment(fontID: oldFontID, userID: explorerID,
+                                        body: "Torna a rajar", waterStatus: "flowing")
+            try await recovered.save(on: app.db)
+            let second = FontComment(fontID: secondID, userID: explorerID,
+                                     body: "Comprovada", waterStatus: "flowing")
+            try await second.save(on: app.db)
+            let third = FontComment(fontID: thirdID, userID: explorerID,
+                                    body: "Comprovada", waterStatus: "flowing")
+            try await third.save(on: app.db)
+            let confirmation = FontConfirmation(commentID: try dry.requireID(), userID: explorerID)
+            try await confirmation.save(on: app.db)
+
+            guard let sql = app.db as? SQLDatabase else { return XCTFail("Postgres requerido") }
+            try await sql.raw("UPDATE font_comments SET created_at = \(bind: dryAt) WHERE id = \(bind: dry.requireID())").run()
+            for id in [try recovered.requireID(), try second.requireID(), try third.requireID()] {
+                try await sql.raw("UPDATE font_comments SET created_at = \(bind: routeAt) WHERE id = \(bind: id)").run()
+            }
+            try await sql.raw("UPDATE font_reports SET created_at = \(bind: reportAt) WHERE id = \(bind: report.requireID())").run()
+            try await sql.raw("UPDATE font_confirmations SET created_at = \(bind: routeAt) WHERE id = \(bind: confirmation.requireID())").run()
+
+            _ = try await ContributionLedger.sync(on: app.db, now: now)
+            let profile = try await ContributionLedger.profile(for: explorerID, on: app.db, now: now)
+            func slot(_ family: String) -> ContributionScore.BadgeSlot? {
+                profile.collection.first { $0.family == family }
+            }
+
+            XCTAssertEqual(slot("waterRecovered")?.progress, 1)
+            XCTAssertEqual(slot("waterRecovered")?.tier, "bronze")
+            XCTAssertEqual(slot("routes")?.progress, 1)
+            XCTAssertEqual(slot("verifier")?.progress, 1)
+            XCTAssertEqual(slot("international")?.progress, 3)
+            XCTAssertEqual(slot("international")?.tier, "bronze")
+            XCTAssertEqual(slot("reunion")?.progress, 1)
+            XCTAssertEqual(slot("incidentResolved")?.progress, 1)
+            XCTAssertEqual(slot("guardianLocal")?.progress, 3)
         }
     }
 

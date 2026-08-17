@@ -164,7 +164,7 @@ sigue el mapa al abrirse.
 
 ## 6. Insignias
 
-Seis familias, cada una apuntando a un hueco real de los datos. Dentro de cada familia hay
+Las familias apuntan a huecos reales de los datos. Dentro de cada familia hay
 tres escalones: bronce · plata · oro. Los umbrales son para calibrar con datos reales; los de
 aquí son el punto de partida.
 
@@ -190,6 +190,19 @@ aquí son el punto de partida.
 | **Comarcas** | Fuentes aportadas en zonas administrativas distintas | 3 · 8 · 20 regiones | Recompensa moverse, no acumular en el mismo pueblo |
 | **Estiaje** | Estados de agua registrados en plena sequía, entre junio y septiembre | 10 · 40 · 120 | Se reinicia cada verano: es estacional a propósito |
 | **Las cuatro estaciones** | Fuentes que has reseñado en las cuatro estaciones | 1 · 3 · 10 fuentes | Umbrales bajos porque el precio lo pone el calendario |
+| **Vigía** | Incidencias comunicadas | 3 · 15 · 50 | Premia dar malas noticias útiles |
+| **Lejanía** | Aportaciones en zonas remotas | 10 · 40 · 150 | Usa el multiplicador de desierto |
+| **Sin cobertura** | Aportaciones creadas desde la bandeja offline | 1 · 10 · 40 | No añade gotas extra |
+| **Guardián local** | Fuentes distintas cuya última reseña reciente es tuya | 5 · 20 · 75 | Mide mantenimiento, no volumen |
+| **Agua recuperada** | Fuentes distintas que confirmas `flowing` después de `dry` | 1 · 5 · 20 | Los dos estados deben estar liquidados |
+| **Ruta de fuentes** | Jornadas con al menos tres fuentes distintas reseñadas | 3 · 10 · 30 rutas | Repetir una fuente no infla la ruta |
+| **Verificador** | Confirmaciones independientes de reseñas ajenas | 10 · 50 · 200 | No cuentan autoconfirmaciones |
+| **Fuente rescatada** | Fuentes completas a las que aportaste un dato que faltaba | 5 · 20 · 75 | Foto, descripción, tipo y potabilidad |
+| **Explorador internacional** | Países distintos con aportaciones liquidadas | 2 · 5 · 10 países | Cada país cuenta una vez |
+| **Constancia** | Días UTC distintos con aportaciones liquidadas | 7 · 30 · 100 días | Un día intenso sigue siendo un día |
+| **Reencuentro** | Reseñas tras más de un año sin actualizaciones | 1 · 10 · 40 | Exige una actualización anterior |
+| **Trabajo en equipo** | Fuentes ajenas atendidas durante sus primeros 30 días | 5 · 25 · 100 | Cada fuente cuenta una vez |
+| **Incidencia resuelta** | Incidencias propias seguidas de un estado `flowing` | 1 · 5 · 20 | La recuperación debe estar liquidada |
 
 **Las cuatro estaciones es la mejor insignia del conjunto y la única que no se puede
 acelerar.** Cuesta doce meses reales pase lo que pase: ni aportando más, ni saliendo más
@@ -201,15 +214,10 @@ Es por fuente y no por persona: cuatro visitas a cuatro sitios distintos, una po
 no la consiguen. Se cuenta sobre la fecha en que ocurrió la reseña y no sobre la de
 liquidación, o una reseña del 20 de marzo liquidada el 23 cambiaría de estación sola.
 
-### Insignias de un solo tiro
+### Insignia de un solo tiro
 
 - **Pionero** — la primera persona que reseña una fuente importada. Una vez por fuente, para
   siempre; queda escrito en la ficha.
-- **Mala noticia** — la primera incidencia confirmada de una fuente que constaba como buena.
-  Nadie quiere darla y hace falta que alguien la dé.
-- **Fuera de casa** — una aportación a más de 300 km de tu región de registro.
-- **Sin cobertura** — una aportación salida de la bandeja de salida, creada sin red. Un guiño
-  a quien usa la app donde realmente hace falta.
 
 Ninguna insignia por registrarse, por abrir la app ni por completar el perfil. Regalarlas al
 principio para que «enganchen» enseña que no valen nada.
@@ -1032,17 +1040,25 @@ que ja segueix el mapa en obrir-se.
 | **Cartògraf** | Reubicacions i correccions de fitxa que sobreviuen sense ser revertides | 10 · 40 · 150 | Una reversió resta; és l'única insígnia que pot baixar |
 | **Comarques** | Fonts aportades en zones administratives diferents | 3 · 8 · 20 regions | Recompensa moure's, no acumular al mateix poble |
 | **Les quatre estacions** | Fonts que has ressenyat a les quatre estacions | 1 · 3 · 10 fonts | Llindars baixos perquè el preu el posa el calendari |
+| **Vigia** | Incidències comunicades | 3 · 15 · 50 | Premia donar males notícies útils |
+| **Llunyania** | Aportacions en zones remotes | 10 · 40 · 150 | Usa el multiplicador de desert |
+| **Sense cobertura** | Aportacions creades des de la safata offline | 1 · 10 · 40 | No afegeix gotes extra |
+| **Guardià local** | Fonts diferents l'última ressenya recent de les quals és teva | 5 · 20 · 75 | Mesura manteniment, no volum |
+| **Aigua recuperada** | Fonts diferents que confirmes `flowing` després de `dry` | 1 · 5 · 20 | Els dos estats han d'estar liquidats |
+| **Ruta de fonts** | Jornades amb almenys tres fonts diferents ressenyades | 3 · 10 · 30 rutes | Repetir una font no infla la ruta |
+| **Verificador** | Confirmacions independents de ressenyes alienes | 10 · 50 · 200 | No compten autoconfirmacions |
+| **Font rescatada** | Fonts completes a les quals vas aportar una dada que faltava | 5 · 20 · 75 | Foto, descripció, tipus i potabilitat |
+| **Explorador internacional** | Països diferents amb aportacions liquidades | 2 · 5 · 10 països | Cada país compta un cop |
+| **Constància** | Dies UTC diferents amb aportacions liquidades | 7 · 30 · 100 dies | Un dia intens continua sent un dia |
+| **Retrobament** | Ressenyes després de més d'un any sense actualitzacions | 1 · 10 · 40 | Exigeix una actualització anterior |
+| **Treball en equip** | Fonts alienes ateses durant els primers 30 dies | 5 · 25 · 100 | Cada font compta un cop |
+| **Incidència resolta** | Incidències pròpies seguides d'un estat `flowing` | 1 · 5 · 20 | La recuperació ha d'estar liquidada |
 | **Estiatge** | Estats d'aigua registrats en plena secada, entre juny i setembre | 10 · 40 · 120 | Es reinicia cada estiu: és estacional a posta |
 
-### Insignies d'un sol tret
+### Insígnia d'un sol tret
 
 - **Pioner** — la primera persona que ressenya una font importada. Un cop per font, per
   sempre; queda escrit a la fitxa.
-- **Mala notícia** — la primera incidència confirmada d'una font que constava com a bona.
-  Ningú vol donar-la i cal que algú la doni.
-- **Fora de casa** — una aportació a més de 300 km de la teva regió de registre.
-- **Sense cobertura** — una aportació sortida de la safata de sortida, creada sense xarxa. Un
-  ullet a qui fa servir l'app on realment fa falta.
 
 Cap insígnia per registrar-se, per obrir l'app ni per completar el perfil. Regalar-ne al
 principi perquè «enganxin» ensenya que no valen res.

@@ -124,6 +124,25 @@ final class AppTests: XCTestCase {
         XCTAssertEqual(Set([1, 4, 7, 10].map { ContributionScore.season(día($0)) }).count, 4)
     }
 
+    /// Ruta de fuentes cuenta jornadas reales, no el número bruto de reseñas: repetir
+    /// diez veces la misma parada no convierte una salida en una ruta.
+    func testRouteBadgeNeedsThreeDistinctFountainsOnTheSameUTCDay() throws {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        func at(_ day: Int, _ hour: Int) -> Date {
+            cal.date(from: DateComponents(year: 2026, month: 8, day: day, hour: hour))!
+        }
+        let a = UUID(), b = UUID(), c = UUID(), d = UUID()
+
+        XCTAssertEqual(ContributionScore.routeDays(from: [
+            (a, at(10, 8)), (a, at(10, 9)), (b, at(10, 10)),
+        ]), 0, "Dos fuentes y una repetición no son una ruta.")
+        XCTAssertEqual(ContributionScore.routeDays(from: [
+            (a, at(10, 8)), (b, at(10, 10)), (c, at(10, 18)),
+            (d, at(11, 9)),
+        ]), 1)
+    }
+
     /// La vitrina enseña **todas** las familias, tenga o no la insignia, y el marcador
     /// solo las conseguidas. Las dos salen de la misma tabla: si se separaran, una
     /// casilla gris podría pedir un umbral que luego no es el que se cobra.

@@ -4,12 +4,13 @@ import Vapor
 
 /// Siembra la BD con fuentes REALES de la comarca del Moianès.
 /// Fuente de datos: OpenStreetMap (Overpass API, área comarcal), licencia ODbL — © colaboradores de OSM.
-/// Uso: `swift run App seed` · `--force` para reemplazar · `--demo` añade usuarios y reseñas.
+/// Uso: `swift run App seed` · `--force` para reemplazar · `--demo` añade usuarios,
+/// reseñas y aportaciones liquidadas para poder recorrer también `/zones`.
 struct SeedCommand: AsyncCommand {
     struct Signature: CommandSignature {
         @Flag(name: "force", help: "Borra las fuentes existentes antes de sembrar")
         var force: Bool
-        @Flag(name: "demo", help: "Además crea usuarios y reseñas de ejemplo (contraseña: demo12345)")
+        @Flag(name: "demo", help: "Crea usuarios, reseñas y datos para /zones (contraseña: demo12345)")
         var demo: Bool
         @Option(name: "sample", help: "Con --demo y BD poblada: reseñas sobre N fuentes ALEATORIAS de toda España (en vez de solo el Moianès)")
         var sample: Int?
@@ -58,7 +59,11 @@ struct SeedCommand: AsyncCommand {
 
         var fonts: [Font] = []
         for (name, lat, long) in Self.moianesFonts {
-            let font = Font(name: name, latitude: lat, longitude: long)
+            // El endpoint de zonas excluye deliberadamente las fuentes sin región. El
+            // conjunto está íntegramente en el Moianès, así que podemos clasificarlo sin
+            // ejecutar `populate-regions`: Natural Earth admin-1 lo sitúa en Catalunya.
+            let font = Font(name: name, latitude: lat, longitude: long,
+                            country: "España", region: "Catalunya")
             try await font.save(on: db)
             fonts.append(font)
         }
@@ -69,8 +74,9 @@ struct SeedCommand: AsyncCommand {
         }
     }
 
-    /// Crea usuarios de ejemplo y una o varias reseñas por fuente, con estados variados
-    /// y fechas repartidas en los últimos 14 días.
+    /// Crea usuarios de ejemplo y reseñas con estados y antigüedades variadas. Algunas
+    /// fuentes quedan sin revisar y otras llevan más de seis meses sin una reseña para
+    /// que las dos barras de `/zones` tengan un progreso reconocible.
     private func seedDemo(app: Application, fonts: [Font], console: Console) async throws {
         let db = app.db
 
@@ -91,15 +97,35 @@ struct SeedCommand: AsyncCommand {
         let sql = db as? SQLDatabase
         var reviews = 0
         var withPhoto = 0
-        for font in fonts {
+        var staleReviews = 0
+        var unreviewed = 0
+        for (fontIndex, font) in fonts.enumerated() {
             let fontID = try font.requireID()
-            // ~15% de las fuentes: foto propia; ~30%: potabilidad marcada (para los filtros).
+            // Una distribución determinista garantiza que la barra de fotos siempre sea
+            // visible, incluso en un seed pequeño. La variedad interna de las reseñas sí
+            // puede seguir siendo aleatoria.
             var fontChanged = false
-            if Int.random(in: 0..<100) < 15 { font.image = Self.demoImages.randomElement(); fontChanged = true }
-            if Int.random(in: 0..<100) < 30 { font.drinkable = Self.demoDrinkable.randomElement() ?? nil; fontChanged = true }
+            // Compatibilidad con bases sembradas antes de que el seed guardase la zona:
+            // `seed --demo` las vuelve visibles sin exigir un `--force` destructivo.
+            if font.region == nil,
+               Self.isInMoianes(lat: font.latitude, long: font.longitude) {
+                font.country = "España"
+                font.region = "Catalunya"
+                fontChanged = true
+            }
+            if fontIndex.isMultiple(of: 4) { font.image = Self.demoImages[fontIndex % Self.demoImages.count]; fontChanged = true }
+            if fontIndex.isMultiple(of: 3) { font.drinkable = Self.demoDrinkable[fontIndex % Self.demoDrinkable.count]; fontChanged = true }
             if fontChanged { try await font.save(on: db) }
 
-            for _ in 0..<Int.random(in: 1...3) {
+            // Una de cada ocho queda sin comprobar; una de cada seis conserva solamente
+            // reseñas antiguas. Así se ejercitan 0, reciente y caducada en la misma zona.
+            if fontIndex.isMultiple(of: 8) {
+                unreviewed += 1
+                continue
+            }
+            let isStale = fontIndex.isMultiple(of: 6)
+            let reviewCount = Int.random(in: 1...3)
+            for _ in 0..<reviewCount {
                 guard let user = users.randomElement() else { continue }
                 let status = Self.weightedStatus()
                 var (text, rating) = Self.reviewText(for: status)
@@ -120,19 +146,35 @@ struct SeedCommand: AsyncCommand {
                     image: image
                 )
                 try await comment.save(on: db)
-                // Repartimos la fecha en los últimos 14 días (para el "última actualización").
+                // Las recientes tienen al menos cuatro días para que el sync pueda
+                // liquidarlas (ventana de 72 h); las antiguas hacen visible el hueco de
+                // mantenimiento en la segunda barra de `/zones`.
                 if let sql, let commentID = comment.id {
-                    let date = Date().addingTimeInterval(-Double.random(in: 0...(14 * 24 * 3600)))
+                    let daysAgo = isStale ? Double.random(in: 200...360) : Double.random(in: 4...14)
+                    let date = Date().addingTimeInterval(-daysAgo * 24 * 3600)
                     try await sql.raw("UPDATE font_comments SET created_at = \(bind: date) WHERE id = \(bind: commentID)").run()
                 }
                 reviews += 1
+                if isStale { staleReviews += 1 }
             }
         }
-        console.info("Insertadas \(reviews) reseñas de ejemplo (\(withPhoto) con foto) en \(fonts.count) fuentes.")
+        console.info("Insertadas \(reviews) reseñas de ejemplo (\(withPhoto) con foto, \(staleReviews) antiguas) en \(fonts.count) fuentes; \(unreviewed) quedan sin comprobar.")
+
+        // `/zones/ranking` lee exclusivamente el registro materializado y liquidado. El
+        // comando de demo lo deja listo en la misma ejecución en vez de obligar a conocer
+        // y lanzar después `gamification-sync` a mano. Es el sync normal con la hora real:
+        // no adelanta el reloj ni liquida aportaciones que aún estén dentro de las 72 h.
+        let sync = try await ContributionLedger.sync(on: db)
+        console.info("Gamificación demo sincronizada: \(sync.inserted) aportaciones registradas y \(sync.settled) liquidadas para los rankings.")
     }
 
     /// Bounding box aproximado de la comarca del Moianès (para acotar las reseñas demo).
     static let moianesBBox = (minLat: 41.70, maxLat: 41.90, minLong: 1.90, maxLong: 2.25)
+
+    static func isInMoianes(lat: Double, long: Double) -> Bool {
+        (moianesBBox.minLat...moianesBBox.maxLat).contains(lat)
+            && (moianesBBox.minLong...moianesBBox.maxLong).contains(long)
+    }
 
     static let demoUsers: [(String, String)] = [
         ("xavi123", "Xavi Puig"),

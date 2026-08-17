@@ -353,6 +353,19 @@ enum ContributionLedger {
         let fontIDs = Array(Set(liquidados.compactMap { $0.$font.id }))
         let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: db).filter(\.$id ~~ fontIDs).all()
         let fontsByID = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f) } })
+        let comments = fontIDs.isEmpty ? [] : try await FontComment.query(on: db)
+            .filter(\.$font.$id ~~ fontIDs).all()
+
+        // Para los hitos que dependen de una secuencia (seca → vuelve a manar, o una
+        // incidencia → recuperación) no basta con que la segunda reseña exista: también
+        // tiene que haber superado las mismas 72 h que cualquier otra aportación.
+        let settledOnFonts = fontIDs.isEmpty ? [] : try await ContributionEvent.query(on: db)
+            .filter(\.$font.$id ~~ fontIDs)
+            .filter(\.$status == .settled)
+            .all()
+        let settledCommentIDs = Set(settledOnFonts
+            .filter { $0.source == ContributionScore.Source.comment.rawValue }
+            .map(\.subjectID))
 
         // Reseñas creadas sin cobertura. Se buscan por `subject_id` —la fila de origen del
         // evento— y no por fuente: una misma fuente puede tener una reseña dejada en el
@@ -371,6 +384,7 @@ enum ContributionLedger {
             let previo = porTipo[e.kind] ?? (0, 0)
             porTipo[e.kind] = (previo.count + 1, previo.gotes + e.gotes)
             if let r = e.$font.id.flatMap({ fontsByID[$0]?.region }) { tally.regions.insert(r) }
+            if let country = e.$font.id.flatMap({ fontsByID[$0]?.country }) { tally.countries.insert(country) }
             guard let kind = ContributionScore.Kind(rawValue: e.kind) else { continue }
             switch kind {
             case .fontCreated: tally.fontsCreated += 1
@@ -378,6 +392,7 @@ enum ContributionLedger {
             case .relocation, .fieldCompleted: tally.mapFixes += 1
             case .updateReview where e.base >= 50: tally.sentinelUpdates += 1
             case .report: tally.incidents += 1
+            case .confirmation: tally.verifications += 1
             default: break
             }
             // Las razones se guardan desde `AddReasonsToContributionEvent`. Las filas
@@ -414,22 +429,91 @@ enum ContributionLedger {
                       let fid = e.$font.id else { return nil }
                 return (fontID: fid, at: e.occurredAt)
             })
+        let settledReviews = liquidados.compactMap { e -> (fontID: UUID, at: Date)? in
+            guard let kind = ContributionScore.Kind(rawValue: e.kind),
+                  kind == .firstReview || kind == .updateReview,
+                  let fontID = e.$font.id else { return nil }
+            return (fontID, e.occurredAt)
+        }
+        tally.routeDays = ContributionScore.routeDays(from: settledReviews)
+        tally.activeDays = Set(liquidados.map { ContributionScore.utcDay($0.occurredAt) }).count
+        tally.reunions = liquidados.count {
+            $0.kind == ContributionScore.Kind.updateReview.rawValue && $0.base >= 70
+        }
+
+        // Aportar pronto a una fuente de otra persona: una fuente cuenta una vez aunque
+        // se complete foto, descripción y estado en la misma visita.
+        tally.teamworkFountains = Set(liquidados.compactMap { e -> UUID? in
+            guard e.kind != ContributionScore.Kind.fontCreated.rawValue,
+                  let fontID = e.$font.id, let font = fontsByID[fontID],
+                  let creator = font.$creator.id, creator != userID,
+                  let created = font.createdAt,
+                  e.occurredAt >= created,
+                  e.occurredAt.timeIntervalSince(created) <= 30 * 86_400
+            else { return nil }
+            return fontID
+        }).count
+
+        // Una ficha rescatada tiene imagen y los tres campos informativos. Se comparte
+        // el mérito entre quienes aportaron una primera foto o uno de los campos que
+        // faltaban, pero una persona solo puede contar cada fuente una vez.
+        tally.rescuedFountains = Set(liquidados.compactMap { e -> UUID? in
+            guard e.kind == ContributionScore.Kind.firstPhoto.rawValue
+                    || e.kind == ContributionScore.Kind.fieldCompleted.rawValue,
+                  let fontID = e.$font.id, let f = fontsByID[fontID],
+                  f.image != nil, !ContributionScore.esVacia(f.description),
+                  f.source != nil, f.drinkable != nil
+            else { return nil }
+            return fontID
+        }).count
+
+        let settledComments = comments.filter { c in c.id.map(settledCommentIDs.contains) ?? false }
+        let ownSettledCommentIDs = Set(liquidados
+            .filter { $0.source == ContributionScore.Source.comment.rawValue }
+            .map(\.subjectID))
+
+        // Una recuperación cuenta por fuente, no por cada comentario posterior que diga
+        // «flowing». La reseña de recuperación ha de ser propia y estar liquidada; la
+        // reseña seca previa también, para que no baste fabricar dos estados pendientes.
+        tally.recoveredFountains = Set(settledComments.compactMap { recovery -> UUID? in
+            guard recovery.waterStatus == "flowing", recovery.id.map(ownSettledCommentIDs.contains) == true,
+                  let at = recovery.createdAt else { return nil }
+            let wasDry = settledComments.contains {
+                $0.$font.id == recovery.$font.id && $0.waterStatus == "dry"
+                    && ($0.createdAt ?? .distantFuture) < at
+            }
+            return wasDry ? recovery.$font.id : nil
+        }).count
+
+        // El mérito de resolver una incidencia vuelve a quien la comunicó. Se considera
+        // resuelta cuando después consta una reseña `flowing` ya liquidada.
+        tally.resolvedIncidents = liquidados.filter {
+            $0.kind == ContributionScore.Kind.report.rawValue
+        }.count { report in
+            guard let fontID = report.$font.id else { return false }
+            return settledComments.contains {
+                $0.$font.id == fontID && $0.waterStatus == "flowing"
+                    && ($0.createdAt ?? .distantPast) > report.occurredAt
+            }
+        }
 
         // Fuentes que mantiene al día: su reseña es la última de esa fuente y es reciente.
         var alDia = 0
         if !fontIDs.isEmpty {
-            let comentarios = try await FontComment.query(on: db).filter(\.$font.$id ~~ fontIDs).all()
             var ultimaPorFuente: [UUID: FontComment] = [:]
-            for c in comentarios {
+            for c in comments {
                 let actual = ultimaPorFuente[c.$font.id]
                 if actual == nil || (c.createdAt ?? .distantPast) > (actual?.createdAt ?? .distantPast) {
                     ultimaPorFuente[c.$font.id] = c
                 }
             }
             alDia = ultimaPorFuente.values.filter {
-                $0.$user.id == userID && now.timeIntervalSince($0.createdAt ?? .distantPast) <= freshnessHorizon
+                $0.$user.id == userID
+                    && $0.id.map(ownSettledCommentIDs.contains) == true
+                    && now.timeIntervalSince($0.createdAt ?? .distantPast) <= freshnessHorizon
             }.count
         }
+        tally.fountainsKeptFresh = alDia
 
         let nivel = ContributionScore.level(for: gotes)
         let siguiente = ContributionScore.nextLevel(after: gotes)

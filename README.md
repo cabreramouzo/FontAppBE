@@ -52,7 +52,7 @@ npm run dev        # http://localhost:5173
 Abre **http://localhost:5173**. La web hace proxy de `/api` y `/uploads` al backend.
 
 ### Datos de ejemplo (recomendado)
-Fuentes reales del Moianès + usuarios y reseñas de ejemplo:
+Fuentes reales del Moianès + usuarios, reseñas y datos de cobertura/ranking para `/zones`:
 
 ```bash
 export $(cat env.development | xargs)
