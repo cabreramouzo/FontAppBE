@@ -143,6 +143,11 @@ export function GamificationPage() {
                       ({t('badges.fromGotes', { n: n(c.gotes) })})
                     </Box>{' '}
                     — {t(`game.can.${c.key}`)}
+                    {/* Por capacidad y no global: desde que unas piden puntos definitivos
+                        y otras no, un único «inactivo» al pie mentía en la mitad. */}
+                    {c.enabled === false && (
+                      <Box component="span" sx={{ color: 'text.disabled' }}> · {t('gamePage.notYet')}</Box>
+                    )}
                   </Typography>
                 ))}
               </Box>

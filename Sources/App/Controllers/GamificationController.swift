@@ -127,6 +127,10 @@ struct GamificationController: RouteCollection {
             /// Clave del nivel a partir del cual se abre.
             let level: String
             let gotes: Int
+            /// Si **esta** capacidad se concede ya. Va por capacidad y no global porque
+            /// desde que unas exigen puntos definitivos y otras no, un único «activo» o
+            /// «inactivo» mentía en la mitad de los casos.
+            let enabled: Bool
         }
         let capabilities: [CapabilityInfo]
         /// `false` mientras falte `GAMIFICATION_CAPABILITIES` o la época no haya pasado.
@@ -137,7 +141,8 @@ struct GamificationController: RouteCollection {
 
     /// GET /gamification/scale — el baremo. Pública y sin base de datos.
     @Sendable func scale(req: Request) async throws -> Scale {
-        Scale(
+        let definitivos = ContributionLedger.epoch.map { Date() >= $0 } ?? false
+        return Scale(
             kinds: ContributionScore.Kind.allCases.map {
                 .init(kind: $0.rawValue, base: $0.base)
             },
@@ -174,12 +179,12 @@ struct GamificationController: RouteCollection {
                 .init(key: $0.key, thresholds: $0.thresholds, unique: $0.unique)
             },
             capabilities: Capabilities.Capability.allCases.map {
-                .init(key: $0.rawValue, level: $0.level, gotes: $0.gotes)
+                .init(key: $0.rawValue, level: $0.level, gotes: $0.gotes,
+                      enabled: Capabilities.enabled && (definitivos || !$0.requiresDefinitivePoints))
             },
-            // Encendido de verdad: hace falta el interruptor **y** que los puntos sean
-            // definitivos. Con uno solo, la página diría que sí y la app diría que no.
+            // El global se queda como «¿hay algo concedible?», para el aviso de la página.
             capabilitiesEnabled: Capabilities.enabled
-                && (ContributionLedger.epoch.map { Date() >= $0 } ?? false),
+                && Capabilities.Capability.allCases.contains { definitivos || !$0.requiresDefinitivePoints },
             capabilityActiveDays: Capabilities.requiredActiveDays)
     }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { capabilities } from '../lib/capabilities'
+import { capabilities, capabilityLevels } from '../lib/capabilities'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
@@ -302,6 +302,12 @@ function LocationActions({ font }: { font: Font }) {
       <Button variant="outlined" startIcon={<DirectionsIcon />} href={mapsUrl} target="_blank" rel="noreferrer">{t('detail.directions')}</Button>
       <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={copy}>{copied ? t('detail.copied') : coords}</Button>
       <Button variant="outlined" startIcon={<ShareIcon />} onClick={share}>{t('detail.share')}</Button>
+      {/* «Otras fotos» va en esta fila y no debajo de la portada. Allí se perdía: en una
+          fuente sin foto quedaba en una zona donde nadie mira, y es la puerta a los
+          documentos —el informe del agua—, que es lo que menos se espera encontrar y por
+          tanto lo que más necesita verse. Mismo `variant` que las demás a propósito: una
+          fila de cuatro botones iguales y un quinto distinto se lee como un descuido. */}
+      <FontGallery fontID={font.id} />
     </Stack>
   )
 }
@@ -341,7 +347,7 @@ function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
 }
 
 function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canManage: boolean; onSaved: () => void; onCancel: () => void }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [name, setName] = useState(font.name)
   const [description, setDescription] = useState(font.description ?? '')
   const [source, setSource] = useState<WaterSource | ''>(font.source ?? '')
@@ -355,9 +361,18 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
   // Mover el pin de una fuente ajena lo abre el nivel (fase 6). Se resuelve al abrir el
   // formulario y no al pintar la ficha: solo hace falta aquí.
   const [porNivel, setPorNivel] = useState(false)
+  // Y a partir de qué nivel se abre, para poder decirlo. «Todavía no puedes» deja a la
+  // persona sin saber si le faltan diez gotas o diez mil, y sin nada que hacer.
+  const [nivelReubicar, setNivelReubicar] = useState<{ level: string; gotes: number } | null>(null)
   useEffect(() => {
     let vivo = true
-    if (!canManage) capabilities().then((c) => { if (vivo) setPorNivel(c.includes('relocateAnyFont')) })
+    if (!canManage) {
+      capabilities().then((c) => { if (vivo) setPorNivel(c.includes('relocateAnyFont')) })
+      capabilityLevels().then((cs) => {
+        const c = cs.find((x) => x.key === 'relocateAnyFont')
+        if (vivo && c) setNivelReubicar({ level: c.level, gotes: c.gotes })
+      })
+    }
     return () => { vivo = false }
   }, [canManage])
   const puedeReubicar = canManage || porNivel
@@ -408,7 +423,13 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
         />
       ) : (
         // Quien no la creó no puede moverla: que lo avise y ya lo corregirá quien pueda.
-        <Typography variant="caption" color="text.secondary">📍 {t('relocate.notYours')}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          📍 {t('relocate.notYours')}{' '}
+          {nivelReubicar && t('cap.needLevel', {
+            level: t(`game.level.${nivelReubicar.level}`),
+            n: nivelReubicar.gotes.toLocaleString(lang),
+          })}
+        </Typography>
       )}
       {puedeFoto && (
         <Box>
@@ -751,13 +772,6 @@ export function FontDetailPage() {
               )}
             </Box>
           )}
-          {/* La galería va junto a la portada y no en una sección aparte: es la misma
-              pregunta («cómo es esta fuente») y así se encuentra sin buscarla. El botón
-              se enseña siempre, también sin foto de portada — una fuente puede no tener
-              retrato y sí un informe del agua, que es de donde nació todo esto. */}
-          <Box sx={{ mt: font.image ? 0.5 : 0 }}>
-            <FontGallery fontID={font.id} />
-          </Box>
           <LocationActions font={font} />
           {avg != null && (
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><StarRating value={avg} size={20} /> <Typography>{avg.toFixed(1)} ({rated.length})</Typography></Stack>

@@ -16,13 +16,14 @@ import CollectionsIcon from '@mui/icons-material/CollectionsOutlined'
 import DescriptionIcon from '@mui/icons-material/DescriptionOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { Link as RouterLink } from 'react-router-dom'
-import { addFontPhoto, assetUrl, deleteFontPhoto, describeError, getFontPhotos, uploadImage } from '../api/client'
+import { addFontPhoto, ApiError, assetUrl, deleteFontPhoto, describeError, getFontPhotos, uploadImage } from '../api/client'
 import type { FontPhoto, PhotoKind } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { Skeleton } from './Skeleton'
 import { ZoomableImage } from './ZoomableImage'
 import { compressImage } from '../lib/image'
+import { capabilityLevels } from '../lib/capabilities'
 
 /**
  * «Otras fotos»: la galería de una fuente, detrás de un botón y en otra pantalla.
@@ -46,7 +47,7 @@ import { compressImage } from '../lib/image'
  * Los documentos llevan aviso: los aporta quien los tiene, no los certifica la app.
  */
 export function FontGallery({ fontID }: { fontID: string }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [fotos, setFotos] = useState<FontPhoto[] | null>(null)
@@ -54,6 +55,25 @@ export function FontGallery({ fontID }: { fontID: string }) {
   const [subiendo, setSubiendo] = useState(false)
   const [kind, setKind] = useState<PhotoKind>('fountain')
   const [caption, setCaption] = useState('')
+  // A partir de qué nivel se pueden subir fotos de la fuente. Viene del servidor: el
+  // aviso decía «nivel 3» escrito a mano y ese número no puede vivir en dos sitios.
+  const [nivelFotos, setNivelFotos] = useState<{ level: string; gotes: number } | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    capabilityLevels().then((cs) => {
+      const c = cs.find((x) => x.key === 'addSecondaryPhoto')
+      if (c) setNivelFotos({ level: c.level, gotes: c.gotes })
+    })
+  }, [open])
+
+  /** «Necesitas el nivel Arroyo (350 gotas)». Sin los datos, el aviso genérico. */
+  const avisoNivel = nivelFotos
+    ? t('cap.needLevel', {
+        level: t(`game.level.${nivelFotos.level}`),
+        n: nivelFotos.gotes.toLocaleString(lang),
+      })
+    : t('cap.needLevelUnknown')
 
   useEffect(() => {
     if (!open || fotos) return
@@ -69,7 +89,9 @@ export function FontGallery({ fontID }: { fontID: string }) {
       setFotos((f) => [nueva, ...(f ?? [])])
       setCaption('')
     } catch (e) {
-      setError(describeError(e, t))
+      // Un 403 aquí solo puede ser el nivel, y el servidor no sabe en qué idioma
+      // contestarte: se sustituye por el aviso que sí nombra el nivel que falta.
+      setError(e instanceof ApiError && e.status === 403 ? avisoNivel : describeError(e, t))
     } finally {
       setSubiendo(false)
     }
@@ -90,7 +112,7 @@ export function FontGallery({ fontID }: { fontID: string }) {
 
   return (
     <>
-      <Button size="small" startIcon={<CollectionsIcon />} onClick={() => setOpen(true)} sx={{ textTransform: 'none' }}>
+      <Button variant="outlined" startIcon={<CollectionsIcon />} onClick={() => setOpen(true)}>
         {t('gallery.open')}
       </Button>
 
@@ -158,7 +180,7 @@ export function FontGallery({ fontID }: { fontID: string }) {
                   intentarlo, no después de un 403. */}
               {kind !== 'document' && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                  {t('gallery.needsLevel')}{' '}
+                  {avisoNivel} {t('gallery.documentsFree')}{' '}
                   <Link component={RouterLink} to="/gamification">{t('gameHelp.readMore')}</Link>
                 </Typography>
               )}

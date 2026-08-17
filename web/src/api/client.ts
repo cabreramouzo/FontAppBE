@@ -372,7 +372,7 @@ export interface GamificationScale {
   /** Las familias de insignias con sus umbrales (uno solo si son de grado único). */
   families: { key: string; thresholds: number[]; unique: boolean }[]
   /** Qué abre cada nivel. Se publica aunque el sistema esté apagado. */
-  capabilities: { key: string; level: string; gotes: number }[]
+  capabilities: { key: string; level: string; gotes: number; enabled?: boolean }[]
   /** `false` mientras las capacidades no concedan nada todavía. */
   capabilitiesEnabled: boolean
   /** Días distintos con aportación que hacen falta además de las gotas. */
