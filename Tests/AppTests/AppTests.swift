@@ -353,4 +353,20 @@ final class AppTests: XCTestCase {
         let d = haversineKm(40.4168, -3.7038, 41.3874, 2.1686)
         XCTAssertEqual(d, 505, accuracy: 15)
     }
+
+    /// Una dirección de correo **no** es una mención.
+    ///
+    /// Es el caso que hay que clavar: sin la comprobación de lo que va antes de la `@`,
+    /// escribir «escriu a hola@fontapp.net» manda un correo a un usuario «fontapp», y con
+    /// mala suerte a una persona real cuyo nombre coincida con un dominio.
+    func testMentionsIgnoreEmailAddresses() throws {
+        XCTAssertEqual(Mentions.names(in: "avisa @macma i @nuria_f"), ["macma", "nuria_f"])
+        XCTAssertEqual(Mentions.names(in: "escriu a hola@fontapp.net si cal"), [])
+        XCTAssertEqual(Mentions.names(in: "correu: admin@nuria.cat"), [])
+        // Sin repetir aunque se nombre dos veces y con distinta caja: un solo correo.
+        XCTAssertEqual(Mentions.names(in: "@Macma ei @macma"), ["Macma"])
+        // Y con tope, para que un mensaje no sea un envío masivo.
+        let muchos = (1...10).map { "@usuari\($0)" }.joined(separator: " ")
+        XCTAssertEqual(Mentions.names(in: muchos).count, Mentions.maxPerMessage)
+    }
 }

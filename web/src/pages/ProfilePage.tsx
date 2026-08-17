@@ -56,7 +56,7 @@ export function ProfilePage() {
     capabilitiesEnabled().then(setCapsOn)
   }, [user, loading, navigate])
 
-  async function savePrivacy(patch: { emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean }) {
+  async function savePrivacy(patch: { emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean; mentionEmails?: boolean }) {
     if (!user) return
     setSavingPrivacy(true)
     try {
@@ -68,6 +68,7 @@ export function ProfilePage() {
         namePublic: user.namePublic ?? true,
         weeklyDigest: user.weeklyDigest ?? true,
         gamificationOptOut: user.gamificationOptOut ?? false,
+        mentionEmails: user.mentionEmails ?? true,
         ...patch,
       })
       await refresh() // refresca el usuario para reflejar el nuevo estado
@@ -156,6 +157,18 @@ export function ProfilePage() {
         />
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
           {t('notif.weeklyHint')}
+        </Typography>
+        {/* Nace encendido: una mención suele ser alguien hablándote de algo tuyo, y un
+            aviso que solo llega si lo activaste antes no llega nunca. El interruptor
+            está aquí, y el propio correo lleva su enlace de baja para quien no tenga
+            la sesión abierta. */}
+        <FormControlLabel
+          sx={{ mt: 1 }}
+          control={<Switch checked={user.mentionEmails ?? true} disabled={savingPrivacy} onChange={(e) => savePrivacy({ mentionEmails: e.target.checked })} />}
+          label={t('notif.mentions')}
+        />
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          {t('notif.mentionsHint')}
         </Typography>
       </Box>
 

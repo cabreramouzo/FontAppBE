@@ -101,6 +101,9 @@ struct FontCommentController: RouteCollection {
         )
         try await comment.save(on: req.db)
 
+        // Igual que en las incidencias: después de guardar y sin esperar.
+        MentionNotifier.notify(text: body, by: user, fontID: fontID, on: req)
+
         let response = Response(status: .created)
         try response.content.encode(
             CommentResponse(comment, username: user.username, staff: user.role == .user ? nil : user.role))

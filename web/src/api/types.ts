@@ -31,6 +31,8 @@ export interface UserResponse {
   weeklyDigest?: boolean | null
   /** Si ha apagado la gamificación (solo en respuestas propias). */
   gamificationOptOut?: boolean | null
+  /** Avisos por correo al ser mencionado (solo en respuestas propias). */
+  mentionEmails?: boolean | null
   anonymized?: boolean
   createdAt?: string | null
 }

@@ -79,6 +79,10 @@ struct FontReportController: RouteCollection {
         let report = FontReport(fontID: fontID, userID: try user.requireID(), message: dto.message)
         try await report.save(on: req.db)
 
+        // Después de guardar y sin esperar: un aviso que no sale no puede costarle la
+        // incidencia a quien la escribe.
+        MentionNotifier.notify(text: dto.message, by: user, fontID: fontID, on: req)
+
         let response = Response(status: .created)
         try response.content.encode(
             ReportResponse(report, username: user.username, staff: user.role == .user ? nil : user.role))

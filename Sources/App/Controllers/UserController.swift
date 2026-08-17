@@ -217,7 +217,11 @@ struct UserController: RouteCollection {
         guard let user = try await User.find(userID, on: req.db) else {
             throw Abort(.badRequest, reason: "Enlace de baja no válido")
         }
-        user.weeklyDigest = false
+        if dto.kind == "mentions" {
+            user.mentionEmails = false
+        } else {
+            user.weeklyDigest = false
+        }
         try await user.save(on: req.db)
         return .ok
     }
@@ -272,6 +276,7 @@ struct UserController: RouteCollection {
         if let namePublic = dto.namePublic { user.namePublic = namePublic }
         if let weeklyDigest = dto.weeklyDigest { user.weeklyDigest = weeklyDigest }
         if let optOut = dto.gamificationOptOut { user.gamificationOptOut = optOut }
+        if let avisos = dto.mentionEmails { user.mentionEmails = avisos }
         if let password = dto.password {
             user.passwordHash = try req.password.hash(password)
         }
@@ -421,6 +426,12 @@ extension CreateUserDTO: Validatable {
 struct UnsubscribeDTO: Content {
     let user: String
     let token: String
+    /// Qué se apaga: `mentions`, o el resumen semanal si no viene.
+    ///
+    /// Opcional y con el resumen por defecto **a posta**: los enlaces de baja ya enviados
+    /// no lo llevan y viven para siempre en el buzón de quien los recibió. Un parámetro
+    /// obligatorio los habría roto todos de golpe.
+    var kind: String? = nil
 }
 
 struct UpdateUserDTO: Content {
@@ -434,6 +445,7 @@ struct UpdateUserDTO: Content {
     var weeklyDigest: Bool? = nil
     /// Apagar la gamificación. Opcional, igual que la anterior.
     var gamificationOptOut: Bool? = nil
+    var mentionEmails: Bool? = nil
 }
 
 extension UpdateUserDTO: Validatable {

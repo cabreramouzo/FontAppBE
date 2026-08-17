@@ -368,10 +368,26 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - `R2ImageStorage` (Soto) compila pero **sin probar** contra un bucket real (necesita credenciales `R2_*`); en local usa disco.
 - Correo (`MailSender`): en dev `LogMailSender` (solo loguea); en prod `ResendMailSender` si hay `RESEND_API_KEY` + `MAIL_FROM` (requiere dominio propio con SPF/DKIM/DMARC). Sin probar contra Resend real.
   Plantillas en `Sources/App/Mail/`: bienvenida al registrarse (`WelcomeEmail`), reset de
-  contraseña (`ResetEmail`, en AuthController) y resumen semanal (`WeeklyDigest` calcula los
-  datos, `WeeklyDigestEmail` los pinta). Todas localizadas en los 5 idiomas; los correos sin
-  petición del usuario usan `users.lang`. La baja del resumen va firmada con `APP_SECRET`
-  (`UnsubscribeToken`) para que funcione desde el buzón, sin sesión.
+  contraseña (`ResetEmail`, en AuthController), resumen semanal (`WeeklyDigest` calcula los
+  datos, `WeeklyDigestEmail` los pinta) y **aviso de mención** (`MentionEmail` +
+  `MentionNotifier`). Todas localizadas en los 5 idiomas; los correos sin
+  petición del usuario usan `users.lang`. La baja va firmada con `APP_SECRET`
+  (`UnsubscribeToken`) para que funcione desde el buzón, sin sesión; `?k=mentions`
+  distingue de qué te das de baja y **sin ese parámetro es el resumen**, porque los
+  enlaces ya enviados no lo llevan y viven para siempre en el buzón de alguien.
+- **Menciones** (`Utils/Mentions.swift`): `@nombre` en una reseña o incidencia se pinta
+  como enlace al perfil (`AuthorLine.tsx`) y avisa por correo. La regla del servidor y la
+  del cliente tienen que decir lo mismo o se subraya a quien no se avisa; las dos llevan
+  `(?<![\w@.])` para que `hola@fontapp.net` **no** sea una mención (hay test). Tope de 3
+  por mensaje —sin él es un envío masivo gratis—, nunca a ti mismo, solo a quien lo tenga
+  encendido (`users.mention_emails`, nace **a true**: un aviso que hay que activar antes
+  no llega nunca) y en **su** idioma. Se lanza después de guardar y sin esperar: perder
+  la reseña por no poder mandar un correo sería absurdo.
+- Los mensajes del equipo van **firmados**: `CommentResponse.staff` / `ReportResponse.staff`
+  llevan el rol solo si quien escribe no es `user`, y la ficha lo pinta con el violeta de
+  `StaffBadge`. Es una exposición más estrecha que hacer público `UserResponse.role` —que
+  se calla a propósito—: acompaña a un mensaje escrito en público, no responde «qué cargo
+  tiene esta persona» sobre cualquiera.
 - **Service worker y redirecciones:** un SW no puede devolver una respuesta marcada como
   redirigida (WebKit: «Response served by service worker has redirections») y la marca
   sobrevive a la Cache API. `/index.html` responde **308 hacia `/`** en Cloudflare Pages,

@@ -28,7 +28,9 @@ export function UnsubscribePage() {
       setError(t('unsub.badLink'))
       return
     }
-    unsubscribeWeekly(user, token)
+    // `k` dice de qué se da de baja; sin él, el resumen semanal, que es lo que hacían
+    // los enlaces de antes de que existieran los avisos de mención.
+    unsubscribeWeekly(user, token, params.get('k') ?? undefined)
       .then(() => setState('done'))
       .catch((e) => { setState('error'); setError(describeError(e, t)) })
   }, [params, t])
@@ -39,7 +41,9 @@ export function UnsubscribePage() {
       {state === 'working' && <Typography color="text.secondary">{t('unsub.working')}</Typography>}
       {state === 'done' && (
         <>
-          <Alert severity="success" sx={{ textAlign: 'left' }}>{t('unsub.done')}</Alert>
+          <Alert severity="success" sx={{ textAlign: 'left' }}>
+            {params.get('k') === 'mentions' ? t('unsub.doneMentions') : t('unsub.done')}
+          </Alert>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>{t('unsub.reenable')}</Typography>
         </>
       )}
