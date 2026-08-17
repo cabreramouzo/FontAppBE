@@ -2020,4 +2020,78 @@ final class IntegrationTests: XCTestCase {
             })
         }
     }
+
+    /// Una fuente **sin zona** dentro de Catalunya cuenta igual, heredando la demarcación
+    /// de la clasificada más cercana.
+    ///
+    /// Sin esto la insignia era inganable sin explicación posible: `fonts.region` la
+    /// rellena `populate-regions` contra un GeoJSON de fronteras, y lo que ese fichero no
+    /// cubre —hoy 90 fuentes catalanas, casi todas costeras o pegadas a un límite— se
+    /// queda nulo. Quien hubiera pisado las cuatro de verdad podía no ganarla nunca.
+    func testCataloniaRescuesFontsWithNoZoneFromTheirNeighbour() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "rescatada")
+            let token = try await login(app, username: "rescatada")
+
+            /// Cuelga una aportación liquidada de `fontID`, fechada `daysAgo` atrás.
+            ///
+            /// Se crea con la fuente puesta desde el principio y no buscando después «la
+            /// más reciente»: aquí las fechas no van en orden y ese atajo reasignaba
+            /// siempre el mismo evento.
+            func aporta(_ fontID: UUID, daysAgo: Int) async throws {
+                let cuando = Date().addingTimeInterval(-Double(daysAgo) * 86_400)
+                let e = ContributionEvent()
+                e.$user.id = id
+                e.$font.id = fontID
+                e.source = "comment"
+                e.subjectID = UUID()
+                e.detail = "z\(daysAgo)"
+                e.kind = ContributionScore.Kind.updateReview.rawValue
+                e.base = 10; e.multiplier = 1; e.gotes = 10
+                e.status = .settled
+                e.occurredAt = cuando
+                e.settlesAt = cuando
+                e.settledAt = cuando
+                try await e.save(on: app.db)
+            }
+
+            // La huérfana va **primero**, y a propósito: `inheritZone` corre en segundo
+            // plano al crear una fuente y le copiaría la zona de la vecina, que es justo
+            // lo que este test necesita que NO pase. Creada cuando todavía no hay ninguna
+            // clasificada a menos de 55 km, no hay de quién heredar y se queda nula sin
+            // depender de ganarle una carrera a una tarea de fondo.
+            //
+            // Coordenadas dentro de la caja catalana (40,4–43,0 · 0,0–3,4): la consulta de
+            // rescate solo mira ahí, que es lo que la mantiene barata.
+            let huerfana = try await createFont(app, token: token, name: "Huérfana", lat: 41.618, long: 0.620)
+            try await aporta(huerfana, daysAgo: 1)
+
+            // Las otras tres, lejísimos entre sí y de la huérfana, para que nadie herede
+            // de nadie. Su demarcación se pone a mano y la consulta principal —que no
+            // filtra por caja— las cuenta igual.
+            for (i, region) in ["Barcelona", "Girona", "Tarragona"].enumerated() {
+                let fid = try await createFont(app, token: token, name: "Z\(i)", lat: 45.5 + Double(i), long: 2.0)
+                let f = try await Font.find(fid, on: app.db)!
+                f.country = "Spain"; f.region = region
+                try await f.save(on: app.db)
+                try await aporta(fid, daysAgo: 10 - i)
+            }
+
+            // Y la vecina de Lleida, a 2 km de la huérfana. Aquí **no se aporta**: la
+            // única aportación de esa demarcación está en la fuente sin zona, así que sin
+            // rescate no hay cuarta y la insignia no cae.
+            let vecina = try await createFont(app, token: token, name: "Vecina", lat: 41.600, long: 0.620)
+            let v = try await Font.find(vecina, on: app.db)!
+            v.country = "Spain"; v.region = "Lleida"
+            try await v.save(on: app.db)
+
+            let h = try await Font.find(huerfana, on: app.db)!
+            XCTAssertNil(h.region, "la huérfana tiene que llegar sin zona a la prueba")
+
+            try await SpecialBadges.award(on: app.db)
+            let ganada = try await BadgeAward.query(on: app.db)
+                .filter(\.$key == "catalonia").filter(\.$user.$id == id).first()
+            XCTAssertNotNil(ganada, "la fuente sin zona debe heredar la de su vecina a 2 km")
+        }
+    }
 }

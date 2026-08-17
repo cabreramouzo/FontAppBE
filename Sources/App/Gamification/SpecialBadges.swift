@@ -31,9 +31,9 @@ enum SpecialBadges {
 
     static func find(_ key: String) -> Special? { catalogue.first { $0.key == key } }
 
-    /// Los tipos de aportación que son «una reseña». Lo usan las dos insignias, y por
-    /// eso vive aquí arriba y no dentro de una: si mañana se añade un tipo de reseña,
-    /// las dos tienen que enterarse a la vez o dirán cosas distintas de lo mismo.
+    /// Los tipos de aportación que son «una reseña». Solo los usa Betatester: Catalunya
+    /// cuenta **cualquier** aportación, porque poner una fuente en el mapa de Lleida es
+    /// haber estado allí igual que reseñarla.
     static let reviewKinds = ["firstReview", "updateReview"]
 
     // MARK: - Catalunya
@@ -59,34 +59,95 @@ enum SpecialBadges {
         "Tarragona": "Tarragona",
     ]
 
-    /// Quién ha **reseñado** en las cuatro, y cuándo completó la cuarta.
+    /// Caja que envuelve Catalunya con holgura. Solo sirve para acotar la consulta de
+    /// rescate: dentro caen trozos de Aragón, Francia y Andorra, y eso da igual porque a
+    /// esos puntos no les va a salir una demarcación catalana como vecina.
+    static let catalanBox = (minLat: 40.4, maxLat: 43.0, minLon: 0.0, maxLon: 3.4)
+
+    /// Hasta dónde se acepta heredar la demarcación de la fuente clasificada más cercana.
     ///
-    /// Reseñas y no cualquier aportación (`reviewKinds`): crear una fuente en Lleida es
-    /// ponerla en el mapa, no haber estado a comprobarla, y esta insignia es de haber
-    /// recorrido el país. Abrirla a todo tipo de aportación es quitar el filtro de
-    /// `kind` de aquí abajo, pero entonces se gana desde el sofá editando fichas.
+    /// **Está medido, no elegido a ojo.** De las fuentes catalanas que hoy no tienen zona,
+    /// la clasificada más cercana está a 1,0 km de mediana y a 3,1 km en el peor caso; con
+    /// 5 km entran todas y se sigue sin cruzar media provincia. Si algún día el importador
+    /// mete fuentes en una zona virgen, quedarán fuera y no se inventará nada.
+    static let rescueKm = 5.0
+
+    /// Quién ha aportado en las cuatro, y cuándo completó la cuarta.
+    ///
+    /// **Cualquier aportación cuenta**, no solo las reseñas: poner una fuente en el mapa
+    /// de Lleida o arreglarle la ubicación es haber estado allí igual, y la insignia
+    /// premia haber recorrido el país, no una forma concreta de contarlo.
     ///
     /// El `country` va en la condición aunque los cuatro nombres parezcan inconfundibles:
     /// `region` es la primera división administrativa **de cualquier país** y el día que
     /// entren fuentes de otro sitio con una demarcación homónima, esto las contaría.
     ///
-    /// La fecha es la de la reseña que cerró el conjunto, no la de la última de todas:
+    /// La fecha es la de la aportación que cerró el conjunto, no la de la última de todas:
     /// es el momento en que se ganó, y es lo que se enseña.
+    ///
+    /// ## Por qué hay una segunda consulta de rescate
+    ///
+    /// `fonts.region` no está siempre puesta. La rellena `populate-regions` contra un
+    /// GeoJSON de fronteras, y lo que ese fichero no cubre se queda nulo: hoy son 90
+    /// fuentes dentro de Catalunya, casi todas costeras o pegadas a un límite. Una
+    /// aportación en una de ellas no contaba para ninguna demarcación, así que alguien
+    /// podía haber pisado las cuatro de verdad y no ganar nunca la insignia **sin manera
+    /// de entender por qué**.
+    ///
+    /// Se descartó afinar el polígono: contra esas mismas 90 fuentes, el borde libre de
+    /// Natural Earth falla 1,9 km de mediana y hasta 11 km, mientras que la fuente
+    /// **clasificada** más cercana está a 1,0 km de mediana y 3,1 km como mucho. O sea que
+    /// el vecino es más preciso que la frontera, no añade un fichero de datos al
+    /// repositorio y no crea una segunda verdad que pueda contradecir a `/zones` y al
+    /// ranking, que siguen leyendo la columna. Es además lo que ya hace `inheritZone` al
+    /// crear una fuente, así que no es un criterio nuevo sino el mismo, aplicado tarde.
     static func catalanCompleters(on db: any SQLDatabase) async throws -> [UUID: Date] {
         struct Fila: Decodable { let user_id: UUID; let region: String; let at: Date }
         let nombres = Array(catalanRegions.keys)
-        // Una fila por (persona, demarcación) con la primera vez que reseñó allí. Son
+
+        // Una fila por (persona, demarcación) con la primera vez que aportó allí. Son
         // pocas por definición —como mucho seis por persona— así que el conjunto se cierra
         // en Swift, donde además se puede unificar Girona/Gerona sin un CASE en el SQL.
-        let filas = try await db.raw("""
+        var filas = try await db.raw("""
             SELECT e.user_id, f.region, MIN(e.occurred_at) AS at
             FROM contribution_events e
             JOIN fonts f ON f.id = e.font_id
             WHERE e.status = 'settled'
-              AND e.kind = ANY(\(bind: reviewKinds))
               AND f.country = 'Spain'
               AND f.region = ANY(\(bind: nombres))
             GROUP BY e.user_id, f.region
+            """).all(decoding: Fila.self)
+
+        // Rescate. Va aparte y no como un `LEFT JOIN LATERAL` sobre la consulta de arriba
+        // porque así el coste está acotado a ojo: sin zona **y** dentro de la caja son un
+        // puñado de fuentes, y el vecino solo se busca para ésas. En la consulta única, el
+        // planificador podía acabar resolviendo el lateral por cada aportación del sistema.
+        filas += try await db.raw("""
+            SELECT e.user_id, near.region, MIN(e.occurred_at) AS at
+            FROM contribution_events e
+            JOIN fonts f ON f.id = e.font_id
+            CROSS JOIN LATERAL (
+              SELECT g.region
+              FROM fonts g
+              WHERE g.country = 'Spain' AND g.region = ANY(\(bind: nombres))
+                -- La caja primero, que es lo que puede usar un índice; el radio exacto
+                -- después, sobre las pocas que quedan. Sin el radio, `rescueKm` sería un
+                -- comentario y no una regla: la diagonal de la caja son casi 7 km.
+                AND g.latitude BETWEEN f.latitude - 0.05 AND f.latitude + 0.05
+                AND g.longitude BETWEEN f.longitude - 0.05 AND f.longitude + 0.05
+                AND sqrt(power((g.latitude - f.latitude) * 111.0, 2)
+                       + power((g.longitude - f.longitude) * 111.0 * cos(radians(f.latitude)), 2))
+                    <= \(bind: rescueKm)
+              ORDER BY (g.latitude - f.latitude) * (g.latitude - f.latitude)
+                     + (g.longitude - f.longitude) * (g.longitude - f.longitude)
+                       * cos(radians(f.latitude)) * cos(radians(f.latitude))
+              LIMIT 1
+            ) near
+            WHERE e.status = 'settled'
+              AND f.region IS NULL
+              AND f.latitude BETWEEN \(bind: catalanBox.minLat) AND \(bind: catalanBox.maxLat)
+              AND f.longitude BETWEEN \(bind: catalanBox.minLon) AND \(bind: catalanBox.maxLon)
+            GROUP BY e.user_id, near.region
             """).all(decoding: Fila.self)
 
         var porPersona: [UUID: [String: Date]] = [:]

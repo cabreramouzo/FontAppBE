@@ -178,9 +178,23 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     índice único `(user_id, key)`, no una comprobación en Swift: dos instancias pueden
     barrer a la vez. Se reparten al **final** de `ContributionLedger.sync()`, cuando la
     liquidación de esa pasada ya está hecha.
-    Las dos primeras: `catalonia` (aportar en las cuatro demarcaciones) y `betatester`
-    (cupo 100). Ojo con `catalanRegions`: acepta **las dos grafías** porque producción
-    dice «Girona/Lleida» y una base repoblada con Natural Earth dice «Gerona/Lérida».
+    Las dos primeras: `catalonia` (**cualquier** aportación en las cuatro demarcaciones,
+    no solo reseñas) y `betatester` (15 reseñas, cupo 100). Ojo con `catalanRegions`:
+    acepta **las dos grafías** porque producción dice «Girona/Lleida» y una base
+    repoblada con Natural Earth dice «Gerona/Lérida».
+    Catalunya lleva además una **consulta de rescate**: `fonts.region` no está siempre
+    puesta —lo que el GeoJSON de fronteras no cubre se queda nulo, hoy 90 fuentes
+    catalanas costeras o pegadas a un límite— y una aportación ahí no contaba para
+    ninguna demarcación, así que se podía haber pisado las cuatro y no ganarla nunca sin
+    forma de entender por qué. Se hereda de la fuente **clasificada** más cercana, hasta
+    `rescueKm` = 5 km. Se descartó afinar el polígono con datos medidos: contra esas
+    mismas 90 fuentes el borde de Natural Earth falla 1,9 km de mediana y hasta 11 km,
+    y el vecino clasificado está a 1,0 km de mediana y 3,1 km como mucho — o sea que el
+    vecino es **más preciso** que la frontera, no mete un fichero de datos en el repo y
+    no crea una segunda verdad que contradiga a `/zones` y al ranking, que siguen leyendo
+    la columna. Es el mismo criterio de `inheritZone`, aplicado tarde. Va en una consulta
+    **aparte** y no en un `LEFT JOIN LATERAL` sobre la principal: así el coste está
+    acotado a las fuentes sin zona dentro de la caja catalana.
     Viajan en la misma lista que las demás con `tier: "special"`, así que el perfil
     público y la celebración las cogen sin saber que existen. `/gamification/scale`
     publica el catálogo pero **no las plazas libres**: esa ruta no toca la BD a propósito.
