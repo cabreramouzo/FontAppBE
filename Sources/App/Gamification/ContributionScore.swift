@@ -552,7 +552,7 @@ enum ContributionScore {
     }
 
     static let badgeFamilies: [BadgeFamily] = [
-        .init(key: "discoverer", name: "Descubridor", thresholds: [1, 50, 200], unique: false) { $0.fontsCreated },
+        .init(key: "discoverer", name: "Descubridor", thresholds: [10, 50, 200], unique: false) { $0.fontsCreated },
         .init(key: "firstLight", name: "Primera luz", thresholds: [5, 25, 100], unique: false) { $0.firstPhotos },
         .init(key: "sentinel", name: "Centinela", thresholds: [15, 60, 250], unique: false) { $0.sentinelUpdates },
         .init(key: "cartographer", name: "Cartógrafo", thresholds: [10, 40, 150], unique: false) { $0.mapFixes },
