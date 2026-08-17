@@ -11,7 +11,7 @@ import { useAuth } from '../auth/AuthContext'
 import { BadgeArt } from './BadgeArt'
 import { BadgeIcon } from './BadgeIcon'
 import { Confetti } from './Confetti'
-import { buscarNovedades } from '../lib/badgeCelebration'
+import { buscarNovedades, buscarNovedadesTrasAportar } from '../lib/badgeCelebration'
 import type { Novedad } from '../lib/badgeCelebration'
 import { BADGE_ART } from '../lib/levelBadges'
 import { TIER_COLOR } from '../lib/tierColors'
@@ -45,10 +45,24 @@ export function BadgeCelebration() {
   useEffect(() => {
     if (!userID) return
     let vivo = true
+
+    // Al arrancar: por si la ganaste en otro sitio o en otra sesión.
     const id = window.setTimeout(() => {
-      buscarNovedades(userID).then((n) => { if (vivo && n) setNovedad(n) }).catch(() => {})
+      buscarNovedades().then((n) => { if (vivo && n) setNovedad(n) }).catch(() => {})
     }, ESPERA)
-    return () => { vivo = false; window.clearTimeout(id) }
+
+    // Y justo después de aportar, que es para lo que sirve esto: la felicitación llega
+    // mientras todavía tienes la fuente delante.
+    function alAportar() {
+      buscarNovedadesTrasAportar().then((n) => { if (vivo && n) setNovedad(n) }).catch(() => {})
+    }
+    window.addEventListener('fontapp:contributed', alAportar)
+
+    return () => {
+      vivo = false
+      window.clearTimeout(id)
+      window.removeEventListener('fontapp:contributed', alAportar)
+    }
   }, [userID])
 
   if (!novedad) return null
@@ -128,7 +142,14 @@ export function BadgeCelebration() {
           </Typography>
         )}
 
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 3, flexWrap: 'wrap' }}>
+        {/* La única letra pequeña, y hace falta: la felicitación va por delante de las
+            72 h de liquidación, así que durante tres días la vitrina todavía la enseña
+            como pendiente. Decirlo aquí cuesta una línea; no decirlo parece un fallo. */}
+        <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 2 }}>
+          {t('celebrate.pending')}
+        </Typography>
+
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 2, flexWrap: 'wrap' }}>
           <Button variant="contained" disableElevation onClick={() => setNovedad(null)}>
             {t('celebrate.nice')}
           </Button>

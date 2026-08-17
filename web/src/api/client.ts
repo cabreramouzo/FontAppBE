@@ -108,10 +108,12 @@ export interface NewFont {
 }
 
 export async function createFont(data: NewFont, queuedOffline = false): Promise<Font> {
-  return apiFetch<Font>('/fonts', {
+  const f = await apiFetch<Font>('/fonts', {
     method: 'POST', body: JSON.stringify(data),
     headers: queuedOffline ? { 'X-FontApp-Queued-Offline': '1' } : undefined,
   })
+  avisaDeAportacion()
+  return f
 }
 
 export async function updateFont(id: string, data: NewFont): Promise<Font> {
@@ -140,11 +142,28 @@ export interface NewComment {
 }
 
 export async function createComment(fontID: string, data: NewComment, queuedOffline = false): Promise<CommentResponse> {
-  return apiFetch<CommentResponse>(`/fonts/${fontID}/comments`, {
+  const c = await apiFetch<CommentResponse>(`/fonts/${fontID}/comments`, {
     method: 'POST',
     body: JSON.stringify(data),
     headers: queuedOffline ? { 'X-FontApp-Queued-Offline': '1' } : undefined,
   })
+  avisaDeAportacion()
+  return c
+}
+
+/**
+ * Acabas de aportar algo. Lo escucha la felicitación de insignias.
+ *
+ * El aviso se dispara aquí y no en cada formulario porque los sitios desde los que se
+ * crea una fuente o una reseña son varios —la ficha, el mapa, la bandeja de salida al
+ * recuperar la cobertura— y uno de ellos se habría quedado fuera.
+ */
+function avisaDeAportacion() {
+  try {
+    window.dispatchEvent(new CustomEvent('fontapp:contributed'))
+  } catch {
+    // en un contexto sin `window` (tests, worker) no hay a quién avisar
+  }
 }
 
 export async function updateComment(fontID: string, commentID: string, data: NewComment): Promise<CommentResponse> {
@@ -311,6 +330,17 @@ export interface GamificationScale {
 
 export async function getGamificationScale(): Promise<GamificationScale> {
   return apiFetch('/gamification/scale')
+}
+
+/**
+ * Lo que ya te has ganado contando también lo pendiente de liquidar.
+ *
+ * Solo lo usa la felicitación, para poder darla en el momento. Todo lo demás —marcador,
+ * vitrina, ranking, lo que ven los demás— sigue contando solo lo liquidado.
+ */
+export async function getMyBadgesPreview(): Promise<PublicBadge[]> {
+  const r = await apiFetch<{ badges: PublicBadge[] }>('/gamification/badges/preview')
+  return r.badges
 }
 
 export async function getUserBadges(userID: string): Promise<PublicBadge[]> {

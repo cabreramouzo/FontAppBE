@@ -336,8 +336,13 @@ enum ContributionLedger {
     /// habitual, y no se puede inflar reseñando mucho la misma tarde.
     static let freshnessHorizon: TimeInterval = 180 * 86_400
 
+    /// - Parameter provisionalBadges: cuenta también lo **pendiente** para las insignias.
+    ///   Es lo que ve el propio usuario; hacia fuera (`/users/:id/badges`) sigue mandando
+    ///   solo lo liquidado. Mismo criterio que las gotas, que ya se enseñan con su parte
+    ///   «en camino» a quien las gana y sin ella a los demás.
     static func profile(for userID: UUID, on db: any Database, now: Date = Date(),
-                        unlockAllBadges: Bool = false) async throws -> Profile {
+                        unlockAllBadges: Bool = false,
+                        provisionalBadges: Bool = false) async throws -> Profile {
         let eventos = try await ContributionEvent.query(on: db)
             .filter(\.$user.$id == userID)
             .filter(\.$status != .void)
@@ -346,11 +351,15 @@ enum ContributionLedger {
         let gotes = liquidados.reduce(0) { $0 + $1.gotes }
         let pending = eventos.filter { $0.status == .pending }.reduce(0) { $0 + $1.gotes }
 
-        // Insignias y desglose, solo sobre lo cobrado: enseñar una insignia que luego se
-        // retira porque la aportación se anuló es peor que no enseñarla.
+        // Sobre qué se cuentan las insignias. Con `provisionalBadges`, lo pendiente
+        // también: es lo que permite felicitar a alguien en el momento de aportar en vez
+        // de tres días después, cuando ya no se acuerda de qué hizo. El riesgo asumido es
+        // que una aportación anulada retire una insignia ya celebrada; a cambio, el premio
+        // llega cuando significa algo. Hacia fuera no se enseña hasta que está liquidada.
+        let paraInsignias = provisionalBadges ? eventos : liquidados
         var tally = ContributionScore.BadgeTally()
         var porTipo: [String: (count: Int, gotes: Int)] = [:]
-        let fontIDs = Array(Set(liquidados.compactMap { $0.$font.id }))
+        let fontIDs = Array(Set(paraInsignias.compactMap { $0.$font.id }))
         let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: db).filter(\.$id ~~ fontIDs).all()
         let fontsByID = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f) } })
         let comments = fontIDs.isEmpty ? [] : try await FontComment.query(on: db)
@@ -361,7 +370,7 @@ enum ContributionLedger {
         // tiene que haber superado las mismas 72 h que cualquier otra aportación.
         let settledOnFonts = fontIDs.isEmpty ? [] : try await ContributionEvent.query(on: db)
             .filter(\.$font.$id ~~ fontIDs)
-            .filter(\.$status == .settled)
+            .filter(provisionalBadges ? \.$status != .void : \.$status == .settled)
             .all()
         let settledCommentIDs = Set(settledOnFonts
             .filter { $0.source == ContributionScore.Source.comment.rawValue }
@@ -370,7 +379,7 @@ enum ContributionLedger {
         // Reseñas creadas sin cobertura. Se buscan por `subject_id` —la fila de origen del
         // evento— y no por fuente: una misma fuente puede tener una reseña dejada en el
         // monte y otra escrita en casa, y solo la primera cuenta.
-        let commentIDs = Array(Set(liquidados
+        let commentIDs = Array(Set(paraInsignias
             .filter { $0.source == ContributionScore.Source.comment.rawValue }
             .map { $0.subjectID }))
         let offlineComments: Set<UUID> = commentIDs.isEmpty ? [] : Set(
@@ -380,9 +389,13 @@ enum ContributionLedger {
                 .all(\.$id)
                 .compactMap { $0 })
 
-        for e in liquidados {
-            let previo = porTipo[e.kind] ?? (0, 0)
-            porTipo[e.kind] = (previo.count + 1, previo.gotes + e.gotes)
+        for e in paraInsignias {
+            // El desglose de gotas por tipo se queda en lo cobrado aunque las insignias
+            // vayan por delante: son las cifras del marcador y tienen que cuadrar.
+            if e.status == .settled {
+                let previo = porTipo[e.kind] ?? (0, 0)
+                porTipo[e.kind] = (previo.count + 1, previo.gotes + e.gotes)
+            }
             if let r = e.$font.id.flatMap({ fontsByID[$0]?.region }) { tally.regions.insert(r) }
             if let country = e.$font.id.flatMap({ fontsByID[$0]?.country }) { tally.countries.insert(country) }
             guard let kind = ContributionScore.Kind(rawValue: e.kind) else { continue }
@@ -423,27 +436,27 @@ enum ContributionLedger {
         // una reseña del 20 de marzo liquidada el 23 sigue siendo de primavera, y en los
         // cambios de estación las dos fechas caen a lados distintos.
         tally.fourSeasonFonts = ContributionScore.fourSeasonFonts(
-            from: liquidados.compactMap { e in
+            from: paraInsignias.compactMap { e in
                 guard let kind = ContributionScore.Kind(rawValue: e.kind),
                       kind == .firstReview || kind == .updateReview,
                       let fid = e.$font.id else { return nil }
                 return (fontID: fid, at: e.occurredAt)
             })
-        let settledReviews = liquidados.compactMap { e -> (fontID: UUID, at: Date)? in
+        let settledReviews = paraInsignias.compactMap { e -> (fontID: UUID, at: Date)? in
             guard let kind = ContributionScore.Kind(rawValue: e.kind),
                   kind == .firstReview || kind == .updateReview,
                   let fontID = e.$font.id else { return nil }
             return (fontID, e.occurredAt)
         }
         tally.routeDays = ContributionScore.routeDays(from: settledReviews)
-        tally.activeDays = Set(liquidados.map { ContributionScore.utcDay($0.occurredAt) }).count
-        tally.reunions = liquidados.count {
+        tally.activeDays = Set(paraInsignias.map { ContributionScore.utcDay($0.occurredAt) }).count
+        tally.reunions = paraInsignias.count {
             $0.kind == ContributionScore.Kind.updateReview.rawValue && $0.base >= 70
         }
 
         // Aportar pronto a una fuente de otra persona: una fuente cuenta una vez aunque
         // se complete foto, descripción y estado en la misma visita.
-        tally.teamworkFountains = Set(liquidados.compactMap { e -> UUID? in
+        tally.teamworkFountains = Set(paraInsignias.compactMap { e -> UUID? in
             guard e.kind != ContributionScore.Kind.fontCreated.rawValue,
                   let fontID = e.$font.id, let font = fontsByID[fontID],
                   let creator = font.$creator.id, creator != userID,
@@ -457,7 +470,7 @@ enum ContributionLedger {
         // Una ficha rescatada tiene imagen y los tres campos informativos. Se comparte
         // el mérito entre quienes aportaron una primera foto o uno de los campos que
         // faltaban, pero una persona solo puede contar cada fuente una vez.
-        tally.rescuedFountains = Set(liquidados.compactMap { e -> UUID? in
+        tally.rescuedFountains = Set(paraInsignias.compactMap { e -> UUID? in
             guard e.kind == ContributionScore.Kind.firstPhoto.rawValue
                     || e.kind == ContributionScore.Kind.fieldCompleted.rawValue,
                   let fontID = e.$font.id, let f = fontsByID[fontID],
@@ -468,7 +481,7 @@ enum ContributionLedger {
         }).count
 
         let settledComments = comments.filter { c in c.id.map(settledCommentIDs.contains) ?? false }
-        let ownSettledCommentIDs = Set(liquidados
+        let ownSettledCommentIDs = Set(paraInsignias
             .filter { $0.source == ContributionScore.Source.comment.rawValue }
             .map(\.subjectID))
 
@@ -487,7 +500,7 @@ enum ContributionLedger {
 
         // El mérito de resolver una incidencia vuelve a quien la comunicó. Se considera
         // resuelta cuando después consta una reseña `flowing` ya liquidada.
-        tally.resolvedIncidents = liquidados.filter {
+        tally.resolvedIncidents = paraInsignias.filter {
             $0.kind == ContributionScore.Kind.report.rawValue
         }.count { report in
             guard let fontID = report.$font.id else { return false }

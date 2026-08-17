@@ -27,6 +27,11 @@ struct GamificationController: RouteCollection {
         let g = routes.grouped("gamification").grouped(UserToken.authenticator(), User.guardMiddleware())
         g.get("me", use: me)
 
+        // Solo para la felicitación. Va aparte de `me` porque cuenta lo pendiente y `me`
+        // no debe: el marcador, la vitrina y todo lo demás siguen con las 72 h.
+        g.grouped(RateLimitMiddleware(scope: "badge-preview", max: 240, window: 60 * 60))
+            .get("badges", "preview", use: badgesPreview)
+
         // El baremo es público y no depende de quién pregunte: sin autenticar, para que
         // la pantalla de ayuda la pueda leer también quien todavía no tiene cuenta —
         // que es justo a quien hay que convencer de que el sistema es entendible.
@@ -165,6 +170,29 @@ struct GamificationController: RouteCollection {
 
     struct PublicBadges: Content, Sendable {
         let badges: [PublicBadge]
+    }
+
+    /// GET /gamification/badges/preview — lo que **ya** te has ganado, sin esperar.
+    ///
+    /// Cuenta las aportaciones pendientes además de las liquidadas, y existe para una sola
+    /// cosa: poder decir «acabas de ganar Pionero» en el momento de ganarla. Una
+    /// felicitación que llega tres días después, cuando ya no te acuerdas de qué hiciste,
+    /// no anima a nadie a seguir.
+    ///
+    /// **No cambia nada más.** El marcador, la vitrina, el ranking y lo que ven los demás
+    /// siguen contando solo lo liquidado: las 72 h existen para poder anular una
+    /// aportación, y eso no se toca. Lo único que se adelanta es el aviso.
+    ///
+    /// Sin caché, a diferencia de la ruta pública: se pide justo después de aportar y una
+    /// respuesta de hace cinco minutos no tendría dentro lo que se acaba de hacer.
+    @Sendable func badgesPreview(req: Request) async throws -> PublicBadges {
+        let user = try req.auth.require(User.self)
+        guard !user.gamificationOptOut else { return PublicBadges(badges: []) }
+        let perfil = try await ContributionLedger.profile(
+            for: try user.requireID(), on: req.db,
+            unlockAllBadges: Self.unlockAllBadges(for: user),
+            provisionalBadges: true)
+        return PublicBadges(badges: perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) })
     }
 
     /// GET /users/:id/badges — insignias conseguidas por alguien. Pública.

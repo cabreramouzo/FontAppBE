@@ -1,4 +1,4 @@
-import { getUserBadges } from '../api/client'
+import { getMyBadgesPreview } from '../api/client'
 import type { PublicBadge } from '../api/client'
 
 /**
@@ -88,20 +88,22 @@ export interface Novedad {
  * Marca todas como vistas aunque solo se enseñe una, a propósito — la fiesta es por
  * haberlas ganado, no una cola pendiente de reproducir.
  */
-export async function buscarNovedades(userID: string): Promise<Novedad | null> {
+export async function buscarNovedades(forzar = false): Promise<Novedad | null> {
   if (!buenaConexion()) return null
-  // Una vez por sesión del navegador. Sin esto, cada recarga de la página pide la lista
-  // otra vez, y una insignia no aparece diez veces en diez minutos.
-  try {
-    if (sessionStorage.getItem(YA_MIRADO)) return null
-    sessionStorage.setItem(YA_MIRADO, '1')
-  } catch {
-    // Sin sessionStorage se mira igual: es una petición cacheada, no un desastre.
+  // Una vez por sesión del navegador, salvo que acabemos de aportar. Sin esto, cada
+  // recarga de la página pide la lista otra vez.
+  if (!forzar) {
+    try {
+      if (sessionStorage.getItem(YA_MIRADO)) return null
+      sessionStorage.setItem(YA_MIRADO, '1')
+    } catch {
+      // Sin sessionStorage se mira igual: es una petición barata, no un desastre.
+    }
   }
 
   let badges: PublicBadge[]
   try {
-    badges = await getUserBadges(userID)
+    badges = await getMyBadgesPreview()
   } catch {
     return null
   }
@@ -124,4 +126,24 @@ export async function buscarNovedades(userID: string): Promise<Novedad | null> {
   const orden = ['bronze', 'silver', 'gold', 'unique']
   nuevas.sort((a, b) => orden.indexOf(b.tier) - orden.indexOf(a.tier))
   return { badge: nuevas[0], otras: nuevas.length - 1 }
+}
+
+/**
+ * La comprobación de después de aportar, que es la que da sentido a todo esto.
+ *
+ * Sondea unas cuantas veces porque el evento no existe en el instante del POST: la
+ * gamificación va por detrás de la petición (middleware de modelo, unos segundos más
+ * tarde), a propósito, para que aportar no cueste ni un milisegundo más. Se pregunta a los
+ * 2, 6 y 14 segundos y se deja de insistir: si a los quince no está, es que no había
+ * insignia que dar, y una cuarta pregunta solo gasta batería.
+ *
+ * Se salta el candado de «una vez por sesión»: aquí sabemos que algo ha cambiado.
+ */
+export async function buscarNovedadesTrasAportar(): Promise<Novedad | null> {
+  for (const espera of [2000, 4000, 8000]) {
+    await new Promise((r) => setTimeout(r, espera))
+    const n = await buscarNovedades(true)
+    if (n) return n
+  }
+  return null
 }
