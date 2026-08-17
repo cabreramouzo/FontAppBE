@@ -218,16 +218,29 @@ struct GamificationController: RouteCollection {
     /// existe y su perfil se sigue viendo, lo que no hay son medallas que enseñar. Y vacía
     /// en vez de 204 porque quien llama siempre quiere pintar lo mismo —nada— y así no
     /// tiene que distinguir dos formas de decirlo.
+    /// Resuelve `:userID` **por UUID o por username**, igual que el resto de `/users/:id`.
+    ///
+    /// Sin esto la ruta solo aceptaba el UUID y devolvía 400 con un nombre: la ficha de la
+    /// fuente funcionaba (allí se tiene el UUID del creador) y el perfil público no, porque
+    /// su URL es `/users/oriol_t`. Dos rutas hermanas resolviendo el parámetro de forma
+    /// distinta es una trampa; se resuelve igual que `UserController.find`.
     @Sendable func badges(req: Request) async throws -> PublicBadges {
-        guard let userID = req.parameters.get("userID", as: UUID.self) else {
+        guard let param = req.parameters.get("userID") else {
             throw Abort(.badRequest, reason: "Identificador de usuario no válido")
         }
+        let user: User?
+        if let id = UUID(uuidString: param) {
+            user = try await User.find(id, on: req.db)
+        } else {
+            user = try await User.query(on: req.db).filter(\.$username == param).first()
+        }
+        guard let user else { throw Abort(.notFound, reason: "Usuario no encontrado") }
+        // La clave lleva el UUID resuelto y no el parámetro: si no, el mismo perfil
+        // ocuparía dos entradas y una podría quedarse vieja respecto de la otra.
+        let userID = try user.requireID()
         let clave = "badges:\(userID)"
         if let cacheada = await Self.badgeCache.get(clave, as: PublicBadges.self) { return cacheada }
 
-        guard let user = try await User.find(userID, on: req.db) else {
-            throw Abort(.notFound, reason: "Usuario no encontrado")
-        }
         // Mismas dos exclusiones que el ranking mensual y el pulso: el interruptor del
         // perfil tiene que valer en todos los sitios donde saldría el nombre, o no dice
         // la verdad. Una cuenta anonimizada tampoco luce medallas.

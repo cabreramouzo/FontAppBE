@@ -14,8 +14,13 @@ export const LEVEL_BADGES = new Set(['drop','spring', 'brook', 'torrent', 'strea
  * Los ficheros viven en `public/`, así que **no llevan hash en el nombre** y el
  * service worker los sirve con `cacheFirst`. Si se redibuja una insignia hay que
  * subir esta versión o la gente seguirá viendo la vieja para siempre.
+ *
+ * v2: once familias entraron sin pasar por `scripts/prepara-insignias.py` y pesaban
+ * entre 700 KB y 2,5 MB cada una a 585-640 px. Reprocesadas a 320 px: la carpeta pasa
+ * de 13 MB a 3,2 MB. Se notaba — en un perfil con siete insignias, dos tardaban en
+ * aparecer.
  */
-const VERSION = 1
+const VERSION = 2
 
 export function levelBadgeURL(levelKey: string): string | null {
   if (!LEVEL_BADGES.has(levelKey)) return null

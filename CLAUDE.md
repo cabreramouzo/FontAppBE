@@ -90,7 +90,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     mensual por comarca, y lo es a posta. Sin insignias todavía: salen de recuentos por
     familia que hoy solo se saben usuario a usuario.
   - **Perfil público** (`/users/:id`): el nivel y las insignias **conseguidas**, con el
-    visor a pantalla completa. `GET /users/:id/badges` devuelve ahora también `level`
+    visor a pantalla completa. La ruta resuelve **por username además de por UUID**, como
+    el resto de `/users/:id`: solo aceptaba el UUID y `/users/oriol_t` daba 400 — la ficha
+    de la fuente funcionaba porque allí se tiene el UUID del creador. Hay test.
+    `GET /users/:id/badges` devuelve ahora también `level`
     (`null` si lo tiene apagado o si aún no ha aportado). Solo lo ganado: sin la escalera,
     sin las bloqueadas, sin progresos y **sin gotas** — «Río» dice cuánto ha aportado
     alguien sin convertir su perfil en un contador, y lo que le falta por ganar es asunto

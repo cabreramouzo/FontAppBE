@@ -488,6 +488,27 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Las insignias públicas se piden **por nombre igual que por UUID**.
+    ///
+    /// La ficha de la fuente tiene el UUID del creador y funcionaba; el perfil público
+    /// vive en `/users/oriol_t` y devolvía 400. Dos rutas hermanas bajo `/users/:id`
+    /// resolviendo el parámetro de forma distinta es una trampa que solo se ve al usarla.
+    func testPublicBadgesAcceptAUsername() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "porelnombre")
+            for ruta in ["users/porelnombre/badges", "users/\(id)/badges"] {
+                try await app.test(.GET, ruta) { res in
+                    XCTAssertEqual(res.status, .ok, "\(ruta) debería resolver")
+                    let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                    XCTAssertNotNil(json?["badges"])
+                    // Sin aportar nada no hay nivel que anunciar, pero la clave viaja.
+                    XCTAssertTrue(json?.keys.contains("level") == true,
+                                  "`level` omitido: en el cliente eso es `undefined`, no `null`")
+                }
+            }
+        }
+    }
+
     /// Qué campos publica una fuente. Fija el contrato en las dos direcciones.
     ///
     /// Hacia fuera: `queued_offline` es un dato interno de gamificación —lo afirma el

@@ -49,7 +49,9 @@ CLAVES = ["drop", "spring", "brook", "torrent", "stream",
 # lleva el aro de color que les pone `BadgeArt`. La alternativa —tres ficheros por
 # familia— son 24 imágenes que hay que redibujar cada vez que se toque el estilo.
 FAMILIAS = ["pioneer", "discoverer", "firstLight", "sentinel", "cartographer", "drySeason",
-            "incidents", "farAway", "offline"]
+            "incidents", "farAway", "offline", "fourSeasons", "counties",
+            "guardianLocal", "waterRecovered", "routes", "verifier", "fountainRescued",
+            "international", "consistency", "reunion", "teamwork", "incidentResolved"]
 
 # Para poder pasar los ficheros tal como los escupe el generador.
 ALIAS = {
@@ -82,6 +84,12 @@ def clave_de(ruta: Path) -> str | None:
         tallo = tallo.replace(prefijo, "")
     if tallo in CLAVES or tallo in FAMILIAS:
         return tallo
+    # Las claves en camelCase (`guardianLocal`, `waterRecovered`) no sobreviven al
+    # `.lower()` de arriba. Se comparan de nuevo sin distinguir mayúsculas, o reprocesar
+    # una insignia ya guardada —que es como se llama el fichero— falla sin motivo.
+    for clave in CLAVES + FAMILIAS:
+        if clave.lower() == tallo:
+            return clave
     return ALIAS.get(tallo)
 
 
