@@ -21,6 +21,9 @@ export function WelcomeDialog() {
     { emoji: '💧', key: 'welcome.b2' },
     { emoji: '➕', key: 'welcome.b3' },
     { emoji: '⭐', key: 'welcome.b4' },
+    // El juego va el último de los cinco a propósito: primero para qué sirve la app y
+    // solo después qué se gana por usarla. Al revés parecería que esto va de puntos.
+    { emoji: '💧', key: 'welcome.b5' },
   ]
 
   return (

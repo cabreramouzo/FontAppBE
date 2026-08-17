@@ -44,6 +44,7 @@ import {
   deleteReport,
   describeError,
   getFavoriteStatus,
+  getFontPhotoAuthor,
   getUser,
   getUserBadges,
   setFavorite,
@@ -588,23 +589,24 @@ export function FontDetailPage() {
   // nada que la primera no dijera ya.
   const showPioneer = !!pioneerUsername && pioneerUsername !== creatorName
 
-  // Quién puso la foto. Dos caminos, y el segundo se nos había olvidado:
+  // Quién puso la foto: lo dice el servidor, que es el único que puede.
   //
-  // 1. Una reseña con foto — la más antigua de las que la traen.
-  // 2. **El formulario de crear la fuente.** La foto va en la propia creación, así que no
-  //    hay reseña ni edición que lo cuente: la columna nace con la imagen puesta. Es el
-  //    caso normal de quien añade una fuente estando delante de ella, y salía como «no
-  //    consta quién la puso» teniendo al autor escrito dos líneas más arriba.
+  // Esto se intentó dos veces desde el cliente y las dos se quedó corto. Con la reseña
+  // con foto más antigua fallaba cuando la fuente nacía con foto; añadiendo al creador
+  // fallaba cuando la foto llegó por el formulario de editar, que es el caso más común
+  // en las importadas — y el historial de ediciones es de moderación, así que desde aquí
+  // no hay forma. El dato existe; solo que en una tabla que esta pantalla no lee.
   //
-  // Lo que no se ve desde aquí son las ediciones: si la foto la puso alguien después por
-  // el formulario de editar, esto se la atribuye al creador. Es el caso raro —el
-  // frecuente con diferencia es (1) o (2)— y el servidor puntúa igual, así que la ficha
-  // dice lo mismo que paga el marcador.
-  const primeraResenaConFoto = comments
-    .filter((c) => c.image)
-    .reduce<typeof comments[number] | null>(
-      (antigua, c) => (!antigua || new Date(c.createdAt) < new Date(antigua.createdAt) ? c : antigua), null)
-  const photoAuthor = primeraResenaConFoto?.username ?? (font.image ? creatorName : null)
+  // La respuesta va cacheada por el navegador y es una consulta pequeña sobre una fuente.
+  // Antes de deducirlo mal por tercera vez, mejor preguntarlo.
+  const [photoAuthor, setPhotoAuthor] = useState<string | null>(null)
+  useEffect(() => {
+    if (!id || !font?.image) { setPhotoAuthor(null); return }
+    let vivo = true
+    getFontPhotoAuthor(id).then((u) => { if (vivo) setPhotoAuthor(u) }).catch(() => {})
+    return () => { vivo = false }
+  }, [id, font?.image])
+
 
   const ultimaComprobacion = latest?.lastConfirmedAt ?? latest?.createdAt ?? null
   const frescor = freshnessOf(ultimaComprobacion)

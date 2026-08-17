@@ -116,6 +116,18 @@ export async function createFont(data: NewFont, queuedOffline = false): Promise<
   return f
 }
 
+/**
+ * Quién puso la primera foto de una fuente. Público.
+ *
+ * Lo resuelve el servidor porque la ficha no puede: si la foto llegó por el formulario de
+ * editar, el rastro está en el historial de ediciones, que es de moderación. Devuelve
+ * `null` cuando la fuente no tiene foto o cuando de verdad no consta.
+ */
+export async function getFontPhotoAuthor(id: string): Promise<string | null> {
+  const r = await apiFetch<{ username: string | null }>(`/fonts/${id}/photo-author`)
+  return r.username ?? null
+}
+
 export async function updateFont(id: string, data: NewFont): Promise<Font> {
   return apiFetch<Font>(`/fonts/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 }

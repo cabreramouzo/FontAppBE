@@ -488,6 +488,42 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Quién puso la primera foto lo resuelve el servidor, incluso cuando el cliente no
+    /// puede: la reseña con foto gana al creador, y sin rastro se responde `null`.
+    func testPhotoAuthorPrefersTheReviewThatBroughtIt() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "duenyo")
+            let tokDuenyo = try await login(app, username: "duenyo")
+            let fontID = try await createFont(app, token: tokDuenyo, name: "Sin foto", lat: 41, long: 2)
+
+            _ = try await register(app, username: "camara")
+            let tokFoto = try await login(app, username: "camara")
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tokFoto), beforeRequest: { req in
+                try req.content.encode(CreateCommentDTO(body: "Foto", rating: 5, waterStatus: "flowing",
+                                                        image: "/uploads/de-la-resena.jpg"))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+
+            // La fuente ya luce esa foto. Se pone directamente para no depender aquí de
+            // por qué ruta se promovió: lo que se comprueba es a quién se le atribuye.
+            let font = try await Font.find(fontID, on: app.db)
+            font?.image = "/uploads/de-la-resena.jpg"
+            try await font?.save(on: app.db)
+            try await app.test(.GET, "fonts/\(fontID)/photo-author") { res in
+                XCTAssertEqual(res.status, .ok)
+                let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                XCTAssertEqual(json?["username"] as? String, "camara")
+            }
+
+            // Una fuente sin foto responde `null`, con la clave presente.
+            let sinFoto = try await createFont(app, token: tokDuenyo, name: "Pelada", lat: 41.2, long: 2.2)
+            try await app.test(.GET, "fonts/\(sinFoto)/photo-author") { res in
+                let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                XCTAssertTrue(json?.keys.contains("username") == true)
+                XCTAssertTrue(json?["username"] is NSNull)
+            }
+        }
+    }
+
     /// Las insignias públicas se piden **por nombre igual que por UUID**.
     ///
     /// La ficha de la fuente tiene el UUID del creador y funcionaba; el perfil público

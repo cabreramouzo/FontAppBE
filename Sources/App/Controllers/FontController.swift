@@ -18,6 +18,7 @@ struct FontController: RouteCollection {
         fonts.get("near", "download", use: nearDownload)
         fonts.get("in-bounds", use: inBounds)
         fonts.get(":fontID", use: show)
+        fonts.get(":fontID", "photo-author", use: photoAuthor)
 
         // Escritura: requiere token Bearer válido.
         let protected = fonts.grouped(UserToken.authenticator(), User.guardMiddleware())
@@ -35,6 +36,63 @@ struct FontController: RouteCollection {
             // Promover la foto de una reseña a foto principal (creador/admin).
             font.post("photo", "from-comment", ":commentID", use: setPhotoFromComment)
         }
+    }
+
+    /// Quién puso la primera foto de esta fuente. Público.
+    ///
+    /// La ficha lo intentaba deducir con lo que tenía —la reseña con foto más antigua— y
+    /// se quedaba en «no consta quién la puso» en el caso más común de las importadas: la
+    /// foto llegó por el **formulario de editar**, y las ediciones no son públicas. El
+    /// dato existe, solo que en una tabla que la ficha no puede leer; así que lo resuelve
+    /// el servidor, que sí puede, y devuelve únicamente el nombre.
+    ///
+    /// Mismo orden que usa `ContributionScore` para pagar la insignia, y a propósito: si
+    /// la ficha dijera un nombre y el marcador pagara a otro, uno de los dos mentiría.
+    /// 1. la reseña con foto más antigua, 2. la edición más antigua que puso `image`,
+    /// 3. el creador, si la fuente nació con foto y no hay ni una cosa ni la otra.
+    struct PhotoAuthor: Content {
+        /// `null` si la fuente no tiene foto, o si no hay forma de saber quién la puso
+        /// (importadas antiguas cuyo `image` no dejó rastro en ningún sitio).
+        let username: String?
+
+        func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(username, forKey: .username)
+        }
+    }
+
+    @Sendable func photoAuthor(req: Request) async throws -> PhotoAuthor {
+        guard let fontID = req.parameters.get("fontID", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Identificador de fuente no válido")
+        }
+        guard let font = try await Font.query(on: req.db).filter(\.$id == fontID).first() else {
+            throw Abort(.notFound, reason: "Fuente no encontrada")
+        }
+        guard font.image != nil else { return PhotoAuthor(username: nil) }
+
+        let conFoto = try await FontComment.query(on: req.db)
+            .filter(\.$font.$id == fontID)
+            .filter(\.$image != nil)
+            .sort(\.$createdAt, .ascending)
+            .with(\.$user)
+            .first()
+        let edicion = try await FontEdit.query(on: req.db)
+            .filter(\.$font.$id == fontID)
+            .sort(\.$createdAt, .ascending)
+            .with(\.$editor)
+            .all()
+            .first { $0.before.image != $0.after.image && $0.after.image != nil }
+
+        // La más antigua de las dos gana; el creador solo si no hay ninguna.
+        let candidatas: [(Date, String?)] = [
+            conFoto.flatMap { c in c.createdAt.map { ($0, c.$user.value??.username) } },
+            edicion.flatMap { e in e.createdAt.map { ($0, e.$editor.value??.username) } },
+        ].compactMap { $0 }
+        if let primera = candidatas.min(by: { $0.0 < $1.0 }) {
+            return PhotoAuthor(username: primera.1)
+        }
+        let creador = try await font.$creator.get(on: req.db)
+        return PhotoAuthor(username: creador?.username)
     }
 
     /// POST /fonts/:fontID/photo/from-comment/:commentID
