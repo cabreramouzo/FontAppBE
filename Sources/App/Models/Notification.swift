@@ -25,6 +25,8 @@ final class Notification: Model, @unchecked Sendable {
     enum Kind: String, Codable, Sendable {
         /// Alguien te ha nombrado con `@tunombre`.
         case mention
+        /// Fuentes que cuidas y llevan mucho sin comprobar. Sin actor: no lo manda nadie.
+        case staleGuarded
     }
 
     @ID(key: .id) var id: UUID?

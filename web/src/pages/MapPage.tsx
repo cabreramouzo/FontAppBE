@@ -63,6 +63,7 @@ import { enqueue, isOffline } from '../lib/outbox'
 import { ImagePicker } from '../components/ImagePicker'
 import { NO_STATUS_COLOR, WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
 import { formatDist, haversineKm } from '../lib/geo'
+import { WorthChip } from '../components/WorthChip'
 import { searchPlaces, type Place } from '../lib/geocode'
 import { compressImage } from '../lib/image'
 import { readGpsFromImage, type GpsCoords } from '../lib/exifGps'
@@ -623,7 +624,15 @@ function NearbyPanel({
               <ListItemButton selected={f.id === selectedID} onClick={() => onFocus(f)}>
                 <ListItemText
                   primary={f.name}
-                  secondary={<>{ws && <span title={t(`status.${ws.key}`)}>{ws.emoji}</span>} {formatDist(dist)}{f.lastUpdate && ` · ${timeAgo(f.lastUpdate, t)}`}</>}
+                  secondary={
+                    <>
+                      {ws && <span title={t(`status.${ws.key}`)}>{ws.emoji}</span>} {formatDist(dist)}
+                      {f.lastUpdate && ` · ${timeAgo(f.lastUpdate, t)}`}
+                      {/* Lo que paga comprobarla, aquí y no en la ficha: el incentivo
+                          solo sirve si se ve ANTES de decidir a cuál se va. */}
+                      {' '}<WorthChip lastCheck={f.lastUpdate} />
+                    </>
+                  }
                 />
               </ListItemButton>
             </ListItem>

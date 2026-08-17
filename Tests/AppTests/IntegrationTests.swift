@@ -2034,6 +2034,95 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    // MARK: - Fuentes que cuidas
+
+    /// Cuidas una fuente si **tu reseña es la última**, y deja de ser tuya en cuanto otra
+    /// persona reseña después. No es propiedad, es relevo.
+    func testYouLookAfterAFountainUntilSomeoneElseReviewsIt() async throws {
+        try await withApp { app in
+            let a = try await register(app, username: "cuidadora")
+            let tokA = try await login(app, username: "cuidadora")
+            _ = try await register(app, username: "relevo")
+            let tokB = try await login(app, username: "relevo")
+            let fontID = try await createFont(app, token: tokA, name: "Font del relleu", lat: 41.5, long: 2.0)
+
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tokA), beforeRequest: { req in
+                try req.content.encode(["body": "mana", "waterStatus": "flowing"])
+            }, afterResponse: { _ in })
+
+            var mias = try await Guardianship.of(a, on: app.db)
+            XCTAssertEqual(mias.map(\.fontID), [fontID])
+            XCTAssertFalse(mias[0].stale, "recién reseñada no está vieja")
+
+            // Otra persona reseña después: el relevo cambia de manos.
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tokB), beforeRequest: { req in
+                try req.content.encode(["body": "sigue manando", "waterStatus": "flowing"])
+            }, afterResponse: { _ in })
+
+            mias = try await Guardianship.of(a, on: app.db)
+            XCTAssertTrue(mias.isEmpty, "ya no la cuida quien reseñó primero")
+        }
+    }
+
+    /// Una fuente escondida deja de contar como cuidada: recordarte que la revises sería
+    /// trabajo inventado, porque ya no manda a nadie a ninguna parte.
+    func testHiddenFountainsAreNotGuarded() async throws {
+        try await withApp { app in
+            let a = try await register(app, username: "cuidaesconde")
+            let tok = try await login(app, username: "cuidaesconde")
+            let fontID = try await createFont(app, token: tok, name: "Font retirada", lat: 41.5, long: 2.0)
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(["body": "mana", "waterStatus": "flowing"])
+            }, afterResponse: { _ in })
+            let antes = try await Guardianship.of(a, on: app.db)
+            XCTAssertEqual(antes.count, 1)
+
+            let f = try await Font.find(fontID, on: app.db)!
+            f.retiredAt = Date()
+            try await f.save(on: app.db)
+            let despues = try await Guardianship.of(a, on: app.db)
+            XCTAssertTrue(despues.isEmpty)
+        }
+    }
+
+    /// El recordatorio llega **una sola vez** aunque el barrido pase cada media hora, y no
+    /// llega si no hay nada olvidado.
+    ///
+    /// Sin el cerrojo de reincidencia esto sería un aviso cada treinta minutos, que es
+    /// exactamente cómo se enseña a la gente a no mirar nunca la campana.
+    func testStaleGuardedRemindsOnceAndOnlyWhenThereIsSomething() async throws {
+        try await withApp { app in
+            let a = try await register(app, username: "olvidadiza")
+            let tok = try await login(app, username: "olvidadiza")
+            let fontID = try await createFont(app, token: tok, name: "Font oblidada", lat: 41.5, long: 2.0)
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(["body": "mana", "waterStatus": "flowing"])
+            }, afterResponse: { _ in })
+
+            // Recién comprobada: no hay nada que recordar.
+            var n = try await StaleGuardedNotifier.run(on: app.db)
+            XCTAssertEqual(n, 0, "una fuente al día no genera aviso")
+
+            // La envejecemos.
+            let c = try await FontComment.query(on: app.db).filter(\.$font.$id == fontID).first()!
+            c.createdAt = Date().addingTimeInterval(-200 * 86_400)
+            try await c.save(on: app.db)
+
+            n = try await StaleGuardedNotifier.run(on: app.db)
+            XCTAssertEqual(n, 1)
+            // Y repetir el barrido no vuelve a avisar.
+            n = try await StaleGuardedNotifier.run(on: app.db)
+            XCTAssertEqual(n, 0, "el mismo aviso no se repite dentro de la ventana")
+
+            let avisos = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == a).filter(\.$kind == .staleGuarded).all()
+            XCTAssertEqual(avisos.count, 1)
+            XCTAssertEqual(avisos[0].fontName, "Font oblidada")
+            // Las cifras viajan crudas para que el idioma lo ponga el navegador.
+            XCTAssertTrue(avisos[0].excerpt.hasPrefix("1|0|"), avisos[0].excerpt)
+        }
+    }
+
     // MARK: - Fugas y promesas que ahora ve gente de verdad
 
     /// El hash de la contraseña no sale por ninguna de las rutas que devuelven usuarios.

@@ -27,6 +27,18 @@ import { timeAgo } from '../lib/time'
  * constante es exactamente el gasto que esto viene a evitar, y un aviso de mención no es
  * urgente: verlo al volver a mirar la app es suficiente. Sin sesión no pregunta nada.
  */
+/**
+ * Los avisos de fuentes olvidadas traen cifras y no una frase: «7|6|142».
+ *
+ * El servidor no sabe en qué idioma lees, y componer allí «7 fuentes que cuidas…» habría
+ * congelado el castellano dentro de la base de datos para siempre. Aquí se reparten y las
+ * pone el diccionario. Si el formato cambiara, se lee 0 y el aviso sigue siendo legible.
+ */
+function cifras(excerpt: string): [number, number, number] {
+  const [a, b, c] = excerpt.split('|').map((x) => Number(x) || 0)
+  return [a ?? 0, b ?? 0, c ?? 0]
+}
+
 export function NotificationBell() {
   const { t } = useI18n()
   const [items, setItems] = useState<NotificationItem[]>([])
@@ -92,12 +104,16 @@ export function NotificationBell() {
             }}
           >
             <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-              {t('notif.mentionedYou', { user: n.actorName, font: n.fontName })}
+              {n.kind === 'staleGuarded'
+                ? t('notif.staleGuarded', { n: String(cifras(n.excerpt)[0]) })
+                : t('notif.mentionedYou', { user: n.actorName, font: n.fontName })}
             </Typography>
             {/* El texto que lo provocó. Sin él hay que abrir la ficha para saber si
                 corre prisa, y casi nunca corre. */}
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.35 }}>
-              {n.excerpt}
+              {n.kind === 'staleGuarded'
+                ? t('notif.staleGuardedBody', { font: n.fontName, d: String(cifras(n.excerpt)[2]) })
+                : n.excerpt}
             </Typography>
             <Box component="span" sx={{ display: 'block', fontSize: 11, color: 'text.disabled', mt: 0.25 }}>
               {n.createdAt ? timeAgo(n.createdAt, t) : ''}

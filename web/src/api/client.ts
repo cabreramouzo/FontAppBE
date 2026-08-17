@@ -316,10 +316,30 @@ export async function forgotPassword(email: string, lang?: string): Promise<{ ok
 
 // Baja del resumen semanal desde el enlace del correo: no requiere sesión, el token
 // firmado que viaja en la URL es la única credencial (ver UnsubscribeToken en el backend).
+/** Una fuente que cuidas: tu reseña es la última que tiene. */
+export interface Guarded {
+  fontID: string
+  name: string
+  lastCheck: string
+  days: number
+  /** Ya ha pasado del corte de 90 días. */
+  stale: boolean
+}
+
+/**
+ * Las fuentes que cuidas, las más olvidadas primero.
+ *
+ * Aparte de `/gamification/me` porque tiene su propio coste y solo la paga quien abre esa
+ * pantalla. Y no depende de tener la gamificación encendida: cuidar no es puntuar.
+ */
+export async function guardedFonts(): Promise<Guarded[]> {
+  return apiFetch<Guarded[]>('/gamification/guarded')
+}
+
 /** Un aviso de la campana. `fontID` nulo = la fuente ya no existe. */
 export interface NotificationItem {
   id: string
-  kind: 'mention'
+  kind: 'mention' | 'staleGuarded'
   actorName: string
   fontID: string | null
   fontName: string

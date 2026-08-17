@@ -26,6 +26,7 @@ struct GamificationController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let g = routes.grouped("gamification").grouped(UserToken.authenticator(), User.guardMiddleware())
         g.get("me", use: me)
+        g.get("guarded", use: guarded)
 
         // Solo para la felicitación. Va aparte de `me` porque cuenta lo pendiente y `me`
         // no debe: el marcador, la vitrina y todo lo demás siguen con las 72 h.
@@ -328,6 +329,17 @@ struct GamificationController: RouteCollection {
         }
         await Self.badgeCache.set(clave, out)
         return out
+    }
+
+    /// GET /gamification/guarded — las fuentes cuya última reseña es tuya.
+    ///
+    /// Va por libre y no dentro de `/gamification/me` a propósito: es una consulta con su
+    /// propio coste y solo la pide quien abre esa pantalla, mientras que `/me` lo pide
+    /// cualquiera que entre en su perfil. Y **no depende de la gamificación**: quien la
+    /// apagó sigue cuidando fuentes, solo que sin puntos. Cuidar no es puntuar.
+    @Sendable func guarded(req: Request) async throws -> [Guardianship.Guarded] {
+        let user = try req.auth.require(User.self)
+        return try await Guardianship.of(try user.requireID(), on: req.db)
     }
 
     /// GET /gamification/me — marcador, nivel, insignias e impacto del usuario autenticado.

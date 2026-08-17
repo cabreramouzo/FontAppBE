@@ -31,6 +31,7 @@ import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
+import { GuardedFonts } from '../components/GuardedFonts'
 import { capabilitiesEnabled } from '../lib/capabilities'
 
 /**
@@ -252,6 +253,12 @@ export function ProfilePage() {
       <Divider sx={{ mb: 3 }} />
 
       {!user.gamificationOptOut && <GamificationCard />}
+
+      {/* Va después del marcador y antes de los interruptores: es lo accionable de esta
+          pantalla. Y **no** depende de `gamificationOptOut` — cuidar una fuente no es
+          puntuar, y quien apagó los puntos sigue queriendo saber qué se le está
+          quedando viejo. */}
+      <GuardedFonts />
 
       {/* El interruptor va DESPUÉS del marcador: decidir sobre las gotas antes de haber
           visto ninguna no significa nada. Y queda fuera de la tarjeta a propósito, para

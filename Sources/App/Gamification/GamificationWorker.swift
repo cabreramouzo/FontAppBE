@@ -99,6 +99,12 @@ final class GamificationWorker: Sendable {
         sucio.withLockedValue { $0 = false }
 
         do {
+            // El recordatorio de fuentes que cuidas y se quedan viejas. Va con el barrido
+            // porque nace del **paso del tiempo** y no de que nadie haga nada, así que
+            // necesita justo esto: algo que pase solo cada rato. Su propio cerrojo de
+            // reincidencia (30 días por persona) hace que pasar cada media hora no moleste.
+            try? await StaleGuardedNotifier.run(on: app.db)
+
             let r = try await Self.runExclusively(on: app.db)
             ultimaPasada.withLockedValue { $0 = Date() }
             if let r, r.inserted > 0 || r.settled > 0 || r.voided > 0 {

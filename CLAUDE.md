@@ -128,6 +128,27 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     atribuírsela a quien pasó por allí. Vive en el controlador de reseñas y no en el
     barrido de gamificación: ningún controlador debe depender de que la gamificación esté
     encendida para decir la verdad sobre una fuente.
+  - **Fuentes que cuidas** (`Gamification/Guardianship.swift` → `GET /gamification/guarded`
+    → `GuardedFonts.tsx` en `/me`): aquellas cuya **última reseña es tuya**, las más
+    olvidadas primero. El dato ya se calculaba para la insignia «Guardián local»; como
+    relación explícita da lo que faltaba, un motivo **recurrente** de volver — lo que
+    contaste caduca solo. Es a propósito el sustituto de una racha: una racha castiga a
+    quien le llueve dos fines de semana y empuja a reseñas de paso, y esto no castiga
+    nada. No es propiedad sino **relevo**: en cuanto otra persona reseña después, la
+    fuente pasa a ser suya, y por eso no hay gesto de adoptar ni de soltar. Las escondidas
+    no cuentan. **No** depende de `gamificationOptOut`: cuidar no es puntuar.
+    El recordatorio (`StaleGuardedNotifier`, desde el trabajador) avisa por la **campana y
+    no por correo** — un correo mensual diciendo «ve a dar una vuelta» es como te marcan
+    como spam— y como mucho **una vez cada 30 días**, controlado mirando la propia tabla
+    de avisos, sin columna nueva. El texto viaja como cifras (`"7|6|142"`) y lo compone el
+    cliente: el servidor no sabe en qué idioma lees.
+  - **Lo que paga comprobar una fuente, antes de ir** (`lib/worth.ts` + `WorthChip`, en la
+    lista de cercanas y en las paradas de las rutas). La curva de frescura es lo mejor del
+    baremo —una olvidada un año paga 70 gotas y una de ayer 5, catorce veces— y era
+    invisible **justo al decidir a cuál ir**. Mismo truco que las motos de alquiler que
+    pagan más por las lejanas: el incentivo solo funciona si se ve antes. Solo se pinta
+    cuando de verdad paga de más (>30 días o nunca), o una etiqueta en todas no señalaría
+    ninguna. Las cifras vienen de `/gamification/scale`, nunca escritas en el cliente.
   - Fase 7, sacarlo de `/me`: toda la gamificación vivía detrás del perfil y casi nadie
     entra ahí. Ahora el **pionero** (primero en reseñar) sale en la ficha de la fuente
     bajo el creador, con el escudo **solo si la insignia se ha ganado de verdad** (fuentes
