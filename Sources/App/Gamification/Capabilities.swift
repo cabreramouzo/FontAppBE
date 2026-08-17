@@ -66,6 +66,25 @@ enum Capabilities {
         /// Por qué NO se ha concedido algo, para poder decirlo en la interfaz en vez de
         /// dejar un botón desactivado sin explicación.
         let blockedBy: [String]
+
+        /// Lo que **todavía** no tienes, con el nivel que lo abre.
+        ///
+        /// El marcador solo enseñaba lo ya concedido, así que para casi todo el mundo la
+        /// escalera no llevaba visiblemente a ninguna parte: diez nombres de agua y
+        /// ninguna consecuencia. Esto es la otra mitad de la información.
+        struct Upcoming: Content, Sendable {
+            let key: String
+            let level: String
+            let gotes: Int
+        }
+        let upcoming: [Upcoming]
+
+        static func of(_ abiertas: [Capability], blockedBy: [String]) -> Grant {
+            let pendientes = Capability.allCases
+                .filter { !abiertas.contains($0) }
+                .map { Upcoming(key: $0.rawValue, level: $0.level, gotes: $0.gotes) }
+            return Grant(capabilities: abiertas, blockedBy: blockedBy, upcoming: pendientes)
+        }
     }
 
     /// Qué puede hacer esta persona ahora mismo.
@@ -74,15 +93,15 @@ enum Capabilities {
     /// «no puedes» no lo es.
     static func of(_ user: User, on db: any Database, now: Date = Date()) async throws -> Grant {
         // Un admin ya lo puede todo por su rol; el nivel no le añade ni le quita nada.
-        if user.isAdmin { return Grant(capabilities: Capability.allCases, blockedBy: []) }
+        if user.isAdmin { return Grant.of(Capability.allCases, blockedBy: []) }
 
-        guard enabled else { return Grant(capabilities: [], blockedBy: ["disabled"]) }
+        guard enabled else { return Grant.of([], blockedBy: ["disabled"]) }
         guard let epoch = ContributionLedger.epoch, now >= epoch else {
-            return Grant(capabilities: [], blockedBy: ["provisional"])
+            return Grant.of([], blockedBy: ["provisional"])
         }
         // Quien ha apagado la gamificación no juega a esto tampoco. Lo contrario sería
         // darle poderes por un contador que ha pedido no tener.
-        guard !user.gamificationOptOut else { return Grant(capabilities: [], blockedBy: ["optedOut"]) }
+        guard !user.gamificationOptOut else { return Grant.of([], blockedBy: ["optedOut"]) }
 
         let userID = try user.requireID()
         let eventos = try await ContributionEvent.query(on: db)
@@ -107,11 +126,11 @@ enum Capabilities {
         if manchas { bloqueos.append("recentlyVoided") }
 
         // Un solo requisito que falle deja todo cerrado: son puertas, no una media.
-        guard bloqueos.isEmpty else { return Grant(capabilities: [], blockedBy: bloqueos) }
+        guard bloqueos.isEmpty else { return Grant.of([], blockedBy: bloqueos) }
 
         let abiertas = Capability.allCases.filter { gotes >= $0.gotes }
         if abiertas.isEmpty { bloqueos.append("gotes") }
-        return Grant(capabilities: abiertas, blockedBy: bloqueos)
+        return Grant.of(abiertas, blockedBy: bloqueos)
     }
 
     /// Atajo para los controladores: ¿tiene esta capacidad concreta?

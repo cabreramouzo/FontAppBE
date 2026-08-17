@@ -201,6 +201,8 @@ export interface GamificationProfile {
     capabilities: string[]
     /** `disabled` · `provisional` · `optedOut` · `activeDays` · `recentlyVoided` · `gotes` */
     blockedBy: string[]
+    /** Lo que aún no tienes, con el nivel que lo abre. */
+    upcoming?: { key: string; level: string; gotes: number }[]
   } | null
   /** La vitrina: los diez peldaños de abajo arriba. */
   levels: LevelStanding[]

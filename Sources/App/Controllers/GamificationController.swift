@@ -115,6 +115,24 @@ struct GamificationController: RouteCollection {
             let unique: Bool
         }
         let families: [Family]
+
+        /// Qué abre cada nivel, más allá de lo que puede hacer cualquiera.
+        ///
+        /// Se publica aunque el sistema esté apagado —lo está por defecto— porque el
+        /// problema que resuelve es el contrario: la escalera parecía no llevar a ninguna
+        /// parte. `enabled` dice si ya concede algo, y la interfaz lo advierte en vez de
+        /// prometer un permiso que hoy no existe.
+        struct CapabilityInfo: Content, Sendable {
+            let key: String
+            /// Clave del nivel a partir del cual se abre.
+            let level: String
+            let gotes: Int
+        }
+        let capabilities: [CapabilityInfo]
+        /// `false` mientras falte `GAMIFICATION_CAPABILITIES` o la época no haya pasado.
+        let capabilitiesEnabled: Bool
+        /// Días distintos con aportación que hacen falta además de las gotas.
+        let capabilityActiveDays: Int
     }
 
     /// GET /gamification/scale — el baremo. Pública y sin base de datos.
@@ -154,7 +172,15 @@ struct GamificationController: RouteCollection {
             levels: ContributionScore.levels.reversed().map { .init(key: $0.key, from: $0.from) },
             families: ContributionScore.badgeFamilies.map {
                 .init(key: $0.key, thresholds: $0.thresholds, unique: $0.unique)
-            })
+            },
+            capabilities: Capabilities.Capability.allCases.map {
+                .init(key: $0.rawValue, level: $0.level, gotes: $0.gotes)
+            },
+            // Encendido de verdad: hace falta el interruptor **y** que los puntos sean
+            // definitivos. Con uno solo, la página diría que sí y la app diría que no.
+            capabilitiesEnabled: Capabilities.enabled
+                && (ContributionLedger.epoch.map { Date() >= $0 } ?? false),
+            capabilityActiveDays: Capabilities.requiredActiveDays)
     }
 
     /// Lo que se publica de otra persona: la familia y el grado, nada más.
@@ -208,8 +234,12 @@ struct GamificationController: RouteCollection {
             for: try user.requireID(), on: req.db,
             unlockAllBadges: Self.unlockAllBadges(for: user),
             provisionalBadges: true)
+        // El nivel también con lo pendiente: si no, subir de peldaño se celebraría tres
+        // días después de haberlo hecho. Igual que las insignias, solo aquí — el marcador
+        // y todo lo demás siguen enseñando el nivel de lo liquidado.
+        let nivel = ContributionScore.level(for: perfil.gotes + perfil.pending)
         return PublicBadges(badges: perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) },
-                            level: perfil.level)
+                            level: nivel.key)
     }
 
     /// GET /users/:id/badges — insignias conseguidas por alguien. Pública.

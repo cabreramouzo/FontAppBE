@@ -130,6 +130,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     texto del baremo (`ExplicacionBaremo`); duplicarlo garantizaba que la copia pública
     —la que lee quien no entiende nada— se quedara vieja. Las cifras siguen viniendo
     todas del servidor, umbrales incluidos, y el test las compara con las reales.
+  - La celebración cubre también **subir de nivel** (mismo diálogo, «Has subido de
+    nivel»): el ascenso va primero cuando coinciden, porque los dos salen de la misma
+    aportación. Y lo que **abre** cada nivel se publica en `/gamification/scale`
+    (`capabilities`, `capabilitiesEnabled`) y sale en `/gamification` y en la tarjeta de
+    `/me` (`grant.upcoming`) — antes solo se nombraba lo ya concedido, y como el sistema
+    está apagado por defecto, la escalera no llevaba visiblemente a ninguna parte. Cuando
+    está apagado se dice, en vez de prometer un permiso que hoy no se concede.
   - **Celebración de insignia nueva** (`BadgeCelebration.tsx` + `Confetti.tsx` +
     `lib/badgeCelebration.ts`): «Gracias por contribuir» con la medalla en grande y
     confeti. **No salta al reseñar**, aunque sea ahí donde apetecería: las insignias solo

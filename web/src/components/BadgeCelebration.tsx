@@ -9,6 +9,7 @@ import { useTheme } from '@mui/material/styles'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { BadgeArt } from './BadgeArt'
+import { LevelBadge } from './LevelBadge'
 import { BadgeIcon } from './BadgeIcon'
 import { Confetti } from './Confetti'
 import { buscarNovedades, buscarNovedadesTrasAportar } from '../lib/badgeCelebration'
@@ -66,9 +67,12 @@ export function BadgeCelebration() {
   }, [userID])
 
   if (!novedad) return null
-  const { badge, otras } = novedad
-  const nombre = t(`game.badge.${badge.family}`)
-  const aro = badge.tier !== 'unique' ? TIER_COLOR[modo][badge.tier] : null
+  const { badge, level, otras } = novedad
+  // Dos celebraciones con la misma cara: subir de nivel y ganar una insignia. Comparten
+  // diálogo a propósito — la fiesta es la misma y así el gesto se reconoce.
+  const esNivel = level != null
+  const nombre = esNivel ? t(`game.level.${level}`) : t(`game.badge.${badge!.family}`)
+  const aro = !esNivel && badge!.tier !== 'unique' ? TIER_COLOR[modo][badge!.tier] : null
 
   return (
     <>
@@ -84,7 +88,7 @@ export function BadgeCelebration() {
         }}
       >
         <Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 800, letterSpacing: 1.5 }}>
-          {t('celebrate.eyebrow')}
+          {t(esNivel ? 'celebrate.levelUp' : 'celebrate.eyebrow')}
         </Typography>
 
         <Box
@@ -100,9 +104,13 @@ export function BadgeCelebration() {
           {/* El aro del grado lo pone `BadgeArt` cuando hay dibujo; ponerlo también aquí
               daba dos anillos concéntricos. Solo lo dibuja este envoltorio cuando la
               familia va con icono y no tiene aro propio. */}
-          {BADGE_ART.has(badge.family) ? (
+          {esNivel ? (
+            <Box sx={{ display: 'flex' }}>
+              <LevelBadge levelKey={level} size={160} placeholder />
+            </Box>
+          ) : BADGE_ART.has(badge!.family) ? (
             <Box sx={{ display: 'flex', ...(aro && { borderRadius: '50%', boxShadow: `0 0 26px ${aro}55` }) }}>
-              <BadgeArt family={badge.family} size={150} tier={badge.tier} />
+              <BadgeArt family={badge!.family} size={150} tier={badge!.tier} />
             </Box>
           ) : (
             <Box
@@ -111,17 +119,17 @@ export function BadgeCelebration() {
                 ...(aro && { p: '10px', border: '3px solid', borderColor: aro, boxShadow: `0 0 26px ${aro}55` }),
               }}
             >
-              <BadgeIcon family={badge.family} sx={{ fontSize: 110, color: aro ?? 'primary.main' }} />
+              <BadgeIcon family={badge!.family} sx={{ fontSize: 110, color: aro ?? 'primary.main' }} />
             </Box>
           )}
         </Box>
 
         <Typography variant="h5" sx={{ fontWeight: 800 }}>{nombre}</Typography>
-        {badge.tier !== 'unique' && (
+        {!esNivel && badge!.tier !== 'unique' && (
           <Chip
             size="small"
             variant="outlined"
-            label={t(`game.tier.${badge.tier}`)}
+            label={t(`game.tier.${badge!.tier}`)}
             sx={{ mt: 1, fontWeight: 700, color: aro ?? undefined, borderColor: aro ?? undefined }}
           />
         )}
@@ -131,14 +139,14 @@ export function BadgeCelebration() {
             responderla el premio parece que sale de la nada. */}
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           {(() => {
-            const clave = `game.badgeAbout.${badge.family}`
+            const clave = esNivel ? 'game.levelAbout' : `game.badgeAbout.${badge!.family}`
             const texto = t(clave)
             return texto === clave ? null : texto
           })()}
         </Typography>
         {otras > 0 && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, fontWeight: 700 }}>
-            {t('celebrate.andMore', { n: String(otras) })}
+            {t(esNivel ? 'celebrate.andBadges' : 'celebrate.andMore', { n: String(otras) })}
           </Typography>
         )}
 

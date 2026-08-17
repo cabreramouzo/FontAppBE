@@ -212,6 +212,7 @@ const ca: Dict = {
   'zones.retry': 'Torna-ho a provar',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'El teu nivell obre',
+  'game.willUnlock': 'Més endavant obriràs',
   'game.can.relocateAnyFont': 'Moure el pin de qualsevol font',
     // La vitrina: /me/badges.
   'badges.title': 'La teva col·lecció',
@@ -222,6 +223,11 @@ const ca: Dict = {
   'badges.families': 'Insígnies',
   'badges.familiesHint': 'Cadascuna té bronze, plata i or. La de Pioner es té o no es té.',
   'badges.current': 'Ara',
+  'celebrate.levelUp': 'Has pujat de nivell',
+  'celebrate.andBadges': 'I {n} insígnia/es noves de propina.',
+  'gamePage.unlocks': 'Què obre pujar de nivell',
+  'gamePage.unlocksAlso': 'A més de les gotes calen {n} dies diferents amb aportacions, i cap anul·lació per mal ús els darrers 90 dies. Els permisos són reversibles.',
+  'gamePage.unlocksOff': 'Encara no està actiu: mentre les gotes siguin provisionals no es concedeix cap permís automàtic.',
   'celebrate.eyebrow': 'Insígnia nova',
   'celebrate.thanks': 'Gràcies per contribuir. Sense gent que hi passi i ho expliqui, el mapa no diu res.',
   'celebrate.andMore': 'I {n} més que t’esperen a la vitrina.',
@@ -836,6 +842,7 @@ const es: Dict = {
   'zones.retry': 'Reintentar',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Tu nivel abre',
+  'game.willUnlock': 'Más adelante abrirás',
   'game.can.relocateAnyFont': 'Mover el pin de cualquier fuente',
     // La vitrina: /me/badges.
   'badges.title': 'Tu colección',
@@ -846,6 +853,11 @@ const es: Dict = {
   'badges.families': 'Insignias',
   'badges.familiesHint': 'Cada una tiene bronce, plata y oro. La de Pionero se tiene o no se tiene.',
   'badges.current': 'Ahora',
+  'celebrate.levelUp': 'Has subido de nivel',
+  'celebrate.andBadges': 'Y {n} insignia(s) nuevas de propina.',
+  'gamePage.unlocks': 'Qué abre subir de nivel',
+  'gamePage.unlocksAlso': 'Además de las gotas hacen falta {n} días distintos con aportaciones, y ninguna anulación por mal uso en los últimos 90 días. Los permisos son reversibles.',
+  'gamePage.unlocksOff': 'Todavía no está activo: mientras las gotas sean provisionales no se concede ningún permiso automático.',
   'celebrate.eyebrow': 'Insignia nueva',
   'celebrate.thanks': 'Gracias por contribuir. Sin gente que pase y lo cuente, el mapa no dice nada.',
   'celebrate.andMore': 'Y {n} más esperándote en la vitrina.',
@@ -1451,6 +1463,7 @@ const gl: Dict = {
   'zones.retry': 'Tentar de novo',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'O teu nivel abre',
+  'game.willUnlock': 'Máis adiante abrirás',
   'game.can.relocateAnyFont': 'Mover o pin de calquera fonte',
     // La vitrina: /me/badges.
   'badges.title': 'A túa colección',
@@ -1461,6 +1474,11 @@ const gl: Dict = {
   'badges.families': 'Insignias',
   'badges.familiesHint': 'Cada unha ten bronce, prata e ouro. A de Pioneiro tense ou non se ten.',
   'badges.current': 'Agora',
+  'celebrate.levelUp': 'Subiches de nivel',
+  'celebrate.andBadges': 'E {n} insignia(s) novas de agasallo.',
+  'gamePage.unlocks': 'Que abre subir de nivel',
+  'gamePage.unlocksAlso': 'Ademais das pingas fan falta {n} días distintos con achegas, e ningunha anulación por mal uso nos últimos 90 días. Os permisos son reversibles.',
+  'gamePage.unlocksOff': 'Aínda non está activo: mentres as pingas sexan provisionais non se concede ningún permiso automático.',
   'celebrate.eyebrow': 'Insignia nova',
   'celebrate.thanks': 'Grazas por contribuír. Sen xente que pase e o conte, o mapa non di nada.',
   'celebrate.andMore': 'E {n} máis agardándote na vitrina.',
@@ -2066,6 +2084,7 @@ const eu: Dict = {
   'zones.retry': 'Saiatu berriro',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Zure mailak irekitzen du',
+  'game.willUnlock': 'Aurrerago irekiko duzu',
   'game.can.relocateAnyFont': 'Edozein iturriren pina mugitu',
     // La vitrina: /me/badges.
   'badges.title': 'Zure bilduma',
@@ -2076,6 +2095,11 @@ const eu: Dict = {
   'badges.families': 'Insigniak',
   'badges.familiesHint': 'Bakoitzak brontzea, zilarra eta urrea ditu. Aitzindariarena izan edo ez izan.',
   'badges.current': 'Orain',
+  'celebrate.levelUp': 'Maila igo duzu',
+  'celebrate.andBadges': 'Eta {n} domina berri opari.',
+  'gamePage.unlocks': 'Zer irekitzen du maila igotzeak',
+  'gamePage.unlocksAlso': 'Tantez gain, ekarpenak dituzten {n} egun ezberdin behar dira, eta azken 90 egunetan gaizki erabiltzeagatik baliogabetzerik ez. Baimenak itzulgarriak dira.',
+  'gamePage.unlocksOff': 'Oraindik ez dago aktibo: tantak behin-behinekoak diren bitartean ez da baimen automatikorik ematen.',
   'celebrate.eyebrow': 'Domina berria',
   'celebrate.thanks': 'Eskerrik asko laguntzeagatik. Inor pasatu eta kontatzen ez badu, mapak ez du ezer esaten.',
   'celebrate.andMore': 'Eta beste {n} bilduman zain.',
@@ -2681,6 +2705,7 @@ const en: Dict = {
   'zones.retry': 'Try again',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Your level unlocks',
+  'game.willUnlock': 'You will unlock later',
   'game.can.relocateAnyFont': 'Move the pin of any fountain',
     // La vitrina: /me/badges.
   'badges.title': 'Your collection',
@@ -2691,6 +2716,11 @@ const en: Dict = {
   'badges.families': 'Badges',
   'badges.familiesHint': 'Each has bronze, silver and gold. Pioneer you either have or you do not.',
   'badges.current': 'Now',
+  'celebrate.levelUp': 'You levelled up',
+  'celebrate.andBadges': 'And {n} new badge(s) on top.',
+  'gamePage.unlocks': 'What levelling up unlocks',
+  'gamePage.unlocksAlso': 'Beyond the drops it takes {n} distinct days with contributions, and no misuse void in the last 90 days. Permissions are reversible.',
+  'gamePage.unlocksOff': 'Not active yet: no permission is granted automatically while drops are still provisional.',
   'celebrate.eyebrow': 'New badge',
   'celebrate.thanks': 'Thank you for contributing. Without people passing by and saying so, the map says nothing.',
   'celebrate.andMore': 'And {n} more waiting in your showcase.',

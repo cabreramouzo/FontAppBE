@@ -326,6 +326,12 @@ export interface GamificationScale {
   levels: { key: string; from: number }[]
   /** Las familias de insignias con sus umbrales (uno solo si son de grado único). */
   families: { key: string; thresholds: number[]; unique: boolean }[]
+  /** Qué abre cada nivel. Se publica aunque el sistema esté apagado. */
+  capabilities: { key: string; level: string; gotes: number }[]
+  /** `false` mientras las capacidades no concedan nada todavía. */
+  capabilitiesEnabled: boolean
+  /** Días distintos con aportación que hacen falta además de las gotas. */
+  capabilityActiveDays: number
 }
 
 export async function getGamificationScale(): Promise<GamificationScale> {
@@ -338,9 +344,9 @@ export async function getGamificationScale(): Promise<GamificationScale> {
  * Solo lo usa la felicitación, para poder darla en el momento. Todo lo demás —marcador,
  * vitrina, ranking, lo que ven los demás— sigue contando solo lo liquidado.
  */
-export async function getMyBadgesPreview(): Promise<PublicBadge[]> {
-  const r = await apiFetch<{ badges: PublicBadge[] }>('/gamification/badges/preview')
-  return r.badges
+export async function getMyBadgesPreview(): Promise<PublicGamification> {
+  const r = await apiFetch<PublicGamification>('/gamification/badges/preview')
+  return { badges: r.badges ?? [], level: r.level ?? null }
 }
 
 export async function getUserBadges(userID: string): Promise<PublicBadge[]> {

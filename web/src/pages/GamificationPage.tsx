@@ -128,6 +128,35 @@ export function GamificationPage() {
           </Apartado>
           )}
 
+          {/* Qué abre la escalera. Va **debajo de los niveles** y no al final: sin esto,
+              los diez peldaños eran diez nombres bonitos sin consecuencia, y la pregunta
+              que deja «Riachuelo, desde 1.700 gotas» es exactamente «¿y eso para qué
+              sirve?». Se enseña aunque el sistema esté apagado —lo está por defecto—
+              pero entonces se dice, en vez de prometer un permiso que hoy no se concede. */}
+          {(escala.capabilities ?? []).length > 0 && (
+            <Apartado titulo={t('gamePage.unlocks')}>
+              <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                {escala.capabilities.map((c) => (
+                  <Typography component="li" variant="body2" key={c.key} sx={{ mb: 0.5 }}>
+                    <strong>{t(`game.level.${c.level}`)}</strong>{' '}
+                    <Box component="span" sx={{ color: 'text.secondary' }}>
+                      ({t('badges.fromGotes', { n: n(c.gotes) })})
+                    </Box>{' '}
+                    — {t(`game.can.${c.key}`)}
+                  </Typography>
+                ))}
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                {t('gamePage.unlocksAlso', { n: n(escala.capabilityActiveDays) })}
+              </Typography>
+              {!escala.capabilitiesEnabled && (
+                <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 1 }}>
+                  {t('gamePage.unlocksOff')}
+                </Typography>
+              )}
+            </Apartado>
+          )}
+
           {/* Las familias. Sin sesión no hay progreso, así que es catálogo: qué existe y
               qué cuesta. El umbral que se enseña es el PRIMERO — el que decide si la
               tienes o no; los otros dos solo cambian el color del aro. */}

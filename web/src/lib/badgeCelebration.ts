@@ -1,5 +1,5 @@
 import { getMyBadgesPreview } from '../api/client'
-import type { PublicBadge } from '../api/client'
+import type { PublicBadge, PublicGamification } from '../api/client'
 
 /**
  * Detectar que acabas de ganar una insignia, para poder celebrarlo.
@@ -26,6 +26,9 @@ import type { PublicBadge } from '../api/client'
  */
 const CLAVE = 'badges:seen'
 
+/** El nivel que ya se había visto, para celebrar el ascenso. */
+const CLAVE_NIVEL = 'level:seen'
+
 /** Ya se ha mirado en esta sesión del navegador (no persiste entre visitas). */
 const YA_MIRADO = 'badges:checked'
 
@@ -44,6 +47,23 @@ function leerVistas(): string[] | null {
     // Safari en privado lanza al tocar localStorage. Sin memoria no hay celebración,
     // que es mejor que romper el arranque de la aplicación.
     return null
+  }
+}
+
+function leerNivel(): string | null {
+  try {
+    return localStorage.getItem(CLAVE_NIVEL)
+  } catch {
+    return null
+  }
+}
+
+function guardarNivel(nivel: string | null) {
+  try {
+    if (nivel) localStorage.setItem(CLAVE_NIVEL, nivel)
+    else localStorage.removeItem(CLAVE_NIVEL)
+  } catch {
+    // igual que arriba
   }
 }
 
@@ -74,8 +94,11 @@ export function buenaConexion(): boolean {
 }
 
 export interface Novedad {
-  badge: PublicBadge
-  /** Cuántas más han aparecido a la vez, sin contar la que se enseña. */
+  /** La insignia nueva, o `null` si lo que hay es un ascenso de nivel. */
+  badge: PublicBadge | null
+  /** Clave del nivel al que se acaba de subir, si es eso lo que ha pasado. */
+  level: string | null
+  /** Cuántas insignias más han aparecido a la vez, sin contar la que se enseña. */
   otras: number
 }
 
@@ -101,31 +124,43 @@ export async function buscarNovedades(forzar = false): Promise<Novedad | null> {
     }
   }
 
-  let badges: PublicBadge[]
+  let datos: PublicGamification
   try {
-    badges = await getMyBadgesPreview()
+    datos = await getMyBadgesPreview()
   } catch {
     return null
   }
 
+  const { badges, level } = datos
   const marcas = badges.map(marca)
   const vistas = leerVistas()
+  const nivelVisto = leerNivel()
+
   if (vistas == null) {
-    // Primera vez en este navegador: se guarda y no se celebra nada.
+    // Primera vez en este navegador: se guarda todo y no se celebra nada.
     guardarVistas(marcas)
+    guardarNivel(level)
     return null
   }
 
   const conocidas = new Set(vistas)
   const nuevas = badges.filter((b) => !conocidas.has(marca(b)))
   guardarVistas(marcas)
+
+  // El ascenso va primero: subir de peldaño es más grande que una insignia más, y si
+  // coinciden —lo normal, porque las dos salen de la misma aportación— es lo que apetece
+  // ver. La insignia se queda contada en «y N más».
+  const subida = level != null && level !== nivelVisto && nivelVisto != null
+  guardarNivel(level)
+  if (subida) return { badge: null, level, otras: nuevas.length }
+
   if (nuevas.length === 0) return null
 
   // La de grado más alto primero: si en la misma tanda cae un oro y un bronce, el que
   // apetece ver en grande es el oro.
   const orden = ['bronze', 'silver', 'gold', 'unique']
   nuevas.sort((a, b) => orden.indexOf(b.tier) - orden.indexOf(a.tier))
-  return { badge: nuevas[0], otras: nuevas.length - 1 }
+  return { badge: nuevas[0], level: null, otras: nuevas.length - 1 }
 }
 
 /**

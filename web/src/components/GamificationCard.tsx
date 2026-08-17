@@ -181,6 +181,26 @@ export function GamificationCard() {
         </Box>
       )}
 
+      {/* Y lo que todavía no. Antes el marcador solo nombraba lo ya concedido, así que
+          para casi todo el mundo —el sistema está apagado por defecto— la escalera no
+          llevaba visiblemente a ninguna parte. Se enlaza a la página, que es donde están
+          las condiciones completas, en vez de repetirlas en la tarjeta. */}
+      {(data.grant?.upcoming?.length ?? 0) > 0 && (
+        <Box sx={{ mt: 1.5 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            {t('game.willUnlock')}
+          </Typography>
+          {data.grant?.upcoming?.map((c) => (
+            <Typography key={c.key} variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+              <strong>{t(`game.level.${c.level}`)}</strong> — {t(`game.can.${c.key}`)}
+            </Typography>
+          ))}
+          <Button component={RouterLink} to="/gamification" size="small" sx={{ textTransform: 'none', ml: -1 }}>
+            {t('gameHelp.readMore')}
+          </Button>
+        </Box>
+      )}
+
       {data.badges.length > 0 && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5 }}>
           {data.badges.map((b) => (
