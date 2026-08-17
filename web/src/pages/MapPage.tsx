@@ -93,6 +93,48 @@ function saveView(v: SavedView) {
   }
 }
 
+// Los filtros del panel, con la misma vida que la vista.
+//
+// Se guardaban el centro y el zoom pero no los filtros, así que entrar en una fuente y
+// volver te devolvía al mismo sitio con el mapa **repoblado de fuentes que acababas de
+// esconder**. Y es justo la combinación normal: filtras, miras una, vuelves a por la
+// siguiente. Peor todavía con las herramientas plegadas, porque los chips no se ven y
+// parece que el mapa haya cambiado solo.
+//
+// En `sessionStorage` y no en `localStorage` a propósito, igual que la vista: un filtro
+// es de este paseo. Volver mañana y no encontrar las fuentes donde estaban, sin recordar
+// que un día marcaste una casilla, es un fallo peor que el que se arregla.
+const FILTERS_KEY = 'fontapp_map_filters'
+type SavedFilters = { onlyWithWater: boolean; showNonPotable: boolean; source: WaterSource | 'all' }
+const SIN_FILTROS: SavedFilters = { onlyWithWater: false, showNonPotable: false, source: 'all' }
+const SOURCES: readonly string[] = ['all', 'tap', 'mountain', 'spring', 'well', 'fountain', 'other']
+
+function loadFilters(): SavedFilters {
+  try {
+    const s = sessionStorage.getItem(FILTERS_KEY)
+    if (!s) return SIN_FILTROS
+    const v = JSON.parse(s) as Partial<SavedFilters>
+    // Se valida en vez de confiar: `source` acaba en un `<TextField select>` y un valor
+    // que no esté entre las opciones deja el desplegable en blanco y filtrando por algo
+    // que no se puede ni leer ni quitar.
+    return {
+      onlyWithWater: v.onlyWithWater === true,
+      showNonPotable: v.showNonPotable === true,
+      source: SOURCES.includes(v.source as string) ? (v.source as WaterSource | 'all') : 'all',
+    }
+  } catch {
+    return SIN_FILTROS
+  }
+}
+
+function saveFilters(f: SavedFilters) {
+  try {
+    sessionStorage.setItem(FILTERS_KEY, JSON.stringify(f))
+  } catch {
+    /* almacenamiento no disponible: se pierden al navegar, como antes */
+  }
+}
+
 // Guarda la vista del mapa cada vez que el usuario lo mueve o hace zoom.
 function PersistView() {
   const map = useMapEvents({
@@ -665,9 +707,11 @@ export function MapPage() {
   const [me, setMe] = useState<[number, number] | null>(null)
   const [goto, setGoto] = useState<[number, number] | null>(null)
   const [geoError, setGeoError] = useState('')
-  const [onlyWithWater, setOnlyWithWater] = useState(false)
-  const [showNonPotable, setShowNonPotable] = useState(false)
-  const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>('all')
+  // Los tres arrancan de lo último elegido en esta sesión, igual que la vista del mapa.
+  const [filtrosGuardados] = useState(loadFilters)
+  const [onlyWithWater, setOnlyWithWater] = useState(filtrosGuardados.onlyWithWater)
+  const [showNonPotable, setShowNonPotable] = useState(filtrosGuardados.showNonPotable)
+  const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>(filtrosGuardados.source)
   const [controlsOpen, setControlsOpen] = useState(false)
   const { layer, setLayer } = useBaseLayer()
   // Instancia del mapa: hace falta fuera del lienzo para el botón de la brújula.
@@ -676,6 +720,12 @@ export function MapPage() {
   const { heading, enable: enableCompass } = useHeading()
   // Nº de filtros activos (para el aviso cuando las herramientas están plegadas).
   const activeFilters = (onlyWithWater ? 1 : 0) + (showNonPotable ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
+
+  // Al cambiar cualquiera, se recuerda. Es lo que hace que volver del detalle no
+  // repueble el mapa con lo que acababas de esconder.
+  useEffect(() => {
+    saveFilters({ onlyWithWater, showNonPotable, source: sourceFilter })
+  }, [onlyWithWater, showNonPotable, sourceFilter])
   const [showNearby, setShowNearby] = useState(false)
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [missionsOpen, setMissionsOpen] = useState(false)
