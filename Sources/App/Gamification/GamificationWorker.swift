@@ -7,6 +7,18 @@ import Vapor
 /// Mantiene el registro de gamificación al día **sin que el resto de la app sepa que
 /// existe**.
 ///
+/// ## Qué es, antes de por qué
+///
+/// Un `scheduleRepeatedTask` de NIO **dentro del mismo proceso que sirve el HTTP** — la
+/// misma llamada que `configure.swift` usa para borrar tokens caducados cada 6 h. No es un
+/// servicio, ni un proceso, ni nada del alojamiento: del entorno solo necesita que la app
+/// siga viva. Y no calcula nada propio; llama a `ContributionLedger.sync()`, exactamente la
+/// misma función que el comando `gamification-sync`. **Cron y trabajador no son dos
+/// implementaciones sino dos formas de decidir cuándo se lanza una sola**, y conviven sin
+/// estorbarse porque el barrido es idempotente. Lo único que no hace nunca es `--rescore`.
+///
+/// ## Por qué así
+///
 /// La forma obvia de conseguir puntos «al momento» sería llamar al contador desde el
 /// `create` de cada controlador. Eso mete la gamificación en el camino crítico de guardar
 /// una fuente: si el contador falla o tarda, el usuario pierde su aportación por culpa de

@@ -536,6 +536,29 @@ al abrirse.
 
 ### Recuento en segundo plano (`GAMIFICATION_WORKER=true`)
 
+**Lo primero, porque es lo que más se malentiende:** el trabajador no calcula nada por su
+cuenta. El trabajo entero lo hace `ContributionLedger.sync()`, y a esa función la llaman
+exactamente dos sitios: el comando `gamification-sync` y este bucle. **No son dos
+implementaciones, son dos formas de decidir cuándo se lanza la misma.** El cron y el
+trabajador son intercambiables y pueden convivir.
+
+**Y qué es el trabajador, físicamente:** un temporizador de SwiftNIO dentro del mismo
+proceso que sirve el HTTP.
+
+```swift
+app.eventLoopGroup.next().scheduleRepeatedTask(initialDelay: .seconds(30), delay: .seconds(20))
+```
+
+Nada más. Es la misma llamada que ya usaba `configure.swift` para borrar los tokens
+caducados cada 6 h, y es API de Vapor/NIO: **no hay nada específico de Fly, ni una máquina
+aparte, ni un proceso aparte, ni una cola**. Un servidor Vapor es un proceso que no se
+muere, y mientras espera peticiones su bucle de eventos puede hacer sonar un reloj. Lo
+único que hace falta del alojamiento es que el proceso siga vivo (en Fly,
+`min_machines_running = 1`) y que le llegue la variable de entorno.
+
+Lo que el trabajador **no** hace nunca es `--rescore`: reconstruir el histórico es una
+decisión, no una tarea de mantenimiento, y solo ocurre si alguien la escribe a mano.
+
 Con el cron solo, una aportación tarda hasta un ciclo en aparecer. Con el trabajador
 activado tarda **unos segundos**, y sin que ningún controlador sepa que la gamificación
 existe.
@@ -562,6 +585,27 @@ y eso sí se nota. Por eso se toma antes un cerrojo de Postgres (`pg_try_advisor
 que no lo consigue se va sin hacer nada.
 
 El cron sigue valiendo y no estorba: son el mismo código.
+
+#### En local está apagado, y se nota
+
+`env.development` no lleva la variable, así que **en desarrollo no cuenta nada solo**. Es
+deliberado —un barrido cada 20 s contra tu base mientras programas no aporta gran cosa—
+pero despista mucho: aportas algo, no aparece, y parece que la gamificación está rota
+cuando lo que falta es que nadie ha puntuado todavía. Las dos salidas:
+
+```bash
+swift run App gamification-sync                                  # una pasada a mano
+GAMIFICATION_WORKER=true swift run App serve                     # como en producción
+```
+
+#### El arranque no se ve en los logs de producción
+
+El trabajador anuncia que está vivo («recuento en segundo plano activo») y resume cada
+pasada («+3 registradas · 1 liquidada»), pero las dos líneas son de nivel `info` y **Vapor
+en release corta en `notice`**. En los logs de Fly no aparece ni una sola línea `[ INFO ]`,
+así que no verlas no significa que no esté funcionando. Para comprobarlo de verdad, o se
+sube el nivel un rato (`LOG_LEVEL=info`), o se mira el efecto en vez del log: si hay filas
+recientes en `contribution_events` que nadie registró a mano, está corriendo.
 
 ### La fecha de corte (`GAMIFICATION_EPOCH`)
 

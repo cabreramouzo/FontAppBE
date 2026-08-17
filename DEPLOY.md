@@ -528,6 +528,17 @@ local: **16 segundos** desde crear la fuente hasta que la aportación está regi
 varias máquinas se coordinan con un cerrojo de Postgres, así que no duplican trabajo. El
 cron sigue valiendo como red de seguridad: es el mismo código.
 
+No hay nada que montar en Fly para esto. El trabajador es un temporizador de NIO **dentro
+del mismo proceso** que sirve el HTTP —la misma llamada que ya limpia los tokens caducados
+cada 6 h—, así que del alojamiento solo necesita que el proceso siga vivo
+(`min_machines_running = 1`) y que le llegue la variable. Ni máquina aparte, ni cron de
+Fly, ni cola.
+
+> **No esperes verlo en los logs.** El trabajador anuncia el arranque y resume cada pasada,
+> pero en nivel `info`, y **Vapor en release corta en `notice`**: en los logs de Fly no
+> aparece ni una línea `[ INFO ]`. Para confirmarlo, `fly ssh console -a fontapp -C
+> "printenv GAMIFICATION_WORKER"`, o sube `LOG_LEVEL=info` un rato.
+
 | Variable | Qué hace |
 |---|---|
 | `GAMIFICATION_WORKER=true` | Recuento en segundo plano dentro de la app. |

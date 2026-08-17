@@ -39,6 +39,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     controlador la menciona y crear una fuente no se entera (medido: 39 ms). Puntúa unos
     segundos después, fuera de la petición, con cerrojo de Postgres para que dos instancias
     no dupliquen el trabajo.
+    El trabajador **no calcula nada propio**: llama a `ContributionLedger.sync()`, la misma
+    función que el comando. Son dos formas de decidir cuándo se lanza una sola, y conviven.
+    Y es **un temporizador de NIO dentro del proceso que sirve el HTTP** (igual que la
+    limpieza de tokens de `configure.swift`), no un servicio aparte ni nada de Fly: del
+    alojamiento solo necesita que el proceso siga vivo. `--rescore` no lo hace nunca.
+    **En local está apagado** (`env.development` no lleva la variable), así que en
+    desarrollo no cuenta nada hasta que lances `gamification-sync` a mano — despista mucho
+    y parece que la gamificación está rota. Sus líneas de log son `info` y Vapor en release
+    corta en `notice`: en Fly **no verás el aviso de arranque** aunque esté funcionando.
   - Fase 3: `GET /gamification/me` + tarjeta en `/me` (`GamificationCard.tsx`). Solo lo
     propio y solo lo liquidado; lo pendiente sale como «en camino». No se pinta si el
     usuario la apagó (`users.gamification_opt_out`, 204) ni si aún no ha aportado nada.
