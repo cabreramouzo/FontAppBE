@@ -163,35 +163,41 @@ export function ProfilePage() {
 
       {!user.gamificationOptOut && <GamificationCard />}
 
-      {/* El interruptor va DESPUÉS del marcador: "ocultar las gotas" antes de haber visto
-          ninguna no significa nada. Y queda fuera de la tarjeta a propósito, para que
-          apagarla no esconda también la forma de volver a encenderla. */}
+      {/* El interruptor va DESPUÉS del marcador: decidir sobre las gotas antes de haber
+          visto ninguna no significa nada. Y queda fuera de la tarjeta a propósito, para
+          que apagarlo no esconda también la forma de volver a encenderlo.
+
+          Se enuncia en positivo —«compartir», encendido— y no como «ocultar», apagado.
+          La preferencia guardada sigue siendo `gamificationOptOut` y su valor por defecto
+          sigue siendo `false`: lo que cambia es solo cómo se lee. Un interruptor negativo
+          en reposo obliga a resolver una doble negación para responder a la única pregunta
+          que importa aquí, que es si los demás te ven el nivel o no. */}
       <Box component="section" sx={{ mb: 3 }}>
         <FormControlLabel
           control={
             <Switch
-              checked={user.gamificationOptOut ?? false}
+              checked={!(user.gamificationOptOut ?? false)}
               disabled={savingPrivacy}
-              onChange={(e) => savePrivacy({ gamificationOptOut: e.target.checked })}
+              onChange={(e) => savePrivacy({ gamificationOptOut: !e.target.checked })}
             />
           }
-          label={t('game.optOut')}
+          label={t('game.share')}
         />
-        {/* Tres frases y no una porque el interruptor hace tres cosas distintas, y la
+        {/* Tres frases y no una porque el interruptor mueve tres cosas distintas, y la
             que decía «solo dejas de ver el marcador» era falsa: también te borra de lo
-            que ven los demás y, si los permisos están activos, te los quita. Quien
-            apaga esto está tomando una decisión sobre su privacidad y necesita saber
-            qué sigue siendo público —sus fuentes y reseñas lo son— y qué no. */}
+            que ven los demás y, si los permisos están activos, te los quita. Quien lo
+            apaga está tomando una decisión sobre su privacidad y necesita saber qué
+            sigue siendo público —sus fuentes y reseñas lo son— y qué no. */}
         <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5, color: 'text.secondary' }}>
           <Typography component="li" variant="caption" sx={{ display: 'list-item' }}>
-            {t('game.optOutKeeps')}
+            {t('game.shareKeeps')}
           </Typography>
           <Typography component="li" variant="caption" sx={{ display: 'list-item' }}>
-            {t('game.optOutHidesOthers')}
+            {t('game.shareOffHides')}
           </Typography>
           {capsOn && (
             <Typography component="li" variant="caption" sx={{ display: 'list-item' }}>
-              {t('game.optOutCaps')}
+              {t('game.shareOffCaps')}
             </Typography>
           )}
         </Box>
