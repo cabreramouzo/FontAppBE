@@ -363,6 +363,12 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Ese código se guarda en `users.signup_source` al registrarse (primera visita gana) y se
   agrupa en el panel de administración. Sirve para saber qué cartel/campaña funciona, que es
   justo lo que el geo-IP del registro NO puede decir (resuelve a la cabecera de comarca).
+- Para las redes hay **enlaces cortos** en `web/public/_redirects` (Cloudflare Pages):
+  `/in`, `/ig`, `/wa`, `/yt` → `/?p=linkedin|instagram|whatsapp|youtube`. Añadir un canal es
+  una línea ahí, y **tiene que ir antes del catch-all del SPA** (`/* /index.html 200`) o se
+  la come. Son **302 a propósito**: un enlace ya publicado en un vídeo o un post no se puede
+  cambiar, así que hay que poder reapuntarlo. El código que se guarda es el largo
+  (`youtube`, no `yt`) para que la tabla del panel se lea sola.
 
 ## Pendiente / deuda
 - `R2ImageStorage` (Soto) compila pero **sin probar** contra un bucket real (necesita credenciales `R2_*`); en local usa disco.
