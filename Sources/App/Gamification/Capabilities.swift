@@ -20,29 +20,29 @@ import Vapor
 enum Capabilities {
     /// Qué puede hacer alguien por nivel, más allá de lo que puede hacer cualquiera.
     enum Capability: String, Content, Sendable, CaseIterable {
-        /// Corregir la ubicación de una fuente que no creaste. Nivel 5 (`stream`).
-        case relocateAnyFont
         /// Añadir fotos secundarias de la fuente. Nivel 3 (`brook`).
         ///
         /// Las de tipo `document` **no pasan por aquí**: un informe de salubridad lo
         /// aporta quien lo tiene, y quien lo tiene puede haberse registrado esta mañana.
         /// La puerta está para los duplicados del mismo ángulo, que es donde hay ruido.
         case addSecondaryPhoto
-        /// Dar por resuelta la incidencia de otra persona. Nivel 6 (`river`).
+        /// Dar por resuelta la incidencia de otra persona. Nivel 3 (`brook`).
+        ///
+        /// Bajó de nivel 6 a 3 al revisar la escalera: cerrar un aviso que dice «está
+        /// seca» cuando ya no lo está es la acción más inocua del sistema, es reversible
+        /// y es justo lo que debería poder hacer quien acaba de pasar por delante. Pedir
+        /// media escalera para eso era desproporcionado. Además, lo normal es que se
+        /// cierre **sola** (ver `FontReportController.autoResolve`).
         case resolveIncident
-        /// Borrar una foto secundaria ajena. Nivel 7 (`waterfall`).
-        case deleteAnyPhoto
-        /// Deshacer la edición de otra persona. Nivel 8 (`reservoir`).
-        case revertAnyEdit
+        /// Corregir la ubicación de una fuente que no creaste. Nivel 5 (`stream`).
+        case relocateAnyFont
 
         /// A partir de qué nivel se abre.
         var level: String {
             switch self {
-            case .relocateAnyFont: return "stream"
             case .addSecondaryPhoto: return "brook"
-            case .resolveIncident: return "river"
-            case .deleteAnyPhoto: return "waterfall"
-            case .revertAnyEdit: return "reservoir"
+            case .resolveIncident: return "brook"
+            case .relocateAnyFont: return "stream"
             }
         }
 
@@ -64,10 +64,6 @@ enum Capabilities {
             // Cerrar una incidencia no destruye nada y se puede reabrir: se comporta como
             // añadir una foto, no como borrarla.
             case .resolveIncident: return false
-            // Estas dos **sí**: borran o deshacen el trabajo de otra persona. Perderlas a
-            // media faena por un `--rescore` es el error intermitente que la regla evita,
-            // y ganarlas por unas gotas que mañana bajan es peor todavía.
-            case .deleteAnyPhoto, .revertAnyEdit: return true
             }
         }
 

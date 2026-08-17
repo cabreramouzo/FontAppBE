@@ -12,11 +12,9 @@ import { getGamification, getGamificationScale } from '../api/client'
  * cliente manipulado no se salta nada, porque `FontController` lo vuelve a comprobar.
  */
 export type Capability =
-  | 'relocateAnyFont'
   | 'addSecondaryPhoto'
   | 'resolveIncident'
-  | 'deleteAnyPhoto'
-  | 'revertAnyEdit'
+  | 'relocateAnyFont'
 
 let cache: Promise<Capability[]> | null = null
 

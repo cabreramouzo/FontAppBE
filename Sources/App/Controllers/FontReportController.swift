@@ -49,6 +49,38 @@ struct FontReportController: RouteCollection {
         try await cambiaEstado(req, resolviendo: false)
     }
 
+    /// Cierra sola las incidencias abiertas de una fuente cuando llega una reseña que
+    /// dice que vuelve a manar.
+    ///
+    /// ## Por qué automático
+    ///
+    /// El sistema ya deducía esto y no hacía nada con ello: `ContributionLedger` concede
+    /// la insignia «Incidencia resuelta» cuando después de un aviso aparece una reseña
+    /// `flowing`. O sea que calculábamos la respuesta y luego pedíamos a un humano —de
+    /// nivel 6, además— que pulsara un botón para decir lo mismo. Mientras nadie lo
+    /// pulsaba, la ficha seguía avisando de una avería que ya no existe, que es
+    /// justamente la información equivocada que esta app existe para evitar.
+    ///
+    /// Se cierra al publicar y no al liquidar a las 72 h, al revés que la insignia: aquí
+    /// no se está pagando nada, se está diciendo si hay agua, y eso caduca rápido. Si la
+    /// reseña resulta falsa, cualquiera puede reabrir la incidencia.
+    ///
+    /// Sin `resolver`: nadie la cerró. La ficha lo dice como «resuelta automáticamente»
+    /// en vez de atribuírsela a quien pasó por allí, que no ha decidido nada.
+    static func autoResolve(fontID: UUID, on db: any Database) async throws {
+        let abiertas = try await FontReport.query(on: db)
+            .filter(\.$font.$id == fontID)
+            .filter(\.$resolvedAt == nil)
+            .all()
+        guard !abiertas.isEmpty else { return }
+        let ahora = Date()
+        for r in abiertas {
+            r.resolvedAt = ahora
+            r.$resolver.id = nil
+            try await r.save(on: db)
+        }
+    }
+
     private func cambiaEstado(_ req: Request, resolviendo: Bool) async throws -> ReportResponse {
         let user = try req.auth.require(User.self)
         guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {

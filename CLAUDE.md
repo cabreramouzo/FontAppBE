@@ -81,10 +81,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     pasada, porque conceder escritura sobre puntos que `--rescore` puede reescribir da
     permisos que desaparecen solos. Además de las gotas: 8 días distintos con aportación
     y ninguna anulación por mala conducta en 90 días (pasarse del techo diario no cuenta).
-    Cinco capacidades: `addSecondaryPhoto` (3), `resolveIncident` (6), `relocateAnyFont`
-    (5), `deleteAnyPhoto` (7) y `revertAnyEdit` (8). Todas reversibles. Sustituir una foto
-    que ya existe y borrar una fuente **no** se abren por nivel: la primera invita a la
-    guerra de ediciones y la segunda no se deshace.
+    **La regla que ordena la escalera:** las gotas miden kilómetros y ojos sobre el
+    terreno, no criterio sobre personas, así que un nivel abre poder **sobre el mapa** y
+    nunca **sobre la gente**. Es la misma razón por la que el nivel 10 es candidatura y no
+    concesión. `deleteAnyPhoto` (7) y `revertAnyEdit` (8) existieron y **se retiraron** al
+    revisar la escalera: cruzaban esa línea, la primera además **no era reversible**
+    (borra el fichero) pese a que aquí decía que todas lo eran, y la segunda nunca tuvo
+    puerta porque el historial de ediciones es de moderación. Sustituir una foto que ya
+    existe y borrar una fuente tampoco se abren por nivel: la primera invita a la guerra
+    de ediciones y la segunda no se deshace.
     `Capability.requiresDefinitivePoints` parte la regla de la época en dos: las que
     **destruyen o deshacen trabajo ajeno** (`deleteAnyPhoto`, `revertAnyEdit`,
     `relocateAnyFont`) la exigen; añadir una foto o cerrar una incidencia, no. Con la
@@ -92,6 +97,16 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     Nivel 10 = **candidatura** a moderar su región a propuesta de un admin, nunca
     concesión automática: moderar es poder sobre personas y no cuelga de un contador.
     Falta acotar `UserRole.moderator` por región — hoy modera todo el mapa.
+  - Las incidencias **se cierran solas** (`FontReportController.autoResolve`) cuando llega
+    una reseña `flowing` sobre esa fuente. El sistema ya lo deducía para pagar la insignia
+    «Incidencia resuelta» y no hacía nada con ello: la ficha seguía avisando de una avería
+    inexistente hasta que alguien pulsara un botón. Se cierra **al publicar** y no al
+    liquidar a las 72 h, al revés que la insignia, porque aquí no se paga nada — se dice
+    si hay agua, y eso caduca deprisa; si la reseña es falsa, cualquiera reabre. Queda
+    **sin `resolver`**, y la ficha lo dice como «resuelta automáticamente» en vez de
+    atribuírsela a quien pasó por allí. Vive en el controlador de reseñas y no en el
+    barrido de gamificación: ningún controlador debe depender de que la gamificación esté
+    encendida para decir la verdad sobre una fuente.
   - Fase 7, sacarlo de `/me`: toda la gamificación vivía detrás del perfil y casi nadie
     entra ahí. Ahora el **pionero** (primero en reseñar) sale en la ficha de la fuente
     bajo el creador, con el escudo **solo si la insignia se ha ganado de verdad** (fuentes

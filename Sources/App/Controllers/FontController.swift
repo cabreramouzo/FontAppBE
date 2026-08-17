@@ -277,16 +277,14 @@ struct FontController: RouteCollection {
     /// a esa edición (solo admins). No borra el registro: crea uno nuevo, dejando
     /// el propio revert en el historial.
     @Sendable func revertEdit(req: Request) async throws -> Font {
+        // Solo admins. Estuvo abierta por nivel (`revertAnyEdit`, nivel 8) y se retiró:
+        // nunca tuvo puerta —el historial de ediciones es de moderación, así que ni con
+        // el nivel había dónde pulsar— y sobre todo es la misma pelea que el proyecto ya
+        // había decidido no abrir. Sustituir una foto que existe no se concede por nivel
+        // porque «invita a la guerra de ediciones»; deshacer el texto que escribió otro
+        // es esa guerra con otro campo.
+        try requireAdmin(req)
         let admin = try req.auth.require(User.self)
-        // Admin siempre; y desde la fase 6 también quien lo abra por nivel
-        // (`revertAnyEdit`, nivel 8). Deshacer una edición es reversible en los dos
-        // sentidos —la vuelta atrás queda a su vez en el historial—, que es lo que
-        // permite concederlo sin que sea un cheque en blanco.
-        if !admin.isAdmin {
-            guard try await Capabilities.has(.revertAnyEdit, admin, on: req.db) else {
-                throw Abort(.forbidden, reason: "Todavía no puedes deshacer ediciones ajenas")
-            }
-        }
         guard let edit = try await FontEdit.find(req.parameters.get("editID"), on: req.db) else {
             throw Abort(.notFound)
         }

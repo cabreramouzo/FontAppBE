@@ -921,8 +921,10 @@ export function FontDetailPage() {
                 {r.resolvedAt ? (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
                     <Chip size="small" color="success" variant="outlined" label={t('report.resolved')} sx={{ height: 20 }} />
+                    {/* Sin `resolvedBy` no es que falte el dato: es que no la cerró
+                        nadie, se cerró sola al llegar una reseña diciendo que mana. */}
                     <Typography variant="caption" color="text.secondary">
-                      {r.resolvedBy ? t('report.resolvedBy', { user: r.resolvedBy }) : ''} · {timeAgo(r.resolvedAt, t)}
+                      {r.resolvedBy ? t('report.resolvedBy', { user: r.resolvedBy }) : t('report.resolvedAuto')} · {timeAgo(r.resolvedAt, t)}
                     </Typography>
                     {puedeResolver(r) && (
                       <Button size="small" onClick={() => cambiaResuelta(r, false)} sx={{ textTransform: 'none' }}>

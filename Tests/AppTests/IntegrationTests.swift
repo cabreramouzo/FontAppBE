@@ -78,6 +78,13 @@ final class IntegrationTests: XCTestCase {
         return id
     }
 
+    /// Registra un usuario y devuelve su username, para tests que solo necesitan sesión.
+    @discardableResult
+    private func nombreDe(_ app: Application, _ username: String) async throws -> String {
+        _ = try await register(app, username: username)
+        return username
+    }
+
     private func bearer(_ token: String) -> HTTPHeaders { ["Authorization": "Bearer \(token)"] }
 
     /// GeoLocator de prueba: devuelve siempre una ubicación fija.
@@ -2017,6 +2024,46 @@ final class IntegrationTests: XCTestCase {
                 let body = res.body.string
                 XCTAssertTrue(body.contains("catalonia"), body)
                 XCTAssertTrue(body.contains("special"), body)
+            })
+        }
+    }
+
+    /// Una reseña que dice que vuelve a manar cierra sola las incidencias abiertas.
+    ///
+    /// El sistema ya deducía esto para pagar la insignia «Incidencia resuelta» y no hacía
+    /// nada con ello: la ficha seguía avisando de una avería que ya no existía hasta que
+    /// alguien con nivel pulsara un botón. Se cierra al publicar y no al liquidar, porque
+    /// aquí no se paga nada — se dice si hay agua, y eso caduca deprisa.
+    func testAFlowingReviewClosesOpenIncidentsByItself() async throws {
+        try await withApp { app in
+            let token = try await login(app, username: try await nombreDe(app, "avisador"))
+            let fontID = try await createFont(app, token: token, name: "Font seca", lat: 41.8, long: 2.1)
+
+            try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(["message": "Está seca desde julio"])
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+
+            // Una reseña que NO dice que mana no cierra nada.
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(["body": "sigue igual", "waterStatus": "dry"])
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+            var abiertas = try await FontReport.query(on: app.db)
+                .filter(\.$font.$id == fontID).filter(\.$resolvedAt == nil).count()
+            XCTAssertEqual(abiertas, 1, "«seca» no cierra una incidencia de fuente seca")
+
+            // Una que sí, la cierra.
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(["body": "vuelve a manar", "waterStatus": "flowing"])
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+            abiertas = try await FontReport.query(on: app.db)
+                .filter(\.$font.$id == fontID).filter(\.$resolvedAt == nil).count()
+            XCTAssertEqual(abiertas, 0)
+
+            // Y queda **sin resolver por nadie**: no la cerró una persona.
+            try await app.test(.GET, "fonts/\(fontID)/report", afterResponse: { res in
+                let rs = try res.content.decode([ReportResponse].self)
+                XCTAssertNotNil(rs[0].resolvedAt)
+                XCTAssertNil(rs[0].resolvedBy, "nadie la cerró: se cerró sola")
             })
         }
     }

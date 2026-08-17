@@ -104,6 +104,14 @@ struct FontCommentController: RouteCollection {
         // Igual que en las incidencias: después de guardar y sin esperar.
         MentionNotifier.notify(text: body, by: user, fontID: fontID, on: req)
 
+        // Si alguien dice que vuelve a manar, las incidencias abiertas de esa fuente se
+        // cierran solas. Va aquí y no en el barrido de gamificación a propósito: esto es
+        // información sobre el agua, no sobre puntos, y ningún controlador debe depender
+        // de que la gamificación esté encendida para decir la verdad sobre una fuente.
+        if dto.waterStatus == "flowing" {
+            try await FontReportController.autoResolve(fontID: fontID, on: req.db)
+        }
+
         let response = Response(status: .created)
         try response.content.encode(
             CommentResponse(comment, username: user.username, staff: user.role == .user ? nil : user.role))

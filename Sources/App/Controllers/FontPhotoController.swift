@@ -150,11 +150,12 @@ struct FontPhotoController: RouteCollection {
             throw Abort(.notFound, reason: "Foto no encontrada")
         }
         let userID = try user.requireID()
-        // Y, desde la fase 6, quien lo abra por nivel (`deleteAnyPhoto`, nivel 7): cinco
-        // fotos del mismo ángulo son ruido local y quien conoce la fuente lo ve antes que
-        // ningún moderador.
-        var puede = foto.$uploader.id == userID || user.canModerate
-        if !puede { puede = try await Capabilities.has(.deleteAnyPhoto, user, on: req.db) }
+        // Quien la subió o un moderador, y nadie más. Estuvo abierta por nivel
+        // (`deleteAnyPhoto`, nivel 7) y se retiró por dos razones: **no es reversible**
+        // —se borra el fichero del almacenamiento y la fila, y eso rompía la promesa de
+        // que todas las capacidades se deshacen— y la presión que aliviaba no existe,
+        // porque ya hay tope de 3 fotos por persona y fuente y son denunciables.
+        let puede = foto.$uploader.id == userID || user.canModerate
         guard puede else { throw Abort(.forbidden, reason: "No puedes borrar esta foto") }
         // El fichero se borra en best-effort, igual que en fuentes y reseñas: si falla,
         // queda un huérfano en el disco y no una petición rota.
