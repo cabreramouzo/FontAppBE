@@ -277,6 +277,27 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Los movimientos quedan en `FontInfoSnapshot` (lat/long **opcionales**: las ediciones
   guardadas antes de esto no los tienen) y por tanto son reversibles desde el panel.
 
+## Fotos de una fuente
+- La **portada** sigue en `fonts.image`, una columna. Las demás viven en `font_photos`
+  (`CreateFontPhoto`) y se piden **solo al abrir «Otras fotos»** (`GET /fonts/:id/photos`
+  → `FontGallery.tsx`). Ni siquiera hay contador en la ficha: saber cuántas hay costaría
+  un `COUNT` por fuente en el mapa y el listado, que es justo el gasto que esto evita.
+- Cada foto lleva **tipo** (`PhotoKind`): `fountain` · `document` · `context`. No es
+  decoración — nació de un geólogo que aportó el informe de salubridad del agua, y un
+  documento **nunca compite por la portada**. Los documentos se pintan aparte y con
+  aviso: los aporta quien los tiene, la app no los certifica.
+- **Quién puede subir**: `document`, cualquiera con sesión (quien tiene ese papel puede
+  haberse registrado esta mañana; poner una puerta ahí cierra la aportación más valiosa).
+  `fountain`/`context`, **nivel 3** (`Capabilities.addSecondaryPhoto`) y tope de 3 por
+  persona y fuente — ahí el ruido son cinco veces el mismo ángulo.
+- Por eso `Capability` distingue ahora `requiresDefinitivePoints`: `relocateAnyFont` lo
+  exige (escritura destructiva sobre trabajo ajeno; perderla a media corrección es un
+  error intermitente), añadir fotos no (aditivo y reversible). Con la época sin poner,
+  exigírselo a las dos dejaba la segunda inservible. Hay test de las dos mitades.
+- Borrar: quien la subió o un **moderador** — no el creador de la fuente; la ficha no es
+  suya y no debería poder borrar el análisis que aportó otro. Denunciables desde el día
+  uno (`content_flags` acepta `photo`).
+
 ## Datos de fuentes
 - Dos orígenes: **OpenStreetMap** (`import-fonts`, ODbL) y el **WFS abierto de la ACA**
   (`AIGUA:AIGUA_FONTS`, ~10.000 fuentes de Catalunya con topónimo oficial; es la capa que

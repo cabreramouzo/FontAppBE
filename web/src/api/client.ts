@@ -128,6 +128,39 @@ export async function getFontPhotoAuthor(id: string): Promise<string | null> {
   return r.username ?? null
 }
 
+/** Tipo de imagen secundaria. `document` nunca es portada. */
+export type PhotoKind = 'fountain' | 'document' | 'context'
+
+export interface FontPhoto {
+  id: string
+  url: string
+  kind: PhotoKind
+  caption: string | null
+  createdAt: string | null
+  uploader: { id: string | null; username: string | null }
+}
+
+/**
+ * La galería de una fuente. **Se pide solo al abrirla.**
+ *
+ * La portada sigue viniendo en `fonts.image`, que es una columna: así el mapa y el
+ * listado no pagan nada por una galería que casi nadie va a abrir.
+ */
+export async function getFontPhotos(fontID: string): Promise<FontPhoto[]> {
+  return apiFetch<FontPhoto[]>(`/fonts/${fontID}/photos`)
+}
+
+export async function addFontPhoto(
+  fontID: string,
+  data: { url: string; kind: PhotoKind; caption?: string },
+): Promise<FontPhoto> {
+  return apiFetch<FontPhoto>(`/fonts/${fontID}/photos`, { method: 'POST', body: JSON.stringify(data) })
+}
+
+export async function deleteFontPhoto(fontID: string, photoID: string): Promise<void> {
+  await apiFetch(`/fonts/${fontID}/photos/${photoID}`, { method: 'DELETE' })
+}
+
 export async function updateFont(id: string, data: NewFont): Promise<Font> {
   return apiFetch<Font>(`/fonts/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 }

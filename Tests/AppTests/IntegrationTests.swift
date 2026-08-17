@@ -488,6 +488,47 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// La galería: los documentos los sube cualquiera, las fotos de la fuente piden nivel.
+    ///
+    /// Es la regla que nació del caso real —un geólogo con el informe de salubridad del
+    /// agua— y la que más fácil se rompe al tocar `Capabilities`: si `document` cayera
+    /// bajo la misma puerta que el resto, la aportación más valiosa sería la única que
+    /// no se puede hacer sin llevar meses en la app.
+    func testAnyoneCanAddADocumentButNotAFountainPhoto() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "geologo")
+            let tok = try await login(app, username: "geologo")
+            let fontID = try await createFont(app, token: tok, name: "Con informe", lat: 41, long: 2)
+
+            // El documento entra sin nivel: la cuenta se acaba de crear y tiene 0 gotas.
+            try await app.test(.POST, "fonts/\(fontID)/photos", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(FontPhotoController.CreatePhotoDTO(
+                    url: "/uploads/analisis.jpg", kind: .document, caption: "Análisis ACA"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok, "un documento no debería pedir nivel")
+            })
+
+            // Otra vista de la fuente sí, y la misma cuenta no llega.
+            try await app.test(.POST, "fonts/\(fontID)/photos", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(FontPhotoController.CreatePhotoDTO(
+                    url: "/uploads/otra.jpg", kind: .fountain, caption: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+
+            // La galería es pública y el autor viaja con la clave presente.
+            try await app.test(.GET, "fonts/\(fontID)/photos") { res in
+                XCTAssertEqual(res.status, .ok)
+                let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [[String: Any]] ?? []
+                XCTAssertEqual(json.count, 1)
+                XCTAssertEqual(json.first?["kind"] as? String, "document")
+                let subio = json.first?["uploader"] as? [String: Any]
+                XCTAssertEqual(subio?["username"] as? String, "geologo")
+                XCTAssertTrue(subio?.keys.contains("id") == true)
+            }
+        }
+    }
+
     /// Quién puso la primera foto lo resuelve el servidor, incluso cuando el cliente no
     /// puede: la reseña con foto gana al creador, y sin rastro se responde `null`.
     func testPhotoAuthorPrefersTheReviewThatBroughtIt() async throws {
@@ -1491,12 +1532,17 @@ final class IntegrationTests: XCTestCase {
             XCTAssertTrue(grant.capabilities.isEmpty, "Apagado por defecto, ni con 100.000 gotas.")
             XCTAssertEqual(grant.blockedBy, ["disabled"])
 
-            // Encendido pero con puntos provisionales: tampoco. Conceder escritura sobre
-            // puntos que `--rescore` puede reescribir da permisos que desaparecen solos.
+            // Encendido pero con puntos provisionales, la regla ya no es la misma para
+            // todas y es a propósito. Conceder **escritura destructiva** sobre puntos que
+            // `--rescore` puede reescribir da permisos que desaparecen solos, y eso sigue
+            // cerrado. Añadir una foto es aditivo y reversible: exigirle lo mismo dejaba
+            // la capacidad inservible, porque la época no está puesta ni lo va a estar.
             setenv("GAMIFICATION_CAPABILITIES", "true", 1)
             grant = try await Capabilities.of(user, on: app.db)
-            XCTAssertTrue(grant.capabilities.isEmpty)
-            XCTAssertEqual(grant.blockedBy, ["provisional"])
+            XCTAssertFalse(grant.capabilities.contains(.relocateAnyFont),
+                           "mover el pin ajeno sigue pidiendo puntos definitivos")
+            XCTAssertTrue(grant.capabilities.contains(.addSecondaryPhoto),
+                          "añadir fotos no los pide: si no, no la tendría nadie nunca")
             unsetenv("GAMIFICATION_CAPABILITIES")
         }
     }

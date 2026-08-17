@@ -4,7 +4,7 @@ import Vapor
 // Denuncias de contenido inapropiado. Crear: cualquier usuario autenticado.
 // Listar/descartar: solo admins (moderación).
 struct FlagController: RouteCollection {
-    static let targetTypes = ["comment", "font"]
+    static let targetTypes = ["comment", "font", "photo"]
 
     func boot(routes: RoutesBuilder) throws {
         let flags = routes.grouped("flags").grouped(UserToken.authenticator(), User.guardMiddleware())
@@ -35,6 +35,12 @@ struct FlagController: RouteCollection {
         // Contenido de los objetivos (una query por tipo, sin N+1).
         let commentIDs = flags.filter { $0.targetType == "comment" }.map { $0.targetID }
         let fontIDs = flags.filter { $0.targetType == "font" }.map { $0.targetID }
+        // Las fotos secundarias se pueden denunciar desde el primer día: varias imágenes
+        // por fuente es más superficie para el abuso que una sola, y la moderación tenía
+        // que llegar con la función y no después.
+        let photoIDs = flags.filter { $0.targetType == "photo" }.map { $0.targetID }
+        let photos = photoIDs.isEmpty ? [] : try await FontPhoto.query(on: req.db).filter(\.$id ~~ photoIDs).all()
+        let photoByID = Dictionary(uniqueKeysWithValues: photos.compactMap { p in p.id.map { ($0, p) } })
         let comments = commentIDs.isEmpty ? [] : try await FontComment.query(on: req.db).filter(\.$id ~~ commentIDs).all()
         let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: req.db).filter(\.$id ~~ fontIDs).all()
         let commentByID = Dictionary(uniqueKeysWithValues: comments.compactMap { c in c.id.map { ($0, c) } })
@@ -47,6 +53,8 @@ struct FlagController: RouteCollection {
                 text = c.body; image = c.image
             } else if flag.targetType == "font", let f = fontByID[flag.targetID] {
                 text = f.name; image = f.image
+            } else if flag.targetType == "photo", let p = photoByID[flag.targetID] {
+                text = p.caption ?? p.kind.rawValue; image = p.url
             } else {
                 text = nil; image = nil // contenido ya borrado
             }
@@ -79,7 +87,7 @@ struct CreateFlagDTO: Content {
 
 extension CreateFlagDTO: Validatable {
     static func validations(_ validations: inout Validations) {
-        validations.add("targetType", as: String.self, is: .in("comment", "font"))
+        validations.add("targetType", as: String.self, is: .in("comment", "font", "photo"))
         validations.add("reason", as: String.self, is: .count(...500), required: false)
     }
 }

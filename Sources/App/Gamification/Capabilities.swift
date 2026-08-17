@@ -22,11 +22,36 @@ enum Capabilities {
     enum Capability: String, Content, Sendable, CaseIterable {
         /// Corregir la ubicación de una fuente que no creaste. Nivel 5 (`stream`).
         case relocateAnyFont
+        /// Añadir fotos secundarias de la fuente. Nivel 3 (`brook`).
+        ///
+        /// Las de tipo `document` **no pasan por aquí**: un informe de salubridad lo
+        /// aporta quien lo tiene, y quien lo tiene puede haberse registrado esta mañana.
+        /// La puerta está para los duplicados del mismo ángulo, que es donde hay ruido.
+        case addSecondaryPhoto
 
         /// A partir de qué nivel se abre.
         var level: String {
             switch self {
             case .relocateAnyFont: return "stream"
+            case .addSecondaryPhoto: return "brook"
+            }
+        }
+
+        /// ¿Hace falta que los puntos sean **definitivos** (`GAMIFICATION_EPOCH` pasada)?
+        ///
+        /// La regla original la exigía para todo, y el motivo es bueno: mientras
+        /// `--rescore` pueda reescribir el histórico, un permiso concedido por gotas puede
+        /// desaparecer solo. Pero el peso del accidente no es el mismo en todas.
+        ///
+        /// Mover el pin de una fuente ajena es escritura destructiva sobre el trabajo de
+        /// otro: perder esa capacidad a media corrección es un error intermitente y hay
+        /// que evitarlo. Añadir una foto es aditivo y reversible; perderla una noche es
+        /// una molestia. Exigir lo mismo a las dos dejaba la segunda inservible en la
+        /// práctica, porque la época no está puesta y no lo va a estar pronto.
+        var requiresDefinitivePoints: Bool {
+            switch self {
+            case .relocateAnyFont: return true
+            case .addSecondaryPhoto: return false
             }
         }
 
@@ -96,9 +121,10 @@ enum Capabilities {
         if user.isAdmin { return Grant.of(Capability.allCases, blockedBy: []) }
 
         guard enabled else { return Grant.of([], blockedBy: ["disabled"]) }
-        guard let epoch = ContributionLedger.epoch, now >= epoch else {
-            return Grant.of([], blockedBy: ["provisional"])
-        }
+        // Con puntos provisionales solo se cierran las que lo exigen; las demás siguen.
+        let definitivos = ContributionLedger.epoch.map { now >= $0 } ?? false
+        let candidatas = Capability.allCases.filter { definitivos || !$0.requiresDefinitivePoints }
+        if candidatas.isEmpty { return Grant.of([], blockedBy: ["provisional"]) }
         // Quien ha apagado la gamificación no juega a esto tampoco. Lo contrario sería
         // darle poderes por un contador que ha pedido no tener.
         guard !user.gamificationOptOut else { return Grant.of([], blockedBy: ["optedOut"]) }
@@ -121,6 +147,9 @@ enum Capabilities {
             $0.status == .void && isMisconduct($0.voidReason) && $0.occurredAt >= corte
         }
 
+        // `provisional` NO se añade aquí aunque los puntos lo sean: cerraría también las
+        // capacidades que no lo exigen, que es justo lo que acabamos de separar. Las que
+        // sí lo exigen ya se han quedado fuera de `candidatas`.
         var bloqueos: [String] = []
         if dias < requiredActiveDays { bloqueos.append("activeDays") }
         if manchas { bloqueos.append("recentlyVoided") }
@@ -128,7 +157,7 @@ enum Capabilities {
         // Un solo requisito que falle deja todo cerrado: son puertas, no una media.
         guard bloqueos.isEmpty else { return Grant.of([], blockedBy: bloqueos) }
 
-        let abiertas = Capability.allCases.filter { gotes >= $0.gotes }
+        let abiertas = candidatas.filter { gotes >= $0.gotes }
         if abiertas.isEmpty { bloqueos.append("gotes") }
         return Grant.of(abiertas, blockedBy: bloqueos)
     }

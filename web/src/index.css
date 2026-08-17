@@ -718,3 +718,14 @@ select:not([class*="Mui"]) {
   /* El pinch ya hace zoom del mapa: ocultamos los botones +/-. */
   .zoom-ctrl { display: none; }
 }
+
+/* Miniaturas de la galería de una fuente («otras fotos»). Cuadradas y recortadas: las
+   fotos llegan con proporciones muy distintas y una rejilla con alturas dispares se lee
+   como un error de maquetación antes que como una galería. */
+.gallery-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}

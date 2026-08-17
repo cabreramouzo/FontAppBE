@@ -75,6 +75,7 @@ import { isStale, timeAgo } from '../lib/time'
 import { FreshnessChip } from '../components/FreshnessChip'
 import { freshnessOf } from '../lib/freshness'
 import { FontBadges } from '../components/FontBadges'
+import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 
 // Reseñas "Anteriores" que se muestran por tanda (el resto, tras "mostrar más").
@@ -560,6 +561,24 @@ export function FontDetailPage() {
     }
   }
 
+  // Quién puso la foto: lo dice el servidor, que es el único que puede.
+  //
+  // Esto se intentó dos veces desde el cliente y las dos se quedó corto. Con la reseña
+  // con foto más antigua fallaba cuando la fuente nacía con foto; añadiendo al creador
+  // fallaba cuando la foto llegó por el formulario de editar, que es el caso más común
+  // en las importadas — y el historial de ediciones es de moderación, así que desde aquí
+  // no hay forma. El dato existe; solo que en una tabla que esta pantalla no lee.
+  //
+  // La respuesta va cacheada por el navegador y es una consulta pequeña sobre una fuente.
+  // Antes de deducirlo mal por tercera vez, mejor preguntarlo.
+  const [photoAuthor, setPhotoAuthor] = useState<string | null>(null)
+  useEffect(() => {
+    if (!id || !font?.image) { setPhotoAuthor(null); return }
+    let vivo = true
+    getFontPhotoAuthor(id).then((u) => { if (vivo) setPhotoAuthor(u) }).catch(() => {})
+    return () => { vivo = false }
+  }, [id, font?.image])
+
   if (!font) return <Box className="pad" sx={{ maxWidth: 720, mx: 'auto' }}>{error ? <Alert severity="error">{error}</Alert> : <Skeleton lines={5} />}</Box>
 
   const rated = comments.filter((c) => c.rating != null)
@@ -588,24 +607,6 @@ export function FontDetailPage() {
   // Si el creador y quien reseñó primero son la misma persona, la segunda línea no dice
   // nada que la primera no dijera ya.
   const showPioneer = !!pioneerUsername && pioneerUsername !== creatorName
-
-  // Quién puso la foto: lo dice el servidor, que es el único que puede.
-  //
-  // Esto se intentó dos veces desde el cliente y las dos se quedó corto. Con la reseña
-  // con foto más antigua fallaba cuando la fuente nacía con foto; añadiendo al creador
-  // fallaba cuando la foto llegó por el formulario de editar, que es el caso más común
-  // en las importadas — y el historial de ediciones es de moderación, así que desde aquí
-  // no hay forma. El dato existe; solo que en una tabla que esta pantalla no lee.
-  //
-  // La respuesta va cacheada por el navegador y es una consulta pequeña sobre una fuente.
-  // Antes de deducirlo mal por tercera vez, mejor preguntarlo.
-  const [photoAuthor, setPhotoAuthor] = useState<string | null>(null)
-  useEffect(() => {
-    if (!id || !font?.image) { setPhotoAuthor(null); return }
-    let vivo = true
-    getFontPhotoAuthor(id).then((u) => { if (vivo) setPhotoAuthor(u) }).catch(() => {})
-    return () => { vivo = false }
-  }, [id, font?.image])
 
 
   const ultimaComprobacion = latest?.lastConfirmedAt ?? latest?.createdAt ?? null
@@ -750,6 +751,13 @@ export function FontDetailPage() {
               )}
             </Box>
           )}
+          {/* La galería va junto a la portada y no en una sección aparte: es la misma
+              pregunta («cómo es esta fuente») y así se encuentra sin buscarla. El botón
+              se enseña siempre, también sin foto de portada — una fuente puede no tener
+              retrato y sí un informe del agua, que es de donde nació todo esto. */}
+          <Box sx={{ mt: font.image ? 0.5 : 0 }}>
+            <FontGallery fontID={font.id} />
+          </Box>
           <LocationActions font={font} />
           {avg != null && (
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><StarRating value={avg} size={20} /> <Typography>{avg.toFixed(1)} ({rated.length})</Typography></Stack>
