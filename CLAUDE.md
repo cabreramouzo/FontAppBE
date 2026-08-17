@@ -89,6 +89,12 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     no por zona: el nivel es del total de toda la vida. No es un ranking — ése es el
     mensual por comarca, y lo es a posta. Sin insignias todavía: salen de recuentos por
     familia que hoy solo se saben usuario a usuario.
+  - **Perfil público** (`/users/:id`): el nivel y las insignias **conseguidas**, con el
+    visor a pantalla completa. `GET /users/:id/badges` devuelve ahora también `level`
+    (`null` si lo tiene apagado o si aún no ha aportado). Solo lo ganado: sin la escalera,
+    sin las bloqueadas, sin progresos y **sin gotas** — «Río» dice cuánto ha aportado
+    alguien sin convertir su perfil en un contador, y lo que le falta por ganar es asunto
+    suyo. `gamification_opt_out` lo apaga entero, como en todas partes.
   - **Insignias de la ficha** (`FontBadges.tsx`, al final de la fuente): las que se ganan
     **en esta fuente** y nada más — «Internacional» o «Constancia» salen del conjunto de
     lo que aportas y aquí no dirían nada. Cada línea nombra a quien se la llevó o invita

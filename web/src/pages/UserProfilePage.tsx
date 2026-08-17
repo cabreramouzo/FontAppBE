@@ -10,11 +10,19 @@ import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import type { Font, MyComment, UserResponse } from '../api/types'
-import { getUser, getUserComments, getUserFonts } from '../api/client'
+import { getUser, getUserComments, getUserFonts, getUserGamification } from '../api/client'
+import type { PublicGamification } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
+import { LevelBadge } from '../components/LevelBadge'
+import { BadgeArt } from '../components/BadgeArt'
+import { BadgeIcon } from '../components/BadgeIcon'
+import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
+import { BADGE_ART } from '../lib/levelBadges'
+import { TIER_COLOR } from '../lib/tierColors'
+import { useTheme } from '@mui/material/styles'
 
 export function UserProfilePage() {
   const { id } = useParams<{ id: string }>()
@@ -23,12 +31,16 @@ export function UserProfilePage() {
   const [fonts, setFonts] = useState<Font[] | null>(null)
   const [comments, setComments] = useState<MyComment[] | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [juego, setJuego] = useState<PublicGamification | null>(null)
+  const [mirando, setMirando] = useState<{ kind: 'level' | 'badge'; key: string; tier: string | null } | null>(null)
+  const modo = useTheme().palette.mode === 'dark' ? 'dark' : 'light'
 
   useEffect(() => {
     if (!id) return
     getUser(id).then(setUser).catch(() => setNotFound(true))
     getUserFonts(id).then(setFonts).catch(() => setFonts([]))
     getUserComments(id).then(setComments).catch(() => setComments([]))
+    getUserGamification(id).then(setJuego).catch(() => setJuego(null))
   }, [id])
 
   if (notFound) {
@@ -69,6 +81,59 @@ export function UserProfilePage() {
         )}
       </Box>
 
+      {/* Nivel e insignias, lo mismo que ve esa persona en su vitrina pero **solo lo
+          conseguido**: sin la escalera entera, sin las bloqueadas y sin progresos. Lo
+          que falta por ganar es asunto suyo; lo ganado es un hecho sobre el mapa que
+          cualquiera puede ver, igual que sus fuentes y sus reseñas.
+          Tampoco van las gotas: «Río» dice cuánto ha aportado sin convertir el perfil en
+          un contador. Y no se pinta nada si lo tiene apagado desde su perfil — el
+          servidor devuelve la lista vacía y el nivel nulo. */}
+      {juego && (juego.level || juego.badges.length > 0) && (
+        <Box component="section" sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom>{t('user.gamification')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            {juego.level && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Abrible
+                  puede
+                  nombre={t(`game.level.${juego.level}`)}
+                  onOpen={() => setMirando({ kind: 'level', key: juego.level as string, tier: null })}
+                >
+                  <LevelBadge levelKey={juego.level} size={56} />
+                </Abrible>
+                <Typography sx={{ fontWeight: 800 }}>{t(`game.level.${juego.level}`)}</Typography>
+              </Box>
+            )}
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {juego.badges.map((b) => (
+                <Abrible
+                  key={b.family}
+                  puede
+                  nombre={t(`game.badge.${b.family}`)}
+                  onOpen={() => setMirando({ kind: 'badge', key: b.family, tier: b.tier })}
+                >
+                  {BADGE_ART.has(b.family) ? (
+                    <BadgeArt family={b.family} size={44} tier={b.tier} />
+                  ) : (
+                    <Box
+                      sx={{
+                        width: 44, height: 44, borderRadius: '50%', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        bgcolor: 'action.hover', border: '2px solid',
+                        borderColor: TIER_COLOR[modo][b.tier] ?? 'divider',
+                        color: TIER_COLOR[modo][b.tier] ?? 'text.secondary',
+                      }}
+                    >
+                      <BadgeIcon family={b.family} sx={{ fontSize: 24 }} />
+                    </Box>
+                  )}
+                </Abrible>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      )}
+
       <Box component="section" sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{t('user.fonts', { n: fonts?.length ?? 0 })}</Typography>
         {fonts === null && <Skeleton lines={2} />}
@@ -104,6 +169,14 @@ export function UserProfilePage() {
           })}
         </List>
       </Box>
+
+      <BadgeShowcase
+        open={!!mirando}
+        onClose={() => setMirando(null)}
+        kind={mirando?.kind ?? 'badge'}
+        badgeKey={mirando?.key ?? ''}
+        tier={mirando?.tier ?? null}
+      />
     </Box>
   )
 }

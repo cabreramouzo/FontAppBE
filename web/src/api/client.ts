@@ -344,8 +344,21 @@ export async function getMyBadgesPreview(): Promise<PublicBadge[]> {
 }
 
 export async function getUserBadges(userID: string): Promise<PublicBadge[]> {
-  const r = await apiFetch<{ badges: PublicBadge[] }>(`/users/${encodeURIComponent(userID)}/badges`)
-  return r.badges
+  return (await getUserGamification(userID)).badges
+}
+
+/** Lo público de la gamificación de alguien: su nivel y lo que ha ganado. */
+export interface PublicGamification {
+  badges: PublicBadge[]
+  /** Clave del nivel, o `null` si lo tiene apagado o aún no ha aportado nada. */
+  level: string | null
+}
+
+export async function getUserGamification(userID: string): Promise<PublicGamification> {
+  const r = await apiFetch<PublicGamification>(`/users/${encodeURIComponent(userID)}/badges`)
+  // `level` puede faltar si el backend es más viejo que esta pantalla: `?? null` evita
+  // que la diferencia entre `undefined` y `null` vuelva a costar una pantalla.
+  return { badges: r.badges ?? [], level: r.level ?? null }
 }
 
 // Altas por código de cartel (?p=…). `source` nulo = llegaron sin código.

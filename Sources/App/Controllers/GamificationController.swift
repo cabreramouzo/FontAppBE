@@ -170,6 +170,22 @@ struct GamificationController: RouteCollection {
 
     struct PublicBadges: Content, Sendable {
         let badges: [PublicBadge]
+        /// Clave del nivel (`river`), o `null` si no hay nada que enseñar.
+        ///
+        /// Solo el nivel que tiene, **no la escalera ni las gotas**: «Río» dice cuánto ha
+        /// aportado alguien sin convertir su perfil en un contador. Las gotas exactas
+        /// siguen siendo suyas y solo suyas.
+        ///
+        /// Se escribe explícitamente como `null` — es un opcional, y el codificador
+        /// sintetizado omitiría la clave y en el cliente llegaría `undefined`. Tercera vez
+        /// que lo escribimos a mano en este fichero, y por algo será.
+        let level: String?
+
+        func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(badges, forKey: .badges)
+            try c.encode(level, forKey: .level)
+        }
     }
 
     /// GET /gamification/badges/preview — lo que **ya** te has ganado, sin esperar.
@@ -187,12 +203,13 @@ struct GamificationController: RouteCollection {
     /// respuesta de hace cinco minutos no tendría dentro lo que se acaba de hacer.
     @Sendable func badgesPreview(req: Request) async throws -> PublicBadges {
         let user = try req.auth.require(User.self)
-        guard !user.gamificationOptOut else { return PublicBadges(badges: []) }
+        guard !user.gamificationOptOut else { return PublicBadges(badges: [], level: nil) }
         let perfil = try await ContributionLedger.profile(
             for: try user.requireID(), on: req.db,
             unlockAllBadges: Self.unlockAllBadges(for: user),
             provisionalBadges: true)
-        return PublicBadges(badges: perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) })
+        return PublicBadges(badges: perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) },
+                            level: perfil.level)
     }
 
     /// GET /users/:id/badges — insignias conseguidas por alguien. Pública.
@@ -214,11 +231,15 @@ struct GamificationController: RouteCollection {
         // Mismas dos exclusiones que el ranking mensual y el pulso: el interruptor del
         // perfil tiene que valer en todos los sitios donde saldría el nombre, o no dice
         // la verdad. Una cuenta anonimizada tampoco luce medallas.
-        var out = PublicBadges(badges: [])
+        var out = PublicBadges(badges: [], level: nil)
         if !user.gamificationOptOut && user.anonymizedAt == nil {
             let perfil = try await ContributionLedger.profile(
                 for: userID, on: req.db, unlockAllBadges: Self.unlockAllBadges(for: user))
-            out = PublicBadges(badges: perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) })
+            // Nivel solo si ha aportado algo. En el primer peldaño está todo el mundo por
+            // el hecho de existir, y anunciar «Gota» de quien no ha hecho nada todavía es
+            // una etiqueta que no ha pedido nadie.
+            out = PublicBadges(badges: perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) },
+                               level: perfil.gotes > 0 ? perfil.level : nil)
         }
         await Self.badgeCache.set(clave, out)
         return out
