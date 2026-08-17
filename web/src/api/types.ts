@@ -14,6 +14,10 @@ export interface Font {
   drinkable: Drinkable | null
   creator?: { id: string | null }
   createdAt: string
+  /** Id de la fuente buena si ésta es un duplicado. `null` si está en pie. */
+  duplicateOf?: string | null
+  /** Cuándo se retiró del mapa por no existir ya. `null` si sigue ahí. */
+  retiredAt?: string | null
 }
 
 export type UserRole = 'user' | 'moderator' | 'admin' | 'owner'

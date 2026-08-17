@@ -34,15 +34,46 @@ enum Capabilities {
         /// media escalera para eso era desproporcionado. Además, lo normal es que se
         /// cierre **sola** (ver `FontReportController.autoResolve`).
         case resolveIncident
+        /// Ver quién ha cambiado qué en una fuente. Nivel 4 (`torrent`). **Solo lectura.**
+        ///
+        /// Es el contrapeso de `relocateAnyFont`: sin esto, mover el pin de una fuente
+        /// ajena es una escritura que nadie salvo un admin puede ver, y mucho menos
+        /// deshacer. El historial es de moderación por privacidad —«quién editó qué» no
+        /// está a la vista de cualquiera— y esto es el término medio: lo ve quien ya ha
+        /// demostrado que anda por el mapa.
+        case viewFontHistory
         /// Corregir la ubicación de una fuente que no creaste. Nivel 5 (`stream`).
         case relocateAnyFont
+        /// Marcar una fuente como duplicada de otra. Nivel 5 (`stream`). Reversible.
+        ///
+        /// Es la que más trabajo quita: hoy los duplicados los resuelve un admin a mano,
+        /// borrando. El importador ya hace lo que puede —el `--dedupe 50` está medido—
+        /// pero en la banda de 25 a 50 m un 20 % de los vecinos son fuentes distintas de
+        /// verdad, así que el resto **solo lo puede decidir quien conoce el sitio**.
+        /// No borra nada: la duplicada se esconde del mapa y apunta a la buena.
+        case markDuplicate
+        /// Retirar del mapa una fuente que ya no existe. Nivel 6 (`river`). Reversible.
+        ///
+        /// El estado `gone` de una reseña es «un testimonio, no una decisión», y hasta
+        /// ahora ese testimonio no llevaba a ninguna parte: el punto seguía en el mapa
+        /// mandando gente a caminar para nada, que es justo lo que esta app existe para
+        /// evitar. Hacen falta además `retireGoneReports` testimonios independientes.
+        case retireFont
+        /// Marcar una edición como revisada, para sacarla de la cola. Nivel 7
+        /// (`waterfall`). Puro triaje: **no cambia la fuente**, así que el riesgo es cero
+        /// y lo único que hace es repartir trabajo que hoy solo puede hacer un admin.
+        case reviewEdit
 
         /// A partir de qué nivel se abre.
         var level: String {
             switch self {
             case .addSecondaryPhoto: return "brook"
             case .resolveIncident: return "brook"
+            case .viewFontHistory: return "torrent"
             case .relocateAnyFont: return "stream"
+            case .markDuplicate: return "stream"
+            case .retireFont: return "river"
+            case .reviewEdit: return "waterfall"
             }
         }
 
@@ -64,6 +95,13 @@ enum Capabilities {
             // Cerrar una incidencia no destruye nada y se puede reabrir: se comporta como
             // añadir una foto, no como borrarla.
             case .resolveIncident: return false
+            // Leer no destruye nada, y marcar una edición como revisada tampoco toca el
+            // contenido: perderlas una noche por un `--rescore` no rompe nada.
+            case .viewFontHistory, .reviewEdit: return false
+            // Estas dos sacan una fuente del mapa. Se deshacen —de eso se trata— pero
+            // mientras están puestas nadie encuentra ese punto, así que se comportan como
+            // mover un pin ajeno: hay que poder confiar en que el permiso no baila.
+            case .markDuplicate, .retireFont: return true
             }
         }
 
@@ -84,6 +122,15 @@ enum Capabilities {
 
     /// Ventana en la que una anulación por mala conducta bloquea las capacidades.
     static let cleanWindowDays = 90.0
+
+    /// Testimonios `gone` independientes que hacen falta para retirar una fuente, además
+    /// del nivel.
+    ///
+    /// Dos y no uno porque retirar es la única de estas acciones que hace **desaparecer**
+    /// un punto para todo el mundo, y una persona equivocada —o con prisa— no debería
+    /// poder hacerlo sola. Dos tampoco es una gran barrera, y ése es el punto: no se trata
+    /// de que cueste, sino de que no sea la opinión de uno.
+    static let retireGoneReports = 2
 
     /// Anulaciones que cuentan como mala conducta. La del techo diario **no**: pasarse del
     /// tope es haber aportado mucho un día, no haber hecho nada malo, y castigarlo con la

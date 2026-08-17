@@ -87,6 +87,10 @@ enum ZoneStats {
                 GROUP BY font_id
             ) c ON c.font_id = f.id
             WHERE f.region IS NOT NULL AND f.region <> ''
+              -- Las escondidas no cuentan para la cobertura: una comarca no está mejor
+              -- cubierta por tener duplicados, y una fuente retirada ya no hay que ir a
+              -- comprobarla.
+              AND \(unsafeRaw: Font.visibleSQL)
             GROUP BY f.country, f.region
             ORDER BY fonts DESC
             """).all(decoding: CoverageRow.self)

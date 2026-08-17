@@ -2028,6 +2028,131 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    // MARK: - Esconder fuentes (duplicadas y retiradas)
+
+    /// Marcar una duplicada la saca del mapa, del listado y de la cercanía **sin
+    /// borrarla**, y se puede deshacer.
+    ///
+    /// Lo que de verdad prueba este test es el filtro: si una escondida se cuela en
+    /// cualquier lectura pública, la app manda a alguien a caminar hasta un punto que no
+    /// debería estar ahí, que es exactamente lo que viene a evitar.
+    func testDuplicateIsHiddenEverywhereButStillReachableByLink() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "duplicadora")
+            let token = try await login(app, username: "duplicadora")
+            try await grantGotes(id, 100_000, days: 40, on: app.db)
+            // Las dos que esconden un punto exigen puntos definitivos, así que hace falta
+            // también la época: es la mitad de la regla que fija `requiresDefinitivePoints`.
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+
+            let buena = try await createFont(app, token: token, name: "Font bona", lat: 41.80, long: 2.10)
+            let mala = try await createFont(app, token: token, name: "Font repetida", lat: 41.8001, long: 2.1001)
+
+            try await app.test(.POST, "fonts/\(mala)/duplicate-of", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(["of": buena.uuidString])
+            }, afterResponse: { res in XCTAssertEqual(res.status, .ok) })
+
+            // Fuera del listado…
+            try await app.test(.GET, "fonts?per=100", afterResponse: { res in
+                let p = try res.content.decode(Page<FontJSON>.self)
+                XCTAssertTrue(p.items.contains { $0.id == buena })
+                XCTAssertFalse(p.items.contains { $0.id == mala }, "la duplicada no sale en el listado")
+            })
+            // …y fuera del mapa.
+            try await app.test(.GET, "fonts/in-bounds?minLat=41.7&maxLat=41.9&minLong=2.0&maxLong=2.2", afterResponse: { res in
+                let body = res.body.string
+                XCTAssertTrue(body.contains(buena.uuidString.lowercased()) || body.contains(buena.uuidString))
+                XCTAssertFalse(body.contains(mala.uuidString.lowercased()) || body.contains(mala.uuidString),
+                               "la duplicada no sale en el mapa")
+            })
+            // Pero por enlace directo se sigue viendo, y dice de quién es duplicada.
+            try await app.test(.GET, "fonts/\(mala)", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertTrue(res.body.string.contains("duplicateOf"), res.body.string)
+            })
+            // Y no se ha borrado nada.
+            let sigue = try await Font.find(mala, on: app.db)
+            XCTAssertNotNil(sigue)
+
+            // Deshacer: vuelve al mapa.
+            try await app.test(.DELETE, "fonts/\(mala)/duplicate-of", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+            try await app.test(.GET, "fonts?per=100", afterResponse: { res in
+                let p = try res.content.decode(Page<FontJSON>.self)
+                XCTAssertTrue(p.items.contains { $0.id == mala }, "al deshacerlo vuelve")
+            })
+        }
+    }
+
+    /// Retirar exige, además del nivel, dos testimonios `gone` de personas distintas.
+    ///
+    /// Es la única de estas acciones que hace desaparecer un punto para todo el mundo, y
+    /// no debería poder hacerla sola una persona que se haya equivocado o tenga prisa.
+    func testRetiringNeedsTwoIndependentWitnesses() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "retiradora")
+            let token = try await login(app, username: "retiradora")
+            try await grantGotes(id, 100_000, days: 40, on: app.db)
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+
+            let fontID = try await createFont(app, token: token, name: "Font que ja no hi és", lat: 41.5, long: 2.0)
+
+            // Sin testigos: no.
+            try await app.test(.POST, "fonts/\(fontID)/retire", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+
+            // Un solo testigo tampoco: la misma persona no cuenta dos veces.
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(["body": "ya no está", "waterStatus": "gone"])
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+            try await app.test(.POST, "fonts/\(fontID)/retire", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest, "una sola persona no basta")
+            })
+
+            // Con una segunda persona, sí.
+            _ = try await register(app, username: "testiga")
+            let token2 = try await login(app, username: "testiga")
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(token2), beforeRequest: { req in
+                try req.content.encode(["body": "confirmo, no existe", "waterStatus": "gone"])
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+            try await app.test(.POST, "fonts/\(fontID)/retire", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+
+            try await app.test(.GET, "fonts?per=100", afterResponse: { res in
+                let p = try res.content.decode(Page<FontJSON>.self)
+                XCTAssertFalse(p.items.contains { $0.id == fontID }, "una fuente retirada no sale")
+            })
+        }
+    }
+
+    /// El historial de una fuente lo abre el nivel 4; sin él, no.
+    func testFontHistoryOpensAtItsLevel() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "curiosa")
+            let token = try await login(app, username: "curiosa")
+            let fontID = try await createFont(app, token: token, name: "Font", lat: 41.5, long: 2.0)
+
+            // Sin capacidades encendidas no lo ve nadie que no sea admin.
+            try await app.test(.GET, "fonts/\(fontID)/history", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+
+            try await grantGotes(id, 100_000, days: 40, on: app.db)
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES") }
+            try await app.test(.GET, "fonts/\(fontID)/history", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+        }
+    }
+
     /// Una reseña que dice que vuelve a manar cierra sola las incidencias abiertas.
     ///
     /// El sistema ya deducía esto para pagar la insignia «Incidencia resuelta» y no hacía

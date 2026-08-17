@@ -81,6 +81,21 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     pasada, porque conceder escritura sobre puntos que `--rescore` puede reescribir da
     permisos que desaparecen solos. Además de las gotas: 8 días distintos con aportación
     y ninguna anulación por mala conducta en 90 días (pasarse del techo diario no cuenta).
+    Siete capacidades: `addSecondaryPhoto` (3), `resolveIncident` (3), `viewFontHistory`
+    (4), `relocateAnyFont` (5), `markDuplicate` (5), `retireFont` (6) y `reviewEdit` (7).
+    Los peldaños 8 y 9 están **vacíos a propósito**: no hace falta que cada nivel abra
+    algo, y los dos últimos antes de la candidatura funcionan bien como recta final.
+    **Esconder no es borrar** (`AddHiddenToFont`): `markDuplicate` apunta a la ficha buena
+    y `retireFont` marca que ya no existe; ninguna de las dos borra, porque las dos son
+    opinables, las toma alguien por nivel y tiene que haber vuelta atrás — y porque borrar
+    se lleva por delante reseñas y fotos que siguen siendo ciertas. **Toda lectura pública
+    que devuelva varias fuentes tiene que partir de `Font.visible(on:)`** (o de
+    `Font.visibleSQL` en las consultas crudas): mapa, listado, cercanía, rutas y zonas. La
+    ficha individual es la excepción a propósito — se llega por un enlace viejo y hay que
+    poder ver **por qué** el punto no está, con `duplicateOf`/`retiredAt` en el DTO y un
+    aviso arriba del todo. Retirar pide además `Capabilities.retireGoneReports` = 2
+    testimonios `gone` de **personas distintas**: es la única acción que hace desaparecer
+    un punto para todo el mundo y no debería ser la opinión de uno.
     **La regla que ordena la escalera:** las gotas miden kilómetros y ojos sobre el
     terreno, no criterio sobre personas, así que un nivel abre poder **sobre el mapa** y
     nunca **sobre la gente**. Es la misma razón por la que el nivel 10 es candidatura y no

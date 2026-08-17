@@ -77,6 +77,7 @@ import { FreshnessChip } from '../components/FreshnessChip'
 import { freshnessOf } from '../lib/freshness'
 import { FontBadges } from '../components/FontBadges'
 import { Autor, ConMenciones } from '../components/AuthorLine'
+import { FontHiddenNotice, FontMaintenance } from '../components/FontMaintenance'
 import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 
@@ -667,6 +668,10 @@ export function FontDetailPage() {
     <Box className="detail pad" sx={{ maxWidth: 720, mx: 'auto' }}>
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
 
+      {/* Arriba del todo: si esta ficha ya no sale en el mapa, es lo primero que hay que
+          saber, antes que el nombre. */}
+      <FontHiddenNotice font={font} />
+
       <Stack direction="row" sx={{ mt: 1, justifyContent: "space-between", alignItems: "center", gap: 1 }}>
         <Typography variant="h4" sx={{ fontWeight: 800 }}>{font.name}</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
@@ -948,6 +953,8 @@ export function FontDetailPage() {
           <Typography color="text.secondary"><Link href="/login">{t('nav.enter')}</Link> {t('report.loginToReport')}</Typography>
         )}
       </Box>
+
+      <FontMaintenance font={font} onChanged={() => { load().catch(() => {}) }} />
 
       {/* Va al final y no arriba: es lo último que se mira, después de haber leído si hay
           agua. Puesto antes competiría con la información de la fuente, que es a lo que

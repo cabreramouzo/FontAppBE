@@ -45,7 +45,29 @@ final class Font: Model, Content, @unchecked Sendable {
     /// cliente y no se puede verificar: por eso solo paga insignia, nunca gotas.
     @Field(key: "queued_offline") var queuedOffline: Bool
 
+    /// Es la misma agua que otra ficha. Apunta a la buena; ésta se esconde del mapa.
+    @OptionalParent(key: "duplicate_of") var duplicateOf: Font?
+    /// Retirada porque ya no existe sobre el terreno. Nulo = sigue en pie.
+    @OptionalField(key: "retired_at") var retiredAt: Date?
+    @OptionalParent(key: "retired_by") var retiredBy: User?
+
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
+
+    /// ¿Sale en el mapa? Falso si es duplicada de otra o si se ha retirado.
+    var isVisible: Bool { $duplicateOf.id == nil && retiredAt == nil }
+
+    /// Consulta de fuentes **que salen al público**: sin duplicadas ni retiradas.
+    ///
+    /// Existe para que el filtro esté escrito una vez y no seis. Toda lectura pública que
+    /// devuelva varias fuentes tiene que partir de aquí — mapa, listado, cercanía, rutas.
+    /// La ficha individual (`show`) es la excepción a propósito: se llega por un enlace
+    /// viejo y hay que poder ver **por qué** ya no está, no un 404.
+    static func visible(on db: any Database) -> QueryBuilder<Font> {
+        Font.query(on: db).filter(\.$duplicateOf.$id == nil).filter(\.$retiredAt == nil)
+    }
+
+    /// La misma condición en SQL crudo, para las consultas que no pasan por Fluent.
+    static let visibleSQL = "duplicate_of IS NULL AND retired_at IS NULL"
 
     init() {}
 
@@ -97,6 +119,11 @@ final class Font: Model, Content, @unchecked Sendable {
     private enum PublicKey: String, CodingKey {
         case id, name, latitude, longitude, image, description
         case source, drinkable, country, region, creator, createdAt
+        // Por qué esta ficha ya no sale en el mapa. Salen **siempre**, con `null` cuando
+        // está en pie: la ficha se llega a ver por un enlace viejo y tiene que poder
+        // explicar por qué el punto no aparece, en vez de dar un 404 o, peor, parecer
+        // normal. Explícitos, como todo opcional de esta API.
+        case duplicateOf, retiredAt
     }
 
     /// El padre opcional sale como `{"id": …}`, igual que lo serializaba Fluent.
@@ -128,5 +155,7 @@ final class Font: Model, Content, @unchecked Sendable {
         try c.encode(region, forKey: .region)
         try c.encode(CreatorRef(id: $creator.id), forKey: .creator)
         try c.encode(createdAt, forKey: .createdAt)
+        try c.encode($duplicateOf.id, forKey: .duplicateOf)
+        try c.encode(retiredAt, forKey: .retiredAt)
     }
 }

@@ -64,7 +64,7 @@ struct MissionController: RouteCollection {
         // según subes.
         let dLat = km / 111.0
         let dLong = km / (111.0 * max(cos(q.lat * .pi / 180), 0.01))
-        let candidatas = try await Font.query(on: req.db)
+        let candidatas = try await Font.visible(on: req.db)
             .filter(\.$latitude >= q.lat - dLat).filter(\.$latitude <= q.lat + dLat)
             .filter(\.$longitude >= q.long - dLong).filter(\.$longitude <= q.long + dLong)
             .limit(3_000)

@@ -165,6 +165,29 @@ export async function updateFont(id: string, data: NewFont): Promise<Font> {
   return apiFetch<Font>(`/fonts/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 }
 
+/** Historial de cambios de una fuente. Nivel 4 (`viewFontHistory`) o admin. */
+export async function getFontHistory(id: string): Promise<FontEdit[]> {
+  return apiFetch<FontEdit[]>(`/fonts/${id}/history`)
+}
+
+/** Marca esta fuente como duplicada de `of`. Reversible: no borra nada. */
+export async function markDuplicate(id: string, of: string): Promise<Font> {
+  return apiFetch<Font>(`/fonts/${id}/duplicate-of`, { method: 'POST', body: JSON.stringify({ of }) })
+}
+
+export async function unmarkDuplicate(id: string): Promise<Font> {
+  return apiFetch<Font>(`/fonts/${id}/duplicate-of`, { method: 'DELETE' })
+}
+
+/** Retira del mapa una fuente que ya no existe. Pide dos testimonios `gone`. */
+export async function retireFont(id: string): Promise<Font> {
+  return apiFetch<Font>(`/fonts/${id}/retire`, { method: 'POST' })
+}
+
+export async function unretireFont(id: string): Promise<Font> {
+  return apiFetch<Font>(`/fonts/${id}/retire`, { method: 'DELETE' })
+}
+
 export async function deleteFont(id: string): Promise<void> {
   await apiFetch(`/fonts/${id}`, { method: 'DELETE' })
 }

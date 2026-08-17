@@ -35,6 +35,13 @@ struct FontController: RouteCollection {
             font.delete(use: destroy)
             // Promover la foto de una reseña a foto principal (creador/admin).
             font.post("photo", "from-comment", ":commentID", use: setPhotoFromComment)
+            // Historial de ESTA fuente: admins y quien tenga `viewFontHistory` (nivel 4).
+            font.get("history", use: fontHistory)
+            // Esconder del mapa sin borrar. Las dos se deshacen.
+            font.post("duplicate-of", use: markDuplicate)
+            font.delete("duplicate-of", use: unmarkDuplicate)
+            font.post("retire", use: retire)
+            font.delete("retire", use: unretire)
         }
     }
 
@@ -178,7 +185,7 @@ struct FontController: RouteCollection {
 
     /// GET /fonts?page=&per=&search= — listado paginado; `search` filtra por nombre (ILIKE, insensible a mayúsculas).
     @Sendable func index(req: Request) async throws -> Page<Font> {
-        let query = Font.query(on: req.db).sort(\.$name)
+        let query = Font.visible(on: req.db).sort(\.$name)
         // El patrón se acota y se escapa: ver `SearchTerm` (un ILIKE con una cadena
         // enorme cuesta segundos de CPU por petición).
         if let raw = req.query[String.self, at: "search"], let patron = SearchTerm.likePattern(raw) {
@@ -318,15 +325,129 @@ struct FontController: RouteCollection {
     }
 
     /// POST /fonts/edits/:editID/review — marca una edición como revisada (✓), para
-    /// sacarla de la cola del panel. Solo triaje: NO cambia la fuente. Solo admins.
+    /// sacarla de la cola del panel.
+    ///
+    /// Solo triaje: **no cambia la fuente**, así que el riesgo es cero y lo único que
+    /// hace es repartir un trabajo que hoy solo puede hacer un admin. Por eso se abre por
+    /// nivel (`reviewEdit`, nivel 7) y deshacer una edición no.
     @Sendable func reviewEdit(req: Request) async throws -> HTTPStatus {
-        try requireAdmin(req)
+        _ = try await requireAdminOr(.reviewEdit, req,
+                                     reason: "Todavía no puedes revisar ediciones")
         guard let edit = try await FontEdit.find(req.parameters.get("editID"), on: req.db) else {
             throw Abort(.notFound)
         }
         edit.reviewedAt = Date()
         try await edit.save(on: req.db)
         return .noContent
+    }
+
+    // MARK: - Capacidades por nivel sobre una fuente
+
+    /// Admin, o quien tenga la capacidad. Devuelve el usuario para poder firmar la acción.
+    private func requireAdminOr(_ cap: Capabilities.Capability, _ req: Request,
+                                reason: String) async throws -> User {
+        let user = try req.auth.require(User.self)
+        if user.isAdmin { return user }
+        guard try await Capabilities.has(cap, user, on: req.db) else {
+            throw Abort(.forbidden, reason: reason)
+        }
+        return user
+    }
+
+    /// GET /fonts/:fontID/history — quién ha cambiado qué en esta fuente.
+    ///
+    /// Solo lectura y **acotado a una fuente**, al revés que `/fonts/edits`, que es la
+    /// cola global de moderación y sigue siendo de admins. Es el contrapeso de poder
+    /// mover pines ajenos: sin esto, una reubicación mala no la ve nadie.
+    @Sendable func fontHistory(req: Request) async throws -> [FontEditResponse] {
+        _ = try await requireAdminOr(.viewFontHistory, req,
+                                     reason: "Todavía no puedes ver el historial de una fuente")
+        let font = try await find(req)
+        let fontID = try font.requireID()
+        let edits = try await FontEdit.query(on: req.db)
+            .filter(\.$font.$id == fontID)
+            .sort(\.$createdAt, .descending)
+            .limit(50)
+            .all()
+        let nombres = try await User.usernames(for: edits.compactMap { $0.$editor.id }, on: req.db)
+        return edits.map {
+            FontEditResponse($0, editorName: $0.$editor.id.flatMap { nombres[$0] },
+                             currentFontName: font.name)
+        }
+    }
+
+    struct DuplicateDTO: Content { let of: UUID }
+
+    /// POST /fonts/:fontID/duplicate-of — esta ficha es la misma agua que otra.
+    ///
+    /// No borra: la esconde del mapa y la deja apuntando a la buena. Las reseñas y fotos
+    /// se quedan donde están, porque son ciertas — alguien fue y vio agua.
+    @Sendable func markDuplicate(req: Request) async throws -> Font {
+        _ = try await requireAdminOr(.markDuplicate, req,
+                                     reason: "Todavía no puedes marcar duplicados")
+        let font = try await find(req)
+        let dto = try req.content.decode(DuplicateDTO.self)
+        let id = try font.requireID()
+        guard dto.of != id else {
+            throw Abort(.badRequest, reason: "Una fuente no puede ser duplicada de sí misma")
+        }
+        guard let buena = try await Font.find(dto.of, on: req.db) else {
+            throw Abort(.notFound, reason: "La fuente indicada no existe")
+        }
+        // Sin cadenas: si la buena ya apunta a otra, se apunta al final de la cadena. Con
+        // A→B y luego B→C, A se quedaba señalando a una ficha escondida y el enlace de
+        // «ver la buena» no llevaba a ninguna parte.
+        guard buena.$duplicateOf.id == nil else {
+            throw Abort(.conflict, reason: "Esa fuente ya está marcada como duplicada de otra")
+        }
+        font.$duplicateOf.id = dto.of
+        try await font.save(on: req.db)
+        return font
+    }
+
+    /// DELETE /fonts/:fontID/duplicate-of — no era duplicada; vuelve al mapa.
+    @Sendable func unmarkDuplicate(req: Request) async throws -> Font {
+        _ = try await requireAdminOr(.markDuplicate, req,
+                                     reason: "Todavía no puedes marcar duplicados")
+        let font = try await find(req)
+        font.$duplicateOf.id = nil
+        try await font.save(on: req.db)
+        return font
+    }
+
+    /// POST /fonts/:fontID/retire — ya no existe sobre el terreno.
+    ///
+    /// Pide, además del nivel, `Capabilities.retireGoneReports` testimonios `gone`
+    /// **de personas distintas**. Retirar es la única de estas acciones que hace
+    /// desaparecer un punto para todo el mundo, y no debería ser la opinión de uno.
+    @Sendable func retire(req: Request) async throws -> Font {
+        let user = try await requireAdminOr(.retireFont, req,
+                                            reason: "Todavía no puedes retirar fuentes del mapa")
+        let font = try await find(req)
+        let fontID = try font.requireID()
+        let testigos = try await FontComment.query(on: req.db)
+            .filter(\.$font.$id == fontID)
+            .filter(\.$waterStatus == "gone")
+            .all()
+        let distintos = Set(testigos.compactMap { $0.$user.id }).count
+        guard distintos >= Capabilities.retireGoneReports || user.isAdmin else {
+            throw Abort(.badRequest, reason: "Hacen falta \(Capabilities.retireGoneReports) personas distintas que hayan reseñado la fuente como desaparecida")
+        }
+        font.retiredAt = Date()
+        font.$retiredBy.id = try user.requireID()
+        try await font.save(on: req.db)
+        return font
+    }
+
+    /// DELETE /fonts/:fontID/retire — sigue ahí; vuelve al mapa.
+    @Sendable func unretire(req: Request) async throws -> Font {
+        _ = try await requireAdminOr(.retireFont, req,
+                                     reason: "Todavía no puedes retirar fuentes del mapa")
+        let font = try await find(req)
+        font.retiredAt = nil
+        font.$retiredBy.id = nil
+        try await font.save(on: req.db)
+        return font
     }
 
     private func requireAdmin(_ req: Request) throws {
@@ -357,7 +478,7 @@ struct FontController: RouteCollection {
         let quantity = min(max(1, params.quantity ?? 10), Self.maxNearQuantity)
         let delta = 0.5 // ~55 km a nivel del ecuador; suficiente como prefiltro.
 
-        let candidates = try await Font.query(on: req.db)
+        let candidates = try await Font.visible(on: req.db)
             .filter(\.$latitude >= params.lat - delta)
             .filter(\.$latitude <= params.lat + delta)
             .filter(\.$longitude >= params.long - delta)
@@ -396,7 +517,8 @@ struct FontController: RouteCollection {
         if let sql = req.db as? SQLDatabase {
             let rows = try await sql.raw("""
                 SELECT id FROM fonts
-                WHERE latitude >= \(bind: b.minLat) AND latitude <= \(bind: b.maxLat)
+                WHERE \(unsafeRaw: Font.visibleSQL)
+                  AND latitude >= \(bind: b.minLat) AND latitude <= \(bind: b.maxLat)
                   AND longitude >= \(bind: b.minLong) AND longitude <= \(bind: b.maxLong)
                 ORDER BY md5(id::text)
                 LIMIT \(bind: Self.maxInBoundsResults)
@@ -408,7 +530,7 @@ struct FontController: RouteCollection {
         }
 
         // Fallback (bases de datos sin SQL crudo): recorte simple por bbox.
-        let fonts = try await Font.query(on: req.db)
+        let fonts = try await Font.visible(on: req.db)
             .filter(\.$latitude >= b.minLat)
             .filter(\.$latitude <= b.maxLat)
             .filter(\.$longitude >= b.minLong)
