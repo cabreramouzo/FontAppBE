@@ -30,6 +30,7 @@ import { AppInterestBanner } from './AppInterestBanner'
 import { InstallPrompt } from './InstallPrompt'
 import { PendingUploads } from './PendingUploads'
 import { RoleChip, StaffStripe, staffRole } from './StaffBadge'
+import { NotificationBell } from './NotificationBell'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -180,6 +181,9 @@ export function Layout({ children }: { children: ReactNode }) {
               <MapOutlinedIcon />
             </IconButton>
           </Tooltip>
+          {/* La campana solo tiene sentido con sesión, y solo se pinta si hay algo:
+              un icono que nunca hace nada es ruido en una barra que ya va justa. */}
+          {user && <NotificationBell />}
           <ThemeToggle />
           <LanguageSwitcher />
           {user ? (

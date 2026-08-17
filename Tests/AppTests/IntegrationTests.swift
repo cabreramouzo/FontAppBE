@@ -2021,6 +2021,90 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    // MARK: - Campana
+
+    /// La bandeja cuenta lo no leído, **no** lo marca al pedirlo, y al marcar conserva
+    /// los avisos.
+    ///
+    /// Lo de no marcar al pedir es la mitad del test: la app pide esta ruta en cada carga,
+    /// y si leer contara como haber mirado, la campana se vaciaría sola antes de que nadie
+    /// la abriera. Se marca al abrir el panel, que es un gesto.
+    func testNotificationInboxCountsUnreadAndOnlyClearsWhenAsked() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "campanera")
+            let token = try await login(app, username: "campanera")
+            for i in 0..<2 {
+                try await Notification(userID: id, kind: .mention, actorID: nil, actorName: "admin",
+                                       fontID: nil, fontName: "Font \(i)", excerpt: "hola @campanera")
+                    .save(on: app.db)
+            }
+
+            try await app.test(.GET, "notifications", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let inbox = try res.content.decode(NotificationController.Inbox.self)
+                XCTAssertEqual(inbox.unread, 2)
+                XCTAssertEqual(inbox.items.count, 2)
+                XCTAssertFalse(inbox.items[0].read)
+                // Sin fuente el aviso sigue existiendo; es el enlace lo que desaparece.
+                XCTAssertNil(inbox.items[0].fontID)
+            })
+
+            // Pedirla otra vez no ha marcado nada.
+            try await app.test(.GET, "notifications", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(try res.content.decode(NotificationController.Inbox.self).unread, 2)
+            })
+
+            try await app.test(.POST, "notifications/read", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .noContent)
+            })
+            try await app.test(.GET, "notifications", headers: bearer(token), afterResponse: { res in
+                let inbox = try res.content.decode(NotificationController.Inbox.self)
+                XCTAssertEqual(inbox.unread, 0)
+                XCTAssertEqual(inbox.items.count, 2, "marcar como leído no borra nada")
+            })
+        }
+    }
+
+    /// La bandeja es privada: sin sesión no hay campana, y la de otro no se ve.
+    func testNotificationInboxIsPrivate() async throws {
+        try await withApp { app in
+            let ajeno = try await register(app, username: "ajena")
+            try await Notification(userID: ajeno, kind: .mention, actorID: nil, actorName: "admin",
+                                   fontID: nil, fontName: "Font", excerpt: "@ajena").save(on: app.db)
+            let mirona = try await register(app, username: "mirona")
+            _ = mirona
+            let token = try await login(app, username: "mirona")
+
+            try await app.test(.GET, "notifications", afterResponse: { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            })
+            try await app.test(.GET, "notifications", headers: bearer(token), afterResponse: { res in
+                let inbox = try res.content.decode(NotificationController.Inbox.self)
+                XCTAssertEqual(inbox.unread, 0)
+                XCTAssertTrue(inbox.items.isEmpty, "la bandeja de otro no se ve")
+            })
+        }
+    }
+
+    /// Pedir la bandeja anota que has pasado, y eso es lo que decide que **no** te llegue
+    /// un correo contándote lo que ya tienes en la campana.
+    func testAskingForTheInboxMarksYouAsAround() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "presente")
+            let token = try await login(app, username: "presente")
+            let antes = try await User.find(id, on: app.db)
+            XCTAssertNil(antes?.lastSeenAt)
+            XCTAssertEqual(antes?.isAround, false)
+
+            try await app.test(.GET, "notifications", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+            let despues = try await User.find(id, on: app.db)
+            XCTAssertNotNil(despues?.lastSeenAt)
+            XCTAssertEqual(despues?.isAround, true)
+        }
+    }
+
     /// Una fuente **sin zona** dentro de Catalunya cuenta igual, heredando la demarcación
     /// de la clasificada más cercana.
     ///

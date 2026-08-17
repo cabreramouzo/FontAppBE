@@ -283,6 +283,31 @@ export async function forgotPassword(email: string, lang?: string): Promise<{ ok
 
 // Baja del resumen semanal desde el enlace del correo: no requiere sesión, el token
 // firmado que viaja en la URL es la única credencial (ver UnsubscribeToken en el backend).
+/** Un aviso de la campana. `fontID` nulo = la fuente ya no existe. */
+export interface NotificationItem {
+  id: string
+  kind: 'mention'
+  actorName: string
+  fontID: string | null
+  fontName: string
+  excerpt: string
+  read: boolean
+  createdAt: string | null
+}
+
+/**
+ * La bandeja propia. **No marca nada como leído**: eso lo hace `markNotificationsRead`
+ * cuando se abre el panel, o cualquier carga de la app te vaciaría la campana antes de
+ * que la miraras.
+ */
+export async function getNotifications(): Promise<{ unread: number; items: NotificationItem[] }> {
+  return apiFetch('/notifications')
+}
+
+export async function markNotificationsRead(): Promise<void> {
+  await apiFetch('/notifications/read', { method: 'POST' })
+}
+
 export async function unsubscribeWeekly(user: string, token: string, kind?: string): Promise<void> {
   await apiFetch('/users/unsubscribe', { method: 'POST', body: JSON.stringify({ user, token, kind }) })
 }

@@ -1,14 +1,17 @@
 import Fluent
 import Vapor
 
-/// Avisa por correo a quien has mencionado con `@sunombre`.
+/// Avisa a quien has mencionado con `@sunombre`: campana siempre, correo solo si hace falta.
 ///
-/// ## Por qué correo y no un aviso dentro de la app
+/// ## Los dos canales, y cuál manda
 ///
-/// Porque no hay tal cosa, y montarla —tabla, endpoint, campana, estado de leído— es una
-/// funcionalidad entera. Pero sobre todo porque el caso que lo pide es «voy a borrar tu
-/// fuente duplicada y perderás las gotas»: eso hay que decírselo a alguien **aunque no
-/// vuelva a abrir la app**, que es justo lo que un aviso dentro de la app no consigue.
+/// **La campana primero** (`Notification`). No cuesta nada, no interrumpe y es donde lo va
+/// a ver la mayoría, porque la mayoría de las menciones las lee alguien que ya usa la app.
+///
+/// **El correo solo para quien no anda por aquí** (`User.isAround`). El caso que dio origen
+/// a esto es «voy a borrar tu fuente duplicada y perderás las gotas»: eso hay que decírselo
+/// a alguien **aunque no vuelva a abrir la app**, y ahí la campana no llega. Pero mandarle
+/// un correo a quien está mirando la pantalla es pagar por molestar, así que se calla.
 ///
 /// ## Lo que se cuida
 ///
@@ -56,8 +59,10 @@ enum MentionNotifier {
         let db = app.db
         // Insensible a mayúsculas: quien escribe `@Nuria_F` está nombrando a `nuria_f`.
         let bajos = nombres.map { $0.lowercased() }
+        // Sin filtrar por `mentionEmails` aquí: esa preferencia es **del correo**, y
+        // colarla en la consulta dejaba sin campana a quien solo había pedido no recibir
+        // correos. La campana no interrumpe a nadie y por eso no se apaga.
         let destinatarios = try await User.query(on: db)
-            .filter(\.$mentionEmails == true)
             .filter(\.$anonymizedAt == nil)
             .all()
             .filter { bajos.contains($0.username.lowercased()) && $0.id != autorID }
@@ -68,8 +73,22 @@ enum MentionNotifier {
             ?? "http://localhost:5173"
         let origen = base.hasSuffix("/") ? String(base.dropLast()) : base
 
+        // La campana primero y siempre: no cuesta nada, no molesta y es donde lo va a ver
+        // la mayoría. El correo queda para quien no anda por aquí.
         for u in destinatarios {
-            guard let email = u.email, let uid = u.id else { continue }
+            guard let uid = u.id else { continue }
+            let aviso = Notification(userID: uid, kind: .mention, actorID: autorID,
+                                     actorName: autorNombre, fontID: fontID,
+                                     fontName: nombreFuente, excerpt: excerpt)
+            try? await aviso.save(on: db)
+        }
+
+        for u in destinatarios {
+            guard u.mentionEmails, let email = u.email, let uid = u.id else { continue }
+            // Quien ha pasado por la app hace poco ya tiene el aviso en la campana; el
+            // correo solo repetiría lo mismo, y cada uno cuesta dinero. Es toda la razón
+            // de ser de la campana, así que la regla vive aquí y en un solo sitio.
+            if u.isAround { continue }
             let baja = "\(origen)/unsubscribe?u=\(uid)&t=\(UnsubscribeToken.make(userID: uid))&k=mentions"
             let mail = MentionEmail.build(
                 lang: u.lang, by: autorNombre, fontName: nombreFuente, excerpt: excerpt,

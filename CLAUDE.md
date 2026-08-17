@@ -375,6 +375,20 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   (`UnsubscribeToken`) para que funcione desde el buzón, sin sesión; `?k=mentions`
   distingue de qué te das de baja y **sin ese parámetro es el resumen**, porque los
   enlaces ya enviados no lo llevan y viven para siempre en el buzón de alguien.
+- **Campana** (`Notification` + `NotificationController` → `GET /notifications`,
+  `POST /notifications/read`, `NotificationBell.tsx`): avisos dentro de la app, privados y
+  sin caché. Guarda **el texto ya resuelto** y no una referencia a la reseña: un aviso es
+  una foto de lo que pasó, y con una referencia media bandeja se quedaría en blanco al
+  primer borrado. `GET` **no marca como leído** —la app lo pide en cada carga y se
+  vaciaría la campana antes de mirarla—; se marca al abrir el panel. El cliente pregunta
+  al cargar y al volver la pestaña al primer plano, **no cada X segundos**: un sondeo es
+  el gasto que esto viene a evitar.
+  De paso, `GET /notifications` anota `users.last_seen_at` (como mucho una escritura por
+  hora, `User.seenThrottle`) y **eso decide si además va un correo**: quien ha pasado por
+  aquí en 3 días (`User.aroundWindow`) ya lo tiene en la campana y no se le escribe. Tres
+  días y no tres horas porque esta app se usa cuando sales al monte, no a diario.
+  Ojo: `users.mention_emails` es del **correo**, no de la campana — colarlo en la consulta
+  de destinatarios dejaba sin avisos a quien solo había pedido no recibir correos.
 - **Menciones** (`Utils/Mentions.swift`): `@nombre` en una reseña o incidencia se pinta
   como enlace al perfil (`AuthorLine.tsx`) y avisa por correo. La regla del servidor y la
   del cliente tienen que decir lo mismo o se subraya a quien no se avisa; las dos llevan

@@ -35,6 +35,9 @@ final class User: Model, @unchecked Sendable {
     @Field(key: "gamification_opt_out") var gamificationOptOut: Bool
     /// Avisar por correo cuando alguien te menciona con `@tunombre`. Nace encendido.
     @Field(key: "mention_emails") var mentionEmails: Bool
+    /// Última vez que se le vio por la app. Solo sirve para no mandar un correo a quien
+    /// ya tiene el aviso en la campana. Ver `AddLastSeenAtToUser`.
+    @OptionalField(key: "last_seen_at") var lastSeenAt: Date?
     // Idioma con el que se registró, para los correos que no nacen de una petición suya.
     @OptionalField(key: "lang") var lang: String?
     // Código del cartel por el que llegó (`?p=castellcir`), si venía con uno.
@@ -78,6 +81,24 @@ extension User: ModelAuthenticatable {
 }
 
 extension User {
+    /// Cada cuánto se refresca `lastSeenAt` como mucho. Una hora: lo bastante fino para
+    /// saber si alguien anda por aquí y lo bastante grueso para que sea una escritura por
+    /// persona activa y hora, no una por petición.
+    static let seenThrottle: TimeInterval = 3_600
+
+    /// Se le ha visto lo bastante cerca como para que la campana baste y el correo sobre.
+    ///
+    /// Tres días, no tres horas: quien entra un par de veces por semana **va a ver** el
+    /// punto rojo la próxima vez, y ése es el caso normal de esta app —se usa cuando sales
+    /// al monte, no a diario—. Con un margen corto se enviaría correo a casi todo el
+    /// mundo y la campana no habría ahorrado nada, que es justo para lo que se ha hecho.
+    static let aroundWindow: TimeInterval = 3 * 86_400
+
+    var isAround: Bool {
+        guard let lastSeenAt else { return false }
+        return Date().timeIntervalSince(lastSeenAt) < Self.aroundWindow
+    }
+
     /// El propietario del servicio: máximo nivel, único, se fija por CLI (`set-role`).
     var isOwner: Bool { role == .owner }
     /// Admin o superior: gestiona fuentes, revierte ediciones y ve estadísticas.
