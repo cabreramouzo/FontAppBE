@@ -15,6 +15,12 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 
 ## Comandos
 - Build / tests backend: `swift build` · `swift test` (los tests de integración usan la DB `fontapp_test`).
+- Traducciones: `npm --prefix web run check:i18n` comprueba que los cinco diccionarios
+  llevan **las mismas claves**. Va dentro de `npm run build`, así que también corre en CI.
+  Existe porque un diccionario incompleto **no rompe nada visible**: `t()` devuelve la
+  clave cruda, así que solo se ve un `maint.retire` en mitad de un botón y solo en un
+  idioma. Es script de Node y no un test porque `web/` no tiene runner, y montar uno para
+  comparar cinco listas de cadenas costaba más que el problema.
 - Postgres local: `brew services start postgresql@16` (binarios en `/opt/homebrew/opt/postgresql@16/bin`,
   keg-only; rol `vapor`, DB `fontapp` — ver `env.development`). Alternativa: `docker compose up db -d`.
 - Migrar: `swift run App migrate --yes` · revertir: `--revert --yes`.

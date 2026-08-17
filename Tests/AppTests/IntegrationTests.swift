@@ -667,6 +667,12 @@ final class IntegrationTests: XCTestCase {
                 XCTAssertFalse(items.isEmpty)
                 for f in items {
                     XCTAssertNil(f["queuedOffline"], "columna interna publicada en /fonts")
+                    // `retired_by` es de moderación: quién la retiró no es asunto público.
+                    // `duplicateOf` y `retiredAt` **sí** salen —la ficha tiene que poder
+                    // explicar por qué el punto no está— y salen SIEMPRE, con null.
+                    XCTAssertNil(f["retiredBy"], "quién retiró la fuente no es público")
+                    XCTAssertTrue(f.keys.contains("duplicateOf"), "omitida = `undefined` en el cliente")
+                    XCTAssertTrue(f.keys.contains("retiredAt"), "omitida = `undefined` en el cliente")
                     let creator = f["creator"] as? [String: Any]
                     XCTAssertNotNil(creator, "creator debe salir siempre, aunque sea sin id")
                     XCTAssertTrue(creator?.keys.contains("id") == true,
@@ -2024,6 +2030,151 @@ final class IntegrationTests: XCTestCase {
                 let body = res.body.string
                 XCTAssertTrue(body.contains("catalonia"), body)
                 XCTAssertTrue(body.contains("special"), body)
+            })
+        }
+    }
+
+    // MARK: - Fugas y promesas que ahora ve gente de verdad
+
+    /// El hash de la contraseña no sale por ninguna de las rutas que devuelven usuarios.
+    ///
+    /// `User` no es `Content` justamente para que esto no pueda pasar, pero la protección
+    /// depende de que nadie devuelva el modelo por descuido, y eso no lo impide el
+    /// compilador. Es la fuga más cara que puede tener esta app y no había test.
+    func testPasswordHashNeverLeaves() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "secreta")
+            let token = try await login(app, username: "secreta")
+            let fontID = try await createFont(app, token: token, name: "Font", lat: 41.5, long: 2.0)
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(["body": "hola", "waterStatus": "flowing"])
+            }, afterResponse: { _ in })
+
+            let rutas = ["users/\(id)", "users/secreta", "users/secreta/badges",
+                         "users/\(id)/fonts", "fonts/\(fontID)/comments", "fonts/\(fontID)"]
+            for ruta in rutas {
+                try await app.test(.GET, ruta, headers: bearer(token), afterResponse: { res in
+                    let body = res.body.string
+                    XCTAssertFalse(body.contains("passwordHash"), "\(ruta) publica el hash")
+                    XCTAssertFalse(body.contains("password_hash"), "\(ruta) publica el hash")
+                    XCTAssertFalse(body.contains("$2b$"), "\(ruta) publica un hash de bcrypt")
+                })
+            }
+            // Y en la respuesta propia, que sí lleva email y preferencias, tampoco.
+            try await app.test(.GET, "auth/me", headers: bearer(token), afterResponse: { res in
+                XCTAssertFalse(res.body.string.contains("$2b$"))
+            })
+        }
+    }
+
+    /// El techo diario se aplica de verdad: nadie liquida más de `dailyCap` en un día.
+    ///
+    /// Es la defensa contra el guion que da de alta doscientas fuentes en una tarde, y
+    /// hasta ahora no la probaba nada. Se comprueba el invariante —lo liquidado de un día
+    /// nunca pasa del techo— y no un número concreto, porque los multiplicadores del
+    /// baremo cambian el total y la promesa es el tope, no la cifra.
+    func testDailyCapIsEnforced() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "maquina")
+            // Directas a la BD y no por HTTP: la ruta de crear tiene su propio límite de
+            // 30/hora, que es otra defensa distinta. Aquí se prueba el techo de gotas.
+            let dia = Date().addingTimeInterval(-10 * 86_400)
+            for i in 0..<60 {
+                let f = Font(name: "Massiva \(i)", latitude: 41.0 + Double(i) / 1000, longitude: 2.0,
+                             creatorID: id)
+                try await f.create(on: app.db)
+                f.createdAt = dia
+                try await f.save(on: app.db)
+            }
+
+            _ = try await ContributionLedger.sync(on: app.db, now: dia.addingTimeInterval(96 * 3_600))
+
+            let liquidadas = try await ContributionEvent.query(on: app.db)
+                .filter(\.$user.$id == id).filter(\.$status == .settled).all()
+            let total = liquidadas.reduce(0) { $0 + $1.gotes }
+            XCTAssertGreaterThan(total, 0, "algo tiene que cobrar")
+            XCTAssertLessThanOrEqual(total, ContributionLedger.dailyCap,
+                                     "se ha liquidado más del techo de un solo día")
+
+            let porTecho = try await ContributionEvent.query(on: app.db)
+                .filter(\.$user.$id == id).filter(\.$status == .void).all()
+                .filter { $0.voidReason?.contains("techo") == true }
+            XCTAssertFalse(porTecho.isEmpty, "lo que pasa del techo tiene que quedar anulado y dicho")
+        }
+    }
+
+    /// `--rescore` **no toca** lo posterior a la época.
+    ///
+    /// Es la promesa que se le hizo a los usuarios al fijar `GAMIFICATION_EPOCH`: a partir
+    /// de esa fecha tus gotas no se mueven aunque se recalibre el baremo. Hasta ahora solo
+    /// estaba probado que sobrevivían las insignias especiales, que van en otra tabla.
+    func testRescoreLeavesEverythingAfterTheEpochAlone() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "congelada")
+            let vieja = Date().addingTimeInterval(-40 * 86_400)
+            let nueva = Date().addingTimeInterval(-5 * 86_400)
+            for (i, cuando) in [vieja, nueva].enumerated() {
+                let f = Font(name: "F\(i)", latitude: 41.0 + Double(i), longitude: 2.0, creatorID: id)
+                try await f.create(on: app.db)
+                f.createdAt = cuando
+                try await f.save(on: app.db)
+            }
+            _ = try await ContributionLedger.sync(on: app.db, now: Date())
+
+            let antes = try await ContributionEvent.query(on: app.db).filter(\.$user.$id == id).all()
+            XCTAssertEqual(antes.count, 2)
+            let idProtegida = antes.first { $0.occurredAt > vieja.addingTimeInterval(86_400) }?.id
+            let idBorrable = antes.first { $0.occurredAt < vieja.addingTimeInterval(86_400) }?.id
+            XCTAssertNotNil(idProtegida); XCTAssertNotNil(idBorrable)
+
+            // Línea entre las dos.
+            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.timeZone = TimeZone(identifier: "UTC")
+            setenv("GAMIFICATION_EPOCH", f.string(from: Date().addingTimeInterval(-20 * 86_400)), 1)
+            defer { unsetenv("GAMIFICATION_EPOCH") }
+
+            let r = try await ContributionLedger.rescore(on: app.db)
+            XCTAssertEqual(r.protected, 1)
+            XCTAssertEqual(r.deleted, 1)
+
+            let despues = try await ContributionEvent.query(on: app.db).filter(\.$user.$id == id).all()
+            // La misma fila, no una reconstruida: mismo id.
+            XCTAssertTrue(despues.contains { $0.id == idProtegida },
+                          "la aportación posterior a la época tiene que ser LA MISMA fila")
+            XCTAssertFalse(despues.contains { $0.id == idBorrable },
+                           "la anterior sí se reconstruye")
+        }
+    }
+
+    /// Una fuente escondida tampoco sale por cercanía ni en las rutas propuestas.
+    ///
+    /// El listado y el mapa ya estaban probados. Éstas dos son las que de verdad mandan a
+    /// alguien a caminar: «la más cercana» y «una vuelta por aquí».
+    func testHiddenFountainsStayOutOfNearbyAndRoutes() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "caminante")
+            let token = try await login(app, username: "caminante")
+            let buena = try await createFont(app, token: token, name: "Font bona", lat: 41.800, long: 2.100)
+            let mala = try await createFont(app, token: token, name: "Font repetida", lat: 41.801, long: 2.101)
+            let ida = try await createFont(app, token: token, name: "Font que ja no hi és", lat: 41.802, long: 2.102)
+
+            let f1 = try await Font.find(mala, on: app.db)!
+            f1.$duplicateOf.id = buena
+            try await f1.save(on: app.db)
+            let f2 = try await Font.find(ida, on: app.db)!
+            f2.retiredAt = Date()
+            try await f2.save(on: app.db)
+            _ = id
+
+            try await app.test(.GET, "fonts/near?lat=41.8&long=2.1&quantity=50", afterResponse: { res in
+                let cuerpo = res.body.string
+                XCTAssertTrue(cuerpo.contains("Font bona"))
+                XCTAssertFalse(cuerpo.contains("Font repetida"), "una duplicada no es «la más cercana»")
+                XCTAssertFalse(cuerpo.contains("ja no hi és"), "una retirada no es «la más cercana»")
+            })
+            try await app.test(.GET, "missions?lat=41.8&long=2.1&km=5", afterResponse: { res in
+                let cuerpo = res.body.string
+                XCTAssertFalse(cuerpo.contains("Font repetida"), "una duplicada no es una parada")
+                XCTAssertFalse(cuerpo.contains("ja no hi és"), "una retirada no es una parada")
             })
         }
     }
