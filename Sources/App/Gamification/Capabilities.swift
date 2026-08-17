@@ -28,12 +28,21 @@ enum Capabilities {
         /// aporta quien lo tiene, y quien lo tiene puede haberse registrado esta mañana.
         /// La puerta está para los duplicados del mismo ángulo, que es donde hay ruido.
         case addSecondaryPhoto
+        /// Dar por resuelta la incidencia de otra persona. Nivel 6 (`river`).
+        case resolveIncident
+        /// Borrar una foto secundaria ajena. Nivel 7 (`waterfall`).
+        case deleteAnyPhoto
+        /// Deshacer la edición de otra persona. Nivel 8 (`reservoir`).
+        case revertAnyEdit
 
         /// A partir de qué nivel se abre.
         var level: String {
             switch self {
             case .relocateAnyFont: return "stream"
             case .addSecondaryPhoto: return "brook"
+            case .resolveIncident: return "river"
+            case .deleteAnyPhoto: return "waterfall"
+            case .revertAnyEdit: return "reservoir"
             }
         }
 
@@ -52,6 +61,13 @@ enum Capabilities {
             switch self {
             case .relocateAnyFont: return true
             case .addSecondaryPhoto: return false
+            // Cerrar una incidencia no destruye nada y se puede reabrir: se comporta como
+            // añadir una foto, no como borrarla.
+            case .resolveIncident: return false
+            // Estas dos **sí**: borran o deshacen el trabajo de otra persona. Perderlas a
+            // media faena por un `--rescore` es el error intermitente que la regla evita,
+            // y ganarlas por unas gotas que mañana bajan es peor todavía.
+            case .deleteAnyPhoto, .revertAnyEdit: return true
             }
         }
 

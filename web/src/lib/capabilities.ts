@@ -11,7 +11,12 @@ import { getGamification, getGamificationScale } from '../api/client'
  * y allí que no, el usuario vería el mapa y se comería un 403 al guardar; y al revés, un
  * cliente manipulado no se salta nada, porque `FontController` lo vuelve a comprobar.
  */
-export type Capability = 'relocateAnyFont' | 'addSecondaryPhoto'
+export type Capability =
+  | 'relocateAnyFont'
+  | 'addSecondaryPhoto'
+  | 'resolveIncident'
+  | 'deleteAnyPhoto'
+  | 'revertAnyEdit'
 
 let cache: Promise<Capability[]> | null = null
 

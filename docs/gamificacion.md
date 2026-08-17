@@ -243,7 +243,7 @@ proyecto ya tiene pendiente con el modelo de administradores por zona.
 | 7 | Cascada | 7 000 | Marcar fuentes como desaparecidas. Las ediciones no hacen cola. |
 | 8 | Embalse | 14 000 | — |
 | 9 | Lago | 28 000 | — |
-| 10 | Acuífero | 60 000 | Candidata a moderadora de su región, a propuesta de un admin. |
+| 10 | Acuífero | 60 000 | Candidatura a moderar su región, a propuesta de un admin. |
 
 Eran cinco y se llegaba al tercero en una semana: medido sobre el usuario más activo,
 2 853 gotas y nivel 3 de 5 con 31 aportaciones. Un nivel alto alcanzado pronto deja de

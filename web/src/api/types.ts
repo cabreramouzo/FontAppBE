@@ -106,6 +106,9 @@ export interface ReportResponse {
   username: string | null
   message: string
   createdAt: string
+  /** Nulo = sigue abierta. Se cierra, no se borra: la avería es parte de la historia. */
+  resolvedAt: string | null
+  resolvedBy: string | null
 }
 
 export interface CommentResponse {

@@ -72,9 +72,17 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     pasada, porque conceder escritura sobre puntos que `--rescore` puede reescribir da
     permisos que desaparecen solos. Además de las gotas: 8 días distintos con aportación
     y ninguna anulación por mala conducta en 90 días (pasarse del techo diario no cuenta).
-    Se abre **una sola** capacidad, `relocateAnyFont` (nivel 5): reversible desde el panel
-    y necesaria porque las fuentes importadas no tienen creador. Sustituir foto y borrar
-    NO se abren por nivel.
+    Cinco capacidades: `addSecondaryPhoto` (3), `resolveIncident` (6), `relocateAnyFont`
+    (5), `deleteAnyPhoto` (7) y `revertAnyEdit` (8). Todas reversibles. Sustituir una foto
+    que ya existe y borrar una fuente **no** se abren por nivel: la primera invita a la
+    guerra de ediciones y la segunda no se deshace.
+    `Capability.requiresDefinitivePoints` parte la regla de la época en dos: las que
+    **destruyen o deshacen trabajo ajeno** (`deleteAnyPhoto`, `revertAnyEdit`,
+    `relocateAnyFont`) la exigen; añadir una foto o cerrar una incidencia, no. Con la
+    época sin poner, exigírselo a todas dejaba inservibles justo las nuevas.
+    Nivel 10 = **candidatura** a moderar su región a propuesta de un admin, nunca
+    concesión automática: moderar es poder sobre personas y no cuelga de un contador.
+    Falta acotar `UserRole.moderator` por región — hoy modera todo el mapa.
   - Fase 7, sacarlo de `/me`: toda la gamificación vivía detrás del perfil y casi nadie
     entra ahí. Ahora el **pionero** (primero en reseñar) sale en la ficha de la fuente
     bajo el creador, con el escudo **solo si la insignia se ha ganado de verdad** (fuentes

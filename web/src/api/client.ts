@@ -236,6 +236,13 @@ export async function createReport(fontID: string, message: string): Promise<Rep
   })
 }
 
+/** Cerrar (o reabrir) una incidencia. Cerrar no la borra: queda con fecha y autor. */
+export async function resolveReport(fontID: string, reportID: string, on: boolean): Promise<ReportResponse> {
+  return apiFetch<ReportResponse>(`/fonts/${fontID}/report/${reportID}/resolve`, {
+    method: on ? 'POST' : 'DELETE',
+  })
+}
+
 export async function deleteReport(fontID: string, reportID: string): Promise<void> {
   await apiFetch(`/fonts/${fontID}/report/${reportID}`, { method: 'DELETE' })
 }

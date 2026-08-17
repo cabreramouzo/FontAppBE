@@ -10,6 +10,12 @@ final class FontReport: Model, Content, @unchecked Sendable {
     @OptionalParent(key: "user_id") var user: User?
     @Field(key: "message") var message: String
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
+    /// Cuándo se dio por resuelta, y quién. Nulo = sigue abierta.
+    ///
+    /// Resolver en vez de borrar: que la fuente estuvo rota y se arregló es parte de su
+    /// historia, y es lo que mira quien duda si acercarse.
+    @OptionalField(key: "resolved_at") var resolvedAt: Date?
+    @OptionalParent(key: "resolved_by") var resolver: User?
 
     init() {}
 

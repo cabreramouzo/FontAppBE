@@ -11,6 +11,11 @@ struct FontReportController: RouteCollection {
         auth.grouped(RateLimitMiddleware(scope: "report", max: 20, window: 60 * 60)).post(use: create)
         auth.group(":reportID") { r in
             r.delete(use: destroy)
+            // Cerrar y reabrir. Reabrir es lo que hace que cerrar se pueda conceder por
+            // nivel: si no hubiera vuelta atrás, una incidencia legítima podría quedar
+            // silenciada por alguien que se equivocó.
+            r.post("resolve", use: resolve)
+            r.delete("resolve", use: reopen)
         }
     }
 
@@ -21,8 +26,46 @@ struct FontReportController: RouteCollection {
             .filter(\.$font.$id == fontID)
             .sort(\.$createdAt, .descending)
             .all()
-        let names = try await User.usernames(for: reports.compactMap { $0.$user.id }, on: req.db)
-        return reports.map { ReportResponse($0, username: $0.$user.id.flatMap { names[$0] }) }
+        let names = try await User.usernames(
+            for: reports.flatMap { [$0.$user.id, $0.$resolver.id] }.compactMap { $0 }, on: req.db)
+        return reports.map {
+            ReportResponse($0, username: $0.$user.id.flatMap { names[$0] },
+                           resolverName: $0.$resolver.id.flatMap { names[$0] })
+        }
+    }
+
+    /// POST /fonts/:fontID/report/:reportID/resolve — darla por resuelta.
+    ///
+    /// La puede cerrar quien la abrió (ya se ha arreglado, lo he visto), un moderador, o
+    /// quien tenga la capacidad por nivel. **No se borra**: que la fuente estuvo rota y
+    /// volvió a manar es parte de su historia y es lo que mira quien duda si acercarse.
+    @Sendable func resolve(req: Request) async throws -> ReportResponse {
+        try await cambiaEstado(req, resolviendo: true)
+    }
+
+    /// DELETE /fonts/:fontID/report/:reportID/resolve — volver a abrirla.
+    @Sendable func reopen(req: Request) async throws -> ReportResponse {
+        try await cambiaEstado(req, resolviendo: false)
+    }
+
+    private func cambiaEstado(_ req: Request, resolviendo: Bool) async throws -> ReportResponse {
+        let user = try req.auth.require(User.self)
+        guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {
+            throw Abort(.notFound, reason: "Incidencia no encontrada")
+        }
+        let userID = try user.requireID()
+        var puede = report.$user.id == userID || user.canModerate
+        if !puede { puede = try await Capabilities.has(.resolveIncident, user, on: req.db) }
+        guard puede else { throw Abort(.forbidden, reason: "Todavía no puedes cerrar incidencias ajenas") }
+
+        report.resolvedAt = resolviendo ? Date() : nil
+        report.$resolver.id = resolviendo ? userID : nil
+        try await report.save(on: req.db)
+        let names = try await User.usernames(
+            for: [report.$user.id, report.$resolver.id].compactMap { $0 }, on: req.db)
+        return ReportResponse(report,
+                              username: report.$user.id.flatMap { names[$0] },
+                              resolverName: report.$resolver.id.flatMap { names[$0] })
     }
 
     /// POST /fonts/:fontID/report — reporta un problema en la fuente.
@@ -80,13 +123,31 @@ struct ReportResponse: Content {
     let username: String?
     let message: String
     let createdAt: Date?
+    /// Nulo = sigue abierta. Explícito en el JSON, como el resto de opcionales de esta
+    /// API: omitido llega como `undefined` y «resuelta» se distingue de «no lo sé».
+    let resolvedAt: Date?
+    let resolvedBy: String?
 
-    init(_ report: FontReport, username: String?) {
+    init(_ report: FontReport, username: String?, resolverName: String? = nil) {
         self.id = report.id
         self.fontID = report.$font.id
         self.userID = report.$user.id
         self.username = username
         self.message = report.message
         self.createdAt = report.createdAt
+        self.resolvedAt = report.resolvedAt
+        self.resolvedBy = resolverName
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(fontID, forKey: .fontID)
+        try c.encode(userID, forKey: .userID)
+        try c.encode(username, forKey: .username)
+        try c.encode(message, forKey: .message)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(resolvedAt, forKey: .resolvedAt)
+        try c.encode(resolvedBy, forKey: .resolvedBy)
     }
 }

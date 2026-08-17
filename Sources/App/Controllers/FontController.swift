@@ -278,7 +278,15 @@ struct FontController: RouteCollection {
     /// el propio revert en el historial.
     @Sendable func revertEdit(req: Request) async throws -> Font {
         let admin = try req.auth.require(User.self)
-        try requireAdmin(req)
+        // Admin siempre; y desde la fase 6 también quien lo abra por nivel
+        // (`revertAnyEdit`, nivel 8). Deshacer una edición es reversible en los dos
+        // sentidos —la vuelta atrás queda a su vez en el historial—, que es lo que
+        // permite concederlo sin que sea un cheque en blanco.
+        if !admin.isAdmin {
+            guard try await Capabilities.has(.revertAnyEdit, admin, on: req.db) else {
+                throw Abort(.forbidden, reason: "Todavía no puedes deshacer ediciones ajenas")
+            }
+        }
         guard let edit = try await FontEdit.find(req.parameters.get("editID"), on: req.db) else {
             throw Abort(.notFound)
         }

@@ -42,6 +42,7 @@ import {
   deleteComment,
   deleteFont,
   deleteReport,
+  resolveReport,
   describeError,
   getFavoriteStatus,
   getFontPhotoAuthor,
@@ -482,6 +483,15 @@ export function FontDetailPage() {
   const [mirando, setMirando] = useState<
     { key: string; tier: string | null; locked: boolean; subtitle?: string } | null
   >(null)
+  // Cerrar incidencias ajenas lo abre el nivel 6. Se resuelve una vez por ficha y se
+  // comparte con la caché de `lib/capabilities`, así que no cuesta una petición.
+  const [puedeCerrarIncidencias, setPuedeCerrar] = useState(false)
+  useEffect(() => {
+    if (!user) return
+    let vivo = true
+    capabilities().then((c) => { if (vivo) setPuedeCerrar(c.includes('resolveIncident')) })
+    return () => { vivo = false }
+  }, [user])
 
   const load = useCallback(async () => {
     if (!id) return
@@ -546,6 +556,23 @@ export function FontDetailPage() {
     if (!id || !confirm(t('detail.confirmDeleteIncident'))) return
     try {
       await deleteReport(id, reportID)
+      load()
+    } catch (e) {
+      setError(describeError(e, t))
+    }
+  }
+
+  /// Quién puede cerrar una incidencia: quien la abrió, un admin, o quien lo tenga
+  /// abierto por nivel. El servidor lo vuelve a comprobar; esto solo decide si se pinta
+  /// el botón, para no ofrecer una acción que va a devolver 403.
+  function puedeResolver(r: ReportResponse): boolean {
+    return !!user && (user.id === r.userID || !!user.isAdmin || puedeCerrarIncidencias)
+  }
+
+  async function cambiaResuelta(r: ReportResponse, resolver: boolean) {
+    if (!id) return
+    try {
+      await resolveReport(id, r.id, resolver)
       load()
     } catch (e) {
       setError(describeError(e, t))
@@ -879,7 +906,30 @@ export function FontDetailPage() {
             <ListItem key={r.id} divider disableGutters secondaryAction={(user?.id === r.userID || user?.isAdmin) ? (
               <IconButton edge="end" size="small" color="error" onClick={() => removeReport(r.id)} aria-label={t('detail.delete')}><DeleteOutlineIcon fontSize="small" /></IconButton>
             ) : undefined}>
-              <Typography variant="body2"><strong>{r.username ?? t('review.anon')}:</strong> {r.message}</Typography>
+              <Box>
+                <Typography variant="body2" sx={{ ...(r.resolvedAt && { color: 'text.secondary' }) }}>
+                  <strong>{r.username ?? t('review.anon')}:</strong> {r.message}
+                </Typography>
+                {/* Resuelta: se tacha el problema, no se esconde. Que la fuente estuvo
+                    rota y volvió a manar es lo que mira quien duda si acercarse. */}
+                {r.resolvedAt ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
+                    <Chip size="small" color="success" variant="outlined" label={t('report.resolved')} sx={{ height: 20 }} />
+                    <Typography variant="caption" color="text.secondary">
+                      {r.resolvedBy ? t('report.resolvedBy', { user: r.resolvedBy }) : ''} · {timeAgo(r.resolvedAt, t)}
+                    </Typography>
+                    {puedeResolver(r) && (
+                      <Button size="small" onClick={() => cambiaResuelta(r, false)} sx={{ textTransform: 'none' }}>
+                        {t('report.reopen')}
+                      </Button>
+                    )}
+                  </Box>
+                ) : puedeResolver(r) && (
+                  <Button size="small" onClick={() => cambiaResuelta(r, true)} sx={{ textTransform: 'none', ml: -1 }}>
+                    {t('report.resolve')}
+                  </Button>
+                )}
+              </Box>
             </ListItem>
           ))}
         </List>

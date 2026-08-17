@@ -132,6 +132,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddReasonsToContributionEvent()) // por qué valió lo que valió
     app.migrations.add(AddQueuedOfflineToContent()) // creada sin cobertura (bandeja de salida)
     app.migrations.add(CreateFontPhoto())       // fotos secundarias con tipo
+    app.migrations.add(AddResolvedToFontReport()) // incidencias que se cierran, no se borran
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

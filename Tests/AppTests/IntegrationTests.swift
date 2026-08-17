@@ -488,6 +488,54 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Cerrar una incidencia no la borra, y se puede reabrir.
+    ///
+    /// Que la fuente estuvo rota y volvió a manar es parte de su historia: borrarla pierde
+    /// justo lo que mira quien duda si acercarse. Y **reabrir** es la condición que hace
+    /// que esto se pueda abrir por nivel — sin vuelta atrás, una incidencia legítima
+    /// podría quedar silenciada por alguien que se equivocó.
+    func testResolvingAnIncidentKeepsItAndCanBeUndone() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "avisador")
+            let tok = try await login(app, username: "avisador")
+            let fontID = try await createFont(app, token: tok, name: "Rota", lat: 41, long: 2)
+
+            var reportID = UUID()
+            try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(["message": "El caño está roto"])
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+                reportID = try res.content.decode(ReportResponse.self).id ?? reportID
+            })
+
+            try await app.test(.POST, "fonts/\(fontID)/report/\(reportID)/resolve", headers: bearer(tok)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let r = try res.content.decode(ReportResponse.self)
+                XCTAssertNotNil(r.resolvedAt)
+                XCTAssertEqual(r.resolvedBy, "avisador")
+            }
+
+            // Sigue estando: resolver no borra.
+            try await app.test(.GET, "fonts/\(fontID)/report") { res in
+                let rs = try res.content.decode([ReportResponse].self)
+                XCTAssertEqual(rs.count, 1)
+                XCTAssertNotNil(rs.first?.resolvedAt)
+            }
+
+            try await app.test(.DELETE, "fonts/\(fontID)/report/\(reportID)/resolve", headers: bearer(tok)) { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertNil(try res.content.decode(ReportResponse.self).resolvedAt)
+            }
+
+            // La de otra persona no, mientras no se tenga el nivel.
+            _ = try await register(app, username: "extranyo")
+            let otro = try await login(app, username: "extranyo")
+            try await app.test(.POST, "fonts/\(fontID)/report/\(reportID)/resolve", headers: bearer(otro)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+        }
+    }
+
     /// La galería: los documentos los sube cualquiera, las fotos de la fuente piden nivel.
     ///
     /// Es la regla que nació del caso real —un geólogo con el informe de salubridad del
