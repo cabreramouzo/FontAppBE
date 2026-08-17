@@ -1,4 +1,4 @@
-import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, GamificationProfile, InterestStats, LoginResponse, Missions, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneRanking } from './types'
+import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -163,6 +163,16 @@ export async function deleteFontPhoto(fontID: string, photoID: string): Promise<
 
 export async function updateFont(id: string, data: NewFont): Promise<Font> {
   return apiFetch<Font>(`/fonts/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+}
+
+/**
+ * Fuentes cercanas a un punto, ya ordenadas por distancia por el servidor.
+ *
+ * Las escondidas (duplicadas, retiradas) no vienen: `Font.visible` las filtra. Es lo que
+ * hace que el buscador de duplicados no ofrezca como «buena» una ficha que tampoco sale.
+ */
+export async function nearbyFonts(lat: number, long: number, quantity = 40): Promise<FontSummary[]> {
+  return apiFetch<FontSummary[]>(`/fonts/near?lat=${lat}&long=${long}&quantity=${quantity}`)
 }
 
 /** Historial de cambios de una fuente. Nivel 4 (`viewFontHistory`) o admin. */

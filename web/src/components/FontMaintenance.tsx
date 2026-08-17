@@ -17,12 +17,19 @@ import HistoryIcon from '@mui/icons-material/HistoryOutlined'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import LayersClearIcon from '@mui/icons-material/LayersClearOutlined'
 import type { Font, FontEdit } from '../api/types'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import ListItemText from '@mui/material/ListItemText'
+import InputAdornment from '@mui/material/InputAdornment'
+import SearchIcon from '@mui/icons-material/SearchOutlined'
+import type { FontSummary } from '../api/types'
 import {
-  describeError, getFontHistory, markDuplicate, retireFont, unmarkDuplicate, unretireFont,
+  describeError, getFontHistory, markDuplicate, nearbyFonts, retireFont, unmarkDuplicate, unretireFont,
 } from '../api/client'
 import { capabilities } from '../lib/capabilities'
 import { useI18n } from '../i18n/I18nContext'
 import { timeAgo } from '../lib/time'
+import { haversineKm } from '../lib/geo'
 
 /**
  * El aviso de que esta ficha ya no sale en el mapa.
@@ -67,12 +74,25 @@ export function FontMaintenance({ font, onChanged }: { font: Font; onChanged: ()
   const [historial, setHistorial] = useState<FontEdit[] | null>(null)
   const [verHistorial, setVerHistorial] = useState(false)
   const [dupOpen, setDupOpen] = useState(false)
-  const [otraID, setOtraID] = useState('')
+  const [cercanas, setCercanas] = useState<FontSummary[] | null>(null)
+  const [filtro, setFiltro] = useState('')
   const [error, setError] = useState('')
   const [ocupado, setOcupado] = useState(false)
 
   useEffect(() => { capabilities().then((c) => setPuedo(c as string[])) }, [])
 
+  // Las vecinas se piden al abrir el diálogo, no antes: casi nadie marca duplicados y
+  // esta petición no tiene por qué pagarla toda visita a una ficha.
+  useEffect(() => {
+    if (!dupOpen || cercanas) return
+    nearbyFonts(font.latitude, font.longitude)
+      .then((fs) => setCercanas(fs.filter((f) => f.id !== font.id)))
+      .catch(() => setCercanas([]))
+  }, [dupOpen, cercanas, font.id, font.latitude, font.longitude])
+
+  // Los dos `useEffect` van ARRIBA del todo, antes del `return null` de más abajo. Con
+  // uno por debajo, React cuenta un hook en el primer render y dos en el siguiente y
+  // tumba la pantalla entera («Rendered more hooks than during the previous render»).
   const puedeHistorial = puedo.includes('viewFontHistory')
   const puedeDuplicar = puedo.includes('markDuplicate')
   const puedeRetirar = puedo.includes('retireFont')
@@ -149,27 +169,59 @@ export function FontMaintenance({ font, onChanged }: { font: Font; onChanged: ()
 
       <Dialog open={dupOpen} onClose={() => setDupOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>{t('maint.markDuplicate')}</DialogTitle>
-        <DialogContent>
-          {/* Se pide el id y no un buscador porque el flujo real es tener las dos fichas
-              abiertas y copiar la de la buena de la barra de direcciones. Un buscador
-              aquí sería otra pantalla para resolver algo que ya tienes delante. */}
+        <DialogContent dividers>
+          {/* Se abre directamente con las vecinas ordenadas por distancia y no con un
+              campo de búsqueda vacío: un duplicado está, por definición, a unos metros.
+              En el caso normal no hay que escribir nada — la buena es la primera o la
+              segunda de la lista. El filtro por nombre es para el caso raro. */}
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
             {t('maint.duplicateHelp')}
           </Typography>
           <TextField
-            autoFocus fullWidth size="small" value={otraID}
-            onChange={(e) => setOtraID(e.target.value.trim())}
-            label={t('maint.goodFontId')} placeholder="8d315d65-…"
+            fullWidth size="small" value={filtro} onChange={(e) => setFiltro(e.target.value)}
+            placeholder={t('maint.filterByName')}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>
+                ),
+              },
+            }}
           />
+          {cercanas === null && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>…</Typography>
+          )}
+          {cercanas?.length === 0 && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              {t('maint.noNeighbours')}
+            </Typography>
+          )}
+          <List dense sx={{ maxHeight: 320, overflowY: 'auto' }}>
+            {(cercanas ?? [])
+              .filter((f) => !filtro || f.name.toLowerCase().includes(filtro.toLowerCase()))
+              .map((f) => {
+                const m = haversineKm(font.latitude, font.longitude, f.latitude, f.longitude) * 1000
+                return (
+                  <ListItemButton
+                    key={f.id}
+                    disabled={ocupado}
+                    onClick={() => { setDupOpen(false); corre(() => markDuplicate(font.id, f.id)) }}
+                  >
+                    <ListItemText
+                      primary={f.name}
+                      // Los metros son el dato que decide: a 8 m es casi seguro la misma
+                      // agua, a 800 m casi seguro que no.
+                      secondary={m < 1000 ? t('maint.metresAway', { n: String(Math.round(m)) })
+                                          : t('maint.kmAway', { n: (m / 1000).toFixed(1) })}
+                      slotProps={{ primary: { sx: { fontWeight: 600 } } }}
+                    />
+                  </ListItemButton>
+                )
+              })}
+          </List>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDupOpen(false)}>{t('form.cancel')}</Button>
-          <Button
-            variant="contained" disableElevation disabled={!otraID || ocupado}
-            onClick={() => { setDupOpen(false); corre(() => markDuplicate(font.id, otraID)) }}
-          >
-            {t('form.save')}
-          </Button>
         </DialogActions>
       </Dialog>
     </Box>
