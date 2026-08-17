@@ -1893,4 +1893,131 @@ final class IntegrationTests: XCTestCase {
             })
         }
     }
+
+    // MARK: - Insignias especiales
+
+    /// Le da a alguien `n` reseñas liquidadas, fechadas hacia atrás desde `endingAt`.
+    /// La última que se crea es la más reciente, y su fecha es la que ordena la carrera.
+    @discardableResult
+    private func grantReviews(_ userID: UUID, _ n: Int, endingAt: Date,
+                              on db: any Database) async throws -> Date {
+        for i in 0..<n {
+            let cuando = endingAt.addingTimeInterval(-Double(n - 1 - i) * 3_600)
+            let e = ContributionEvent()
+            e.$user.id = userID
+            e.source = "comment"
+            e.subjectID = UUID()
+            e.detail = "r\(i)"
+            e.kind = ContributionScore.Kind.updateReview.rawValue
+            e.base = 10; e.multiplier = 1; e.gotes = 10
+            e.status = .settled
+            e.occurredAt = cuando
+            e.settlesAt = cuando
+            e.settledAt = cuando
+            try await e.save(on: db)
+        }
+        return endingAt
+    }
+
+    /// El cupo es de verdad: la plaza 101 no existe, y la reparte quien llegó antes **por
+    /// la fecha de su reseña número quince**, no por el orden en que la base devuelva las
+    /// filas. Con el histórico volcado de golpe eso es lo único que distingue una carrera
+    /// de un sorteo.
+    func testBetatesterGoesToWhoeverGotThereFirstAndTheQuotaRunsOut() async throws {
+        try await withApp { app in
+            // Tres aspirantes y sitio para dos.
+            let pronto = try await register(app, username: "pronto")
+            let medio = try await register(app, username: "medio")
+            let tarde = try await register(app, username: "tarde")
+            let base = Date().addingTimeInterval(-30 * 86_400)
+            // A propósito en orden inverso al de llegada: si el reparto siguiera el orden
+            // de inserción, «tarde» se llevaría una plaza y el test lo vería.
+            try await grantReviews(tarde, 15, endingAt: base.addingTimeInterval(3 * 86_400), on: app.db)
+            try await grantReviews(medio, 15, endingAt: base.addingTimeInterval(2 * 86_400), on: app.db)
+            try await grantReviews(pronto, 15, endingAt: base.addingTimeInterval(86_400), on: app.db)
+            // Y alguien que se queda a una reseña: catorce no son quince.
+            let casi = try await register(app, username: "casi")
+            try await grantReviews(casi, 14, endingAt: base, on: app.db)
+
+            try await SpecialBadges.award(on: app.db, limits: ["betatester": 2])
+
+            let dadas = try await BadgeAward.query(on: app.db).filter(\.$key == "betatester").all()
+            XCTAssertEqual(dadas.count, 2, "el cupo de dos no se puede sobrepasar")
+            let conMedalla = Set(dadas.map { $0.$user.id })
+            XCTAssertTrue(conMedalla.contains(pronto))
+            XCTAssertTrue(conMedalla.contains(medio))
+            XCTAssertFalse(conMedalla.contains(tarde), "llegó el tercero y solo había dos plazas")
+            XCTAssertFalse(conMedalla.contains(casi), "con catorce reseñas no se entra")
+
+            // Idempotente: repetir el barrido no reparte de nuevo ni duplica.
+            try await SpecialBadges.award(on: app.db, limits: ["betatester": 2])
+            let otraVez = try await BadgeAward.query(on: app.db).filter(\.$key == "betatester").count()
+            XCTAssertEqual(otraVez, 2)
+        }
+    }
+
+    /// Catalunya pide las cuatro demarcaciones, acepta las dos grafías (producción dice
+    /// «Girona» y una base repoblada con Natural Earth dice «Gerona») y **sobrevive a
+    /// `--rescore`**, que es la mitad del sentido de guardarlas.
+    func testCataloniaBadgeNeedsAllFourAndSurvivesARescore() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "quatre")
+            let token = try await login(app, username: "quatre")
+
+            // Las fuentes van **muy separadas** (un grado de latitud, ~111 km) y no es
+            // decoración: al crear una fuente, `FontController.inheritZone` le copia en
+            // segundo plano la zona de la clasificada más cercana si la hay a menos de
+            // 55 km. Con las cuatro juntas, la segunda heredaba «Barcelona» por encima de
+            // lo que escribe el test y la insignia no se ganaba nunca — costó un rato.
+            // Tres demarcaciones: todavía no.
+            for (i, region) in ["Barcelona", "Gerona", "Tarragona"].enumerated() {
+                let fontID = try await createFont(app, token: token, name: "F\(i)",
+                                                  lat: 41.5 + Double(i), long: 2.0)
+                let f = try await Font.find(fontID, on: app.db)!
+                f.country = "Spain"; f.region = region
+                try await f.save(on: app.db)
+                try await grantReviews(id, 1, endingAt: Date().addingTimeInterval(-Double(10 - i) * 86_400),
+                                       on: app.db)
+                // La reseña tiene que colgar de esa fuente para que cuente la región.
+                let ultimo = try await ContributionEvent.query(on: app.db)
+                    .filter(\.$user.$id == id).sort(\.$occurredAt, .descending).first()!
+                ultimo.$font.id = fontID
+                try await ultimo.save(on: app.db)
+            }
+            try await SpecialBadges.award(on: app.db)
+            let conTres = try await BadgeAward.query(on: app.db).filter(\.$key == "catalonia").count()
+            XCTAssertEqual(conTres, 0, "con tres demarcaciones no se gana")
+
+            // La cuarta, con la grafía catalana. Debe unificarse con «Lérida».
+            let fontID = try await createFont(app, token: token, name: "F4", lat: 44.9, long: 2.0)
+            let f = try await Font.find(fontID, on: app.db)!
+            f.country = "Spain"; f.region = "Lleida"
+            try await f.save(on: app.db)
+            try await grantReviews(id, 1, endingAt: Date().addingTimeInterval(-86_400), on: app.db)
+            let ultimo = try await ContributionEvent.query(on: app.db)
+                .filter(\.$user.$id == id).sort(\.$occurredAt, .descending).first()!
+            ultimo.$font.id = fontID
+            try await ultimo.save(on: app.db)
+
+            try await SpecialBadges.award(on: app.db)
+            let ganada = try await BadgeAward.query(on: app.db)
+                .filter(\.$key == "catalonia").filter(\.$user.$id == id).first()
+            XCTAssertNotNil(ganada, "las cuatro demarcaciones dan la insignia")
+
+            // Y ahora lo que de verdad las separa de las otras 21: reconstruir el
+            // histórico borra las gotas y **no** la medalla.
+            _ = try await ContributionLedger.rescore(on: app.db)
+            let sigue = try await BadgeAward.query(on: app.db)
+                .filter(\.$key == "catalonia").filter(\.$user.$id == id).first()
+            XCTAssertNotNil(sigue, "--rescore no puede quitar una insignia ya concedida")
+
+            // Y sale en el perfil público, junto a las normales y marcada como especial.
+            try await app.test(.GET, "users/quatre/badges", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let body = res.body.string
+                XCTAssertTrue(body.contains("catalonia"), body)
+                XCTAssertTrue(body.contains("special"), body)
+            })
+        }
+    }
 }

@@ -58,6 +58,22 @@ struct GamificationSyncCommand: AsyncCommand {
             console.print("  anuladas por \(razon): \(n)")
         }
 
+        if !r.awarded.isEmpty {
+            console.info("\nInsignias especiales \(signature.dryRun ? "que se concederían" : "concedidas"):")
+            for (clave, n) in r.awarded.sorted(by: { $0.key < $1.key }) where n > 0 {
+                let nombre = SpecialBadges.find(clave)?.name ?? clave
+                console.print("  \(nombre): \(n)")
+            }
+        }
+        // El cupo importa mientras queda; cuando se agota, deja de ser una noticia.
+        for (clave, quedan) in try await SpecialBadges.remaining(on: db).sorted(by: { $0.key < $1.key }) {
+            let nombre = SpecialBadges.find(clave)?.name ?? clave
+            let total = SpecialBadges.find(clave)?.limit ?? 0
+            console.print(quedan > 0
+                ? "  \(nombre): quedan \(quedan) de \(total) plazas"
+                : "  \(nombre): plazas agotadas")
+        }
+
         if !signature.dryRun {
             let pendientes = try await ContributionEvent.query(on: db).filter(\.$status == .pending).count()
             let liquidadas = try await ContributionEvent.query(on: db).filter(\.$status == .settled).count()

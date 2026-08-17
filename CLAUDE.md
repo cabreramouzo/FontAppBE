@@ -168,6 +168,22 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     caen varias a la vez se enseña **una** y se dice cuántas más hay. El confeti es un
     `<canvas>` de cien rectángulos, sin dependencia, y no se pinta con
     `prefers-reduced-motion` (el diálogo sí).
+  - **Insignias especiales** (`Gamification/SpecialBadges.swift` + `BadgeAward`): las que
+    son un **hecho** y no un contador. Se **conceden y se guardan**, al revés que las 21
+    familias, que se derivan del recuento cada vez. La razón la impone «Betatester» —de
+    las 100 primeras personas en llegar a 15 reseñas—: eso es una carrera, y recalcularla
+    tras un `--rescore` movería una medalla ya enseñada de un perfil a otro. Consecuencias
+    queridas: `--rescore` no las toca, **no se revocan** (borrar reseñas después no te
+    quita haber llegado antes) y el cupo se agota de verdad. La idempotencia la da el
+    índice único `(user_id, key)`, no una comprobación en Swift: dos instancias pueden
+    barrer a la vez. Se reparten al **final** de `ContributionLedger.sync()`, cuando la
+    liquidación de esa pasada ya está hecha.
+    Las dos primeras: `catalonia` (aportar en las cuatro demarcaciones) y `betatester`
+    (cupo 100). Ojo con `catalanRegions`: acepta **las dos grafías** porque producción
+    dice «Girona/Lleida» y una base repoblada con Natural Earth dice «Gerona/Lérida».
+    Viajan en la misma lista que las demás con `tier: "special"`, así que el perfil
+    público y la celebración las cogen sin saber que existen. `/gamification/scale`
+    publica el catálogo pero **no las plazas libres**: esa ruta no toca la BD a propósito.
   - Insignias de familia dibujadas: `web/public/badges/<clave>.png` (`BADGE_ART` +
     `BadgeArt.tsx`), mismo script que los niveles. Solo las de **grado único** — las de
     bronce/plata/oro serían tres ficheros por familia y siguen con icono coloreado.

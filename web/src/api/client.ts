@@ -354,7 +354,9 @@ export async function getPulse(): Promise<PulseSnapshot> {
  */
 export interface PublicBadge {
   family: string
-  tier: 'bronze' | 'silver' | 'gold' | 'unique'
+  /** `special` son las de `SpecialBadges`: viajan en la misma lista para que el perfil
+   *  público las pinte juntas y la celebración las detecte sin saber que existen. */
+  tier: 'bronze' | 'silver' | 'gold' | 'unique' | 'special'
 }
 
 /**
@@ -378,6 +380,10 @@ export interface GamificationScale {
   levels: { key: string; from: number }[]
   /** Las familias de insignias con sus umbrales (uno solo si son de grado único). */
   families: { key: string; thresholds: number[]; unique: boolean }[]
+  /** Las especiales: un hecho, no un contador. `limit` es el cupo total (null = sin
+   *  cupo). Las plazas **libres** no vienen aquí — esta ruta no toca la base de datos;
+   *  se ven en `/gamification/me`. */
+  specials: { key: string; limit: number | null }[]
   /** Qué abre cada nivel. Se publica aunque el sistema esté apagado. */
   capabilities: { key: string; level: string; gotes: number; enabled?: boolean }[]
   /** `false` mientras las capacidades no concedan nada todavía. */

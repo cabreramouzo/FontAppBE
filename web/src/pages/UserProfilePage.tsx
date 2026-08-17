@@ -125,8 +125,12 @@ export function UserProfilePage() {
                         width: 44, height: 44, borderRadius: '50%', display: 'flex',
                         alignItems: 'center', justifyContent: 'center',
                         bgcolor: 'action.hover', border: '2px solid',
-                        borderColor: TIER_COLOR[modo][b.tier] ?? 'divider',
-                        color: TIER_COLOR[modo][b.tier] ?? 'text.secondary',
+                        // Las especiales no tienen metal, así que no hay color en la
+                        // tabla de grados. Sin esto caían en el gris de «divider», que
+                        // es justo el color de una casilla bloqueada: la insignia más
+                        // rara del sistema se pintaba como la que no tienes.
+                        borderColor: colorDeGrado(b.tier, modo),
+                        color: colorDeGrado(b.tier, modo),
                       }}
                     >
                       <BadgeIcon family={b.family} sx={{ fontSize: 24 }} />
@@ -187,6 +191,12 @@ export function UserProfilePage() {
 }
 
 /// Iniciales para el avatar: primeras letras de las dos primeras palabras.
+/** El color de un grado. `special` no es un metal y va con el acento del tema. */
+function colorDeGrado(tier: string, modo: 'light' | 'dark'): string {
+  if (tier === 'special') return 'secondary.main'
+  return TIER_COLOR[modo][tier] ?? 'text.secondary'
+}
+
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return '?'

@@ -116,6 +116,25 @@ struct GamificationController: RouteCollection {
         }
         let families: [Family]
 
+        /// Las especiales: las que son un hecho y no un contador.
+        ///
+        /// Solo la clave y el cupo. **Las plazas libres no van aquí**: esta ruta es
+        /// pública y no toca la base de datos a propósito, y un «quedan 38» exigiría un
+        /// `COUNT` por visita a la página. Quien tiene sesión ve las plazas restantes en
+        /// `/gamification/me`, que ya consulta.
+        struct SpecialInfo: Content, Sendable {
+            let key: String
+            /// Plazas totales, o `null` si no tiene cupo. Explícito, como siempre aquí.
+            let limit: Int?
+
+            func encode(to encoder: any Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(key, forKey: .key)
+                try c.encode(limit, forKey: .limit)
+            }
+        }
+        let specials: [SpecialInfo]
+
         /// Qué abre cada nivel, más allá de lo que puede hacer cualquiera.
         ///
         /// Se publica aunque el sistema esté apagado —lo está por defecto— porque el
@@ -178,6 +197,7 @@ struct GamificationController: RouteCollection {
             families: ContributionScore.badgeFamilies.map {
                 .init(key: $0.key, thresholds: $0.thresholds, unique: $0.unique)
             },
+            specials: SpecialBadges.catalogue.map { .init(key: $0.key, limit: $0.limit) },
             capabilities: Capabilities.Capability.allCases.map {
                 .init(key: $0.rawValue, level: $0.level, gotes: $0.gotes,
                       enabled: Capabilities.enabled && (definitivos || !$0.requiresDefinitivePoints))
@@ -196,7 +216,18 @@ struct GamificationController: RouteCollection {
     /// que no aporta nada a quien está mirando una fuente.
     struct PublicBadge: Content, Sendable {
         let family: String
+        /// `bronze` · `silver` · `gold` · `unique`, y `special` para las de
+        /// `SpecialBadges`. Viajan en la misma lista a propósito: el perfil público las
+        /// pinta juntas y la celebración compara esta lista contra la que vio la última
+        /// vez, así que una especial nueva se celebra sola sin tocar nada del cliente.
         let tier: String
+    }
+
+    /// Las especiales de alguien, con la forma de las demás para poder mezclarlas.
+    static func specials(for userID: UUID, on db: any Database) async throws -> [PublicBadge] {
+        try await BadgeAward.query(on: db).filter(\.$user.$id == userID)
+            .sort(\.$earnedAt).all()
+            .map { PublicBadge(family: $0.key, tier: "special") }
     }
 
     struct PublicBadges: Content, Sendable {
@@ -243,8 +274,12 @@ struct GamificationController: RouteCollection {
         // días después de haberlo hecho. Igual que las insignias, solo aquí — el marcador
         // y todo lo demás siguen enseñando el nivel de lo liquidado.
         let nivel = ContributionScore.level(for: perfil.gotes + perfil.pending)
-        return PublicBadges(badges: perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) },
-                            level: nivel.key)
+        let userID = try user.requireID()
+        // Las especiales **no** se adelantan como las demás: son concesiones guardadas, y
+        // si ya está en la tabla es que se ganó de verdad. No hay nada que anticipar.
+        let todas = perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) }
+            + (try await Self.specials(for: userID, on: req.db))
+        return PublicBadges(badges: todas, level: nivel.key)
     }
 
     /// GET /users/:id/badges — insignias conseguidas por alguien. Pública.
@@ -286,7 +321,9 @@ struct GamificationController: RouteCollection {
             // Nivel solo si ha aportado algo. En el primer peldaño está todo el mundo por
             // el hecho de existir, y anunciar «Gota» de quien no ha hecho nada todavía es
             // una etiqueta que no ha pedido nadie.
-            out = PublicBadges(badges: perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) },
+            let todas = perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) }
+                + (try await Self.specials(for: userID, on: req.db))
+            out = PublicBadges(badges: todas,
                                level: perfil.gotes > 0 ? perfil.level : nil)
         }
         await Self.badgeCache.set(clave, out)

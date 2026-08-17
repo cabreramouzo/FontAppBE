@@ -72,7 +72,12 @@ export function BadgeCelebration() {
   // diálogo a propósito — la fiesta es la misma y así el gesto se reconoce.
   const esNivel = level != null
   const nombre = esNivel ? t(`game.level.${level}`) : t(`game.badge.${badge!.family}`)
-  const aro = !esNivel && badge!.tier !== 'unique' ? TIER_COLOR[modo][badge!.tier] : null
+  // Las especiales no tienen metal y no están en la tabla de grados: sin este caso el
+  // aro salía `undefined` y la insignia más rara del sistema se celebraba con el color
+  // por defecto, igual que cualquiera. Va con el acento, como en la vitrina y el perfil.
+  const aro = esNivel || badge!.tier === 'unique'
+    ? null
+    : badge!.tier === 'special' ? '#9c27b0' : TIER_COLOR[modo][badge!.tier]
 
   return (
     <>

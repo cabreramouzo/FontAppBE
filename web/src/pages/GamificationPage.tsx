@@ -67,6 +67,7 @@ export function GamificationPage() {
   // que sí llega, se sigue viendo: media explicación es mucho mejor que ninguna.
   const niveles = escala?.levels ?? []
   const familias = escala?.families ?? []
+  const especiales = escala?.specials ?? []
 
   /** «Bronce a 10 · oro a 200», o el grado único. Tolera una familia sin umbrales. */
   function grados(f: { thresholds: number[]; unique: boolean }): string {
@@ -160,6 +161,48 @@ export function GamificationPage() {
                 </Typography>
               )}
             </Apartado>
+          )}
+
+          {/* Las especiales, antes de las veintiuna familias. Van primero porque son la
+              parte de la que se habla: una tiene plazas contadas y la otra pide cruzar
+              un país. Aquí no se dice cuántas quedan —esta página se sirve sin tocar la
+              base de datos a propósito— y el catálogo se publica igual: lo importante es
+              que existan a la vista de quien todavía no tiene cuenta. */}
+          {especiales.length > 0 && (
+          <Apartado titulo={t('badges.specials')}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              {t('badges.specialsHint')}
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+              {especiales.map((e) => {
+                const explicacion = t(`game.badgeAbout.${e.key}`)
+                return (
+                  <Box key={e.key} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                    <Abrible
+                      puede
+                      nombre={t(`game.badge.${e.key}`)}
+                      onOpen={() => setMirando({ kind: 'badge', key: e.key })}
+                    >
+                      <BadgeIcon family={e.key} sx={{ fontSize: 34, color: 'secondary.main' }} />
+                    </Abrible>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography sx={{ fontWeight: 700, lineHeight: 1.25 }}>
+                        {t(`game.badge.${e.key}`)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
+                        {explicacion === `game.badgeAbout.${e.key}` ? null : explicacion}
+                      </Typography>
+                      {e.limit != null && (
+                        <Typography variant="caption" color="text.disabled">
+                          {t('gamePage.specialQuota', { n: n(e.limit) })}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                )
+              })}
+            </Box>
+          </Apartado>
           )}
 
           {/* Las familias. Sin sesión no hay progreso, así que es catálogo: qué existe y

@@ -73,6 +73,8 @@ enum ContributionLedger {
         var overCap = 0         // anuladas por pasarse del techo de su día
         var alreadyKnown = 0
         var voidReasons: [String: Int] = [:]
+        /// Insignias especiales repartidas en esta pasada, por clave.
+        var awarded: [String: Int] = [:]
     }
 
     // MARK: - Sincronización
@@ -131,6 +133,7 @@ enum ContributionLedger {
             result.overCap = pasadas.count
             result.voided += pasadas.count
             result.voidReasons["techo diario"] = pasadas.count
+            result.awarded = try await SpecialBadges.award(on: db, dryRun: true).granted
             return result
         }
 
@@ -167,6 +170,11 @@ enum ContributionLedger {
             result.voidReasons["techo diario", default: 0] += 1
         }
 
+        // Al final y no antes: las especiales se ganan con aportaciones **liquidadas**, y
+        // hasta esta línea la liquidación de este barrido no estaba hecha. Mirar antes
+        // dejaría a alguien fuera de las cien plazas por un ciclo de veinte segundos.
+        result.awarded = try await SpecialBadges.award(on: db).granted
+
         return result
     }
 
@@ -184,6 +192,11 @@ enum ContributionLedger {
     ///
     /// Lo ocurrido a partir de `epoch` no se toca. Si no hay `epoch`, todo es provisional
     /// y se reconstruye entero.
+    ///
+    /// **Las insignias especiales sobreviven**, y no por descuido: `BadgeAward` es otra
+    /// tabla y aquí no se toca. Es justo lo que las hace especiales — «de los 100
+    /// primeros» es una carrera que ya se corrió, y reconstruirla al recalibrar el baremo
+    /// se llevaría medallas ya enseñadas del perfil de alguien.
     static func rescore(on db: any Database, now: Date = Date()) async throws -> RescoreResult {
         var r = RescoreResult()
         let linea = epoch
@@ -321,6 +334,28 @@ enum ContributionLedger {
         /// Todas las familias de insignias, conseguidas o no. Las que no, con su progreso:
         /// una casilla gris que dice «3 de 5» invita, y una que solo dice «bloqueada» no.
         let collection: [ContributionScore.BadgeSlot]
+        /// Las especiales: las conseguidas con su fecha, y las que no con lo que queda de
+        /// cupo. Van aparte de `collection` porque no tienen progreso que enseñar —o la
+        /// tienes o no— y porque una con cupo agotado ya no es «te falta», es «se acabó».
+        var special: [SpecialStanding] = []
+    }
+
+    /// Una insignia especial vista desde el perfil de alguien.
+    struct SpecialStanding: Content, Sendable {
+        let key: String
+        /// Nula si no la tiene. Explícita en el JSON, no omitida: es el cuarto sitio de
+        /// este proyecto donde el codificador sintetizado convertía un `nil` en `undefined`
+        /// y el cliente daba por conseguida una insignia que no lo estaba.
+        let earnedAt: Date?
+        /// Plazas libres, si la insignia tiene cupo. Nula si es ilimitada.
+        let remaining: Int?
+
+        func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(key, forKey: .key)
+            try c.encode(earnedAt, forKey: .earnedAt)
+            try c.encode(remaining, forKey: .remaining)
+        }
     }
 
     struct LevelStanding: Content, Sendable {
@@ -557,7 +592,19 @@ enum ContributionLedger {
                 LevelStanding(key: $0.key, from: $0.from,
                               reached: gotes >= $0.from, current: $0.key == nivel.key)
             },
-            collection: badgeView.1)
+            collection: badgeView.1,
+            special: try await specialStandings(for: userID, on: db))
+    }
+
+    /// Las especiales de alguien: lo ganado con su fecha y lo que queda por ganar con su
+    /// cupo. Dos consultas cortas contra una tabla diminuta.
+    static func specialStandings(for userID: UUID, on db: any Database) async throws -> [SpecialStanding] {
+        let mias = try await BadgeAward.query(on: db).filter(\.$user.$id == userID).all()
+        let porClave = Dictionary(mias.map { ($0.key, $0.earnedAt) }, uniquingKeysWith: { a, _ in a })
+        let quedan = try await SpecialBadges.remaining(on: db)
+        return SpecialBadges.catalogue.map {
+            .init(key: $0.key, earnedAt: porClave[$0.key], remaining: quedan[$0.key])
+        }
     }
 
     /// Marcador de todos, de más a menos. `since` acota a un periodo (los rankings del

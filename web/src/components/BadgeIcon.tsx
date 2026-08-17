@@ -7,6 +7,8 @@ import WbSunnyOutlinedIcon from '@mui/icons-material/WbSunnyOutlined'
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined'
 import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined'
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined'
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
+import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
 import type { SvgIconProps } from '@mui/material/SvgIcon'
 
 /**
@@ -32,6 +34,11 @@ const ICONS: Record<string, React.ComponentType<SvgIconProps>> = {
   // denunciar reseñas, unos centímetros más abajo. Con la misma forma, la insignia se
   // leería como "esto está reportado" en vez de "fuiste el primero en llegar".
   pioneer: ExploreOutlinedIcon,
+  // Especiales. No tienen grado, así que el icono carga con todo el significado.
+  // Un mapa para Catalunya —las cuatro demarcaciones son un recorrido, no un lugar— y
+  // el matraz para Betatester: quien llegó cuando esto todavía era un experimento.
+  catalonia: MapOutlinedIcon,
+  betatester: ScienceOutlinedIcon,
 }
 
 export function BadgeIcon({ family, ...props }: { family: string } & SvgIconProps) {

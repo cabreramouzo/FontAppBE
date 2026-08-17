@@ -211,6 +211,17 @@ export interface GamificationProfile {
   levels: LevelStanding[]
   /** Todas las familias de insignias, conseguidas o no. */
   collection: BadgeSlot[]
+  /** Las especiales. Aparte de `collection` porque no tienen progreso: o la tienes o no. */
+  special?: SpecialStanding[]
+}
+
+/** Una insignia especial vista desde un perfil. */
+export interface SpecialStanding {
+  key: string
+  /** ISO, o `null` si no la tiene. El servidor lo escribe explícito. */
+  earnedAt: string | null
+  /** Plazas libres si tiene cupo; `null` si es ilimitada. */
+  remaining: number | null
 }
 
 export interface LevelStanding {

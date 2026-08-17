@@ -11,7 +11,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { useTheme } from '@mui/material/styles'
 import { getGamification } from '../api/client'
-import type { GamificationProfile } from '../api/types'
+import type { GamificationProfile, SpecialStanding } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { Skeleton } from '../components/Skeleton'
@@ -60,6 +60,25 @@ export function BadgesPage() {
       })
       .catch(() => setEstado('error'))
   }, [])
+
+  /**
+   * El pie de una especial. Tres estados distintos y ninguno es un progreso:
+   * la fecha en que la ganaste, las plazas que quedan, o que ya no quedan.
+   *
+   * «Quedan 38 de 100» es la mitad de la insignia — sin el número, un cupo no apremia.
+   * Y cuando se agota se dice, en vez de dejar una silueta gris que parece alcanzable:
+   * perseguir algo que ya no existe es la peor forma de descubrirlo.
+   */
+  function detalleEspecial(s: SpecialStanding, conseguida: boolean, agotada: boolean) {
+    if (conseguida) {
+      return t('badges.specialEarnedOn', {
+        d: new Date(s.earnedAt!).toLocaleDateString(lang, { year: 'numeric', month: 'long', day: 'numeric' }),
+      })
+    }
+    if (agotada) return t('badges.specialGone')
+    if (s.remaining != null) return t('badges.specialLeft', { n: s.remaining.toLocaleString(lang) })
+    return t(`game.badgeAbout.${s.key}`)
+  }
 
   if (!user) return <Alert severity="info" sx={{ m: 2 }}>{t('badges.needLogin')}</Alert>
 
@@ -112,6 +131,60 @@ export function BadgesPage() {
               </Casilla>
             ))}
           </Seccion>
+
+          {/* Entre la escalera y las familias, no al final: son las raras y enterradas
+              bajo veintiún contadores no las vería nadie. Y no se mezclan con las
+              familias porque no tienen progreso — «3 de 5» no significa nada aquí, o la
+              tienes o no— y una de ellas tiene plazas que se acaban, que es información
+              de otro tipo: no dice cómo vas, dice cuánto queda de tiempo. */}
+          {!!data.special?.length && (
+            <Seccion titulo={t('badges.specials')} pie={t('badges.specialsHint')}>
+              {data.special.map((s) => {
+                const conseguida = s.earnedAt != null
+                const agotada = !conseguida && s.remaining === 0
+                return (
+                  <Casilla key={s.key} destacada={conseguida}>
+                    <Abrible
+                      puede
+                      nombre={t(`game.badge.${s.key}`)}
+                      onOpen={() => setMirando({
+                        kind: 'badge', key: s.key, tier: null, locked: !conseguida,
+                        subtitle: detalleEspecial(s, conseguida, agotada),
+                      })}
+                    >
+                      <Box
+                        sx={{
+                          width: 88, height: 88, borderRadius: '50%', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', position: 'relative',
+                          bgcolor: 'action.hover',
+                          border: '2px solid',
+                          borderColor: conseguida ? 'secondary.main' : 'divider',
+                          color: conseguida ? 'secondary.main' : 'text.disabled',
+                          ...(conseguida ? null : APAGADA),
+                        }}
+                      >
+                        <BadgeIcon family={s.key} sx={{ fontSize: 40 }} />
+                        {!conseguida && (
+                          <LockOutlinedIcon
+                            sx={{ position: 'absolute', bottom: 6, right: 6, fontSize: 16, color: 'text.disabled' }}
+                          />
+                        )}
+                      </Box>
+                    </Abrible>
+                    <Rotulo
+                      nombre={t(`game.badge.${s.key}`)}
+                      apagado={!conseguida}
+                      detalle={detalleEspecial(s, conseguida, agotada)}
+                      insignia={conseguida
+                        ? <Chip size="small" color="secondary" label={t('badges.specialTier')}
+                                sx={{ fontWeight: 700, height: 20 }} />
+                        : null}
+                    />
+                  </Casilla>
+                )
+              })}
+            </Seccion>
+          )}
 
           <Seccion titulo={t('badges.families')} pie={t('badges.familiesHint')}>
             {data.collection.map((b) => {
