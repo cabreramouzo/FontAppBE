@@ -121,6 +121,20 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     texto del baremo (`ExplicacionBaremo`); duplicarlo garantizaba que la copia pública
     —la que lee quien no entiende nada— se quedara vieja. Las cifras siguen viniendo
     todas del servidor, umbrales incluidos, y el test las compara con las reales.
+  - **Celebración de insignia nueva** (`BadgeCelebration.tsx` + `Confetti.tsx` +
+    `lib/badgeCelebration.ts`): «Gracias por contribuir» con la medalla en grande y
+    confeti. **No salta al reseñar**, aunque sea ahí donde apetecería: las insignias solo
+    cuentan aportaciones **liquidadas** y eso son 72 h, así que enseñarla al publicar y
+    retirarla dos días después porque la reseña se anuló sería una promesa rota. Salta la
+    primera vez que la app ve una insignia que antes no tenías — en la práctica, tu
+    siguiente visita. Se compara contra una foto en `localStorage` (`badges:seen`), sin
+    estado en el servidor; por eso **la primera vez no celebra nada**, o quien ya tiene
+    ocho se comería ocho fiestas el día del despliegue. Una comprobación por sesión, solo
+    con buena conexión (`navigator.connection`: nada con ahorro de datos ni en 2g) y
+    usando `GET /users/:id/badges`, que ya existía, es pública y va cacheada 5 min. Si
+    caen varias a la vez se enseña **una** y se dice cuántas más hay. El confeti es un
+    `<canvas>` de cien rectángulos, sin dependencia, y no se pinta con
+    `prefers-reduced-motion` (el diálogo sí).
   - Insignias de familia dibujadas: `web/public/badges/<clave>.png` (`BADGE_ART` +
     `BadgeArt.tsx`), mismo script que los niveles. Solo las de **grado único** — las de
     bronce/plata/oro serían tres ficheros por familia y siguen con icono coloreado.
