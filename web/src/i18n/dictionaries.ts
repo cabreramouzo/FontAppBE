@@ -599,6 +599,7 @@ const ca: Dict = {
   'update.publish': 'Publica l\'actualització',
   'update.sending': 'Enviant…',
   'review.anon': 'anònim',
+  'staff.tagHint': 'Membre de l\u2019equip de FontApp',
   'review.confirmDelete': 'Esborrar aquesta ressenya?',
 
   // Selector de imagen
@@ -1269,6 +1270,7 @@ const es: Dict = {
   'update.publish': 'Publicar actualización',
   'update.sending': 'Enviando…',
   'review.anon': 'anónimo',
+  'staff.tagHint': 'Miembro del equipo de FontApp',
   'review.confirmDelete': '¿Borrar esta reseña?',
 
   'image.add': '📷 Añadir foto',
@@ -1931,6 +1933,7 @@ const gl: Dict = {
   'update.publish': 'Publicar actualización',
   'update.sending': 'Enviando…',
   'review.anon': 'anónimo',
+  'staff.tagHint': 'Membro do equipo de FontApp',
   'review.confirmDelete': 'Borrar esta reseña?',
 
   'image.add': '📷 Engadir foto',
@@ -2593,6 +2596,7 @@ const eu: Dict = {
   'update.publish': 'Argitaratu eguneratzea',
   'update.sending': 'Bidaltzen…',
   'review.anon': 'anonimoa',
+  'staff.tagHint': 'FontApp taldeko kidea',
   'review.confirmDelete': 'Iritzi hau ezabatu?',
 
   'image.add': '📷 Gehitu argazkia',
@@ -3255,6 +3259,7 @@ const en: Dict = {
   'update.publish': 'Post update',
   'update.sending': 'Sending…',
   'review.anon': 'anonymous',
+  'staff.tagHint': 'FontApp team member',
   'review.confirmDelete': 'Delete this review?',
 
   'image.add': '📷 Add photo',

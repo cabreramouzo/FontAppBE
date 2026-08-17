@@ -26,11 +26,12 @@ struct FontReportController: RouteCollection {
             .filter(\.$font.$id == fontID)
             .sort(\.$createdAt, .descending)
             .all()
-        let names = try await User.usernames(
+        let autores = try await User.authors(
             for: reports.flatMap { [$0.$user.id, $0.$resolver.id] }.compactMap { $0 }, on: req.db)
         return reports.map {
-            ReportResponse($0, username: $0.$user.id.flatMap { names[$0] },
-                           resolverName: $0.$resolver.id.flatMap { names[$0] })
+            let quien = $0.$user.id.flatMap { autores[$0] }
+            return ReportResponse($0, username: quien?.username, staff: quien?.staff,
+                                  resolverName: $0.$resolver.id.flatMap { autores[$0]?.username })
         }
     }
 
@@ -61,11 +62,11 @@ struct FontReportController: RouteCollection {
         report.resolvedAt = resolviendo ? Date() : nil
         report.$resolver.id = resolviendo ? userID : nil
         try await report.save(on: req.db)
-        let names = try await User.usernames(
+        let autores = try await User.authors(
             for: [report.$user.id, report.$resolver.id].compactMap { $0 }, on: req.db)
-        return ReportResponse(report,
-                              username: report.$user.id.flatMap { names[$0] },
-                              resolverName: report.$resolver.id.flatMap { names[$0] })
+        let quien = report.$user.id.flatMap { autores[$0] }
+        return ReportResponse(report, username: quien?.username, staff: quien?.staff,
+                              resolverName: report.$resolver.id.flatMap { autores[$0]?.username })
     }
 
     /// POST /fonts/:fontID/report — reporta un problema en la fuente.
@@ -79,7 +80,8 @@ struct FontReportController: RouteCollection {
         try await report.save(on: req.db)
 
         let response = Response(status: .created)
-        try response.content.encode(ReportResponse(report, username: user.username))
+        try response.content.encode(
+            ReportResponse(report, username: user.username, staff: user.role == .user ? nil : user.role))
         return response
     }
 
@@ -121,6 +123,10 @@ struct ReportResponse: Content {
     let fontID: UUID
     let userID: UUID?
     let username: String?
+    /// Rol de quien lo escribió, **solo si es del equipo**. Nulo para todos los demás.
+    /// Es lo que deja marcar un aviso de moderación como tal: firmado por «admin», el
+    /// mismo texto pasa de ser la opinión de alguien a ser una decisión.
+    let staff: UserRole?
     let message: String
     let createdAt: Date?
     /// Nulo = sigue abierta. Explícito en el JSON, como el resto de opcionales de esta
@@ -128,11 +134,12 @@ struct ReportResponse: Content {
     let resolvedAt: Date?
     let resolvedBy: String?
 
-    init(_ report: FontReport, username: String?, resolverName: String? = nil) {
+    init(_ report: FontReport, username: String?, staff: UserRole? = nil, resolverName: String? = nil) {
         self.id = report.id
         self.fontID = report.$font.id
         self.userID = report.$user.id
         self.username = username
+        self.staff = staff
         self.message = report.message
         self.createdAt = report.createdAt
         self.resolvedAt = report.resolvedAt
@@ -145,6 +152,7 @@ struct ReportResponse: Content {
         try c.encode(fontID, forKey: .fontID)
         try c.encode(userID, forKey: .userID)
         try c.encode(username, forKey: .username)
+        try c.encode(staff, forKey: .staff)
         try c.encode(message, forKey: .message)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(resolvedAt, forKey: .resolvedAt)

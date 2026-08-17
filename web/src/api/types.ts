@@ -104,6 +104,8 @@ export interface ReportResponse {
   fontID: string
   userID: string | null
   username: string | null
+  /** Rol de quien lo escribió, solo si es del equipo. `null` para todos los demás. */
+  staff?: UserRole | null
   message: string
   createdAt: string
   /** Nulo = sigue abierta. Se cierra, no se borra: la avería es parte de la historia. */
@@ -116,6 +118,8 @@ export interface CommentResponse {
   fontID: string
   userID: string | null
   username: string | null
+  /** Rol de quien la escribió, solo si es del equipo. */
+  staff?: UserRole | null
   body: string
   rating: number | null
   waterStatus: string | null

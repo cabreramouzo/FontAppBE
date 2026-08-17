@@ -85,6 +85,30 @@ extension User {
 
 extension User {
     /// Diccionario `id -> username` para los ids dados, en una sola query (evita N+1).
+    /// Quién firma un mensaje público: su nombre y, si es del equipo, su rol.
+    ///
+    /// El rol **no** se publica en `UserResponse` a propósito (ver el comentario de
+    /// allí): saber el cargo de cualquiera con solo mirar su perfil no aporta nada y
+    /// dibuja el organigrama para quien quiera buscarle las vueltas. Aquí es distinto y
+    /// por eso existe este tipo aparte: acompaña **a un mensaje que esa persona ha
+    /// escrito en público**, y ahí sí importa —«esto lo dice un moderador» es la mitad
+    /// del contenido de un aviso de moderación—. Es una exposición acotada al mensaje,
+    /// no una consulta que se pueda hacer sobre cualquiera.
+    struct Author: Sendable {
+        let username: String
+        /// Nulo para un usuario normal.
+        let staff: UserRole?
+    }
+
+    static func authors(for ids: [UUID], on db: Database) async throws -> [UUID: Author] {
+        let unique = Array(Set(ids))
+        guard !unique.isEmpty else { return [:] }
+        let users = try await User.query(on: db).filter(\.$id ~~ unique).all()
+        return Dictionary(uniqueKeysWithValues: users.compactMap { user in
+            user.id.map { ($0, Author(username: user.username, staff: user.role == .user ? nil : user.role)) }
+        })
+    }
+
     static func usernames(for ids: [UUID], on db: Database) async throws -> [UUID: String] {
         let unique = Array(Set(ids))
         guard !unique.isEmpty else { return [:] }

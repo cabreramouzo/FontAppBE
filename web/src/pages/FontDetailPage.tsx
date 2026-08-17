@@ -76,6 +76,7 @@ import { isStale, timeAgo } from '../lib/time'
 import { FreshnessChip } from '../components/FreshnessChip'
 import { freshnessOf } from '../lib/freshness'
 import { FontBadges } from '../components/FontBadges'
+import { Autor, ConMenciones } from '../components/AuthorLine'
 import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 
@@ -180,10 +181,12 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
     <Paper variant="outlined" sx={{ p: 2, my: 1, borderRadius: 2, ...(highlight && { borderColor: 'primary.main', bgcolor: 'action.hover' }) }}>
       <Stack direction="row" sx={{ mb: 0.5, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
         {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`} />}
-        <Typography variant="caption" color="text.secondary">{c.username ?? t('review.anon')} · {c.createdAt ? timeAgo(c.createdAt, t) : ''}</Typography>
+        <Typography variant="caption" color="text.secondary" component="span">
+          <Autor username={c.username} staff={c.staff} /> · {c.createdAt ? timeAgo(c.createdAt, t) : ''}
+        </Typography>
       </Stack>
       {c.rating != null && <StarRating value={c.rating} size={18} />}
-      {c.body && <Typography sx={{ my: 0.5 }}>{c.body}</Typography>}
+      {c.body && <Typography sx={{ my: 0.5 }}><ConMenciones texto={c.body} /></Typography>}
       {c.image && (
         <Box>
           <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />
@@ -907,8 +910,11 @@ export function FontDetailPage() {
               <IconButton edge="end" size="small" color="error" onClick={() => removeReport(r.id)} aria-label={t('detail.delete')}><DeleteOutlineIcon fontSize="small" /></IconButton>
             ) : undefined}>
               <Box>
+                {/* Firma con distintivo si es del equipo, y el texto con sus menciones
+                    enlazadas: un aviso de moderación suele nombrar a quien afecta, y
+                    ese @nombre era texto muerto. */}
                 <Typography variant="body2" sx={{ ...(r.resolvedAt && { color: 'text.secondary' }) }}>
-                  <strong>{r.username ?? t('review.anon')}:</strong> {r.message}
+                  <Autor username={r.username} staff={r.staff} />: <ConMenciones texto={r.message} />
                 </Typography>
                 {/* Resuelta: se tacha el problema, no se esconde. Que la fuente estuvo
                     rota y volvió a manar es lo que mira quien duda si acercarse. */}

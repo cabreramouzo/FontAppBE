@@ -38,10 +38,12 @@ struct FontCommentController: RouteCollection {
             .filter(\.$font.$id == fontID)
             .sort(\.$createdAt, .descending)
             .all()
-        let names = try await User.usernames(for: comments.compactMap { $0.$user.id }, on: req.db)
+        let autores = try await User.authors(for: comments.compactMap { $0.$user.id }, on: req.db)
         let confs = try await Self.confirmations(for: comments, viewer: req.auth.get(User.self)?.id, on: req.db)
         return comments.map { c in
-            CommentResponse(c, username: c.$user.id.flatMap { names[$0] }, confirm: c.id.flatMap { confs[$0] })
+            let quien = c.$user.id.flatMap { autores[$0] }
+            return CommentResponse(c, username: quien?.username, staff: quien?.staff,
+                                   confirm: c.id.flatMap { confs[$0] })
         }
     }
 
@@ -100,7 +102,8 @@ struct FontCommentController: RouteCollection {
         try await comment.save(on: req.db)
 
         let response = Response(status: .created)
-        try response.content.encode(CommentResponse(comment, username: user.username))
+        try response.content.encode(
+            CommentResponse(comment, username: user.username, staff: user.role == .user ? nil : user.role))
         return response
     }
 
@@ -142,9 +145,11 @@ struct FontCommentController: RouteCollection {
 
     /// Construye la respuesta de un comentario con su recuento de confirmaciones.
     static func response(for comment: FontComment, viewer: UUID?, on db: Database) async throws -> CommentResponse {
-        let names = try await User.usernames(for: comment.$user.id.map { [$0] } ?? [], on: db)
+        let autores = try await User.authors(for: comment.$user.id.map { [$0] } ?? [], on: db)
         let confs = try await confirmations(for: [comment], viewer: viewer, on: db)
-        return CommentResponse(comment, username: comment.$user.id.flatMap { names[$0] }, confirm: comment.id.flatMap { confs[$0] })
+        let quien = comment.$user.id.flatMap { autores[$0] }
+        return CommentResponse(comment, username: quien?.username, staff: quien?.staff,
+                               confirm: comment.id.flatMap { confs[$0] })
     }
 
     /// PUT /fonts/:fontID/comments/:commentID — edita una reseña propia.
@@ -160,7 +165,7 @@ struct FontCommentController: RouteCollection {
         comment.image = dto.image
         try await comment.save(on: req.db)
         if let oldImage, oldImage != dto.image { try? await req.imageStorage.delete(oldImage) }
-        return CommentResponse(comment, username: user.username)
+        return CommentResponse(comment, username: user.username, staff: user.role == .user ? nil : user.role)
     }
 
     /// DELETE /fonts/:fontID/comments/:commentID — borra una reseña propia.
@@ -217,6 +222,8 @@ struct CommentResponse: Content {
     let fontID: UUID
     let userID: UUID?
     let username: String?
+    /// Rol de quien la escribió, **solo si es del equipo** (ver `ReportResponse.staff`).
+    let staff: UserRole?
     let body: String
     let rating: Int?
     let waterStatus: String?
@@ -229,11 +236,12 @@ struct CommentResponse: Content {
     /// Fecha de la confirmación más reciente (refresca la frescura del estado).
     let lastConfirmedAt: Date?
 
-    init(_ comment: FontComment, username: String?, confirm: ConfirmAgg? = nil) {
+    init(_ comment: FontComment, username: String?, staff: UserRole? = nil, confirm: ConfirmAgg? = nil) {
         self.id = comment.id
         self.fontID = comment.$font.id
         self.userID = comment.$user.id
         self.username = username
+        self.staff = staff
         self.body = comment.body
         self.rating = comment.rating
         self.waterStatus = comment.waterStatus
