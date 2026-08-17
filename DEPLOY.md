@@ -532,13 +532,22 @@ cron sigue valiendo como red de seguridad: es el mismo código.
 |---|---|
 | `GAMIFICATION_WORKER=true` | Recuento en segundo plano dentro de la app. |
 | `GAMIFICATION_EPOCH=AAAA-MM-DD` | Fecha desde la que los puntos son definitivos. Sin definir, todo es provisional. |
-| `GAMIFICATION_CAPABILITIES=true` | Enciende los permisos por nivel (fase 6). **Apagado por defecto.** No basta con esto: hace falta además `GAMIFICATION_EPOCH` puesta y pasada, o no se concede nada. |
+| `GAMIFICATION_CAPABILITIES=true` | Enciende los permisos por nivel (fase 6). **Apagado por defecto.** Con esto basta para los permisos aditivos; los que destruyen trabajo ajeno piden además `GAMIFICATION_EPOCH` puesta y pasada. |
 
 > **Antes de encender `GAMIFICATION_CAPABILITIES`:** los permisos cuelgan de las gotas, y
 > mientras `GAMIFICATION_EPOCH` no esté puesta, `gamification-sync --rescore` puede
-> reescribirlas. Por eso el código exige las dos cosas: un permiso que aparece y desaparece
-> solo no es un permiso, es un error intermitente. El orden correcto es calibrar el baremo,
-> fijar la época, y solo entonces encender los permisos.
+> reescribirlas. Un permiso que aparece y desaparece solo no es un permiso, es un error
+> intermitente.
+>
+> La regla está partida en dos (`Capability.requiresDefinitivePoints`), porque exigírsela a
+> todas dejaba inservibles justo las nuevas. Sin época se conceden **añadir una foto
+> secundaria** (nivel 3) y **dar por resuelta una incidencia** (6): son aditivas y
+> reversibles, y perderlas a media faena no rompe nada de nadie. Siguen esperando a la
+> época **reubicar una fuente ajena** (5), **borrar una foto ajena** (7) y **deshacer una
+> edición ajena** (8) — ésas destruyen o deshacen trabajo de otra persona.
+>
+> El orden completo sigue siendo: calibrar el baremo, fijar la época, y entonces se abren
+> también las tres últimas.
 
 Antes de la primera vez, conviene mirar qué haría:
 
