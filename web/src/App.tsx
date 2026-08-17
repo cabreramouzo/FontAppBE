@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { I18nProvider } from './i18n/I18nContext'
 import { ThemeModeProvider } from './theme/ThemeModeContext'
@@ -8,6 +8,8 @@ import { ToastProvider } from './components/ToastContext'
 import { Layout } from './components/Layout'
 import { Skeleton } from './components/Skeleton'
 import { WelcomeDialog } from './components/WelcomeDialog'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { useI18n } from './i18n/I18nContext'
 import { IntroDialog } from './components/IntroDialog'
 
 // Code-splitting por ruta: cada página es su propio chunk (Leaflet solo se carga
@@ -45,6 +47,9 @@ export default function App() {
         <ToastProvider>
           <AuthProvider>
             <Layout>
+              {/* Por dentro del layout: la barra y el pie sobreviven a una pantalla
+                  rota, así que se puede navegar a otra sin recargar. */}
+              <BarreraDePantalla>
               <Suspense fallback={<div className="pad"><Skeleton lines={4} /></div>}>
                 <Routes>
                   <Route path="/" element={<MapPage />} />
@@ -68,6 +73,7 @@ export default function App() {
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
+              </BarreraDePantalla>
             </Layout>
             <WelcomeDialog />
             <IntroDialog />
@@ -77,5 +83,22 @@ export default function App() {
        </MuiProvider>
       </ThemeModeProvider>
     </BrowserRouter>
+  )
+}
+
+/**
+ * Envuelve las páginas para que un error al pintar no apague la aplicación entera.
+ *
+ * La `key` es la ruta a propósito: sin ella, una pantalla que revienta deja la barrera
+ * en estado de error para el resto de la sesión y las demás páginas dejarían de pintarse
+ * también. Cambiar de ruta la remonta y se vuelve a intentar.
+ */
+function BarreraDePantalla({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation()
+  const { t } = useI18n()
+  return (
+    <ErrorBoundary key={pathname} mensaje={t('error.screen')} reintentar={t('error.retry')}>
+      {children}
+    </ErrorBoundary>
   )
 }

@@ -60,6 +60,21 @@ export function GamificationPage() {
 
   const n = (v: number) => v.toLocaleString(lang)
 
+  // Un backend más viejo que esta página no manda `levels` ni `families`, y
+  // `undefined.map` deja la pantalla en negro entera: React desmonta el árbol y queda el
+  // fondo del `body`. Es el tercer aviso del mismo tipo (`tier`, `fromDays`, esto), así
+  // que aquí se lee a la defensiva y las secciones se callan si no hay datos. El baremo,
+  // que sí llega, se sigue viendo: media explicación es mucho mejor que ninguna.
+  const niveles = escala?.levels ?? []
+  const familias = escala?.families ?? []
+
+  /** «Bronce a 10 · oro a 200», o el grado único. Tolera una familia sin umbrales. */
+  function grados(f: { thresholds: number[]; unique: boolean }): string {
+    const u = f.thresholds ?? []
+    if (f.unique || u.length === 0) return t('gamePage.uniqueTier')
+    return t('gamePage.tiers', { a: n(u[0]), b: n(u[u.length - 1]) })
+  }
+
   return (
     <Box className="pad" sx={{ maxWidth: 760, mx: 'auto' }}>
       <Typography variant="h4" sx={{ fontWeight: 800, mt: 1 }}>
@@ -75,6 +90,7 @@ export function GamificationPage() {
       {escala && (
         <>
           {/* La escalera. Se lee subiendo, y por eso el backend la manda ya del revés. */}
+          {niveles.length > 0 && (
           <Apartado titulo={t('gamePage.levels')}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
               {t('gamePage.levelsLead')}
@@ -88,7 +104,7 @@ export function GamificationPage() {
                 gap: 2,
               }}
             >
-              {escala.levels.map((n2) => (
+              {niveles.map((n2) => (
                 <Box key={n2.key} sx={{ textAlign: 'center' }}>
                   <Abrible
                     puede={LEVEL_BADGES.has(n2.key)}
@@ -110,10 +126,12 @@ export function GamificationPage() {
               ))}
             </Box>
           </Apartado>
+          )}
 
           {/* Las familias. Sin sesión no hay progreso, así que es catálogo: qué existe y
               qué cuesta. El umbral que se enseña es el PRIMERO — el que decide si la
               tienes o no; los otros dos solo cambian el color del aro. */}
+          {familias.length > 0 && (
           <Apartado titulo={t('gamePage.badges')}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
               {t('gamePage.badgesLead')}
@@ -125,7 +143,7 @@ export function GamificationPage() {
                 gap: 1.5,
               }}
             >
-              {escala.families.map((f) => {
+              {familias.map((f) => {
                 const explicacion = t(`game.badgeAbout.${f.key}`)
                 return (
                   <Box key={f.key} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
@@ -134,9 +152,7 @@ export function GamificationPage() {
                       nombre={t(`game.badge.${f.key}`)}
                       onOpen={() => setMirando({
                         kind: 'badge', key: f.key,
-                        subtitle: f.unique
-                          ? t('gamePage.uniqueTier')
-                          : t('gamePage.tiers', { a: n(f.thresholds[0]), b: n(f.thresholds[f.thresholds.length - 1]) }),
+                        subtitle: grados(f),
                       })}
                     >
                       {BADGE_ART.has(f.key)
@@ -153,9 +169,7 @@ export function GamificationPage() {
                         {explicacion === `game.badgeAbout.${f.key}` ? null : explicacion}
                       </Typography>
                       <Typography variant="caption" color="text.disabled">
-                        {f.unique
-                          ? t('gamePage.uniqueTier')
-                          : t('gamePage.tiers', { a: n(f.thresholds[0]), b: n(f.thresholds[f.thresholds.length - 1]) })}
+                        {grados(f)}
                       </Typography>
                     </Box>
                   </Box>
@@ -163,6 +177,7 @@ export function GamificationPage() {
               })}
             </Box>
           </Apartado>
+          )}
 
           <Divider sx={{ my: 3 }} />
 
