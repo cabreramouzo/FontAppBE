@@ -29,7 +29,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Sembrar: `swift run App seed [--force] [--demo]` (fuentes reales del Moianès; `--demo` añade usuarios+reseñas).
   Con la BD ya poblada (p. ej. tras `import-fonts`), `seed --demo` NO reinserta fuentes: solo añade
   reseñas de ejemplo sobre las fuentes existentes de la zona del Moianès (bbox), sin tocar el resto.
-- Importar/zonas: `import-fonts` (Overpass/OSM) · `import-geojson` (ICGC/ACA; acepta Point y
+- Importar/zonas: `import-fonts` (Overpass/OSM; `--unnamed`/`--unnamed-spring` fijan el
+  rótulo de los puntos sin nombre, que son **3 de cada 4** — `Fontaine`/`Source` en Francia,
+  `Fuente` en España. **No deduplica**: solo tiene `--replace`, que borra la base entera,
+  así que hay que medir el solape antes) · `import-geojson` (ICGC/ACA; acepta Point y
   MultiPoint, con `--dry-run` y `--titlecase`) ·
   `populate-regions <fronteras.geojson>` (rellena país/región offline por point-in-polygon).
 - Resumen semanal por correo: `swift run App send-weekly-digest [--dry-run] [--user <username>]`

@@ -173,6 +173,52 @@ cargado) no hace falta dedupe; junto a España conviene `--dedupe` para no dupli
    out body;
    ```
    Exporta el resultado como `portugal-osm.json` (Export → data → raw OSM data / JSON).
+
+   **Ponle el nombre genérico del territorio.** Los puntos sin `name` en OSM se guardan con
+   un rótulo por defecto, y son **tres de cada cuatro**. Ese rótulo acaba dentro de los
+   datos, así que conviene que esté en el idioma de donde se importa:
+
+   | Territorio | `--unnamed` | `--unnamed-spring` |
+   |---|---|---|
+   | Catalunya | `Font` (por defecto) | `Manantial` (por defecto) |
+   | España | `Fuente` | `Manantial` |
+   | Francia | `Fontaine` | `Source` |
+   | Portugal | `Fonte` | `Nascente` |
+
+   Ojo: un `natural=spring` **con caño o potable** se clasifica como fuente de montaña, así
+   que se lleva el `--unnamed`, no el `--unnamed-spring`. Es lo correcto — «Fontaine» y no
+   «Source» — pero conviene saberlo.
+
+   Ejemplo real, el Pirineo francés (bbox intersectado con el área de Francia para no
+   colarse en España):
+   ```overpassql
+   [out:json][timeout:240];
+   area["ISO3166-1"="FR"][admin_level=2]->.fr;
+   (
+     node["amenity"="drinking_water"](area.fr)(42.25,-1.95,43.35,3.25);
+     node["natural"="spring"]["drinking_water"](area.fr)(42.25,-1.95,43.35,3.25);
+     node["man_made"="water_tap"](area.fr)(42.25,-1.95,43.35,3.25);
+   );
+   out body;
+   ```
+   ```bash
+   swift run App import-fonts pirineu-frances-osm.json --unnamed Fontaine --unnamed-spring Source
+   ```
+   Medido antes de importar: 2.168 nodos y **cero** a menos de 100 m de una fuente ya
+   existente (la más cercana, a 218 m), así que no hacía falta dedupe. `import-fonts` **no
+   deduplica** — compruébalo siempre antes, porque lo único que tiene es `--replace`, que
+   borra la base entera.
+
+   Si ya importaste sin las opciones, el lote se aísla por fecha y por no tener creador
+   (**no** por `country`, que en la frontera miente):
+   ```sql
+   SELECT name, count(*) FROM fonts
+    WHERE created_by IS NULL AND created_at >= 'AAAA-MM-DD' GROUP BY 1 ORDER BY 2 DESC;
+   UPDATE fonts SET name = 'Fontaine'
+    WHERE created_by IS NULL AND created_at >= 'AAAA-MM-DD' AND name = 'Font';
+   UPDATE fonts SET name = 'Source'
+    WHERE created_by IS NULL AND created_at >= 'AAAA-MM-DD' AND name = 'Manantial';
+   ```
 2. Importa contra la BD de PROD (cliente/servidor via `DATABASE_URL`, **no** `env.development`):
    ```bash
    DATABASE_URL='postgresql://USER:PASSWORD@HOST/neondb?sslmode=require' \

@@ -10,7 +10,25 @@ struct ImportCommand: AsyncCommand {
         var file: String
         @Flag(name: "replace", help: "Borra las fuentes existentes antes de importar")
         var replace: Bool
+        @Option(name: "unnamed", help: "Nombre para los puntos SIN nombre en OSM (por defecto «Font»)")
+        var unnamed: String?
+        @Option(name: "unnamed-spring", help: "Igual, para los manantiales (por defecto «Manantial»)")
+        var unnamedSpring: String?
     }
+
+    /// Rótulo por defecto de un punto sin nombre.
+    ///
+    /// Está aquí y no incrustado en la línea de abajo para que se vea lo que es: **una
+    /// etiqueta de interfaz que acabó dentro de los datos**. Tres de cada cuatro fuentes
+    /// de la base se llaman así, y el idioma lo eligió quien lanzó la primera importación.
+    ///
+    /// Lo correcto sería guardar el nombre vacío y que el navegador ponga la palabra en el
+    /// idioma de quien mira —es lo que hace el resto del proyecto con los niveles, las
+    /// insignias y los avisos—, pero eso son 41.679 filas y diez pantallas. Mientras tanto,
+    /// que **cada importación elija la palabra de su territorio** es mejor que llamar
+    /// «Font» a una fuente del Béarn.
+    static let defaultUnnamed = "Font"
+    static let defaultUnnamedSpring = "Manantial"
 
     var help: String { "Importa fuentes desde un JSON de Overpass (OpenStreetMap, ODbL)" }
 
@@ -25,7 +43,10 @@ struct ImportCommand: AsyncCommand {
             guard let lat = node.lat, let lon = node.lon else { return nil }
             let tags = node.tags ?? [:]
             let source = Self.source(from: tags)
-            let name = tags["name"].flatMap { $0.isEmpty ? nil : $0 } ?? (source == .spring ? "Manantial" : "Font")
+            let sinNombre = source == .spring
+                ? (signature.unnamedSpring ?? Self.defaultUnnamedSpring)
+                : (signature.unnamed ?? Self.defaultUnnamed)
+            let name = tags["name"].flatMap { $0.isEmpty ? nil : $0 } ?? sinNombre
             let description = source == .spring ? "Manantial (OpenStreetMap)" : nil
             return Font(
                 name: name,
