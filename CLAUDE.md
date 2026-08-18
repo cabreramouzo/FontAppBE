@@ -510,8 +510,24 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   **tercero**, uso no comercial) con `GEOIP_ENABLED=true`. Alternativa futura: BD local MaxMind
   GeoLite2 (`.mmdb`) → sin llamada externa por registro y la IP no sale del servidor. Ver `docs/api.md`.
 - Zona de la fuente: `fonts.country` y `fonts.region` (migración `AddRegionToFont`, nullable) para
-  funciones por zona (admins por región, filtros). `region` = **primera división administrativa**
-  del país (comunidad autónoma en ES, région en FR, distrito en PT…), consistente en todo el mundo.
+  funciones por zona (admins por región, filtros). **`region` NO es la primera división
+  administrativa**, aunque aquí se dijo durante meses que sí: contiene lo que Natural Earth
+  llame «admin-1» en cada país, y eso son cosas distintas. Medido en producción: 52
+  regiones en España (**provincias**, las 50 + Ceuta y Melilla), 20 en Portugal
+  (**distritos**), 4 en Francia (**départements**, no régions) y 7 en Andorra
+  (**parròquies**). Tres profundidades mezcladas en una columna.
+  **Pendiente, decidido pero sin hacer:** una columna `admin1` con el **código ISO 3166-2**
+  (`ES-CT`, `PT-11`, `FR-OCC`), *sin tocar* `region` —que es carga estructural: sale en el
+  JSON público de `Font`, en `/zones`, en `/zones/ranking?region=`, en el correo semanal y
+  en la insignia de Catalunya—. Un código y no un nombre por lo mismo que el resto de la
+  gamificación, y porque el nombre ya nos costó el diccionario de dos grafías de
+  `catalanRegions`. Se deriva **de `region` con una tabla estática** (~180 filas para los
+  cuatro países) y no por point-in-polygon: una provincia está dentro de una comunidad por
+  definición, no por dónde caiga un polígono, y usar geometría para una pregunta definitoria
+  mete un error que no hace falta (el borde de Natural Earth falla 1,9 km de mediana).
+  Sirve para **agrupar** `/zones` (hoy 83 filas planas), para moderadores por región y para
+  simplificar la insignia; **no** para las barras ni el ranking, que se quedan en provincia
+  porque Catalunya son 15.675 fuentes y esa barra se mueve aún menos que la de Barcelona.
   Al **crear** una fuente se heredan de la fuente clasificada más cercana (≤55 km, en
   segundo plano; ver `FontController.inheritZone`): instantáneo y sin cargar fronteras en
   el servidor. Si en la zona no hay ninguna clasificada, quedan nulas (no se inventa nada).
