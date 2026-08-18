@@ -34,6 +34,32 @@ import { timeAgo } from '../lib/time'
  * congelado el castellano dentro de la base de datos para siempre. Aquí se reparten y las
  * pone el diccionario. Si el formato cambiara, se lee 0 y el aviso sigue siendo legible.
  */
+/**
+ * Qué ha pasado en una fuente que sigues.
+ *
+ * El servidor manda un **código** (`review:dry`, `report`, `hidden:retired`) y no una
+ * frase, porque no sabe en qué idioma lees — la misma regla que los avisos de fuentes
+ * olvidadas. Aquí se convierte en palabras.
+ *
+ * Un código que no se reconozca cae en el genérico en vez de pintar la clave cruda: los
+ * avisos viejos siguen en la bandeja cuando el servidor ya manda códigos nuevos.
+ */
+function queHaPasado(excerpt: string, quien: string, t: (k: string, v?: Record<string, string>) => string): string {
+  const [tipo, detalle] = excerpt.split(':')
+  if (tipo === 'review') {
+    const estado = detalle ? t(`status.${detalle}`) : ''
+    return estado
+      ? t('notif.fontUpdate.reviewWithStatus', { user: quien, status: estado })
+      : t('notif.fontUpdate.review', { user: quien })
+  }
+  if (tipo === 'report') return t('notif.fontUpdate.report', { user: quien })
+  if (tipo === 'resolved') return t('notif.fontUpdate.resolved')
+  if (tipo === 'hidden') {
+    return t(detalle === 'retired' ? 'notif.fontUpdate.retired' : 'notif.fontUpdate.duplicate')
+  }
+  return t('notif.fontUpdate.other')
+}
+
 function cifras(excerpt: string): [number, number, number] {
   const [a, b, c] = excerpt.split('|').map((x) => Number(x) || 0)
   return [a ?? 0, b ?? 0, c ?? 0]
@@ -106,14 +132,18 @@ export function NotificationBell() {
             <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
               {n.kind === 'staleGuarded'
                 ? t('notif.staleGuarded', { n: String(cifras(n.excerpt)[0]) })
-                : t('notif.mentionedYou', { user: n.actorName, font: n.fontName })}
+                : n.kind === 'fontUpdate'
+                  ? t('notif.fontUpdate', { font: n.fontName })
+                  : t('notif.mentionedYou', { user: n.actorName, font: n.fontName })}
             </Typography>
             {/* El texto que lo provocó. Sin él hay que abrir la ficha para saber si
                 corre prisa, y casi nunca corre. */}
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.35 }}>
               {n.kind === 'staleGuarded'
                 ? t('notif.staleGuardedBody', { font: n.fontName, d: String(cifras(n.excerpt)[2]) })
-                : n.excerpt}
+                : n.kind === 'fontUpdate'
+                  ? queHaPasado(n.excerpt, n.actorName, t)
+                  : n.excerpt}
             </Typography>
             <Box component="span" sx={{ display: 'block', fontSize: 11, color: 'text.disabled', mt: 0.25 }}>
               {n.createdAt ? timeAgo(n.createdAt, t) : ''}

@@ -402,6 +402,7 @@ struct FontController: RouteCollection {
         }
         font.$duplicateOf.id = dto.of
         try await font.save(on: req.db)
+        avisaSeguidores(req, font: font, razon: "duplicate")
         return font
     }
 
@@ -435,6 +436,7 @@ struct FontController: RouteCollection {
         }
         font.retiredAt = Date()
         font.$retiredBy.id = try user.requireID()
+        defer { avisaSeguidores(req, font: font, razon: "retired") }
         try await font.save(on: req.db)
         return font
     }
@@ -448,6 +450,22 @@ struct FontController: RouteCollection {
         font.$retiredBy.id = nil
         try await font.save(on: req.db)
         return font
+    }
+
+    /// Avisa por la campana a quien tenga la fuente guardada. Esconder una fuente es lo
+    /// más gordo que le puede pasar —desaparece del mapa para todo el mundo— y quien la
+    /// tenía apuntada para el domingo merece enterarse antes de ir.
+    ///
+    /// Sin esperar y sin propagar errores: la fuente ya está escondida, que es lo que
+    /// pedía quien pulsó el botón.
+    private func avisaSeguidores(_ req: Request, font: Font, razon: String) {
+        guard let fontID = font.id else { return }
+        let actorID = try? req.auth.require(User.self).requireID()
+        let db = req.db
+        Task.detached {
+            await FontWatchNotifier.notify(fontID: fontID, change: .hidden(reason: razon),
+                                           actorID: actorID, on: db)
+        }
     }
 
     private func requireAdmin(_ req: Request) throws {

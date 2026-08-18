@@ -67,18 +67,23 @@ struct FontReportController: RouteCollection {
     ///
     /// Sin `resolver`: nadie la cerró. La ficha lo dice como «resuelta automáticamente»
     /// en vez de atribuírsela a quien pasó por allí, que no ha decidido nada.
-    static func autoResolve(fontID: UUID, on db: any Database) async throws {
+    /// - Returns: si de verdad ha cerrado alguna. Quien llama lo necesita para avisar a
+    ///   los seguidores solo cuando ha pasado algo: «la incidencia se ha resuelto» dicho
+    ///   sobre una fuente que no tenía ninguna no es una noticia, es ruido.
+    @discardableResult
+    static func autoResolve(fontID: UUID, on db: any Database) async throws -> Bool {
         let abiertas = try await FontReport.query(on: db)
             .filter(\.$font.$id == fontID)
             .filter(\.$resolvedAt == nil)
             .all()
-        guard !abiertas.isEmpty else { return }
+        guard !abiertas.isEmpty else { return false }
         let ahora = Date()
         for r in abiertas {
             r.resolvedAt = ahora
             r.$resolver.id = nil
             try await r.save(on: db)
         }
+        return true
     }
 
     private func cambiaEstado(_ req: Request, resolviendo: Bool) async throws -> ReportResponse {
@@ -114,6 +119,14 @@ struct FontReportController: RouteCollection {
         // Después de guardar y sin esperar: un aviso que no sale no puede costarle la
         // incidencia a quien la escribe.
         MentionNotifier.notify(text: dto.message, by: user, fontID: fontID, on: req)
+
+        // Y a quien sigue la fuente: una avería es exactamente lo que quiere saber quien
+        // la tiene guardada antes de ir.
+        let quienID = try user.requireID()
+        let db = req.db
+        Task.detached {
+            await FontWatchNotifier.notify(fontID: fontID, change: .report, actorID: quienID, on: db)
+        }
 
         let response = Response(status: .created)
         try response.content.encode(

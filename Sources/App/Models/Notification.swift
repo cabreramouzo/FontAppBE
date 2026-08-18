@@ -27,6 +27,10 @@ final class Notification: Model, @unchecked Sendable {
         case mention
         /// Fuentes que cuidas y llevan mucho sin comprobar. Sin actor: no lo manda nadie.
         case staleGuarded
+        /// Ha cambiado algo en una fuente que sigues (la tienes guardada). El `excerpt`
+        /// lleva un **código** (`review:dry`, `report`, `hidden:retired`), no una frase:
+        /// las palabras las pone el navegador, que sí sabe en qué idioma lees.
+        case fontUpdate
     }
 
     @ID(key: .id) var id: UUID?

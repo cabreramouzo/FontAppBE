@@ -2192,6 +2192,72 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    // MARK: - Seguir una fuente
+
+    /// Guardar una fuente **es** seguirla: quien la tiene en favoritos recibe por la
+    /// campana lo que le pase. Y la mitad que más importa — **a quien lo provoca no se le
+    /// avisa de lo suyo**, que es la forma más rápida de que la campana se vuelva ruido.
+    func testWatchersAreToldButNeverAboutTheirOwnDoing() async throws {
+        try await withApp { app in
+            let seguidoraID = try await register(app, username: "seguidora")
+            _ = try await register(app, username: "passavolant")
+            let tokenSeguidora = try await login(app, username: "seguidora")
+            let tokenOtro = try await login(app, username: "passavolant")
+
+            let fontID = try await createFont(app, token: tokenSeguidora, name: "Font seguida",
+                                              lat: 41.55, long: 2.05)
+            try await app.test(.POST, "fonts/\(fontID)/favorite", headers: bearer(tokenSeguidora),
+                               afterResponse: { res in XCTAssertEqual(res.status, .ok) })
+
+            // Lo suyo no se le avisa.
+            _ = try await addComment(app, token: tokenSeguidora, fontID: fontID, body: "Hi he anat jo")
+            try await esperaAvisos(app)
+            var avisos = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == seguidoraID).filter(\.$kind == .fontUpdate).all()
+            XCTAssertEqual(avisos.count, 0, "Nadie quiere que le avisen de lo que acaba de hacer.")
+
+            // Lo de otra persona sí, y con el estado del agua dentro.
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tokenOtro), beforeRequest: { req in
+                try req.content.encode(["body": "Seca del tot", "waterStatus": "dry"])
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+            try await esperaAvisos(app)
+            avisos = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == seguidoraID).filter(\.$kind == .fontUpdate).all()
+            XCTAssertEqual(avisos.count, 1)
+            // Un **código**, no una frase: el servidor no sabe en qué idioma lee quien
+            // mira, así que manda el hecho y el navegador pone las palabras.
+            XCTAssertEqual(avisos.first?.excerpt, "review:dry")
+            XCTAssertEqual(avisos.first?.fontName, "Font seguida")
+        }
+    }
+
+    /// Quien no la sigue no recibe nada. Parece obvio y es justo lo que se rompe al
+    /// escribir mal el filtro de la consulta de seguidores.
+    func testNonWatchersGetNothing() async throws {
+        try await withApp { app in
+            let mironaID = try await register(app, username: "mirona")
+            _ = try await register(app, username: "autora")
+            let tokenAutora = try await login(app, username: "autora")
+
+            let fontID = try await createFont(app, token: tokenAutora, name: "Font qualsevol",
+                                              lat: 41.56, long: 2.06)
+            _ = try await addComment(app, token: tokenAutora, fontID: fontID, body: "Raja")
+            try await esperaAvisos(app)
+            let avisos = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == mironaID).all()
+            XCTAssertTrue(avisos.isEmpty, "No la sigue: no le toca ningún aviso.")
+        }
+    }
+
+    /// Los avisos se mandan con `Task.detached` para no hacer esperar a quien aporta, así
+    /// que el test tiene que darles un momento. Se mira la tabla en vez de dormir a ciegas.
+    private func esperaAvisos(_ app: Application, _ intentos: Int = 40) async throws {
+        for _ in 0..<intentos {
+            try await Task.sleep(nanoseconds: 50_000_000)
+            if try await Notification.query(on: app.db).filter(\.$kind == .fontUpdate).count() > 0 { return }
+        }
+    }
+
         // MARK: - Sitemap
 
     /// Lo que entra en el sitemap es lo que **ha tocado una persona**, y muy explícitamente

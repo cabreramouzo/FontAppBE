@@ -677,6 +677,31 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   «Comarques», que es la palabra de las divisiones de Catalunya. A 150 px y con confeti
   delante, se confunden. Conviene redibujar una de las dos.
 
+## Seguir una fuente (`FontWatchNotifier`)
+
+- **Guardar una fuente es seguirla.** No hay tabla de suscripciones: la relación ya
+  existía (`FontFavorite`, el botón de la ficha y la lista de `/me`). Guardar una fuente y
+  querer saber si se seca son la misma intención dicha dos veces; separarlas obligaría a
+  elegir entre dos palabras para lo mismo. GitHub distingue *star* de *watch* porque un
+  repo se mueve cada día — aquí una fuente cambia unas pocas veces al año. Si el volumen
+  molesta algún día, la salida es un interruptor sobre la relación que ya hay, no una nueva.
+- Avisa de: **reseña** (con el estado del agua si lo trae), **incidencia**, **incidencia
+  resuelta** y **escondida** (duplicada o retirada). Esa última es la más importante: la
+  fuente desaparece del mapa y quien la tenía apuntada para el domingo debe enterarse.
+- **Nunca al que lo provoca.** Es la forma más rápida de que la campana se vuelva ruido, y
+  hay test.
+- El aviso guarda un **código** (`review:dry`, `report`, `hidden:retired`), no una frase:
+  misma regla que `StaleGuardedNotifier`, el servidor no sabe en qué idioma lees. Lo
+  compone `queHaPasado()` en `NotificationBell`, y un código desconocido cae en un genérico
+  en vez de pintar la clave cruda — los avisos viejos sobreviven a un servidor nuevo.
+- `FontReportController.autoResolve` devuelve ahora **si de verdad cerró algo**: «la
+  incidencia se ha resuelto» sobre una fuente que no tenía ninguna no es una noticia.
+- **Sin correo, a propósito**: cada envío cuesta y esto se dispara a menudo. El enganche
+  está señalado con un solo bloque en `FontWatchNotifier`, con las cuatro cosas que faltan
+  escritas allí (columna `watch_emails` naciendo a true, la regla de `isAround`, plantilla
+  con `?k=watch` en `UnsubscribeToken`, y agrupar: cinco reseñas en una tarde son un correo
+  y no cinco).
+
 ## Interrupciones (`lib/asks.ts`)
 
 - **Como mucho un aviso a la vez.** Cada uno se escribió por su cuenta y ninguno sabía de

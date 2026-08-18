@@ -688,8 +688,11 @@ export function FontDetailPage() {
             color={favorite?.favorited ? 'primary' : 'default'}
             onClick={toggleFavorite}
             disabled={savingFavorite}
+            // Guardar una fuente **es** seguirla: desde que la campana avisa de los
+            // cambios, el marcador dejó de ser solo un apunte. El rótulo lo dice, porque
+            // si no, nadie descubre que recibirá avisos hasta que le llegue el primero.
             aria-label={favorite?.favorited ? t('favorite.saved') : t('favorite.save')}
-            title={favorite?.favorited ? t('favorite.saved') : t('favorite.save')}
+            title={`${favorite?.favorited ? t('favorite.saved') : t('favorite.save')} · ${t('detail.saveWatch')}`}
           >
             {favorite?.favorited ? <BookmarkIcon /> : <BookmarkBorderIcon />}
           </IconButton>
