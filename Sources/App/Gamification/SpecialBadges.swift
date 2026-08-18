@@ -31,10 +31,30 @@ enum SpecialBadges {
 
     static func find(_ key: String) -> Special? { catalogue.first { $0.key == key } }
 
-    /// Los tipos de aportación que son «una reseña». Solo los usa Betatester: Catalunya
-    /// cuenta **cualquier** aportación, porque poner una fuente en el mapa de Lleida es
-    /// haber estado allí igual que reseñarla.
+    /// Los tipos de aportación que son «una reseña». Solo los usa Betatester.
     static let reviewKinds = ["firstReview", "updateReview"]
+
+    /// Los tipos que **prueban que estuviste delante de la fuente**. Los usa Catalunya.
+    ///
+    /// No es «cualquier aportación», aunque así se pidió y así estuvo. El argumento de
+    /// entonces era correcto —«poner una fuente en el mapa de Lleida es haber estado allí
+    /// igual que reseñarla»— pero iba dirigido contra limitarlo a reseñas, y la lista
+    /// entera se coló con él. Dentro había dos que se hacen desde el sofá:
+    ///
+    /// - `fieldCompleted`: rellenar el nombre o la descripción es edición estilo wiki, y
+    ///   cualquiera con sesión puede hacerlo sobre una fuente de Tarragona sin moverse.
+    /// - `relocation`: mover el pin se hace con la ortofoto, que es justo para lo que
+    ///   sirve la capa del PNOA.
+    ///
+    /// Fuera también `confirmation`: confirmar la reseña de otro es opinar sobre lo que
+    /// dijo alguien, no haber visto el agua.
+    ///
+    /// Lo que queda exige tener algo del sitio: una foto de esa fuente, el estado del
+    /// agua, una avería que viste. Nada de esto es **verificable** —ver `PhotoExif`— pero
+    /// sí es difícil de inventar sin haber ido, que es todo lo que una web puede pedir.
+    static let onSiteKinds = [
+        "fontCreated", "firstPhoto", "photoReplaced", "firstReview", "updateReview", "report",
+    ]
 
     // MARK: - Catalunya
 
@@ -74,9 +94,10 @@ enum SpecialBadges {
 
     /// Quién ha aportado en las cuatro, y cuándo completó la cuarta.
     ///
-    /// **Cualquier aportación cuenta**, no solo las reseñas: poner una fuente en el mapa
-    /// de Lleida o arreglarle la ubicación es haber estado allí igual, y la insignia
-    /// premia haber recorrido el país, no una forma concreta de contarlo.
+    /// Cuenta **cualquier aportación que pruebe que estuviste allí** (ver `onSiteKinds`),
+    /// no solo las reseñas: poner una fuente en el mapa de Lleida o fotografiarla es haber
+    /// estado allí igual, y la insignia premia haber recorrido el país, no una forma
+    /// concreta de contarlo. Lo que no cuenta es lo que se hace desde casa.
     ///
     /// El `country` va en la condición aunque los cuatro nombres parezcan inconfundibles:
     /// `region` es la primera división administrativa **de cualquier país** y el día que
@@ -113,6 +134,7 @@ enum SpecialBadges {
             FROM contribution_events e
             JOIN fonts f ON f.id = e.font_id
             WHERE e.status = 'settled'
+              AND e.kind = ANY(\(bind: onSiteKinds))
               AND f.country = 'Spain'
               AND f.region = ANY(\(bind: nombres))
             GROUP BY e.user_id, f.region
@@ -144,6 +166,7 @@ enum SpecialBadges {
               LIMIT 1
             ) near
             WHERE e.status = 'settled'
+              AND e.kind = ANY(\(bind: onSiteKinds))
               AND f.region IS NULL
               AND f.latitude BETWEEN \(bind: catalanBox.minLat) AND \(bind: catalanBox.maxLat)
               AND f.longitude BETWEEN \(bind: catalanBox.minLon) AND \(bind: catalanBox.maxLon)

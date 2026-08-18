@@ -2292,7 +2292,63 @@ final class IntegrationTests: XCTestCase {
     /// Catalunya pide las cuatro demarcaciones, acepta las dos grafías (producción dice
     /// «Girona» y una base repoblada con Natural Earth dice «Gerona») y **sobrevive a
     /// `--rescore`**, que es la mitad del sentido de guardarlas.
-    func testCataloniaBadgeNeedsAllFourAndSurvivesARescore() async throws {
+/// La insignia de Catalunya premia **haber recorrido el país**, así que solo cuentan las
+    /// aportaciones que prueban que estuviste delante de la fuente.
+    ///
+    /// Rellenar un campo es edición estilo wiki y mover el pin se hace con la ortofoto: las
+    /// dos se pueden hacer sobre una fuente de Tarragona desde el sofá de Castellcir. Con
+    /// ellas dentro, la insignia decía una cosa y medía otra — y el más expuesto era
+    /// justamente quien tiene el panel de administración.
+    func testCataloniaIgnoresContributionsYouCanMakeFromHome() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "desdecasa")
+            let token = try await login(app, username: "desdecasa")
+
+            /// Coloca una aportación del tipo pedido sobre una fuente de esa demarcación.
+            /// (Un grado de separación: `inheritZone` pisa la zona si están cerca.)
+            func aporta(_ region: String, _ kind: ContributionScore.Kind, i: Int) async throws {
+                let fontID = try await createFont(app, token: token, name: "\(region)-\(kind.rawValue)",
+                                                  lat: 41.0 + Double(i), long: 2.0)
+                let f = try await Font.find(fontID, on: app.db)!
+                f.country = "Spain"; f.region = region
+                try await f.save(on: app.db)
+                let e = ContributionEvent()
+                e.$user.id = id
+                e.$font.id = fontID
+                e.source = "test"; e.subjectID = UUID(); e.detail = region
+                e.kind = kind.rawValue
+                e.base = 10; e.multiplier = 1; e.gotes = 10
+                e.status = .settled
+                let cuando = Date().addingTimeInterval(-Double(20 - i) * 86_400)
+                e.occurredAt = cuando; e.settlesAt = cuando; e.settledAt = cuando
+                try await e.save(on: app.db)
+            }
+
+            // Tres pisadas de verdad y la cuarta desde casa.
+            try await aporta("Barcelona", .firstReview, i: 0)
+            try await aporta("Girona", .firstPhoto, i: 1)
+            try await aporta("Lleida", .fontCreated, i: 2)
+            try await aporta("Tarragona", .fieldCompleted, i: 3)
+
+            try await SpecialBadges.award(on: app.db)
+            var dadas = try await BadgeAward.query(on: app.db).filter(\.$key == "catalonia").count()
+            XCTAssertEqual(dadas, 0, "Rellenar un campo no es haber ido a Tarragona.")
+
+            // Mover el pin tampoco: se hace con la ortofoto.
+            try await aporta("Tarragona", .relocation, i: 4)
+            try await SpecialBadges.award(on: app.db)
+            dadas = try await BadgeAward.query(on: app.db).filter(\.$key == "catalonia").count()
+            XCTAssertEqual(dadas, 0, "Mover el pin tampoco prueba que estuvieras allí.")
+
+            // Con una reseña en Tarragona, ahora sí.
+            try await aporta("Tarragona", .updateReview, i: 5)
+            try await SpecialBadges.award(on: app.db)
+            dadas = try await BadgeAward.query(on: app.db).filter(\.$key == "catalonia").count()
+            XCTAssertEqual(dadas, 1, "Con las cuatro pisadas de verdad, se gana.")
+        }
+    }
+
+        func testCataloniaBadgeNeedsAllFourAndSurvivesARescore() async throws {
         try await withApp { app in
             let id = try await register(app, username: "quatre")
             let token = try await login(app, username: "quatre")

@@ -253,8 +253,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     índice único `(user_id, key)`, no una comprobación en Swift: dos instancias pueden
     barrer a la vez. Se reparten al **final** de `ContributionLedger.sync()`, cuando la
     liquidación de esa pasada ya está hecha.
-    Las dos primeras: `catalonia` (**cualquier** aportación en las cuatro demarcaciones,
-    no solo reseñas) y `betatester` (15 reseñas, cupo 100). Ojo con `catalanRegions`:
+    Las dos primeras: `catalonia` (aportación en las cuatro demarcaciones) y `betatester`
+    (15 reseñas, cupo 100). Catalunya cuenta **solo lo que prueba que estuviste delante de
+    la fuente** (`SpecialBadges.onSiteKinds`): crear, fotografiar, reseñar o dar una
+    incidencia. **Fuera `fieldCompleted` y `relocation`** —rellenar un campo es edición
+    wiki y mover el pin se hace con la ortofoto, las dos desde el sofá y sobre una fuente
+    de Tarragona— y fuera `confirmation`, que es opinar sobre lo que dijo otro. Se dijo
+    «cualquier aportación» y era correcto **contra** limitarlo a reseñas, pero con la lista
+    entera la insignia decía una cosa y medía otra, y el más expuesto era quien tiene el
+    panel de administración. Hay test. Ojo con `catalanRegions`:
     acepta **las dos grafías** porque producción dice «Girona/Lleida» y una base
     repoblada con Natural Earth dice «Gerona/Lérida».
     Catalunya lleva además una **consulta de rescate**: `fonts.region` no está siempre
