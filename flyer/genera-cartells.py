@@ -16,6 +16,12 @@ obrir el navegador ni tocar cap diàleg d'impressió:
       --print-to-pdf=cartell-castelltercol.pdf \\
       "file://$PWD/flyer/pobles/cartell-castelltercol.html"
 
+Comprova que cada cartell porta el SEU codi (l'adreça impresa és `fontapp.net` a
+seques, així que el QR és l'única cosa que el duu):
+
+    swiftc -O flyer/llegeix-qr.swift -o /tmp/llegeix-qr
+    /tmp/llegeix-qr flyer/pobles/*.pdf
+
 Comprova SEMPRE el PDF resultant: el cartell té l'alçada fixada a 210 mm i Chrome no
 pagina, **retalla**. Si hi afegeixes una línia i el peu desapareix, el problema és aquest
 i es resol traient espai a `ul.punts` (margin) o a `ul.punts li` (margin-bottom).

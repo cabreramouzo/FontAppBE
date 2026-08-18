@@ -454,6 +454,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 ## Carteles / campañas
 - Cartel A5 en catalán en `flyer/` (HTML editable + PDF). `flyer/genera-cartells.py <codis>`
   genera una copia por pueblo con su QR y su código (`fontapp.net/?p=castellcir`).
+- El código va **solo dentro del QR**: la dirección impresa es `fontapp.net` a secas,
+  porque `fontapp.net/?p=castelltercol` no lo teclea nadie bien. Como no hay red de
+  seguridad, `flyer/llegeix-qr.swift` decodifica los PDF con **Vision** (framework del
+  sistema, no la librería que los dibuja: comparar segno con segno no demuestra nada) y
+  sale con código ≠ 0 si algún cartel no lleva su código.
+- Ojo al editar el cartel: tiene la altura fijada a 210 mm y **Chrome no pagina, recorta**.
+  Añadir una línea empuja el pie fuera de la página sin dar ningún error.
 - Ese código se guarda en `users.signup_source` al registrarse (primera visita gana) y se
   agrupa en el panel de administración. Sirve para saber qué cartel/campaña funciona, que es
   justo lo que el geo-IP del registro NO puede decir (resuelve a la cabecera de demarcación).
