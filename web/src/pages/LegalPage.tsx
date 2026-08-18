@@ -31,6 +31,7 @@ export function LegalPage() {
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
       {lang === 'ca' ? <LegalCA />
         : lang === 'en' ? <LegalEN />
+        : lang === 'fr' ? <LegalFR />
         : lang === 'gl' ? <LegalGL />
         : lang === 'eu' ? <LegalEU />
         : <LegalES />}
@@ -276,6 +277,74 @@ function LegalEN() {
         <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a> licence.
         {' '}Some fountains come from the <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> and
         ACA, under the <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> licence.
+      </p>
+    </>
+  )
+}
+
+function LegalFR() {
+  return (
+    <>
+      <h1>Mentions légales et confidentialité</h1>
+      <h2>⚠️ Sécurité de l’eau et exclusion de responsabilité</h2>
+      <p className="stale-warn">
+        FontApp est un service d’information <strong>collaboratif</strong> : les fontaines, leur débit et leur potabilité
+        proviennent des utilisateurs et de données ouvertes et peuvent être <strong>obsolètes, incomplets ou erronés</strong>.
+        Ces informations sont fournies <strong>à titre indicatif</strong> et ne remplacent pas une analyse officielle.
+        FontApp <strong>ne garantit pas</strong> la potabilité ni la sécurité de l’eau. La boire relève de la
+        <strong> seule décision et responsabilité de l’utilisateur</strong>. En cas de doute, ne la buvez pas ou traitez-la.
+        Ni FontApp ni son propriétaire ne répondent d’un dommage résultant de l’utilisation de ces informations.
+      </p>
+      <h2>Mentions légales</h2>
+      <p>
+        Propriétaire du site : <strong>Miguel Cabrera</strong>. Contact :{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>. L’utilisation du service implique l’acceptation de ces conditions.
+        Les contenus publiés par les utilisateurs relèvent de la responsabilité de leur auteur.
+      </p>
+      <h2>Confidentialité (RGPD)</h2>
+      <p><strong>Responsable du traitement :</strong> Miguel Cabrera, <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.</p>
+      <p><strong>Données traitées :</strong></p>
+      <ul>
+        <li>Votre <strong>nom d’utilisateur et votre nom</strong>, votre <strong>adresse e-mail</strong> et votre <strong>mot de passe</strong> (haché avec bcrypt, jamais stocké en clair).</li>
+        <li>Le <strong>contenu publié</strong> : fontaines, avis, évaluations, photos et signalements.</li>
+        <li>Votre <strong>position</strong> sert uniquement, avec votre autorisation, à afficher les fontaines proches ; elle <strong>n’est pas stockée</strong> sur le serveur.</li>
+        <li>Pour les <strong>photos envoyées</strong>, nous conservons, lorsqu’elles existent, la date et les coordonnées EXIF, uniquement à des fins de <strong>modération</strong>. <strong>Seuls les administrateurs y ont accès</strong> et l’image publiée ne les contient pas.</li>
+        <li>À l’<strong>inscription</strong>, nous conservons votre <strong>région approximative</strong> (déduite de l’IP, <strong>pas l’IP elle-même</strong>) et la <strong>langue</strong> de l’interface, pour les statistiques et pour vous écrire dans votre langue.</li>
+        <li>Si vous venez d’une <strong>affiche ou campagne</strong> munie d’un code (<code>fontapp.net/?p=castellcir</code>), ce code est associé à l’inscription pour mesurer son efficacité. Il n’identifie personne.</li>
+      </ul>
+      <p><strong>Utilisation de votre adresse e-mail :</strong></p>
+      <ul>
+        <li>Messages de service : bienvenue et récupération du mot de passe.</li>
+        <li>Un <strong>récapitulatif hebdomadaire</strong> de l’activité des fontaines auxquelles vous avez contribué, désactivable depuis votre profil ou grâce au lien présent dans chaque e-mail.</li>
+      </ul>
+      <p><strong>Finalité et base juridique :</strong> fournir le service demandé et le consentement donné à l’inscription. <strong>Conservation :</strong> tant que votre compte existe.</p>
+      <p>
+        <strong>Vos droits :</strong> accès, rectification, effacement, portabilité, limitation et opposition.
+        Vous pouvez <strong>supprimer votre compte</strong> depuis l’application ou écrire à{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>. Vous pouvez aussi saisir votre autorité de protection des données.
+      </p>
+      <p>
+        <strong>Stockage dans votre navigateur :</strong> <strong>nous n’utilisons aucun cookie</strong>. Nous conservons sur votre appareil
+        le jeton de session, vos préférences, le code de campagne et vos contributions hors connexion jusqu’au retour du réseau.
+        Vous pouvez tout effacer en supprimant les données du site dans votre navigateur.
+      </p>
+      <p>
+        <strong>Mesure d’audience :</strong> nous utilisons <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
+        qui mesure les visites de façon <strong>agrégée, sans cookies et sans vous identifier</strong>. Nous n’utilisons ni Google Analytics ni réseau publicitaire et ne vendons ni ne partageons vos données.
+      </p>
+      <p><strong>Sous-traitants :</strong></p>
+      <ul>
+        <li><strong>Fly.io</strong> (serveur) et <strong>Neon</strong> (base PostgreSQL).</li>
+        <li><strong>Cloudflare</strong> : web et CDN, statistiques agrégées et stockage des photos (R2).</li>
+        <li><strong>Resend</strong> : envoi des e-mails.</li>
+        <li><strong>ip-api.com</strong> : uniquement à l’inscription, pour déterminer le pays et la région. <strong>Il reçoit votre IP</strong>, que nous ne stockons pas.</li>
+      </ul>
+      <h2>Données cartographiques</h2>
+      <p>
+        Le fond de carte et les données proviennent d’<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>,
+        © contributeurs OpenStreetMap, sous licence <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
+        {' '}Certaines fontaines proviennent de l’<a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> et de l’ACA,
+        sous licence <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
       </p>
     </>
   )

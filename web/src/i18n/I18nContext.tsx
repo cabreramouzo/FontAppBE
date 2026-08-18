@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { dictionaries, type Lang } from './dictionaries'
 
 const LANG_KEY = 'fontapp_lang'
-const SUPPORTED: Lang[] = ['ca', 'es', 'gl', 'eu', 'en']
+const SUPPORTED: Lang[] = ['ca', 'es', 'gl', 'eu', 'en', 'fr']
 
 // Idioma inicial: elección guardada → idioma del navegador → catalán por defecto.
 function detectLang(): Lang {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Comprueba que los cinco diccionarios tienen exactamente las mismas claves.
+// Comprueba que todos los diccionarios tienen exactamente las mismas claves.
 //
 // Nace de un susto: un `re.sub` codicioso se comió 2.700 líneas del fichero y la app
 // seguía compilando y arrancando tan tranquila. `t()` devuelve la clave cruda cuando falta
