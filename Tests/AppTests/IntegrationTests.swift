@@ -93,6 +93,16 @@ final class IntegrationTests: XCTestCase {
         func locate(ip: String?, on client: any Client) async -> GeoLocation? { location }
     }
 
+    /// Como el anterior pero nombrando con UUID, igual que el almacenamiento real: es lo
+    /// que necesita `PhotoExif`, que se indexa por el identificador del nombre.
+    private struct UUIDImageStorage: ImageStorage {
+        func save(_ data: ByteBuffer, ext: String) async throws -> String {
+            "/uploads/\(UUID().uuidString).\(ext)"
+        }
+        func delete(_ reference: String) async throws {}
+        func copy(_ reference: String) async throws -> String { "/uploads/\(UUID().uuidString).jpg" }
+    }
+
     /// ImageStorage de prueba: no toca disco; `copy` devuelve una referencia nueva.
     private struct StubImageStorage: ImageStorage {
         func save(_ data: ByteBuffer, ext: String) async throws -> String { "/uploads/stub.\(ext)" }
@@ -2042,6 +2052,107 @@ final class IntegrationTests: XCTestCase {
             })
             try await app.test(.GET, "zones/local?lat=200&long=10", afterResponse: { res in
                 XCTAssertEqual(res.status, .badRequest)
+            })
+        }
+    }
+
+    // MARK: - EXIF de las fotos (solo moderación)
+
+    /// Construye un cuerpo multipart con el fichero y los campos sueltos del EXIF.
+    private func multipart(_ campos: [(String, String)], boundary: String = "----fontapptest") -> (HTTPHeaders, ByteBuffer) {
+        var cuerpo = ByteBufferAllocator().buffer(capacity: 0)
+        cuerpo.writeString("--\(boundary)\r\n")
+        cuerpo.writeString("Content-Disposition: form-data; name=\"file\"; filename=\"f.jpg\"\r\n")
+        cuerpo.writeString("Content-Type: image/jpeg\r\n\r\n")
+        cuerpo.writeBytes([0xFF, 0xD8, 0xFF, 0xD9]) // JPEG mínimo: SOI + EOI
+        cuerpo.writeString("\r\n")
+        for (k, v) in campos {
+            cuerpo.writeString("--\(boundary)\r\n")
+            cuerpo.writeString("Content-Disposition: form-data; name=\"\(k)\"\r\n\r\n\(v)\r\n")
+        }
+        cuerpo.writeString("--\(boundary)--\r\n")
+        var h = HTTPHeaders()
+        h.contentType = HTTPMediaType(type: "multipart", subType: "form-data",
+                                      parameters: ["boundary": boundary])
+        return (h, cuerpo)
+    }
+
+    /// El EXIF viaja en campos aparte porque la compresión del cliente lo borra de la
+    /// imagen, y **la fecha va como texto ISO a propósito**: el decodificador multipart de
+    /// Vapor no promete ninguna estrategia para `Date`. Este test es lo que impide que
+    /// alguien lo «simplifique» a `Date?` y descubra en producción que llega nulo.
+    func testUploadKeepsExifAndOnlyAdminsCanReadIt() async throws {
+        try await withApp { app in
+            app.imageStorage = UUIDImageStorage()
+            _ = try await register(app, username: "fotografa")
+            let token = try await login(app, username: "fotografa")
+            let adminID = try await register(app, username: "fotoadmin")
+            try await makeAdmin(app, userID: adminID)
+            let tokenAdmin = try await login(app, username: "fotoadmin")
+
+            var headers = bearer(token)
+            let (tipo, cuerpo) = multipart([
+                ("takenAt", "2026-08-01T09:41:02Z"),
+                ("latitude", "41.7466"),
+                ("longitude", "2.1660"),
+            ])
+            tipo.forEach { headers.replaceOrAdd(name: $0.name, value: $0.value) }
+
+            var url = ""
+            try await app.test(.POST, "images", headers: headers, body: cuerpo, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                url = try res.content.decode(ImageUploadResponse.self).url
+            })
+            let photoID = try XCTUnwrap(PhotoExif.photoID(fromURL: url))
+
+            // Quien no es admin no lo ve, aunque la foto la haya subido él.
+            try await app.test(.GET, "images/meta?ids=\(photoID)", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden, "Las coordenadas de una foto no son públicas.")
+            })
+
+            try await app.test(.GET, "images/meta?ids=\(photoID)", headers: bearer(tokenAdmin), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let filas = try res.content.decode([ImageController.MetaResponse].self)
+                XCTAssertEqual(filas.count, 1)
+                XCTAssertEqual(filas.first?.latitude ?? 0, 41.7466, accuracy: 0.0001)
+                let hecha = try XCTUnwrap(filas.first?.takenAt)
+                XCTAssertEqual(hecha.timeIntervalSince1970,
+                               ISO8601DateFormatter().date(from: "2026-08-01T09:41:02Z")!.timeIntervalSince1970,
+                               accuracy: 1)
+                // La otra mitad de la comparación: sin `uploadedAt` no se puede decir
+                // «hecha veinte días antes de subirla», que es para lo único que sirve esto.
+                XCTAssertNotNil(filas.first?.uploadedAt)
+            })
+        }
+    }
+
+    /// Una foto sin nada de EXIF **también deja fila**. Es lo que permite distinguir «no
+    /// traía metadatos» —lo más normal: todo lo que pasa por mensajería llega limpio— de
+    /// «se subió antes de que existiera esto». Sin la fila, las dos cosas se leerían igual
+    /// y un moderador sacaría conclusiones de un hueco.
+    func testUploadWithoutExifStillRecordsTheUploadTime() async throws {
+        try await withApp { app in
+            app.imageStorage = UUIDImageStorage()
+            let adminID = try await register(app, username: "sinexif")
+            try await makeAdmin(app, userID: adminID)
+            let token = try await login(app, username: "sinexif")
+
+            var headers = bearer(token)
+            let (tipo, cuerpo) = multipart([])
+            tipo.forEach { headers.replaceOrAdd(name: $0.name, value: $0.value) }
+
+            var url = ""
+            try await app.test(.POST, "images", headers: headers, body: cuerpo, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                url = try res.content.decode(ImageUploadResponse.self).url
+            })
+            let photoID = try XCTUnwrap(PhotoExif.photoID(fromURL: url))
+            try await app.test(.GET, "images/meta?ids=\(photoID)", headers: bearer(token), afterResponse: { res in
+                let filas = try res.content.decode([ImageController.MetaResponse].self)
+                XCTAssertEqual(filas.count, 1, "Sin EXIF también hay fila.")
+                XCTAssertNil(filas.first?.takenAt)
+                XCTAssertNil(filas.first?.latitude)
+                XCTAssertNotNil(filas.first?.uploadedAt)
             })
         }
     }

@@ -65,8 +65,8 @@ import { NO_STATUS_COLOR, WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } 
 import { formatDist, haversineKm } from '../lib/geo'
 import { WorthChip } from '../components/WorthChip'
 import { searchPlaces, type Place } from '../lib/geocode'
-import { compressImage } from '../lib/image'
-import { readGpsFromImage, type GpsCoords } from '../lib/exifGps'
+import { prepararFoto } from '../lib/image'
+import { readGpsFromImage, type GpsCoords } from '../lib/exif'
 import { DRINKABLE_OPTIONS, SOURCE_OPTIONS, DRINKABLE_EMOJI, SOURCE_EMOJI, isNotPotable } from '../lib/waterType'
 import { timeAgo } from '../lib/time'
 
@@ -481,7 +481,8 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
     setSaving(true)
     // Comprimimos antes de nada: así la foto ya está lista tanto para subirla ahora
     // como para guardarla en la cola si resulta que no hay cobertura.
-    const photo = file ? await compressImage(file) : undefined
+    const preparada = file ? await prepararFoto(file) : undefined
+    const photo = preparada?.photo
     const data = {
       name,
       latitude: coords.lat,
@@ -491,7 +492,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
       drinkable: drinkable || undefined,
     }
     try {
-      const image = photo ? await uploadImage(photo) : undefined
+      const image = photo ? await uploadImage(photo, preparada?.meta) : undefined
       const font = await createFont({ ...data, image })
       // El estado va como primera actualización de la fuente. Best-effort: si fallara,
       // la fuente ya está creada y no tiene sentido abortar (se puede añadir luego).
@@ -507,7 +508,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
     } catch (e) {
       // Sin cobertura: no perdemos la fuente. Se guarda en el móvil y se envía sola.
       if (isOffline(e)) {
-        await enqueue({ kind: 'font', data, waterStatus: waterStatus || undefined, photo, photoName: photo?.name })
+        await enqueue({ kind: 'font', data, waterStatus: waterStatus || undefined, photo, photoName: photo?.name, photoMeta: preparada?.meta })
         toast.show(t('offline.savedFont'))
         onCreated()
       } else {

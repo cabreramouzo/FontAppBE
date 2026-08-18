@@ -601,6 +601,33 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   Usan `VITE_API_URL` —Pages expone las variables del panel también en ejecución—, así que
   no hay que configurar nada nuevo.
 
+## EXIF de las fotos (`PhotoExif`, solo moderación)
+
+- Al subir, el cliente lee del fichero **original** la fecha (`DateTimeOriginal`) y las
+  coordenadas y las manda en campos aparte de `POST /images`. Aparte **porque la imagen ya
+  no las lleva**: `compressImage` reencoda con canvas y eso borra todo el EXIF.
+- `prepararFoto()` (`lib/image.ts`) es el único sitio donde se prepara una foto, y existe
+  para que **el orden deje de ser una decisión**: leer el EXIF después de comprimir
+  devuelve vacío, no da ningún error y solo se nota meses después.
+- Una **tabla** (`photo_exif`) y no columnas: hay cuatro sitios de los que cuelga una foto
+  y todos pasan por el mismo endpoint. Se indexa por el **UUID del nombre del fichero**,
+  que es lo único estable entre el disco local y R2.
+- La fecha viaja como **texto ISO**, no como `Date`: el decodificador multipart de Vapor no
+  promete ninguna estrategia y enterarse en producción sería tarde. Hay test.
+- **La fila se guarda siempre**, aunque venga toda vacía. Así «no hay fila» significa
+  «subida antes de que esto existiera» y no se confunde con «no traía EXIF», que es **lo
+  normal**: lo que pasa por mensajería llega limpio, las capturas no tienen y iOS lo quita
+  al compartir. Hay test de esta mitad también.
+- `GET /images/meta?ids=` es **solo admin** (403 al resto, incluso a quien subió la foto).
+  En la interfaz, `PhotoExifNote` bajo cada foto. Enseña **la distancia a la fuente** y no
+  las coordenadas: «a 12 m» se entiende de un vistazo y saca de la pantalla el dato
+  personal que no hace falta.
+- **Lo afirma el cliente y no se puede verificar** — cualquier editor reescribe el EXIF.
+  Misma categoría que `queued_offline` y misma regla: orienta a una persona, **nunca anula
+  puntos por sí solo**. No hay ningún automatismo leyendo esta tabla y no debe haberlo.
+- La página legal lo dice en los cinco idiomas. Decía «tu ubicación precisa **no se
+  almacena**», y esto lo habría vuelto falso.
+
 ## Interrupciones (`lib/asks.ts`)
 
 - **Como mucho un aviso a la vez.** Cada uno se escribió por su cuenta y ninguno sabía de

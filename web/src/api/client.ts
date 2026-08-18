@@ -1,3 +1,4 @@
+import type { PhotoUploadMeta } from '../lib/image'
 import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
@@ -90,8 +91,13 @@ export async function loginRequest(username: string, password: string): Promise<
 }
 
 /** Sube una imagen (multipart) y devuelve su URL relativa. */
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(file: File, meta?: PhotoUploadMeta): Promise<string> {
   const form = new FormData()
+  // El EXIF va aparte porque la imagen que se sube ya no lo lleva: la compresión con
+  // canvas lo borra. Ver `prepararFoto`.
+  if (meta?.takenAt) form.append('takenAt', meta.takenAt)
+  if (meta?.lat != null) form.append('latitude', String(meta.lat))
+  if (meta?.lon != null) form.append('longitude', String(meta.lon))
   form.append('file', file)
   const res = await apiFetch<{ url: string }>('/images', { method: 'POST', body: form })
   return res.url
@@ -632,6 +638,22 @@ export async function getMissions(lat: number, long: number, km?: number): Promi
   const q = new URLSearchParams({ lat: String(lat), long: String(long) })
   if (km) q.set('km', String(km))
   return apiFetch<Missions>(`/missions?${q}`)
+}
+
+/** EXIF de una foto: lo que escribió el móvil. **Solo admins** (403 para el resto). */
+export interface PhotoExifMeta {
+  photoID: string
+  /** Cuándo dice la cámara que se hizo. */
+  takenAt: string | null
+  /** Cuándo se subió. La distancia entre las dos es el dato que interesa. */
+  uploadedAt: string | null
+  latitude: number | null
+  longitude: number | null
+}
+
+export async function photoExif(ids: string[]): Promise<PhotoExifMeta[]> {
+  if (ids.length === 0) return []
+  return apiFetch<PhotoExifMeta[]>(`/images/meta?ids=${ids.join(',')}`)
 }
 
 /** Cobertura por zona (fase 5). Pública. */

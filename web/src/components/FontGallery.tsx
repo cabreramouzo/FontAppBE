@@ -22,7 +22,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { Skeleton } from './Skeleton'
 import { ZoomableImage } from './ZoomableImage'
-import { compressImage } from '../lib/image'
+import { prepararFoto } from '../lib/image'
 import { capabilityLevels } from '../lib/capabilities'
 
 /**
@@ -84,7 +84,8 @@ export function FontGallery({ fontID }: { fontID: string }) {
     setError('')
     setSubiendo(true)
     try {
-      const url = await uploadImage(await compressImage(file))
+      const { photo, meta } = await prepararFoto(file)
+      const url = await uploadImage(photo, meta)
       const nueva = await addFontPhoto(fontID, { url, kind, caption: caption.trim() || undefined })
       setFotos((f) => [nueva, ...(f ?? [])])
       setCaption('')

@@ -67,8 +67,9 @@ import { TIER_COLOR } from '../lib/tierColors'
 import { BadgeArt } from '../components/BadgeArt'
 import { BADGE_ART } from '../lib/levelBadges'
 import { enqueue, isOffline } from '../lib/outbox'
+import { PhotoExifNote } from '../components/PhotoExifNote'
 import { ZoomableImage } from '../components/ZoomableImage'
-import { compressImage } from '../lib/image'
+import { prepararFoto } from '../lib/image'
 import { RelocateFont } from '../components/RelocateFont'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { DRINKABLE_EMOJI, DRINKABLE_OPTIONS, SOURCE_EMOJI, SOURCE_OPTIONS, drinkableInfo, sourceInfo } from '../lib/waterType'
@@ -98,7 +99,7 @@ function StatusSelect({ value, onChange, label }: { value: string; onChange: (v:
   )
 }
 
-function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage, onChanged }: { c: CommentResponse; highlight?: boolean; canManage: boolean; canFlag: boolean; canManageFont?: boolean; fontImage?: string | null; onChanged: () => void }) {
+function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage, fontPos, onChanged }: { c: CommentResponse; highlight?: boolean; canManage: boolean; canFlag: boolean; canManageFont?: boolean; fontImage?: string | null; fontPos?: { lat: number; long: number }; onChanged: () => void }) {
   const { t } = useI18n()
   const toast = useToast()
   const [editing, setEditing] = useState(false)
@@ -192,6 +193,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
       {c.image && (
         <Box>
           <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />
+          <PhotoExifNote image={c.image} lat={fontPos?.lat} long={fontPos?.long} />
           <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
             {canManageFont && c.image !== fontImage && (
               <Button size="small" startIcon={<PhotoCameraIcon />} onClick={setAsMain}>{t('detail.useAsMainPhoto')}</Button>
@@ -232,11 +234,12 @@ function UpdateForm({ fontID, onPosted, onCancel }: { fontID: string; onPosted: 
     setError('')
     setSaving(true)
     // Comprimimos antes: la foto queda lista para subirla o para guardarla en la cola.
-    const photo = file ? await compressImage(file) : undefined
+    const preparada = file ? await prepararFoto(file) : undefined
+    const photo = preparada?.photo
     const data = { body: body.trim() || undefined, rating: rating || undefined, waterStatus: waterStatus || undefined }
     const clear = () => { setBody(''); setRating(0); setWaterStatus(''); setFile(null) }
     try {
-      const image = photo ? await uploadImage(photo) : undefined
+      const image = photo ? await uploadImage(photo, preparada?.meta) : undefined
       await createComment(fontID, { ...data, image })
       clear()
       toast.show(t('toast.reviewPosted'))
@@ -244,7 +247,7 @@ function UpdateForm({ fontID, onPosted, onCancel }: { fontID: string; onPosted: 
     } catch (e) {
       // Sin cobertura: se guarda en el móvil y se envía en cuanto haya red.
       if (isOffline(e)) {
-        await enqueue({ kind: 'comment', fontID, data, photo, photoName: photo?.name })
+        await enqueue({ kind: 'comment', fontID, data, photo, photoName: photo?.name, photoMeta: preparada?.meta })
         clear()
         toast.show(t('offline.savedUpdate'))
         onPosted()
@@ -392,7 +395,10 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
       // cualquiera (casi ninguna fuente importada tiene creador). Si no hay archivo
       // nuevo se conserva la actual.
       let image = font.image ?? undefined
-      if (puedeFoto && file) image = await uploadImage(await compressImage(file))
+      if (puedeFoto && file) {
+        const { photo, meta } = await prepararFoto(file)
+        image = await uploadImage(photo, meta)
+      }
       // La ubicación va siempre en la petición, pero el servidor solo la aplica si
       // eres el creador o un admin: para el resto se conserva la que ya tenía.
       await updateFont(font.id, { name, latitude: coords.lat, longitude: coords.lng, image, description: description || undefined, source: source || undefined, drinkable: drinkable || undefined })
@@ -806,6 +812,7 @@ export function FontDetailPage() {
           {font.image && (
             <Box>
               <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={font.name} />
+              <PhotoExifNote image={font.image} lat={font.latitude} long={font.longitude} />
               {user && (user.isAdmin || font.creator?.id === user.id) && (
                 <Box>
                   <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={removeFontPhoto}>{t('image.remove')}</Button>
@@ -835,7 +842,7 @@ export function FontDetailPage() {
                 const freshAt = latest.lastConfirmedAt ?? latest.createdAt
                 return freshAt && isStale(freshAt) ? <Alert severity="warning" sx={{ my: 1 }}>{t('detail.stale', { when: timeAgo(freshAt, t) })}</Alert> : null
               })()}
-              <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} onChanged={load} />
+              <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
               {latest.waterStatus && latest.lastConfirmedAt && (
                 <Typography variant="caption" color="text.secondary">
                   {t('confirm.lastConfirmed', { when: timeAgo(latest.lastConfirmedAt, t) })}
@@ -901,7 +908,7 @@ export function FontDetailPage() {
             <Divider sx={{ mt: 2 }} />
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
             {rest.slice(0, shownRest).map((c) => (
-              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} onChanged={load} />
+              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
             ))}
             {rest.length > shownRest && (
               <Button onClick={() => setShownRest((n) => n + REVIEWS_PAGE)} sx={{ mt: 1 }}>

@@ -138,6 +138,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateNotification())    // la campana dentro de la app
     app.migrations.add(AddLastSeenAtToUser())   // para no mandar correo a quien ya está dentro
     app.migrations.add(AddHiddenToFont())       // duplicadas y retiradas: se esconden, no se borran
+    app.migrations.add(CreatePhotoExif())       // EXIF de cada foto: solo para moderar
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

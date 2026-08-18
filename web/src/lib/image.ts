@@ -1,3 +1,5 @@
+import { readPhotoMeta } from './exif'
+
 /**
  * Redimensiona la imagen a `maxDim` px de lado máximo y la recomprime a JPEG.
  * Reduce mucho el peso de subida. Se hace en el cliente (sin dependencias de servidor).
@@ -32,4 +34,28 @@ export async function compressImage(file: File, maxDim = 1280, quality = 0.72): 
   } catch {
     return file
   }
+}
+
+/** Lo que sabemos de una foto que aún no se ha tocado. */
+export interface PhotoUploadMeta {
+  takenAt?: string
+  lat?: number
+  lon?: number
+}
+
+/**
+ * Deja una foto lista para subir: comprimida, y con su EXIF ya leído.
+ *
+ * Existe para que **el orden no sea una decisión de quien la llama**. `compressImage`
+ * reencoda con canvas y eso borra todos los metadatos, así que leerlos después devuelve
+ * siempre vacío — un fallo que no rompe nada, no da ningún error y solo se nota meses
+ * después cuando resulta que ninguna foto tiene fecha. Aquí el orden correcto es el
+ * único posible.
+ */
+export async function prepararFoto(file: File): Promise<{ photo: File; meta: PhotoUploadMeta }> {
+  const exif = await readPhotoMeta(file)
+  const meta: PhotoUploadMeta = {}
+  if (exif.takenAt) meta.takenAt = exif.takenAt.toISOString()
+  if (exif.gps) { meta.lat = exif.gps.lat; meta.lon = exif.gps.lon }
+  return { photo: await compressImage(file), meta }
 }

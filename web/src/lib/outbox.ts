@@ -1,3 +1,4 @@
+import type { PhotoUploadMeta } from './image'
 import { ApiError, createComment, createFont, uploadImage, type NewComment, type NewFont } from '../api/client'
 
 // Bandeja de salida para trabajar SIN COBERTURA (el escenario real de la app: monte).
@@ -28,9 +29,9 @@ const MAX_ATTEMPTS = 3
 export type OutboxItem =
   // Alta de fuente. `waterStatus` viaja aquí (no como item aparte) para no encolar una
   // reseña que apunte a una fuente que todavía no existe.
-  | { kind: 'font'; data: NewFont; waterStatus?: string; photo?: Blob; photoName?: string }
+  | { kind: 'font'; data: NewFont; waterStatus?: string; photo?: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
   // Actualización/reseña sobre una fuente que YA existe.
-  | { kind: 'comment'; fontID: string; data: NewComment; photo?: Blob; photoName?: string }
+  | { kind: 'comment'; fontID: string; data: NewComment; photo?: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
 
 type StoredItem = OutboxItem & {
   id: number; queuedAt: number; attempts: number; claimedAt?: number
@@ -165,7 +166,12 @@ export async function flushOutbox(): Promise<number> {
       if (item.claimedAt && now - item.claimedAt < CLAIM_TTL_MS) continue
       await tx('readwrite', (s) => s.put({ ...item, claimedAt: Date.now() }))
       try {
-        const image = item.photo ? await uploadImage(toFile(item.photo, item.photoName)) : undefined
+        // El EXIF se guardó al encolar, no ahora: lo que hay en la cola ya está
+        // comprimido y por tanto sin metadatos. Y es justo aquí donde más importa —
+        // sin cobertura estabas delante de la fuente, y esto puede subirse días después.
+        const image = item.photo
+          ? await uploadImage(toFile(item.photo, item.photoName), item.photoMeta)
+          : undefined
         if (item.kind === 'font') {
           const font = await createFont({ ...item.data, image: image ?? item.data.image }, true)
           // El estado que se indicó al crearla, como primera actualización.

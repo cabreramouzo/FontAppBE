@@ -66,7 +66,8 @@ function LegalCA() {
       <ul>
         <li>El teu <strong>nom d'usuari i nom</strong>, la teva <strong>adreça de correu</strong> i la teva <strong>contrasenya</strong> (desada xifrada amb bcrypt, mai en clar).</li>
         <li>El <strong>contingut que publiques</strong>: fonts, ressenyes, valoracions, fotos i incidències.</li>
-        <li>La teva <strong>ubicació precisa</strong> només s'utilitza, si l'autoritzes, per mostrar-te fonts properes; <strong>no es desa</strong> al servidor.</li>
+        <li>La teva <strong>ubicació precisa</strong> del navegador només s'utilitza, si l'autoritzes, per mostrar-te fonts properes; <strong>no es desa</strong> al servidor.</li>
+        <li>De les <strong>fotos que puges</strong> desem, si en porten, la <strong>data i les coordenades que hi escriu el mòbil</strong> (EXIF). Només serveix per <strong>moderar</strong> —comprovar que una foto és del lloc i del moment que diu— i <strong>només ho veuen els administradors</strong>. La imatge que es publica va sense aquestes dades.</li>
         <li>En <strong>registrar-te</strong> desem la teva <strong>regió aproximada</strong> (país/regió deduïts de la IP, <strong>no la IP</strong>) i l'<strong>idioma</strong> de la interfície, per a estadística d'ús i per escriure't en la teva llengua.</li>
         <li>Si arribes des d'un <strong>cartell o una campanya</strong> amb codi (<code>fontapp.net/?p=castellcir</code>), desem aquest codi amb l'alta per saber quin cartell funciona. No identifica cap persona.</li>
       </ul>
@@ -146,7 +147,8 @@ function LegalES() {
       <ul>
         <li>Tu <strong>nombre de usuario y nombre</strong>, tu <strong>dirección de correo</strong> y tu <strong>contraseña</strong> (almacenada cifrada con bcrypt, nunca en claro).</li>
         <li>El <strong>contenido que publicas</strong>: fuentes, reseñas, valoraciones, fotos e incidencias.</li>
-        <li>Tu <strong>ubicación precisa</strong> solo se usa, si tú lo autorizas, para mostrarte fuentes cercanas; <strong>no se almacena</strong> en el servidor.</li>
+        <li>Tu <strong>ubicación precisa</strong> del navegador solo se usa, si tú lo autorizas, para mostrarte fuentes cercanas; <strong>no se almacena</strong> en el servidor.</li>
+        <li>De las <strong>fotos que subes</strong> guardamos, si las llevan, la <strong>fecha y las coordenadas que escribe el móvil</strong> (EXIF). Solo sirve para <strong>moderar</strong> —comprobar que una foto es del sitio y del momento que dice— y <strong>solo lo ven los administradores</strong>. La imagen que se publica va sin esos datos.</li>
         <li>Al <strong>registrarte</strong> guardamos tu <strong>región aproximada</strong> (país/región deducidos de la IP, <strong>no la IP</strong>) y el <strong>idioma</strong> de la interfaz, para estadística de uso y para escribirte en tu lengua.</li>
         <li>Si llegas desde un <strong>cartel o una campaña</strong> con código (<code>fontapp.net/?p=castellcir</code>), guardamos ese código con el alta para saber qué cartel funciona. No identifica a ninguna persona.</li>
       </ul>
@@ -226,7 +228,8 @@ function LegalEN() {
       <ul>
         <li>Your <strong>username and name</strong>, your <strong>email address</strong> and your <strong>password</strong> (stored hashed with bcrypt, never in clear text).</li>
         <li>The <strong>content you publish</strong>: fountains, reviews, ratings, photos and issues.</li>
-        <li>Your <strong>location</strong> is only used, if you allow it, to show you nearby fountains; it is <strong>not stored</strong> on the server.</li>
+        <li>Your <strong>browser location</strong> is only used, if you allow it, to show you nearby fountains; it is <strong>not stored</strong> on the server.</li>
+        <li>From the <strong>photos you upload</strong> we store, when present, the <strong>date and coordinates your phone writes into them</strong> (EXIF). It is used only for <strong>moderation</strong> — checking a photo is from the place and moment it claims — and <strong>only administrators can see it</strong>. The published image carries none of it.</li>
         <li>When you <strong>sign up</strong> we store your <strong>approximate region</strong> (country/region derived from your IP — <strong>not the IP</strong>) and your interface <strong>language</strong>, for usage statistics and to write to you in your language.</li>
         <li>If you arrive from a <strong>poster or campaign</strong> carrying a code (<code>fontapp.net/?p=castellcir</code>), we store that code with your sign-up to learn which poster works. It identifies no one.</li>
       </ul>
@@ -306,7 +309,8 @@ function LegalGL() {
       <ul>
         <li>O teu <strong>nome de usuario e nome</strong>, o teu <strong>enderezo de correo</strong> e o teu <strong>contrasinal</strong> (gardado cifrado con bcrypt, nunca en claro).</li>
         <li>O <strong>contido que publicas</strong>: fontes, reseñas, valoracións, fotos e incidencias.</li>
-        <li>A túa <strong>localización precisa</strong> só se usa, se ti o autorizas, para amosarche fontes próximas; <strong>non se garda</strong> no servidor.</li>
+        <li>A túa <strong>localización precisa</strong> do navegador só se usa, se ti o autorizas, para amosarche fontes próximas; <strong>non se garda</strong> no servidor.</li>
+        <li>Das <strong>fotos que subes</strong> gardamos, se as levan, a <strong>data e as coordenadas que escribe o móbil</strong> (EXIF). Só serve para <strong>moderar</strong> e <strong>só o ven os administradores</strong>. A imaxe que se publica vai sen eses datos.</li>
         <li>Ao <strong>rexistrarte</strong> gardamos a túa <strong>rexión aproximada</strong> (país/rexión deducidos da IP, <strong>non a IP</strong>) e o <strong>idioma</strong> da interface, para estatística de uso e para escribirche na túa lingua.</li>
         <li>Se chegas desde un <strong>cartel ou unha campaña</strong> con código (<code>fontapp.net/?p=castellcir</code>), gardamos ese código coa alta para saber que cartel funciona. Non identifica a ninguén.</li>
       </ul>
@@ -386,7 +390,8 @@ function LegalEU() {
       <ul>
         <li>Zure <strong>erabiltzaile-izena eta izena</strong>, zure <strong>helbide elektronikoa</strong> eta zure <strong>pasahitza</strong> (bcrypt-ekin zifratuta gordeta, inoiz ez testu lauan).</li>
         <li><strong>Argitaratzen duzun edukia</strong>: iturriak, iritziak, balorazioak, argazkiak eta oharrak.</li>
-        <li>Zure <strong>kokapen zehatza</strong> baimentzen baduzu bakarrik erabiltzen da, inguruko iturriak erakusteko; <strong>ez da gordetzen</strong> zerbitzarian.</li>
+        <li>Nabigatzailearen <strong>kokapen zehatza</strong> baimentzen baduzu bakarrik erabiltzen da, inguruko iturriak erakusteko; <strong>ez da gordetzen</strong> zerbitzarian.</li>
+        <li><strong>Igotzen dituzun argazkietatik</strong>, baldin badakartzate, mugikorrak idazten dituen <strong>data eta koordenatuak</strong> gordetzen ditugu (EXIF). <strong>Moderatzeko</strong> baino ez da —argazkia dioen lekukoa eta unekoa den egiaztatzeko— eta <strong>administratzaileek soilik ikusten dute</strong>. Argitaratzen den irudiak ez darama datu horietako bat ere.</li>
         <li><strong>Izena ematean</strong> zure <strong>gutxi gorabeherako eskualdea</strong> (IPtik ondorioztatutako herrialdea/eskualdea, <strong>ez IPa</strong>) eta interfazearen <strong>hizkuntza</strong> gordetzen ditugu, erabilera-estatistiketarako eta zure hizkuntzan idazteko.</li>
         <li>Kodea duen <strong>kartel edo kanpaina</strong> batetik iristen bazara (<code>fontapp.net/?p=castellcir</code>), kode hori altarekin batera gordetzen dugu, zein kartelek funtzionatzen duen jakiteko. Ez du inor identifikatzen.</li>
       </ul>
