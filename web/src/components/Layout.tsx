@@ -103,11 +103,13 @@ export function Layout({ children }: { children: ReactNode }) {
               fila empujaba los botones de la derecha hasta solaparse; en su propio
               renglón no compite por el ancho con el nombre. */}
           <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
-            {/* `overflow: hidden` es la red de seguridad, no el arreglo: sin él, un
-                `whiteSpace: nowrap` que no cabe no se recorta — se pinta ENCIMA de lo que
-                tiene al lado, que es exactamente cómo se veía el fallo. Con él, quedarse
-                sin sitio degrada a puntos suspensivos y se nota sin romperse. */}
-            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.25, minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+            {/* Aquí NO va `overflow: hidden`, y no es un olvido. Lo estuvo, como red de
+                seguridad contra un `nowrap` que se pintara encima de los botones — pero el
+                chip de «beta» cae 3 px bajo la línea con `position: relative`, o sea que
+                sobresale de esta caja **por diseño**, y el recorte se lo comía por abajo.
+                La red vive donde toca: en el `textOverflow: ellipsis` del propio nombre,
+                que es quien puede no caber. Recortar aquí solo podía mutilar al vecino. */}
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.25, minWidth: 0, maxWidth: '100%' }}>
               <Typography
                 component={RouterLink}
                 to="/"

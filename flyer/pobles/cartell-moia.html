@@ -33,7 +33,11 @@
 
   .full {
     width: 148mm;
-    height: 210mm;
+    /* `min-height` i no `height`: amb l'alçada fixa, el que no hi cap es RETALLA en
+       silenci —Chrome no pagina— i el peu desapareix sense cap error. Amb el mínim,
+       si algú afegeix una línia de més surt una segona pàgina, que es veu de seguida
+       i el guió `a-pdf.py` detecta. Val més un error escandalós que un cartell mut. */
+    min-height: 210mm;
     background: #fff;
     padding: 12mm 11mm 9mm;
     display: flex;
