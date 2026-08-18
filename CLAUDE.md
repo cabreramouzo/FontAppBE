@@ -327,7 +327,11 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 
 ## Novedades (público) y panel
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias
-  y ediciones mezcladas por fecha, con filtro por zona. **Lectura pública** (`/activity`,
+  y ediciones mezcladas por fecha, con filtro por zona. Las fuentes nuevas salen **solo si
+  las puso una persona** (`created_by` no nulo) y solo si son visibles: al importar el
+  Pirineo francés entraron 11.043 de golpe y se comieron la portada entera. Una importación
+  no es actividad — mismo criterio que el sitemap. El correo semanal lleva el mismo filtro
+  en «fuentes nuevas cerca», o se llena de altas firmadas por nadie. **Lectura pública** (`/activity`,
   `NewsPage.tsx`, con entrada desde el mapa): lo que sale ya se ve en la ficha de cada
   fuente. Las **ediciones** son la excepción y solo las ven los admins — el historial es
   de moderación y "quién editó qué" no está a la vista de nadie más. El ámbito entra en

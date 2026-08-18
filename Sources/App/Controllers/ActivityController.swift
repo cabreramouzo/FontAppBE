@@ -198,7 +198,16 @@ struct ActivityController: RouteCollection {
     // MARK: - Cada fuente de actividad
 
     private func fetchNewFonts(_ req: Request, limit: Int, ids: [UUID]?) async throws -> [ActivityItem] {
-        let query = Font.query(on: req.db).sort(\.$createdAt, .descending).limit(limit)
+        // **Solo las que ha puesto una persona.** Una importación no es actividad: al
+        // cargar el Pirineo francés entraron 11.043 fuentes de golpe y se comieron la
+        // portada entera, tapando lo único que esta pantalla existe para enseñar — lo que
+        // ha hecho la gente. Es el mismo criterio del sitemap, y por el mismo motivo.
+        //
+        // Y `visible`, como toda lectura pública que devuelve varias fuentes: una
+        // duplicada o una retirada no tienen por qué salir en novedades.
+        let query = Font.visible(on: req.db)
+            .filter(\.$creator.$id != nil)
+            .sort(\.$createdAt, .descending).limit(limit)
         if let ids { query.filter(\.$id ~~ ids) }
         let fonts = try await query.all()
         let authors = try await User.usernames(for: fonts.compactMap { $0.$creator.id }, on: req.db)

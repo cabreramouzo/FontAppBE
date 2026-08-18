@@ -147,6 +147,9 @@ struct WeeklyDigest {
                 .filter(\.$latitude >= minLat - dLat).filter(\.$latitude <= maxLat + dLat)
                 .filter(\.$longitude >= minLon - dLon).filter(\.$longitude <= maxLon + dLon)
                 .filter(\.$creator.$id != userID)
+                // Puesta por alguien, no por un importador: si no, un lote nuevo llena el
+                // correo de «fuentes nuevas cerca» firmadas por nadie.
+                .filter(\.$creator.$id != nil)
                 .sort(\.$createdAt, .descending)
                 .all()
             let mine = Set(myFontIDs)

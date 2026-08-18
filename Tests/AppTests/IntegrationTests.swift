@@ -2157,7 +2157,42 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
-    // MARK: - Sitemap
+/// La portada de novedades enseña **lo que ha hecho la gente**, no lo que ha entrado por
+    /// un importador. Al cargar el Pirineo francés entraron 11.043 fuentes de golpe y la
+    /// rejilla se llenó de ellas, tapando las reseñas y las fuentes de verdad.
+    ///
+    /// Es el mismo criterio que el sitemap y por el mismo motivo: `created_by` nulo
+    /// significa «esto lo puso una máquina».
+    func testActivityHidesImportedFountainsAndHiddenOnes() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "novetats")
+            let token = try await login(app, username: "novetats")
+
+            // Puesta por una persona: sale.
+            let dePersona = try await createFont(app, token: token, name: "Font d'algú", lat: 41.60, long: 2.10)
+
+            // Importada: no sale, por reciente que sea.
+            let importada = Font(name: "Font importada", latitude: 41.61, longitude: 2.11)
+            try await importada.save(on: app.db)
+
+            // De una persona pero escondida: tampoco.
+            let escondida = try await createFont(app, token: token, name: "Font duplicada", lat: 41.62, long: 2.12)
+            let e = try await Font.find(escondida, on: app.db)!
+            e.$duplicateOf.id = dePersona
+            try await e.save(on: app.db)
+
+            await ActivityController.cache.clear()
+            try await app.test(.GET, "activity?limit=50", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let body = res.body.string
+                XCTAssertTrue(body.contains("Font d'algú"), "La que puso una persona tiene que salir.")
+                XCTAssertFalse(body.contains("Font importada"), "Una importación no es actividad.")
+                XCTAssertFalse(body.contains("Font duplicada"), "Una escondida no sale en novedades.")
+            })
+        }
+    }
+
+        // MARK: - Sitemap
 
     /// Lo que entra en el sitemap es lo que **ha tocado una persona**, y muy explícitamente
     /// **no** «lo que tiene descripción».
