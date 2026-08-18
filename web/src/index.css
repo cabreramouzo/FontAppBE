@@ -729,3 +729,61 @@ select:not([class*="Mui"]) {
   border-radius: 8px;
   display: block;
 }
+
+/* Botón «ver detalle» del popup del mapa.
+   
+   El popup se dibuja con HTML imperativo (Leaflet no monta React), así que aquí no se
+   puede usar un `<Button>` de MUI. Esto lo imita a mano, con los valores del tema
+   (`MuiProvider`): radio 12, sin mayúsculas y peso 600. Los colores salen de `--accent`,
+   que ya sigue el modo claro/oscuro, así que no hay un segundo azul que mantener.
+
+   El selector lleva `.leaflet-container a` delante a propósito: Leaflet trae su propio
+   `.leaflet-container a { color: #0078A8 }`, que con una clase y un elemento gana a
+   `.popup-link` a secas — y el rótulo salía azul sobre azul.
+
+   Iba sin ninguna regla —era un `<a>` pelado— y por eso parecía lo que era: un enlace.
+   Y en un mapa el objetivo se toca con el pulgar mientras andas, así que va a lo ancho
+   del popup y con 40 px de alto, por encima del mínimo cómodo. */
+.leaflet-container a.popup-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin-top: 10px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: var(--accent);
+  /* Texto OSCURO, no blanco — y no es una preferencia: es lo que hace MUI. Su
+     `getContrastText` calcula que este azul es demasiado claro para el blanco y pone
+     `rgba(0,0,0,.87)`, que da 7,6:1 de contraste frente a los 2,8:1 del blanco. Con
+     `--accent-fg` el botón quedaba menos legible que el resto y encima distinto del
+     resto de botones de la app. Vale para los dos modos: el azul del oscuro es aún
+     más claro. */
+  color: rgba(0, 0, 0, 0.87);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  /* Leaflet centra el contenido del popup con `text-align`; sin esto el rótulo se
+     desalinea al ponerlo en flex. */
+  text-align: center;
+  line-height: 1.2;
+  transition: filter 0.15s ease;
+}
+
+.leaflet-container a.popup-link:hover {
+  /* Oscurecer con un filtro y no con un segundo color: así vale igual para el azul claro
+     y el oscuro sin declarar dos tonos más. */
+  filter: brightness(0.92);
+  text-decoration: none;
+}
+
+.leaflet-container a.popup-link:active { filter: brightness(0.85); }
+
+.leaflet-container a.popup-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-container a.popup-link { transition: none; }
+}
