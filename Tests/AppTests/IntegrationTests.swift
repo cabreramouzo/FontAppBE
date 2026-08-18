@@ -2046,6 +2046,76 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    // MARK: - Sitemap
+
+    /// Lo que entra en el sitemap es lo que **ha tocado una persona**, y muy explícitamente
+    /// **no** «lo que tiene descripción».
+    ///
+    /// La columna `description` la rellenan los importadores: medido sobre la base real, de
+    /// 9.935 fuentes con descripción, 9.692 son la atribución («© ICGC/ACA», «Manantial
+    /// (OpenStreetMap)») repetida miles de veces. Mandarle eso a un buscador es mandarle
+    /// diez mil páginas idénticas, que es exactamente lo que el sitemap existe para evitar.
+    /// Este test es la red: si alguien vuelve a meter `description` en la condición, salta.
+    func testSitemapOnlyListsFountainsAPersonHasTouched() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "mapaweb")
+            let token = try await login(app, username: "mapaweb")
+
+            // Importada: sin creador, sin foto, sin reseñas… y con la descripción del
+            // importador, que es la trampa.
+            let importada = Font(name: "Font importada", latitude: 42.10, longitude: 1.10)
+            importada.description = "© ICGC/ACA"
+            try await importada.save(on: app.db)
+
+            // Importada pero fotografiada por alguien: eso sí es mano humana.
+            let conFoto = Font(name: "Font amb foto", latitude: 42.11, longitude: 1.11)
+            conFoto.image = "/uploads/sitemap.jpg"
+            try await conFoto.save(on: app.db)
+
+            // Puesta por una persona, aunque esté vacía.
+            let creada = try await createFont(app, token: token, name: "Font creada", lat: 42.12, long: 1.12)
+
+            // Reseñada: la fecha de la reseña manda sobre la de creación. Se envejece la
+            // fuente un año para que la diferencia sea imposible de confundir con el
+            // redondeo al segundo de la serialización.
+            let resenyada = Font(name: "Font ressenyada", latitude: 42.13, longitude: 1.13)
+            try await resenyada.save(on: app.db)
+            let resenyadaID = try resenyada.requireID()
+            let haceUnAno = Date().addingTimeInterval(-365 * 86_400)
+            try await (app.db as! any SQLDatabase).raw(
+                "UPDATE fonts SET created_at = \(bind: haceUnAno) WHERE id = \(bind: resenyadaID)").run()
+            _ = try await addComment(app, token: token, fontID: resenyadaID, body: "Raja bé")
+
+            // Escondida y con foto: fuera. Una duplicada indexada compite con la buena.
+            let escondida = Font(name: "Font duplicada", latitude: 42.14, longitude: 1.14)
+            escondida.image = "/uploads/dup.jpg"
+            try await escondida.save(on: app.db)
+            escondida.$duplicateOf.id = try conFoto.requireID()
+            try await escondida.save(on: app.db)
+
+            try await app.test(.GET, "sitemap/fonts", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let filas = try res.content.decode([SitemapController.Entry].self)
+                let ids = Set(filas.map(\.id))
+
+                XCTAssertFalse(ids.contains(try importada.requireID()),
+                               "La atribución del importador no es contenido.")
+                XCTAssertTrue(ids.contains(try conFoto.requireID()))
+                XCTAssertTrue(ids.contains(creada))
+                XCTAssertTrue(ids.contains(resenyadaID))
+                XCTAssertFalse(ids.contains(try escondida.requireID()),
+                               "Una escondida no se ofrece a indexar aunque tenga foto.")
+
+                // El `lastmod` de la reseñada es el de la RESEÑA y no el de la fuente: es
+                // la fecha que le dice a un buscador que ahí hay algo nuevo que leer. La
+                // fuente se creó hace un año, así que si saliera la suya se vería.
+                let lastmod = try XCTUnwrap(filas.first { $0.id == resenyadaID }?.lastmod)
+                XCTAssertGreaterThan(lastmod, Date().addingTimeInterval(-3_600),
+                                     "Tiene que ganar la fecha de la reseña, no la de creación.")
+            })
+        }
+    }
+
     // MARK: - Insignias especiales
 
     /// Le da a alguien `n` reseñas liquidadas, fechadas hacia atrás desde `endingAt`.

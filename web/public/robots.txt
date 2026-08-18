@@ -1,0 +1,18 @@
+# Sin este fichero, el catch-all del SPA devolvía el index.html para /robots.txt.
+# Ojo al desplegar: en Cloudflare Pages los ficheros estáticos ganan al catch-all de
+# _redirects, y por eso esto funciona sin tocar _redirects.
+User-agent: *
+Allow: /
+
+# Rutas de la aplicación, no contenido: son la misma cáscara del SPA y no hay nada que
+# indexar detrás. Se excluyen para no gastar rastreo en páginas que a un buscador no le
+# dicen nada.
+Disallow: /me
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset
+Disallow: /unsubscribe
+
+Sitemap: https://fontapp.net/sitemap.xml

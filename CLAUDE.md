@@ -537,6 +537,40 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   registro, no por coordenadas del punto. **Pendiente:** poblarlas en producción y, más adelante,
   el modelo de permisos de "admins por región".
 
+## Compartir y buscadores (Cloudflare Pages Functions)
+
+- La web es un SPA: **un** `index.html` para las 60.000 fichas, así que todas compartían
+  `<title>`, `og:title`, `og:image` y un `og:url` fijo a la portada. El botón de compartir
+  de la ficha ya existía (`navigator.share`), o sea que el canal estaba montado y roto por
+  el otro extremo: mandabas una fuente por WhatsApp y salía una tarjeta genérica que
+  además enlazaba a otro sitio.
+- `web/functions/fonts/[id].ts` reescribe seis etiquetas del `<head>` al vuelo con
+  `HTMLRewriter`. **No es SSR** — la página la sigue pintando React; esto es streaming y
+  no cuesta nada. Reglas: si algo falla se devuelve la página tal cual (lo peor posible es
+  volver a la tarjeta de antes) y las **escondidas llevan `noindex`** (una duplicada
+  indexada compite con la buena y pierden las dos).
+  Ojo: las `twitter:*` **ya existen** en `index.html`, así que se **reescriben**, no se
+  añaden — con la etiqueta repetida los scrapers cogen la primera, que es la genérica. Y
+  el `og:image:width/height` de 1200×630 se **quita** cuando la foto es de la fuente: la
+  hizo alguien con el móvil y es vertical la mitad de las veces.
+- `web/functions/sitemap.xml.ts` + `GET /sitemap/fonts` (`SitemapController`). Se genera al
+  vuelo y no en el build: si no, cada foto nueva sería una página que Google no conoce
+  hasta el siguiente `git push`. Va cacheado 1 h en el borde.
+- **Qué se ofrece a indexar: lo que ha tocado una persona** (foto, reseña, `created_by` no
+  nulo o alguna edición), y muy explícitamente **no** «lo que tiene descripción». Medido:
+  de 9.935 fuentes con descripción, **9.692 son la atribución del importador** («© ICGC/ACA»,
+  «Manantial (OpenStreetMap)»), la misma cadena miles de veces. Con la regla buena, 553.
+  Hay test (`testSitemapOnlyListsFountainsAPersonHasTouched`) para que nadie vuelva a meter
+  `description` en la condición.
+- `web/public/robots.txt` es un fichero real: sin él, el catch-all del SPA devolvía el
+  `index.html`. En Pages los estáticos ganan al catch-all, por eso no hay que tocar
+  `_redirects`.
+- Las funciones **se comprueban con `tsc`** (`tsconfig.functions.json` +
+  `@cloudflare/workers-types`, solo tipos). Antes `tsc -b` solo miraba `src/` y esto habría
+  ido a producción sin ninguna comprobación; el typecheck pescó seis errores a la primera.
+  Usan `VITE_API_URL` —Pages expone las variables del panel también en ejecución—, así que
+  no hay que configurar nada nuevo.
+
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).
 - No poner el proyecto en iCloud Drive (rompe builds y satura la sincronización).

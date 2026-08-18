@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Estado local de `wrangler pages dev`.
+.wrangler/
