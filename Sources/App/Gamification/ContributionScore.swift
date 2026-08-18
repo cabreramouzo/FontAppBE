@@ -597,6 +597,14 @@ enum ContributionScore {
         let threshold: Int
         /// Los tres (o uno) escalones, para poder dibujar la escalera completa.
         let thresholds: [Int]
+        /// El grado que tendrías **contando lo que aún no ha liquidado**, cuando es mejor
+        /// que el que ya tienes. Nulo si no hay nada en camino.
+        ///
+        /// Existe porque la felicitación **sí** cuenta lo pendiente y la vitrina no, así
+        /// que durante 72 h se podía ver el confeti por una insignia y encontrarla después
+        /// en gris y con candado. Las dos cosas eran correctas por separado y juntas
+        /// parecían una avería — pasó, y a quien se lo encontró fue al autor de la app.
+        var pendingTier: String?
 
         /// `tier` se escribe **explícitamente como `null`** y no se omite.
         ///
@@ -612,6 +620,8 @@ enum ContributionScore {
             try c.encode(progress, forKey: .progress)
             try c.encode(threshold, forKey: .threshold)
             try c.encode(thresholds, forKey: .thresholds)
+            // Explícito, como `tier` y por lo mismo.
+            try c.encode(pendingTier, forKey: .pendingTier)
         }
     }
 

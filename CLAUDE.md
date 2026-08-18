@@ -637,6 +637,27 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - La página legal lo dice en los cinco idiomas. Decía «tu ubicación precisa **no se
   almacena**», y esto lo habría vuelto falso.
 
+## «En camino»: el confeti y la vitrina contaban cosas distintas
+
+- La felicitación usa `GET /gamification/badges/preview`, que cuenta **lo pendiente**
+  (`provisionalBadges: true`) para poder celebrar en el momento de aportar y no tres días
+  después. La vitrina y el perfil cuentan **solo lo liquidado**. Las dos tenían razón por
+  separado, y juntas producían esto: confeti por una insignia y, al ir a mirarla, la misma
+  insignia **en gris y con candado** durante 72 h. Le pasó al autor de la app y lo leyó
+  como una avería — con razón.
+- `BadgeSlot.pendingTier` lo arregla: `/gamification/me` marca las casillas que ya están
+  ganadas contando lo pendiente, y la vitrina las pinta **en color, sin candado y con un
+  chip «en camino»**. Nada se adelanta hacia fuera: el perfil público sigue enseñando solo
+  lo liquidado.
+- Cuesta **dos pasadas** de `ContributionLedger.profile`. Se acepta a propósito: es una
+  ruta autenticada y sobre los eventos de una sola persona, y fusionarlas obligaría a
+  partir en dos el recuento dentro de `profile`, que es la función más delicada del
+  sistema, para ahorrar una consulta que nadie nota.
+- **Aviso de diseño, no de código**: `catalonia.png` y `counties.png` son casi el mismo
+  dibujo —hexágono, marco dorado, rosa de los vientos, mapa— y `counties` se llama
+  «Comarques», que es la palabra de las divisiones de Catalunya. A 150 px y con confeti
+  delante, se confunden. Conviene redibujar una de las dos.
+
 ## Interrupciones (`lib/asks.ts`)
 
 - **Como mucho un aviso a la vez.** Cada uno se escribió por su cuenta y ninguno sabía de

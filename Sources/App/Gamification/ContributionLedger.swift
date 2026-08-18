@@ -333,7 +333,8 @@ enum ContributionLedger {
         let levels: [LevelStanding]
         /// Todas las familias de insignias, conseguidas o no. Las que no, con su progreso:
         /// una casilla gris que dice «3 de 5» invita, y una que solo dice «bloqueada» no.
-        let collection: [ContributionScore.BadgeSlot]
+        /// `var` porque `/gamification/me` le marca encima lo que está en camino.
+        var collection: [ContributionScore.BadgeSlot]
         /// Las especiales: las conseguidas con su fecha, y las que no con lo que queda de
         /// cupo. Van aparte de `collection` porque no tienen progreso que enseñar —o la
         /// tienes o no— y porque una con cupo agotado ya no es «te falta», es «se acabó».

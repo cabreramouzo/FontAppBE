@@ -350,9 +350,36 @@ struct GamificationController: RouteCollection {
     @Sendable func me(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
         guard !user.gamificationOptOut else { return Response(status: .noContent) }
+        let userID = try user.requireID()
+        let desbloqueadas = Self.unlockAllBadges(for: user)
         var perfil = try await ContributionLedger.profile(
-            for: try user.requireID(), on: req.db,
-            unlockAllBadges: Self.unlockAllBadges(for: user))
+            for: userID, on: req.db, unlockAllBadges: desbloqueadas)
+
+        // Lo que está **en camino**: el mismo cálculo que usa la felicitación, que sí
+        // cuenta lo pendiente. Sin esto, durante las 72 h de la liquidación se veía el
+        // confeti por una insignia y luego esa misma insignia en gris y con candado en la
+        // vitrina; las dos pantallas tenían razón por separado y juntas parecían rotas.
+        //
+        // Son dos pasadas del perfil en vez de una. Se acepta: es una ruta autenticada,
+        // por persona y sobre sus propios eventos, no una pública y cara. Fusionarlas
+        // obligaría a partir en dos el cálculo del recuento dentro de `profile`, que es la
+        // función más delicada de todo esto, para ahorrar una consulta que nadie nota.
+        if !desbloqueadas {
+            let conPendiente = try await ContributionLedger.profile(
+                for: userID, on: req.db, provisionalBadges: true)
+            let porFamilia = Dictionary(
+                conPendiente.collection.map { ($0.family, $0.tier) }, uniquingKeysWith: { a, _ in a })
+            perfil.collection = perfil.collection.map { casilla in
+                var c = casilla
+                // Solo si de verdad mejora lo que ya tiene: si coincide, no hay nada que
+                // anunciar y un «en camino» redundante confunde más que ayuda.
+                if let enCamino = porFamilia[casilla.family] ?? nil, enCamino != casilla.tier {
+                    c.pendingTier = enCamino
+                }
+                return c
+            }
+        }
+
         // Fase 6: qué abre el nivel, y si no abre nada, por qué. Un botón desactivado sin
         // explicación se lee como una avería.
         perfil.grant = try await Capabilities.of(user, on: req.db)

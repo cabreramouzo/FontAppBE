@@ -202,6 +202,11 @@ export function BadgesPage() {
           <Seccion titulo={t('badges.families')} pie={t('badges.familiesHint')}>
             {data.collection.map((b) => {
               const conseguida = b.tier != null
+              // Ya ganada contando lo que aún no ha liquidado. Se pinta **en color y
+              // sin candado**, con el aviso de que va en camino: la felicitación cuenta
+              // lo pendiente, así que enseñarla aquí en gris después del confeti es
+              // exactamente lo que hacía parecer que el sistema estaba roto.
+              const enCamino = !conseguida && b.pendingTier != null
               const color = conseguida ? tier[b.tier as string] ?? 'text.primary' : 'text.disabled'
               // Al máximo, `progress` ya pasó del último umbral y la barra debe ir llena.
               const pct = Math.max(0, Math.min(100, (b.progress / b.threshold) * 100))
@@ -216,13 +221,14 @@ export function BadgesPage() {
                       puede
                       nombre={t(`game.badge.${b.family}`)}
                       onOpen={() => setMirando({
-                        kind: 'badge', key: b.family, tier: b.tier, locked: !conseguida,
+                        kind: 'badge', key: b.family, tier: b.tier ?? b.pendingTier, locked: !conseguida && !enCamino,
                         subtitle: tope ? t('badges.maxed') : t('badges.progress', { n: String(b.progress), m: String(b.threshold) }),
                       })}
                     >
                       <Box sx={{ position: 'relative', display: 'flex' }}>
-                        <BadgeArt family={b.family} size={88} locked={!conseguida} tier={b.tier} />
-                        {!conseguida && (
+                        <BadgeArt family={b.family} size={88} locked={!conseguida && !enCamino}
+                          tier={b.tier ?? b.pendingTier} />
+                        {!conseguida && !enCamino && (
                           <LockOutlinedIcon
                             sx={{ position: 'absolute', bottom: 2, right: 2, fontSize: 16, color: 'text.disabled' }}
                           />
@@ -234,7 +240,7 @@ export function BadgesPage() {
                       puede
                       nombre={t(`game.badge.${b.family}`)}
                       onOpen={() => setMirando({
-                        kind: 'badge', key: b.family, tier: b.tier, locked: !conseguida,
+                        kind: 'badge', key: b.family, tier: b.tier ?? b.pendingTier, locked: !conseguida && !enCamino,
                         subtitle: tope ? t('badges.maxed') : t('badges.progress', { n: String(b.progress), m: String(b.threshold) }),
                       })}
                     >
@@ -249,7 +255,7 @@ export function BadgesPage() {
                         }}
                       >
                         <BadgeIcon family={b.family} sx={{ fontSize: 40 }} />
-                        {!conseguida && (
+                        {!conseguida && !enCamino && (
                           <LockOutlinedIcon
                             sx={{ position: 'absolute', bottom: 6, right: 6, fontSize: 16, color: 'text.disabled' }}
                           />
@@ -259,14 +265,19 @@ export function BadgesPage() {
                   )}
                   <Rotulo
                     nombre={t(`game.badge.${b.family}`)}
-                    apagado={!conseguida}
-                    detalle={tope
-                      ? t('badges.maxed')
-                      : t('badges.progress', { n: String(b.progress), m: String(b.threshold) })}
+                    apagado={!conseguida && !enCamino}
+                    detalle={enCamino
+                      ? t('badges.settlingHint')
+                      : tope
+                        ? t('badges.maxed')
+                        : t('badges.progress', { n: String(b.progress), m: String(b.threshold) })}
                     insignia={conseguida
                       ? <Chip size="small" variant="outlined" label={t(`game.tier.${b.tier}`)}
                               sx={{ fontWeight: 700, height: 20, color, borderColor: color }} />
-                      : null}
+                      : enCamino
+                        ? <Chip size="small" variant="outlined" color="warning" label={t('badges.onTheWay')}
+                                sx={{ fontWeight: 700, height: 20 }} />
+                        : null}
                   />
                   {!tope && (
                     <Tooltip title={t('badges.progress', { n: String(b.progress), m: String(b.threshold) })}>

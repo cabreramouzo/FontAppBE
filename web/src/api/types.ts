@@ -248,6 +248,8 @@ export interface BadgeSlot {
   progress: number
   threshold: number
   thresholds: number[]
+  /** Grado que tendrás cuando liquide lo pendiente, si mejora al que ya tienes. */
+  pendingTier: string | null
 }
 
 /** Una parada de una ruta propuesta (`GET /missions`). */
