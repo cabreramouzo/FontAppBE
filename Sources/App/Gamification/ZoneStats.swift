@@ -7,7 +7,7 @@ import Vapor
 ///
 /// Dos lecturas de lo mismo, y el orden importa:
 ///
-/// - **Cobertura por zona** — cuántas fuentes de tu comarca tienen foto y cuántas ha
+/// - **Cobertura por zona** — cuántas fuentes de tu demarcación tienen foto y cuántas ha
 ///   comprobado alguien últimamente. La unidad es el territorio, no la persona: aquí no
 ///   se gana ni se pierde, y quien ha apagado la gamificación sigue contando.
 /// - **Ranking mensual** — y *mensual* es la mitad del diseño. Un ranking histórico
@@ -21,7 +21,7 @@ import Vapor
 enum ZoneStats {
     /// Cuánto vale una lectura antes de recalcularla. Son consultas de agregación sobre
     /// las tablas grandes y el resultado no cambia de un minuto a otro: la cobertura de
-    /// una comarca se mueve con las horas, no con los segundos.
+    /// una demarcación se mueve con las horas, no con los segundos.
     static let cacheTTL: TimeInterval = 5 * 60
 
     /// Desde cuándo se considera que una fuente «la ha comprobado alguien». Es el mismo
@@ -73,7 +73,7 @@ enum ZoneStats {
 
         // Una sola consulta. La subconsulta de comentarios se agrupa antes de unir, o el
         // COUNT(*) de fuentes contaría una vez por reseña y una fuente muy reseñada
-        // inflaría el total de su comarca.
+        // inflaría el total de su demarcación.
         let filas = try await sql.raw("""
             SELECT f.country AS country,
                    f.region  AS region,
@@ -87,7 +87,7 @@ enum ZoneStats {
                 GROUP BY font_id
             ) c ON c.font_id = f.id
             WHERE f.region IS NOT NULL AND f.region <> ''
-              -- Las escondidas no cuentan para la cobertura: una comarca no está mejor
+              -- Las escondidas no cuentan para la cobertura: una demarcación no está mejor
               -- cubierta por tener duplicados, y una fuente retirada ya no hay que ir a
               -- comprobarla.
               AND \(unsafeRaw: Font.visibleSQL)
@@ -154,7 +154,7 @@ enum ZoneStats {
 
     /// El objetivo de barrio: la cobertura de las fuentes que tienes al lado.
     ///
-    /// ## Por qué no basta con la comarca
+    /// ## Por qué no basta con la demarcación
     ///
     /// La barra de una demarcación entera no se mueve nunca. «Barcelona: 24 de 8.007 con
     /// foto» es verdad y es inútil: nadie va a terminar eso, así que no invita a empezar.
@@ -246,7 +246,7 @@ enum ZoneStats {
         ///
         /// Es la mitad colectiva del dato: sin esto la tarjeta es un marcador personal.
         /// No sale ningún nombre —solo cuántos—, así que `gamification_opt_out` no pinta
-        /// nada aquí, igual que en las barras de comarca: el territorio no es de nadie.
+        /// nada aquí, igual que en las barras de demarcación: el territorio no es de nadie.
         let contributors: Int
         /// El corte de «comprobada hace poco», para que la interfaz lo explique sin
         /// repetir el número por su cuenta.

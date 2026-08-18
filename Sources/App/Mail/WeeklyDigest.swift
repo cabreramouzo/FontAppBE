@@ -36,7 +36,7 @@ struct WeeklyDigest {
     var activity: [Activity] = []
     var nearby: [Nearby] = []
 
-    /// Cobertura de la zona donde más aporta esta persona. Fase 5: «cómo va tu comarca»
+    /// Cobertura de la zona donde más aporta esta persona. Fase 5: «cómo va tu demarcación»
     /// es mejor correo que «has hecho 340 puntos», porque habla de un sitio de verdad y
     /// no del contador de nadie.
     var zone: ZoneStats.Coverage?
@@ -162,7 +162,7 @@ struct WeeklyDigest {
         }
 
         // --- Tu zona. La «tuya» es donde más has aportado y no la del registro: mucha
-        // gente se registró desde el sofá de una ciudad y aporta en otra comarca, y la
+        // gente se registró desde el sofá de una ciudad y aporta en otra demarcación, y la
         // barra tiene que hablar del sitio donde de verdad camina.
         if let region = dominantRegion(of: myFonts) {
             digest.zone = try await ZoneStats.coverage(ofRegion: region, on: db)
@@ -173,7 +173,7 @@ struct WeeklyDigest {
 
     /// La región más repetida entre las fuentes de esta persona, o `nil` si ninguna está
     /// clasificada. Los empates se rompen por nombre para que el correo de una semana a
-    /// otra no cambie de comarca sin motivo.
+    /// otra no cambie de demarcación sin motivo.
     static func dominantRegion(of fonts: [Font]) -> String? {
         var cuenta: [String: Int] = [:]
         for f in fonts {

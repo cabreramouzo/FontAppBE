@@ -110,7 +110,7 @@ export function LocalGoalCard() {
   }
 
   const num = (v: number) => v.toLocaleString(lang, { maximumFractionDigits: 1 })
-  // Lo que mueve una sola aportación. Es el dato que la barra de comarca no puede dar:
+  // Lo que mueve una sola aportación. Es el dato que la barra de demarcación no puede dar:
   // allí una foto es el 0,01 % y aquí es un escalón que se ve.
   const paso = num(100 / datos.fonts)
 

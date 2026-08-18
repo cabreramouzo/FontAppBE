@@ -66,7 +66,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     no por puntos**, y sin solaparse entre ellas.
   - Fase 5: zonas (`ZoneStats` + `ZoneController` → `GET /zones` y `/zones/ranking`,
     públicas con límite 120/h y caché de 5 min; página `/zones` y bloque en el correo
-    semanal). Primero **las barras de la comarca** y luego la tabla, plegada: la barra es
+    semanal). Primero **las barras de la demarcación** y luego la tabla, plegada: la barra es
     del territorio y no de nadie. El ranking es **mensual** a propósito — uno histórico lo
     gana para siempre quien llegó primero. `gamification_opt_out` **saca de la tabla pero
     no de las barras**, y hay un test que fija las dos mitades de la regla.
@@ -179,7 +179,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     el histórico ascendería el censo entero a la vez; «a punto» se mide **dentro del
     tramo** (con el umbral absoluto, media escalera sale al 90 % para siempre). Global y
     no por zona: el nivel es del total de toda la vida. No es un ranking — ése es el
-    mensual por comarca, y lo es a posta. Sin insignias todavía: salen de recuentos por
+    mensual por demarcación, y lo es a posta. Sin insignias todavía: salen de recuentos por
     familia que hoy solo se saben usuario a usuario.
   - **Perfil público** (`/users/:id`): el nivel y las insignias **conseguidas**, con el
     visor a pantalla completa. La ruta resuelve **por username además de por UUID**, como
@@ -444,7 +444,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   genera una copia por pueblo con su QR y su código (`fontapp.net/?p=castellcir`).
 - Ese código se guarda en `users.signup_source` al registrarse (primera visita gana) y se
   agrupa en el panel de administración. Sirve para saber qué cartel/campaña funciona, que es
-  justo lo que el geo-IP del registro NO puede decir (resuelve a la cabecera de comarca).
+  justo lo que el geo-IP del registro NO puede decir (resuelve a la cabecera de demarcación).
 - Para las redes hay **enlaces cortos** en `web/public/_redirects` (Cloudflare Pages):
   `/in`, `/ig`, `/wa`, `/yt` → `/?p=linkedin|instagram|whatsapp|youtube`. Añadir un canal es
   una línea ahí, y **tiene que ir antes del catch-all del SPA** (`/* /index.html 200`) o se
@@ -653,7 +653,7 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   ruta autenticada y sobre los eventos de una sola persona, y fusionarlas obligaría a
   partir en dos el recuento dentro de `profile`, que es la función más delicada del
   sistema, para ahorrar una consulta que nadie nota.
-- **Aviso de diseño, no de código**: `catalonia.png` y `counties.png` son casi el mismo
+- **Aviso de diseño, no de código**: `catalonia.png` y `regions.png` son casi el mismo
   dibujo —hexágono, marco dorado, rosa de los vientos, mapa— y `counties` se llama
   «Comarques», que es la palabra de las divisiones de Catalunya. A 150 px y con confeti
   delante, se confunden. Conviene redibujar una de las dos.
@@ -703,6 +703,24 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Ojo al medirlo desde el navegador: R2 no manda `Timing-Allow-Origin`, así que
   `transferSize` sale **0** y parece que las fotos no pesan nada. Hay que ir por
   `Content-Length`, que es lo que hace el script.
+
+## Comarca ≠ provincia (y `fonts.region` no es ninguna de las dos, siempre)
+
+- **`fonts.region` no guarda comarcas.** Medido en producción: 52 valores en España
+  (**provincias**, las 50 más Ceuta y Melilla), 20 en Portugal (distritos), 4 en Francia
+  (départements) y 7 en Andorra (parròquies). En Catalunya hay **exactamente cuatro**
+  valores. Catalunya tiene 42 comarques y en la base no hay ni una.
+- La palabra «comarca» estaba en **7 cadenas de interfaz** y en 31 comentarios, incluida
+  una que decía «sales del ranking de tu comarca» cuando el ranking es por provincia. Se
+  ha sustituido por **«demarcación»** en todas partes, que es la palabra que ya usaba
+  `/zones` y la única lo bastante neutra para cubrir provincia, distrito, département y
+  parròquia a la vez — porque **no es un solo nivel administrativo**.
+- La insignia pasó de `counties`/«Comarcas» a **`regions`/«Demarcaciones»**, clave incluida:
+  dejar `counties` en el código era garantizar que alguien volviera a traducir «comarques».
+  Su explicación lleva ahora un ejemplo («Barcelona, Bizkaia y Cádiz ya son tres»), que es
+  lo que hace entender de golpe que no va de Catalunya.
+- Renombrar la clave hace que quien ya la tuviera vea **una celebración más** (la vitrina
+  compara por `familia:grado` en `localStorage`). Asumido: es cierta y son nueve personas.
 
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).

@@ -29,6 +29,29 @@ enum ContributionScore {
         case report           // incidencia
         case confirmation     // confirmar la reseña de otro
 
+        /// ¿Prueba que estuviste **delante de la fuente**?
+        ///
+        /// Lo usan las insignias de recorrido —`regions`, `international`— y la de
+        /// Catalunya. Rellenar un campo es edición estilo wiki y mover el pin se hace con
+        /// la ortofoto: las dos se pueden hacer sobre una fuente de Tarragona desde el
+        /// sofá de Castellcir, y una medalla que dice «has recorrido» no puede contarlas.
+        /// Confirmar la reseña de otro es opinar sobre lo que dijo alguien, no haber visto
+        /// el agua.
+        ///
+        /// Nada de esto es **verificable** —lo afirma el cliente, ver `PhotoExif`— pero sí
+        /// es difícil de inventar sin haber ido, que es todo lo que una web puede pedir.
+        ///
+        /// Vive aquí y no en cada insignia para que haya **una sola** lista: cuando se
+        /// añada un tipo nuevo, esta pregunta se responde una vez.
+        var provesPresence: Bool {
+            switch self {
+            case .fontCreated, .firstPhoto, .photoReplaced, .firstReview, .updateReview, .report:
+                return true
+            case .fieldCompleted, .relocation, .confirmation:
+                return false
+            }
+        }
+
         var base: Int {
             switch self {
             case .firstPhoto:     return 120
@@ -76,7 +99,7 @@ enum ContributionScore {
 
     /// A qué distancia de la fuente reseñada más cercana empieza a contar como «desierto».
     ///
-    /// Eran 10 km y saltaba en el 46 % de las aportaciones: en comarca rural, diez
+    /// Eran 10 km y saltaba en el 46 % de las aportaciones: en demarcación rural, diez
     /// kilómetros sin una fuente reseñada es lo normal, no la excepción. A 20 km la
     /// condición vuelve a describir lo que decía describir.
     static let desertKm = 20.0
@@ -556,7 +579,11 @@ enum ContributionScore {
         .init(key: "firstLight", name: "Primera luz", thresholds: [5, 25, 100], unique: false) { $0.firstPhotos },
         .init(key: "sentinel", name: "Centinela", thresholds: [15, 60, 250], unique: false) { $0.sentinelUpdates },
         .init(key: "cartographer", name: "Cartógrafo", thresholds: [10, 40, 150], unique: false) { $0.mapFixes },
-        .init(key: "counties", name: "Comarcas", thresholds: [3, 8, 20], unique: false) { $0.regions.count },
+        // `regions` y no `counties`: la columna guarda **provincias** en España (52 con
+        // Ceuta y Melilla), distritos en Portugal, départements en Francia y parròquies en
+        // Andorra. Catalunya tiene 42 demarcacions y en la base no hay ni una. El nombre en
+        // inglés era lo que inducía a traducir «demarcacions» una y otra vez.
+        .init(key: "regions", name: "Demarcaciones", thresholds: [3, 8, 20], unique: false) { $0.regions.count },
         .init(key: "drySeason", name: "Estiaje", thresholds: [10, 40, 120], unique: false) { $0.summerReviews },
         // Umbrales bajos porque el precio ya lo pone el calendario: la de bronce cuesta
         // un año entero de volver a la misma fuente, y no hay forma de acortarlo.
@@ -567,7 +594,7 @@ enum ContributionScore {
         // coleccionando, está avisando. Pedirle 200 sería pedirle que ojalá se rompan más.
         .init(key: "incidents", name: "Vigía", thresholds: [3, 15, 50], unique: false) { $0.incidents },
         // Lejanía: el multiplicador de desierto ya marca estas aportaciones, así que el
-        // umbral es alto a propósito. En comarca rural saltaría constantemente y sería la
+        // umbral es alto a propósito. En demarcación rural saltaría constantemente y sería la
         // insignia de vivir en el campo, no la de haberse desviado a buscar algo.
         .init(key: "farAway", name: "Lejanía", thresholds: [10, 40, 150], unique: false) { $0.farAwayContributions },
         // Sin cobertura: es un dato que afirma el móvil y el servidor no puede comprobar,

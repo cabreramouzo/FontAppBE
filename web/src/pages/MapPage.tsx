@@ -70,7 +70,7 @@ import { readGpsFromImage, type GpsCoords } from '../lib/exif'
 import { DRINKABLE_OPTIONS, SOURCE_OPTIONS, DRINKABLE_EMOJI, SOURCE_EMOJI, isNotPotable } from '../lib/waterType'
 import { timeAgo } from '../lib/time'
 
-// Centro por defecto: comarca del Moianès.
+// Centro por defecto: demarcación del Moianès.
 const MOIANES: [number, number] = [41.81, 2.09]
 
 // Última vista del mapa (centro + zoom), para restaurarla al volver del detalle.

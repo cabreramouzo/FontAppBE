@@ -27,7 +27,7 @@ const ICONS: Record<string, React.ComponentType<SvgIconProps>> = {
   firstLight: PhotoCameraOutlinedIcon,
   sentinel: VisibilityOutlinedIcon,
   cartographer: EditLocationAltOutlinedIcon,
-  counties: PublicOutlinedIcon,
+  regions: PublicOutlinedIcon,
   drySeason: WbSunnyOutlinedIcon,
   fourSeasons: CalendarMonthOutlinedIcon,
   // Una brújula y no una bandera: la ficha de la fuente tiene banderas de verdad para

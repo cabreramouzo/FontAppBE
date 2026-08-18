@@ -52,9 +52,8 @@ enum SpecialBadges {
     /// Lo que queda exige tener algo del sitio: una foto de esa fuente, el estado del
     /// agua, una avería que viste. Nada de esto es **verificable** —ver `PhotoExif`— pero
     /// sí es difícil de inventar sin haber ido, que es todo lo que una web puede pedir.
-    static let onSiteKinds = [
-        "fontCreated", "firstPhoto", "photoReplaced", "firstReview", "updateReview", "report",
-    ]
+    static let onSiteKinds = ContributionScore.Kind.allCases
+        .filter(\.provesPresence).map(\.rawValue)
 
     // MARK: - Catalunya
 
@@ -68,8 +67,8 @@ enum SpecialBadges {
     /// barato y menos frágil que normalizar la columna, que obligaría a volver a pasar el
     /// poblado cada vez que cambie el origen de los datos.
     ///
-    /// Se cuenta por **demarcación** y no por comarca de las 41 porque la app llama
-    /// «comarca» a `fonts.region` en todas partes —el ranking, las barras de zona— y ésa
+    /// Se cuenta por **demarcación** y no por demarcación de las 41 porque la app llama
+    /// «demarcación» a `fonts.region` en todas partes —el ranking, las barras de zona— y ésa
     /// es la unidad que la base de datos sabe decir. Pedir las 41 de verdad sería una
     /// insignia que no gana nadie nunca.
     static let catalanRegions: [String: String] = [

@@ -2,8 +2,8 @@ import Fluent
 import SQLKit
 import Vapor
 
-/// Siembra la BD con fuentes REALES de la comarca del Moianès.
-/// Fuente de datos: OpenStreetMap (Overpass API, área comarcal), licencia ODbL — © colaboradores de OSM.
+/// Siembra la BD con fuentes REALES de la demarcación del Moianès.
+/// Fuente de datos: OpenStreetMap (Overpass API, área demarcaciónl), licencia ODbL — © colaboradores de OSM.
 /// Uso: `swift run App seed` · `--force` para reemplazar · `--demo` añade usuarios,
 /// reseñas y aportaciones liquidadas para poder recorrer también `/zones`.
 struct SeedCommand: AsyncCommand {
@@ -168,7 +168,7 @@ struct SeedCommand: AsyncCommand {
         console.info("Gamificación demo sincronizada: \(sync.inserted) aportaciones registradas y \(sync.settled) liquidadas para los rankings.")
     }
 
-    /// Bounding box aproximado de la comarca del Moianès (para acotar las reseñas demo).
+    /// Bounding box aproximado de la demarcación del Moianès (para acotar las reseñas demo).
     static let moianesBBox = (minLat: 41.70, maxLat: 41.90, minLong: 1.90, maxLong: 2.25)
 
     static func isInMoianes(lat: Double, long: Double) -> Bool {
@@ -284,7 +284,7 @@ struct SeedCommand: AsyncCommand {
         }
     }
 
-    // Fonts reales con nombre de la comarca del Moianès (OpenStreetMap, natural=spring / amenity=drinking_water).
+    // Fonts reales con nombre de la demarcación del Moianès (OpenStreetMap, natural=spring / amenity=drinking_water).
     static let moianesFonts: [(String, Double, Double)] = [
         ("Font", 41.81363, 2.09872),
         ("Font Antic Camí Can Patiràs", 41.81355, 2.10154),

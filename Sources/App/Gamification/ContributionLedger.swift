@@ -432,9 +432,15 @@ enum ContributionLedger {
                 let previo = porTipo[e.kind] ?? (0, 0)
                 porTipo[e.kind] = (previo.count + 1, previo.gotes + e.gotes)
             }
-            if let r = e.$font.id.flatMap({ fontsByID[$0]?.region }) { tally.regions.insert(r) }
-            if let country = e.$font.id.flatMap({ fontsByID[$0]?.country }) { tally.countries.insert(country) }
             guard let kind = ContributionScore.Kind(rawValue: e.kind) else { continue }
+            // Territorio pisado: solo lo cuentan las aportaciones que prueban que estabas
+            // allí (ver `Kind.provesPresence`). Antes contaba cualquiera, así que rellenar
+            // la descripción de una fuente de Cádiz desde casa sumaba una demarcación a
+            // una medalla que dice «has recorrido».
+            if kind.provesPresence {
+                if let r = e.$font.id.flatMap({ fontsByID[$0]?.region }) { tally.regions.insert(r) }
+                if let c = e.$font.id.flatMap({ fontsByID[$0]?.country }) { tally.countries.insert(c) }
+            }
             switch kind {
             case .fontCreated: tally.fontsCreated += 1
             case .firstPhoto: tally.firstPhotos += 1

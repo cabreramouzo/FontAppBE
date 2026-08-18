@@ -2299,7 +2299,54 @@ final class IntegrationTests: XCTestCase {
     /// dos se pueden hacer sobre una fuente de Tarragona desde el sofá de Castellcir. Con
     /// ellas dentro, la insignia decía una cosa y medía otra — y el más expuesto era
     /// justamente quien tiene el panel de administración.
-    func testCataloniaIgnoresContributionsYouCanMakeFromHome() async throws {
+/// «Demarcaciones» premia haber recorrido territorio, así que tampoco se gana desde el
+    /// sofá: rellenar la descripción de una fuente de Cádiz no es haber estado en Cádiz.
+    ///
+    /// Es la misma regla que Catalunya y **sale de la misma lista** (`Kind.provesPresence`),
+    /// para que añadir un tipo de aportación nuevo obligue a responder la pregunta una vez
+    /// y no tres.
+    func testRegionBadgesOnlyCountPlacesYouActuallyVisited() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "sofa")
+            let token = try await login(app, username: "sofa")
+
+            func aporta(_ region: String, _ kind: ContributionScore.Kind, i: Int) async throws {
+                let fontID = try await createFont(app, token: token, name: "\(region)-\(i)",
+                                                  lat: 38.0 + Double(i), long: -3.0)
+                let f = try await Font.find(fontID, on: app.db)!
+                f.country = "Spain"; f.region = region
+                try await f.save(on: app.db)
+                let e = ContributionEvent()
+                e.$user.id = id
+                e.$font.id = fontID
+                e.source = "test"; e.subjectID = UUID(); e.detail = region
+                e.kind = kind.rawValue
+                e.base = 10; e.multiplier = 1; e.gotes = 10
+                e.status = .settled
+                let cuando = Date().addingTimeInterval(-Double(20 - i) * 86_400)
+                e.occurredAt = cuando; e.settlesAt = cuando; e.settledAt = cuando
+                try await e.save(on: app.db)
+            }
+
+            // Tres demarcaciones, pero dos de ellas tocadas desde casa.
+            try await aporta("Barcelona", .firstReview, i: 0)
+            try await aporta("Bizkaia", .fieldCompleted, i: 1)
+            try await aporta("Cádiz", .relocation, i: 2)
+
+            var perfil = try await ContributionLedger.profile(for: id, on: app.db)
+            XCTAssertNil(perfil.badges.first { $0.family == "regions" },
+                         "Rellenar un campo y mover un pin no son dos viajes.")
+
+            // Las mismas dos, ahora pisadas de verdad.
+            try await aporta("Bizkaia", .firstPhoto, i: 3)
+            try await aporta("Cádiz", .updateReview, i: 4)
+            perfil = try await ContributionLedger.profile(for: id, on: app.db)
+            XCTAssertEqual(perfil.badges.first { $0.family == "regions" }?.tier, "bronze",
+                           "Con tres demarcaciones pisadas, la medalla es suya.")
+        }
+    }
+
+        func testCataloniaIgnoresContributionsYouCanMakeFromHome() async throws {
         try await withApp { app in
             let id = try await register(app, username: "desdecasa")
             let token = try await login(app, username: "desdecasa")

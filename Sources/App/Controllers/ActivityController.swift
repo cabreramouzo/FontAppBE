@@ -37,7 +37,7 @@ struct ActivityController: RouteCollection {
     ///
     /// **Global, no por zona**, a diferencia del resto de la página. El nivel sale del
     /// total de gotas de toda la vida y en toda la geografía, así que recortarlo a una
-    /// comarca daría un «subió de nivel» que no cuadra con el nivel que se ve en el
+    /// demarcación daría un «subió de nivel» que no cuadra con el nivel que se ve en el
     /// perfil de esa misma persona. Una lista corta y honesta antes que una filtrada y
     /// engañosa.
     @Sendable func pulse(req: Request) async throws -> Pulse.Snapshot {
@@ -47,7 +47,7 @@ struct ActivityController: RouteCollection {
         return out
     }
 
-    /// Radio por defecto de la vista "cerca de mí", en km. Una comarca larga: lo bastante
+    /// Radio por defecto de la vista "cerca de mí", en km. Una demarcación larga: lo bastante
     /// ancho para que haya movimiento aunque tu pueblo esté tranquilo, y lo bastante
     /// estrecho para que sean fuentes a las que podrías ir de verdad.
     static let defaultRadiusKm = 40.0

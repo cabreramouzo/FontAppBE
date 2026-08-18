@@ -7,7 +7,7 @@ import Vapor
 /// ya se ven una a una en el mapa; lo que aporta esto es el agregado, no el acceso. El
 /// ranking enseña nombres de usuario, que es lo mismo que ya firma cada reseña en la
 /// ficha de una fuente — la tabla dice estrictamente menos que la ficha, porque agrupa
-/// por comarca en vez de decir en qué fuente exacta estuviste.
+/// por demarcación en vez de decir en qué fuente exacta estuviste.
 struct ZoneController: RouteCollection {
     /// Compartida entre peticiones: son consultas de agregación sobre las tablas grandes.
     static let cache = ZoneCache()
@@ -38,7 +38,7 @@ struct ZoneController: RouteCollection {
 
     /// GET /zones/local?lat=&long= — el objetivo de barrio.
     ///
-    /// Responde a la pega de las barras de comarca: «Barcelona, 24 de 8.007 con foto» es
+    /// Responde a la pega de las barras de demarcación: «Barcelona, 24 de 8.007 con foto» es
     /// verdad y no invita a nada, porque nadie va a terminar eso. Las treinta fuentes que
     /// tienes andando sí se terminan, y una foto sube la barra un 3 %.
     ///

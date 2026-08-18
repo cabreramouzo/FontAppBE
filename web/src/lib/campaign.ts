@@ -1,7 +1,7 @@
 // De dónde viene el usuario: el código del cartel que escaneó (`fontapp.net/?p=castellcir`).
 //
 // La geolocalización por IP no sirve para esto: en un pueblo pequeño resuelve a la
-// central del operador en la cabecera de comarca (alguien de Castellcir sale como
+// central del operador en la cabecera de demarcación (alguien de Castellcir sale como
 // La Garriga). Con el código del cartel sabemos con certeza qué cartel trajo a quién.
 const KEY = 'fontapp_source'
 

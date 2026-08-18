@@ -44,7 +44,7 @@ export function levelBadgeURL(levelKey: string): string | null {
  */
 export const BADGE_ART = new Set([
   'pioneer', 'discoverer', 'firstLight', 'sentinel', 'cartographer', 'drySeason',
-  'fourSeasons', 'counties', 'incidents', 'farAway', 'offline',
+  'fourSeasons', 'regions', 'incidents', 'farAway', 'offline',
   'guardianLocal', 'waterRecovered', 'routes', 'verifier', 'fountainRescued',
   'international', 'consistency', 'reunion', 'teamwork', 'incidentResolved',
   // Las especiales (`SpecialBadges.catalogue`). Se piden igual que las familias, por

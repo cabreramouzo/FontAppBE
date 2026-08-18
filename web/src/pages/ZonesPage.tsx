@@ -21,7 +21,7 @@ import { Skeleton } from '../components/Skeleton'
 /**
  * Las zonas. Fase 5 del plan (docs/gamificacion.md).
  *
- * El orden de la página es la mitad del diseño: **primero las barras de la comarca y
+ * El orden de la página es la mitad del diseño: **primero las barras de la demarcación y
  * después la tabla del mes**. A mucha gente los rankings le dan reparo, y en una app de
  * colaboración ciudadana espantarlos sale carísimo. Quien no quiera competir se lleva
  * igualmente lo que ha venido a ver, porque la barra es del territorio y no de nadie.

@@ -39,7 +39,7 @@ export function CoverageBar({ icon, label, hint, done, total, pct, lang }: {
       <LinearProgress
         variant="determinate"
         // Un 0,4 % redondea a 0 y la barra desaparece del todo, que se lee como «esta
-        // comarca no existe». Se le deja un hilo visible mientras haya algo.
+        // demarcación no existe». Se le deja un hilo visible mientras haya algo.
         value={Math.max(pct, done > 0 ? 1.5 : 0)}
         sx={{
           height: 8,
