@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "check:i18n": "node scripts/check-i18n.mjs",
-    "test": "node --test scripts/*.test.ts"
+    "test": "node --experimental-strip-types --test scripts/*.test.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
