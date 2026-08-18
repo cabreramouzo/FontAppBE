@@ -319,13 +319,18 @@ struct GamificationController: RouteCollection {
         if !user.gamificationOptOut && user.anonymizedAt == nil {
             let perfil = try await ContributionLedger.profile(
                 for: userID, on: req.db, unlockAllBadges: Self.unlockAllBadges(for: user))
-            // Nivel solo si ha aportado algo. En el primer peldaño está todo el mundo por
-            // el hecho de existir, y anunciar «Gota» de quien no ha hecho nada todavía es
-            // una etiqueta que no ha pedido nadie.
+            // El nivel sale **siempre**, aunque sean cero gotas: la escalera empieza en
+            // «Gota» y ahí está todo el mundo desde que se registra.
+            //
+            // Antes se callaba hasta tener la primera gota liquidada, y eso hacía daño
+            // justo donde no tocaba: quien acaba de reseñar tiene sus gotas **pendientes**
+            // durante 72 h, así que entraba en su perfil recién estrenado y no encontraba
+            // nada. Un perfil en blanco no distingue «no ha hecho nada» de «lo hizo
+            // anteayer y aún se está contando», y esas dos cosas no merecen la misma
+            // pantalla. Con «Gota» al menos hay una escalera en la que ya estás.
             let todas = perfil.badges.map { PublicBadge(family: $0.family, tier: $0.tier) }
                 + (try await Self.specials(for: userID, on: req.db))
-            out = PublicBadges(badges: todas,
-                               level: perfil.gotes > 0 ? perfil.level : nil)
+            out = PublicBadges(badges: todas, level: perfil.level)
         }
         await Self.badgeCache.set(clave, out)
         return out

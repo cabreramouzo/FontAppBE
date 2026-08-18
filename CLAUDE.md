@@ -189,7 +189,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     el resto de `/users/:id`: solo aceptaba el UUID y `/users/oriol_t` daba 400 — la ficha
     de la fuente funcionaba porque allí se tiene el UUID del creador. Hay test.
     `GET /users/:id/badges` devuelve ahora también `level`
-    (`null` si lo tiene apagado o si aún no ha aportado). Solo lo ganado: sin la escalera,
+    (`null` **solo** si lo tiene apagado o la cuenta está anonimizada: con cero gotas el
+    nivel es «Gota», porque la escalera empieza ahí y ahí está todo el mundo. Antes se
+    callaba hasta la primera gota liquidada, y eso dejaba en blanco el perfil de quien
+    acababa de aportar — sus gotas están **pendientes** 72 h). Solo lo ganado: sin la escalera,
     sin las bloqueadas, sin progresos y **sin gotas** — «Río» dice cuánto ha aportado
     alguien sin convertir su perfil en un contador, y lo que le falta por ganar es asunto
     suyo. `gamification_opt_out` lo apaga entero, como en todas partes.

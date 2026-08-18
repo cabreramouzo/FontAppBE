@@ -2230,6 +2230,35 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Con cero gotas el nivel es **Gota**, no «ninguno». La escalera empieza ahí y ahí está
+    /// todo el mundo desde que se registra.
+    ///
+    /// Se callaba hasta tener la primera gota **liquidada**, y eso pegaba justo donde más
+    /// duele: quien acaba de reseñar las tiene pendientes 72 h, así que entraba en su
+    /// perfil recién estrenado y lo encontraba vacío.
+    func testEveryoneStartsAtDropEvenWithNothingSettled() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "acabadellegar")
+            try await app.test(.GET, "users/acabadellegar/badges", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let out = try res.content.decode(GamificationController.PublicBadges.self)
+                XCTAssertEqual(out.level, "drop", "Cero gotas es Gota, no nada.")
+                XCTAssertTrue(out.badges.isEmpty, "Pero sin insignias, que ésas sí hay que ganarlas.")
+            })
+
+            // Quien lo apaga sigue sin enseñar nivel: eso no lo cambia esto.
+            let calladoID = try await register(app, username: "callado")
+            let u = try await User.find(calladoID, on: app.db)!
+            u.gamificationOptOut = true
+            try await u.save(on: app.db)
+            await GamificationController.badgeCache.clear()
+            try await app.test(.GET, "users/callado/badges", afterResponse: { res in
+                let out = try res.content.decode(GamificationController.PublicBadges.self)
+                XCTAssertNil(out.level, "El interruptor manda por encima de todo.")
+            })
+        }
+    }
+
     // MARK: - Seguir una fuente
 
     /// Guardar una fuente **es** seguirla: quien la tiene en favoritos recibe por la

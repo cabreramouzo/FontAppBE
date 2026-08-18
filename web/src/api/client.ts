@@ -498,7 +498,9 @@ export async function getUserBadges(userID: string): Promise<PublicBadge[]> {
 /** Lo público de la gamificación de alguien: su nivel y lo que ha ganado. */
 export interface PublicGamification {
   badges: PublicBadge[]
-  /** Clave del nivel, o `null` si lo tiene apagado o aún no ha aportado nada. */
+  /** Clave del nivel. `null` solo si tiene la gamificación apagada o la cuenta
+   *  anonimizada — con cero gotas el nivel es «Gota», que es donde empieza todo el
+   *  mundo. */
   level: string | null
 }
 
