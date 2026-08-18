@@ -131,6 +131,19 @@ export function GamificationCard() {
         {/* El backend manda la clave del nivel (`river`), no su nombre: el rótulo se
             traduce aquí. Antes llegaba «Río» hecho y salía en castellano en las cinco. */}
         <Chip label={t(`game.level.${data.level}`)} size="small" sx={{ ml: 0.5, fontWeight: 700 }} />
+        {/* El ascenso ya ganado pero aún sin liquidar. Sin esto, la felicitación decía
+            «has subido de nivel» y la tarjeta seguía enseñando el peldaño viejo durante
+            72 h: las dos tenían razón por separado y juntas parecían una avería. Mismo
+            tratamiento que las insignias «en camino». */}
+        {data.pendingLevel && (
+          <Tooltip title={t('game.pendingLevelHint')}>
+            <Chip
+              size="small" color="warning" variant="outlined"
+              label={t('game.pendingLevel', { level: t(`game.level.${data.pendingLevel}`) })}
+              sx={{ ml: 0.5, fontWeight: 700 }}
+            />
+          </Tooltip>
+        )}
         {data.pending > 0 && (
           <Tooltip title={t('game.pendingHint')}>
             <Chip

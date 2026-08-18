@@ -318,6 +318,14 @@ enum ContributionLedger {
         let level: String
         let nextLevel: String?
         let gotesToNextLevel: Int?
+        /// El nivel que tendrás **cuando liquide lo pendiente**, si es mejor que el de
+        /// ahora. Nulo si no hay ascenso en camino.
+        ///
+        /// Existe por lo mismo que `BadgeSlot.pendingTier`: la felicitación cuenta lo
+        /// pendiente y celebra el ascenso al momento, pero la tarjeta contaba solo lo
+        /// liquidado y seguía enseñando el peldaño viejo hasta 72 h después. Quedaba la
+        /// mitad rara — confeti por subir y el marcador diciendo que no habías subido.
+        var pendingLevel: String?
         let badges: [Badge]
         let byKind: [KindTotal]
         let impact: Impact
@@ -583,6 +591,12 @@ enum ContributionLedger {
             level: nivel.key,
             nextLevel: siguiente?.key,
             gotesToNextLevel: siguiente.map { $0.from - gotes },
+            // Con lo pendiente contado. Solo si de verdad sube: si coincide con el que ya
+            // tiene, no hay nada que anunciar.
+            pendingLevel: {
+                let conPendiente = ContributionScore.level(for: gotes + pending)
+                return conPendiente.key == nivel.key ? nil : conPendiente.key
+            }(),
             badges: badgeView.0
                 .map { .init(family: $0.key, tier: $0.tier.rawValue, progress: $0.progress, threshold: $0.threshold) },
             byKind: ContributionScore.Kind.allCases.compactMap { k in

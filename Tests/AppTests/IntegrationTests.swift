@@ -2192,6 +2192,44 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// El ascenso que aún no ha liquidado se anuncia, pero **solo a quien es**.
+    ///
+    /// La felicitación cuenta lo pendiente para poder celebrar en el momento; la tarjeta
+    /// contaba solo lo liquidado y seguía enseñando el peldaño viejo hasta 72 h después.
+    /// Hacia fuera no se adelanta nada: el perfil público sigue diciendo lo liquidado.
+    func testPendingLevelIsShownToYouButNotToOthers() async throws {
+        try await withApp { app in
+            let id = try await register(app, username: "puja")
+            let token = try await login(app, username: "puja")
+
+            // Gotas de sobra para subir, pero sin liquidar.
+            for i in 0..<40 {
+                let e = ContributionEvent()
+                e.$user.id = id
+                e.source = "test"; e.subjectID = UUID(); e.detail = "p\(i)"
+                e.kind = ContributionScore.Kind.updateReview.rawValue
+                e.base = 70; e.multiplier = 1; e.gotes = 70
+                e.status = .pending
+                e.occurredAt = Date(); e.settlesAt = Date().addingTimeInterval(72 * 3_600)
+                try await e.save(on: app.db)
+            }
+
+            let perfil = try await ContributionLedger.profile(for: id, on: app.db)
+            XCTAssertEqual(perfil.gotes, 0, "Nada liquidado todavía.")
+            XCTAssertGreaterThan(perfil.pending, 0)
+            let enCamino = try XCTUnwrap(perfil.pendingLevel, "Con 2.800 gotas pendientes hay ascenso que anunciar.")
+            XCTAssertNotEqual(enCamino, perfil.level)
+
+            // Y el perfil público no lo adelanta.
+            try await app.test(.GET, "users/puja/badges", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let body = res.body.string
+                XCTAssertFalse(body.contains(enCamino),
+                               "Hacia fuera solo se enseña lo liquidado.")
+            })
+        }
+    }
+
     // MARK: - Seguir una fuente
 
     /// Guardar una fuente **es** seguirla: quien la tiene en favoritos recibe por la

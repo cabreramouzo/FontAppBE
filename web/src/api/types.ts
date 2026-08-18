@@ -200,6 +200,8 @@ export interface GamificationProfile {
   level: string
   nextLevel?: string | null
   gotesToNextLevel?: number | null
+  /** Nivel al que subirás cuando liquide lo pendiente, si mejora al actual. */
+  pendingLevel?: string | null
   badges: { family: string; tier: string; progress: number; threshold: number }[]
   byKind: { kind: string; label: string; count: number; gotes: number }[]
   impact: {

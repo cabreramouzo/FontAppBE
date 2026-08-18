@@ -668,6 +668,11 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   ganadas contando lo pendiente, y la vitrina las pinta **en color, sin candado y con un
   chip «en camino»**. Nada se adelanta hacia fuera: el perfil público sigue enseñando solo
   lo liquidado.
+- **Y el nivel igual** (`Profile.pendingLevel`): el mismo desajuste lo tenía el peldaño, y
+  se quedó sin arreglar en la primera pasada. La felicitación celebraba «has subido de
+  nivel» contando lo pendiente y la tarjeta seguía enseñando el nivel viejo hasta 72 h
+  después. Ahora sale un chip «Río en camino» al lado del actual. Solo a quien es: el
+  perfil público sigue diciendo el liquidado, y hay test de las dos mitades.
 - Cuesta **dos pasadas** de `ContributionLedger.profile`. Se acepta a propósito: es una
   ruta autenticada y sobre los eventos de una sola persona, y fusionarlas obligaría a
   partir en dos el recuento dentro de `profile`, que es la función más delicada del
