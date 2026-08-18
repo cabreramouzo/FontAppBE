@@ -5,6 +5,7 @@
 /ig     /?p=instagram     302
 /wa     /?p=whatsapp      302
 /yt     /?p=youtube       302
+/tw     /?p=twitter       302
 
 # La página de novedades se llamó /novedades unas horas. 301 (permanente) porque
 # no va a volver: el resto de rutas públicas están en inglés y esta era la excepción.
