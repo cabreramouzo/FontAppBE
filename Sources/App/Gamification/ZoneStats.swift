@@ -116,6 +116,155 @@ enum ZoneStats {
         try await coverage(on: db, now: now).first { $0.region == region }
     }
 
+    // MARK: - Tu entorno
+
+    /// Cuántas fuentes entran en el objetivo de barrio.
+    ///
+    /// **Treinta, y es un recuento y no un radio — eso es la mitad del diseño.** Medido
+    /// sobre la base real: a 5 km hay 53 fuentes en Castellcir y 1.482 en el centro de
+    /// Barcelona, veintiocho veces más. Con un radio fijo el objetivo sale terminable en
+    /// un sitio e inalcanzable en el otro, que es exactamente el defecto que esto viene a
+    /// arreglar. Con las treinta más cercanas el denominador es el mismo en todas partes y
+    /// el radio se ajusta solo — medido en los mismos puntos: 0,6 km en Barcelona, 0,9 en
+    /// Girona, 2,9 en Vic, 3,7 en Castellcir, 4,7 en el Pirineo. Un barrio a pie, se viva
+    /// donde se viva.
+    ///
+    /// Treinta y no diez porque cada foto tiene que mover la barra de forma visible
+    /// (3,3 %) sin que se llene en una tarde y deje de haber objetivo.
+    static let localFonts = 30
+
+    /// Hasta dónde se busca antes de rendirse. Si hay que irse a más de 25 km para juntar
+    /// treinta, esto ya no es «tu entorno» y llamarlo así sería mentir: se devuelven las
+    /// que haya dentro y el radio real va en la respuesta.
+    static let localMaxKm = 25.0
+
+    /// Redondeo de las coordenadas **antes de consultar**.
+    ///
+    /// La regla es de `/activity` (ver `ActivityController.coordStep`) y es una regla, no
+    /// una optimización: hay que redondear la coordenada con la que se consulta y no solo
+    /// la clave de la caché, o dos personas de sitios distintos se llevarían el resultado
+    /// de la otra.
+    ///
+    /// Aquí además se busca el efecto secundario. Medio kilómetro de rejilla hace que los
+    /// vecinos compartan centro y vean **el mismo objetivo con las mismas fuentes**, que
+    /// es lo que convierte esto en algo colectivo en vez de en otro marcador personal.
+    static let localStep = 0.005
+
+    static func snapLocal(_ v: Double) -> Double { (v / localStep).rounded() * localStep }
+
+    /// El objetivo de barrio: la cobertura de las fuentes que tienes al lado.
+    ///
+    /// ## Por qué no basta con la comarca
+    ///
+    /// La barra de una demarcación entera no se mueve nunca. «Barcelona: 24 de 8.007 con
+    /// foto» es verdad y es inútil: nadie va a terminar eso, así que no invita a empezar.
+    /// La misma barra sobre las treinta fuentes que tienes andando se termina entre unos
+    /// pocos vecinos, y una foto la sube un 3 %, que se ve.
+    ///
+    /// ## Por qué no es un pueblo
+    ///
+    /// Sería mejor poder decir «Castellcir» en vez de «lo que tienes alrededor», pero eso
+    /// pide una columna de municipio y un fichero de fronteras municipales, y hoy ni
+    /// siquiera `region` está poblada del todo. Además convierte `/zones` en un directorio
+    /// de cientos de pueblos, que es una lista que nadie lee. Esto no añade ninguna
+    /// entrada a ninguna lista: es **una** tarjeta calculada desde tus coordenadas.
+    static func local(lat rawLat: Double, long rawLong: Double,
+                      on db: any Database, now: Date = Date()) async throws -> Local {
+        let lat = snapLocal(rawLat)
+        let long = snapLocal(rawLong)
+        guard let sql = db as? SQLDatabase else {
+            return Local(fonts: 0, radiusKm: 0, withPhoto: 0, checkedRecently: 0, contributors: 0)
+        }
+        let corte = now.addingTimeInterval(-freshDays * 86_400)
+        // Prefiltro por caja, igual que en el resto de consultas de cercanía: un grado de
+        // latitud son ~111 km y en longitud los meridianos se juntan al subir, de ahí el
+        // coseno. La caja es cuadrada y el objetivo redondo, así que el radio se vuelve a
+        // exigir después sobre las pocas que quedan.
+        let dLat = localMaxKm / 111.0
+        let dLong = localMaxKm / (111.0 * max(cos(lat * .pi / 180), 0.01))
+
+        struct Fila: Decodable {
+            let fonts: Int
+            let with_photo: Int
+            let radius_km: Double
+            let contributors: Int
+            let checked: Int
+        }
+
+        let fila = try await sql.raw("""
+            WITH cercanas AS (
+                SELECT f.id, f.image,
+                       sqrt(power((f.latitude - \(bind: lat)) * 111.0, 2)
+                          + power((f.longitude - \(bind: long)) * 111.0
+                                  * cos(radians(\(bind: lat))), 2)) AS km
+                FROM fonts f
+                WHERE f.latitude  BETWEEN \(bind: lat - dLat)  AND \(bind: lat + dLat)
+                  AND f.longitude BETWEEN \(bind: long - dLong) AND \(bind: long + dLong)
+                  AND \(unsafeRaw: Font.visibleSQL)
+                ORDER BY km
+                LIMIT \(bind: localFonts)
+            ),
+            dentro AS (SELECT * FROM cercanas WHERE km <= \(bind: localMaxKm)),
+            agg AS (
+                SELECT count(*) AS fonts, count(image) AS with_photo,
+                       coalesce(max(km), 0) AS radius_km
+                FROM dentro
+            ),
+            -- Las reseñas se miran solo de esas treinta, no de la tabla entera: es la
+            -- diferencia entre una consulta de barrio y un recuento global cada 5 min.
+            com AS (
+                SELECT count(DISTINCT user_id) AS contributors,
+                       count(DISTINCT font_id) FILTER (WHERE created_at >= \(bind: corte)) AS checked
+                FROM font_comments
+                WHERE font_id IN (SELECT id FROM dentro)
+            )
+            SELECT agg.fonts, agg.with_photo, agg.radius_km, com.contributors, com.checked
+            FROM agg, com
+            """).first(decoding: Fila.self)
+
+        guard let fila else { return Local(fonts: 0, radiusKm: 0, withPhoto: 0, checkedRecently: 0, contributors: 0) }
+        return Local(fonts: fila.fonts,
+                     // Un decimal: el metro exacto ni se sabe ni importa, y «4,7 km»
+                     // se lee de un vistazo donde «4,712834 km» no.
+                     radiusKm: (fila.radius_km * 10).rounded() / 10,
+                     withPhoto: fila.with_photo,
+                     checkedRecently: fila.checked,
+                     contributors: fila.contributors)
+    }
+
+    struct Local: Content, Sendable {
+        /// Cuántas ha juntado. Menos de `localFonts` si alrededor no hay más.
+        let fonts: Int
+        /// Hasta dónde ha tenido que llegar, en km. Va en la respuesta porque es lo que
+        /// convierte «treinta fuentes» en un sitio: no es lo mismo a 600 m que a 5 km.
+        let radiusKm: Double
+        let withPhoto: Int
+        let checkedRecently: Int
+        let photoPct: Int
+        let freshPct: Int
+        /// Cuánta gente distinta ha reseñado alguna de ellas, alguna vez.
+        ///
+        /// Es la mitad colectiva del dato: sin esto la tarjeta es un marcador personal.
+        /// No sale ningún nombre —solo cuántos—, así que `gamification_opt_out` no pinta
+        /// nada aquí, igual que en las barras de comarca: el territorio no es de nadie.
+        let contributors: Int
+        /// El corte de «comprobada hace poco», para que la interfaz lo explique sin
+        /// repetir el número por su cuenta.
+        let freshDays: Int
+
+        init(fonts: Int, radiusKm: Double, withPhoto: Int, checkedRecently: Int, contributors: Int) {
+            self.fonts = fonts
+            self.radiusKm = radiusKm
+            self.withPhoto = withPhoto
+            self.checkedRecently = checkedRecently
+            self.contributors = contributors
+            func pct(_ n: Int) -> Int { fonts == 0 ? 0 : Int((Double(n) * 100 / Double(fonts)).rounded()) }
+            self.photoPct = pct(withPhoto)
+            self.freshPct = pct(checkedRecently)
+            self.freshDays = Int(ZoneStats.freshDays)
+        }
+    }
+
     // MARK: - Ranking mensual
 
     struct RankingRow: Content, Sendable {

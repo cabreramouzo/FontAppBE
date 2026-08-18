@@ -1907,6 +1907,145 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    // MARK: - Tu entorno (el objetivo de barrio)
+
+    /// El objetivo de barrio se corta por **recuento y no por radio**, y ese es su motivo
+    /// de existir: con un radio fijo, medido sobre la base real, a 5 km hay 53 fuentes en
+    /// Castellcir y 1.482 en el centro de Barcelona, así que la barra saldría terminable
+    /// en un sitio e inalcanzable en el otro — que es justo el defecto de la barra de
+    /// comarca que esto viene a arreglar.
+    ///
+    /// Con el tope, una foto vale siempre lo mismo: 1/30, un 3 %, se viva donde se viva.
+    func testLocalGoalCapsTheDenominatorSoOnePhotoAlwaysMovesTheBar() async throws {
+        try await withApp { app in
+            // Un sitio sin ninguna otra fixture cerca: el radio máximo son 25 km y las
+            // demás pruebas siembran fuentes por todo el Principat.
+            let lat = 45.0, long = 7.0
+            for i in 1...40 {
+                let f = Font(name: "Entorn \(i)", latitude: lat + Double(i) * 0.001, longitude: long)
+                // Foto a tres de las treinta primeras y a una que se queda fuera del corte:
+                // si el recuento se hiciera antes de recortar, saldrían cuatro.
+                if [1, 2, 3, 35].contains(i) { f.image = "/uploads/e\(i).jpg" }
+                try await f.save(on: app.db)
+            }
+
+            let out = try await ZoneStats.local(lat: lat, long: long, on: app.db)
+            XCTAssertEqual(out.fonts, ZoneStats.localFonts, "Tiene que cortar en treinta, haya las que haya.")
+            XCTAssertEqual(out.withPhoto, 3, "La foto de la 35ª está fuera del objetivo y no cuenta.")
+            XCTAssertEqual(out.photoPct, 10)
+            // La 30ª está a 0,030° ≈ 3,3 km: el radio sale del dato, no está fijado.
+            XCTAssertEqual(out.radiusKm, 3.3, accuracy: 0.2)
+        }
+    }
+
+    /// Las escondidas no entran. Una duplicada o una retirada ya no manda a nadie a
+    /// ninguna parte: contarlas en el denominador sería pedir fotos de algo que no está.
+    func testLocalGoalIgnoresHiddenFonts() async throws {
+        try await withApp { app in
+            let lat = 46.0, long = 8.0
+            var ids: [UUID] = []
+            for i in 1...5 {
+                let f = Font(name: "Amagada \(i)", latitude: lat + Double(i) * 0.001, longitude: long)
+                try await f.save(on: app.db)
+                ids.append(try f.requireID())
+            }
+            let duplicada = try await Font.find(ids[0], on: app.db)!
+            duplicada.$duplicateOf.id = ids[4]
+            try await duplicada.save(on: app.db)
+            let retirada = try await Font.find(ids[1], on: app.db)!
+            retirada.retiredAt = Date()
+            try await retirada.save(on: app.db)
+
+            let out = try await ZoneStats.local(lat: lat, long: long, on: app.db)
+            XCTAssertEqual(out.fonts, 3, "La duplicada y la retirada no son objetivo de nadie.")
+        }
+    }
+
+    /// Cuenta **personas distintas**, no reseñas, y no le importa el interruptor de la
+    /// gamificación: aquí no sale ningún nombre, solo cuántos. Es la mitad colectiva del
+    /// dato — sin ella la tarjeta es otro marcador personal.
+    func testLocalGoalCountsPeopleAndNotReviews() async throws {
+        try await withApp { app in
+            let lat = 47.0, long = 9.0
+            var ids: [UUID] = []
+            for i in 1...2 {
+                let f = Font(name: "Veïna \(i)", latitude: lat + Double(i) * 0.001, longitude: long)
+                try await f.save(on: app.db)
+                ids.append(try f.requireID())
+            }
+            let discreta = try await register(app, username: "entorn_off")
+            _ = try await register(app, username: "entorn_a")
+            _ = try await register(app, username: "entorn_b")
+            let u = try await User.find(discreta, on: app.db)!
+            u.gamificationOptOut = true
+            try await u.save(on: app.db)
+
+            let tokenA = try await login(app, username: "entorn_a")
+            let tokenB = try await login(app, username: "entorn_b")
+            let tokenOff = try await login(app, username: "entorn_off")
+            // Tres reseñas de la misma persona sobre las dos fuentes: sigue siendo una.
+            for i in 0..<3 { _ = try await addComment(app, token: tokenA, fontID: ids[0], body: "A\(i)") }
+            _ = try await addComment(app, token: tokenA, fontID: ids[1], body: "A altra")
+            _ = try await addComment(app, token: tokenB, fontID: ids[0], body: "B")
+            _ = try await addComment(app, token: tokenOff, fontID: ids[0], body: "Off")
+
+            let out = try await ZoneStats.local(lat: lat, long: long, on: app.db)
+            XCTAssertEqual(out.fonts, 2)
+            XCTAssertEqual(out.contributors, 3,
+                           "Cinco reseñas de tres personas son tres, y el opt-out no descuenta a nadie.")
+            XCTAssertEqual(out.checkedRecently, 2)
+            XCTAssertEqual(out.freshPct, 100)
+        }
+    }
+
+    /// Las coordenadas se redondean **antes de consultar** y no solo para la clave de la
+    /// caché. Las dos mitades de la regla:
+    ///
+    /// - Dos vecinos de la misma casilla ven el mismo objetivo, que es lo que hace que
+    ///   esto sea colectivo y no un marcador que cada uno lleva encima.
+    /// - Dos sitios distintos **no** se sirven el resultado del otro, que es el fallo que
+    ///   aparecería si solo se redondease la clave.
+    func testLocalGoalIsSharedBetweenNeighboursButNotBetweenPlaces() async throws {
+        try await withApp { app in
+            for i in 1...5 {
+                try await Font(name: "Prop \(i)", latitude: 48.0 + Double(i) * 0.001, longitude: 10.0).save(on: app.db)
+            }
+            try await Font(name: "Lluny", latitude: 49.0, longitude: 11.0).save(on: app.db)
+
+            // Cien metros de diferencia: misma casilla de 0,005°, mismo objetivo.
+            let yo = try await ZoneStats.local(lat: 48.0, long: 10.0, on: app.db)
+            let vecino = try await ZoneStats.local(lat: 48.0009, long: 10.0008, on: app.db)
+            XCTAssertEqual(yo.fonts, 5)
+            XCTAssertEqual(vecino.fonts, yo.fonts)
+            XCTAssertEqual(vecino.radiusKm, yo.radiusKm, "Los vecinos tienen que ver el mismo objetivo.")
+
+            await ZoneController.cache.clear()
+            var deAqui = 0
+            try await app.test(.GET, "zones/local?lat=48.0&long=10.0", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                deAqui = try res.content.decode(ZoneStats.Local.self).fonts
+            })
+            try await app.test(.GET, "zones/local?lat=49.0&long=11.0", afterResponse: { res in
+                let otro = try res.content.decode(ZoneStats.Local.self)
+                XCTAssertEqual(deAqui, 5)
+                XCTAssertEqual(otro.fonts, 1, "La caché no puede servir el entorno de otro sitio.")
+            })
+        }
+    }
+
+    /// Sin coordenadas no hay entorno que valga: se contesta 400 en vez de inventarse un
+    /// centro, que saldría como datos raros y no como un error.
+    func testLocalGoalNeedsCoordinates() async throws {
+        try await withApp { app in
+            try await app.test(.GET, "zones/local", afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+            try await app.test(.GET, "zones/local?lat=200&long=10", afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+        }
+    }
+
     // MARK: - Insignias especiales
 
     /// Le da a alguien `n` reseñas liquidadas, fechadas hacia atrás desde `endingAt`.

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import LinearProgress from '@mui/material/LinearProgress'
 import Card from '@mui/material/Card'
 import CardActionArea from '@mui/material/CardActionArea'
 import Collapse from '@mui/material/Collapse'
@@ -15,6 +14,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { getZoneRanking, getZones } from '../api/client'
 import type { ZoneCoverage, ZoneRanking } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
+import { CoverageBar } from '../components/CoverageBar'
+import { LocalGoalCard } from '../components/LocalGoalCard'
 import { Skeleton } from '../components/Skeleton'
 
 /**
@@ -50,6 +51,10 @@ export function ZonesPage() {
       <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>🗺️ {t('zones.title')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('zones.intro')}</Typography>
 
+      {/* Primero lo que se puede terminar y después lo que no. Al revés, la página
+          abría con una barra al 0,3 % que no se mueve en meses. */}
+      <LocalGoalCard />
+
       {estado === 'loading' && <Skeleton lines={6} />}
 
       {/* Un fallo de carga no se enseña como «no hay zonas»: confundirlos haría creer
@@ -67,6 +72,11 @@ export function ZonesPage() {
         <Alert severity="info">{t('zones.none')}</Alert>
       )}
 
+      {estado === 'ok' && !!zonas?.length && (
+        <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mt: 3, mb: 0.5 }}>
+          {t('zones.byRegion')}
+        </Typography>
+      )}
       {estado === 'ok' && zonas?.map((z) => <ZonaCard key={z.region} zona={z} lang={lang} />)}
     </Box>
   )
@@ -86,7 +96,7 @@ function ZonaCard({ zona, lang }: { zona: ZoneCoverage; lang: string }) {
           </Typography>
         </Box>
 
-        <Barra
+        <CoverageBar
           icon={<PhotoCameraOutlinedIcon fontSize="small" />}
           label={t('zones.withPhoto')}
           hint={t('zones.withPhotoHint')}
@@ -95,7 +105,7 @@ function ZonaCard({ zona, lang }: { zona: ZoneCoverage; lang: string }) {
           pct={zona.photoPct}
           lang={lang}
         />
-        <Barra
+        <CoverageBar
           icon={<EventAvailableOutlinedIcon fontSize="small" />}
           label={t('zones.checked')}
           hint={t('zones.checkedHint')}
@@ -120,49 +130,6 @@ function ZonaCard({ zona, lang }: { zona: ZoneCoverage; lang: string }) {
         <Tabla region={zona.region} lang={lang} />
       </Collapse>
     </Card>
-  )
-}
-
-function Barra({ icon, label, hint, done, total, pct, lang }: {
-  icon: React.ReactNode
-  label: string
-  hint: string
-  done: number
-  total: number
-  pct: number
-  lang: string
-}) {
-  const { t } = useI18n()
-  return (
-    <Box sx={{ mb: 1.25 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
-        <Box sx={{ display: 'flex', color: 'text.secondary' }}>{icon}</Box>
-        <Tooltip title={hint}>
-          <Typography variant="body2" sx={{ flexGrow: 1, minWidth: 0 }}>{label}</Typography>
-        </Tooltip>
-        {/* El porcentaje y el recuento juntos: «2 %» sobre 2 622 fuentes suena a nada,
-            y «52 fuentes» sin el total suena a mucho. Ninguno de los dos solo es honesto. */}
-        <Typography variant="body2" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-          {t('zones.ofTotal', { n: done.toLocaleString(lang), m: total.toLocaleString(lang), p: String(pct) })}
-        </Typography>
-      </Box>
-      <LinearProgress
-        variant="determinate"
-        // Un 0,4 % redondea a 0 y la barra desaparece del todo, que se lee como «esta
-        // comarca no existe». Se le deja un hilo visible mientras haya algo.
-        value={Math.max(pct, done > 0 ? 1.5 : 0)}
-        sx={{
-          height: 8,
-          borderRadius: 4,
-          // El carril por defecto de MUI es el primario aclarado, un azul bastante
-          // saturado: con estos porcentajes —del 0 al 2 %— la barra vacía se leía como
-          // una barra LLENA, que es justo lo contrario de lo que dice el dato. Carril
-          // neutro y relleno azul, o el gráfico miente de un vistazo.
-          bgcolor: 'action.selected',
-          '& .MuiLinearProgress-bar': { borderRadius: 4 },
-        }}
-      />
-    </Box>
   )
 }
 

@@ -68,6 +68,22 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     del territorio y no de nadie. El ranking es **mensual** a propósito — uno histórico lo
     gana para siempre quien llegó primero. `gamification_opt_out` **saca de la tabla pero
     no de las barras**, y hay un test que fija las dos mitades de la regla.
+    **Tu entorno** (`ZoneStats.local` → `GET /zones/local?lat=&long=` → `LocalGoalCard`,
+    arriba del todo en `/zones`): la misma cobertura, pero sobre **las 30 fuentes más
+    cercanas**. Existe porque la barra de una demarcación no se mueve nunca — «Barcelona:
+    2 de 7.588 con foto» es verdad y no invita a nada— y sobre 30 una sola foto la sube un
+    3 %, que la tarjeta dice en voz alta. Se corta por **recuento y no por radio**, y está
+    medido: a 5 km hay 53 fuentes en Castellcir y 1.482 en el centro de Barcelona, así que
+    un radio fijo daría un objetivo terminable en un sitio e imposible en el otro; con las
+    30 más cercanas el radio se ajusta solo (0,6 km en Barcelona, 3,7 en Castellcir, 4,7
+    en el Pirineo) y el denominador es el mismo en todas partes. **No añade ninguna fila a
+    ninguna lista**: no es un municipio dentro de un directorio de municipios —eso pedía
+    una columna nueva, un fichero de fronteras municipales y una lista de cientos de
+    pueblos que nadie lee—, es una tarjeta calculada desde tus coordenadas y hay una, la
+    tuya. Las coordenadas se redondean **y se consulta con las redondeadas** (misma regla
+    que `/activity`), lo que de paso hace que los vecinos vean el mismo objetivo. Sale
+    `contributors`, cuánta gente distinta ha reseñado alguna — solo cuántos, sin nombres,
+    así que `gamification_opt_out` no aplica, igual que en las barras.
   - Diez niveles (`ContributionScore.levels`), de `drop` a `aquifer`. El nivel y las
     insignias viajan como **clave**, no como nombre: el rótulo lo traduce el navegador.
   - Vitrina en `/me/badges` (`BadgesPage`): los diez niveles y las ocho familias,

@@ -287,6 +287,26 @@ export interface ZoneCoverageResponse {
   freshDays: number
 }
 
+/**
+ * El objetivo de barrio: las N fuentes más cercanas a un punto.
+ *
+ * No es una zona administrativa y no sale en ninguna lista — es una tarjeta calculada
+ * desde tus coordenadas. Ver `ZoneStats.local` en el servidor para el porqué.
+ */
+export interface ZoneLocal {
+  /** Cuántas ha juntado. Menos de 30 si alrededor no hay más. */
+  fonts: number
+  /** Hasta dónde ha tenido que llegar, en km. */
+  radiusKm: number
+  withPhoto: number
+  checkedRecently: number
+  photoPct: number
+  freshPct: number
+  /** Cuánta gente distinta ha reseñado alguna de ellas. Sin nombres, solo cuántos. */
+  contributors: number
+  freshDays: number
+}
+
 export interface ZoneRankingRow {
   rank: number
   username: string
