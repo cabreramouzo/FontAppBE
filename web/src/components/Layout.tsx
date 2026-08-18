@@ -16,7 +16,6 @@ import DialogActions from '@mui/material/DialogActions'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import NewspaperIcon from '@mui/icons-material/Newspaper'
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
-import LogoutIcon from '@mui/icons-material/Logout'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { getFlags, getNewUsers } from '../api/client'
@@ -31,6 +30,7 @@ import { InstallPrompt } from './InstallPrompt'
 import { PendingUploads } from './PendingUploads'
 import { RoleChip, StaffStripe, staffRole } from './StaffBadge'
 import { NotificationBell } from './NotificationBell'
+import { MoreMenu } from './MoreMenu'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -77,11 +77,25 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="app">
       {rol && <StaffStripe role={rol} />}
       <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default', pt: 'env(safe-area-inset-top)' }}>
-        {/* En móvil los huecos bajan a la mitad: son cinco botones a la derecha y con 8 px
-            entre cada uno el nombre se quedaba 16 px corto y "beta" se metía encima del
-            de novedades. Los iconos ya traen su propio acolchado, así que 4 px de hueco
-            se siguen viendo separados. */}
-        <Toolbar sx={{ gap: { xs: 0.5, sm: 1 }, pl: 'max(16px, env(safe-area-inset-left))', pr: 'max(16px, env(safe-area-inset-right))' }}>
+        {/* La fila se había apretado dos veces por `@media` —huecos a la mitad, cosas
+            escondidas— y volvía a romperse con cada botón nuevo. Con la campana quedaban
+            **9 px** de margen a 393 px: no sobraba un icono concreto, es que iba a cero y
+            la tumbaba cualquier variación (otra tipografía, «CA» en vez de «EN», cómo
+            dibuje el emoji cada sistema).
+            Ahora en móvil el reparto es por **frecuencia**: en la barra solo lo que se
+            toca a diario (novedades, campana, perfil) y el resto en `MoreMenu`. Los 4 px
+            de hueco se quedan porque los iconos ya traen su propio acolchado. */}
+        <Toolbar
+          sx={{
+            gap: { xs: 0.5, sm: 1 },
+            pl: 'max(16px, env(safe-area-inset-left))',
+            pr: 'max(16px, env(safe-area-inset-right))',
+            // Quien cede el sitio es SIEMPRE el título, nunca un botón. Va sobre la
+            // Toolbar y no botón a botón para que valga también para el que se añada
+            // mañana sin que nadie se acuerde de esto.
+            '& > :not(:first-of-type)': { flexShrink: 0 },
+          }}
+        >
           {/* "beta" va pegado al nombre como un subíndice tipográfico —alineado por abajo
               y caído unos píxeles bajo la línea base—, no como una etiqueta más de la
               barra: es una propiedad del producto, se lee junto al nombre.
@@ -89,7 +103,11 @@ export function Layout({ children }: { children: ReactNode }) {
               fila empujaba los botones de la derecha hasta solaparse; en su propio
               renglón no compite por el ancho con el nombre. */}
           <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.25 }}>
+            {/* `overflow: hidden` es la red de seguridad, no el arreglo: sin él, un
+                `whiteSpace: nowrap` que no cabe no se recorta — se pinta ENCIMA de lo que
+                tiene al lado, que es exactamente cómo se veía el fallo. Con él, quedarse
+                sin sitio degrada a puntos suspensivos y se nota sin romperse. */}
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.25, minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
               <Typography
                 component={RouterLink}
                 to="/"
@@ -97,6 +115,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 sx={{
                   fontWeight: 800, color: 'primary.main', textDecoration: 'none',
                   whiteSpace: 'nowrap', lineHeight: 1.1,
+                  minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
                   // Por debajo de 360 px (iPhone SE de 2016 y similares) el nombre a
                   // tamaño completo ya no cabía y se metía bajo el botón de novedades.
                   // Esto no lo trajo "beta": pasaba igual sin él.
@@ -119,6 +138,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   borderRadius: 0.75,
                   borderWidth: 1,
                   '& .MuiChip-label': { px: 0.3 },
+                  flexShrink: 0,
                   // El desplome que lo hace subíndice: alineado abajo con el nombre y
                   // 3 px por debajo de su línea. Con `relative` no reserva ese hueco,
                   // así que no engorda la fila.
@@ -184,8 +204,11 @@ export function Layout({ children }: { children: ReactNode }) {
           {/* La campana solo tiene sentido con sesión, y solo se pinta si hay algo:
               un icono que nunca hace nada es ruido en una barra que ya va justa. */}
           {user && <NotificationBell />}
-          <ThemeToggle />
-          <LanguageSwitcher />
+          {/* Tema e idioma se ponen una vez en la vida: en móvil bajan al cajón y aquí
+              solo se quedan donde hay sitio de sobra, que es donde un control suelto se
+              ve y se toca mejor que un menú. */}
+          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><ThemeToggle /></Box>
+          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><LanguageSwitcher /></Box>
           {user ? (
             <>
               {/* Perfil: texto con saludo en pantallas anchas; solo icono en móvil para que quepa. */}
@@ -209,21 +232,22 @@ export function Layout({ children }: { children: ReactNode }) {
               >
                 <AccountCircleIcon />
               </IconButton>
-              {/* Salir: botón con texto en anchas; icono en móvil. */}
+              {/* Salir: botón con texto en anchas. En móvil ya no es un icono suelto
+                  al lado del de perfil —era un vecino peligroso de tocar sin querer—,
+                  vive en el cajón. Sigue pidiendo confirmación igual. */}
               <Button variant="contained" size="small" disableElevation onClick={() => setConfirmLogout(true)} sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
                 {t('nav.logout')}
               </Button>
-              <Tooltip title={t('nav.logout')}>
-                <IconButton color="inherit" size="small" onClick={() => setConfirmLogout(true)} aria-label={t('nav.logout')} sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>
-                  <LogoutIcon />
-                </IconButton>
-              </Tooltip>
             </>
           ) : (
             // Enlace normal (no client-side): carga el documento para que el formulario
             // de acceso exista cuando el navegador lo analiza (autorrelleno fiable).
             <Button component="a" href="/login" variant="contained" size="small" disableElevation>{t('nav.enter')}</Button>
           )}
+          {/* El último de la fila, que es donde se busca un menú de desbordamiento. */}
+          <Box sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>
+            <MoreMenu onLogout={user ? () => setConfirmLogout(true) : undefined} />
+          </Box>
         </Toolbar>
       </AppBar>
       <OfflineBanner />
