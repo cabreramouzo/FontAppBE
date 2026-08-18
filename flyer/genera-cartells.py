@@ -8,10 +8,18 @@ d'administració, secció "D'on venen (cartells)".
     pip3 install segno
     python3 flyer/genera-cartells.py castellcir moia lestany calders
 
-Deixa els fitxers a `flyer/pobles/cartell-<codi>.html`. Per convertir-los a PDF:
-obre'ls amb el navegador → Imprimir → A5 → marges cap → Desa com a PDF.
+Deixa els fitxers a `flyer/pobles/cartell-<codi>.html`. Per convertir-los a PDF, sense
+obrir el navegador ni tocar cap diàleg d'impressió:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \\
+      --headless --disable-gpu --no-pdf-header-footer \\
+      --print-to-pdf=cartell-castelltercol.pdf \\
+      "file://$PWD/flyer/pobles/cartell-castelltercol.html"
+
+Comprova SEMPRE el PDF resultant: el cartell té l'alçada fixada a 210 mm i Chrome no
+pagina, **retalla**. Si hi afegeixes una línia i el peu desapareix, el problema és aquest
+i es resol traient espai a `ul.punts` (margin) o a `ul.punts li` (margin-bottom).
 """
-import html
 import pathlib
 import re
 import sys
@@ -63,11 +71,10 @@ def genera(codi: str) -> pathlib.Path:
         count=1,
         flags=re.S,
     )
-    # 2) L'adreça escrita a sota del QR: qui no escaneja, la tecleja.
-    plantilla = plantilla.replace(
-        '<div class="web">fontapp.net</div>',
-        f'<div class="web">fontapp.net/?p={html.escape(codi)}</div>',
-    )
+    # L'adreça escrita es queda en `fontapp.net`, SENSE el codi. El codi només viatja
+    # dins del QR: `fontapp.net/?p=castelltercol` és massa llarg per teclejar-lo bé, i qui
+    # el copia malament acaba a una pàgina que no existeix. Es perd l'atribució de qui
+    # escriu l'adreça a mà — assumit: són molt pocs comparats amb els que escanegen.
 
     SORTIDA.mkdir(exist_ok=True)
     desti = SORTIDA / f"cartell-{codi}.html"
