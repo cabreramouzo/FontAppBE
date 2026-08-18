@@ -1,4 +1,3 @@
-import { Fragment } from 'react'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Link from '@mui/material/Link'
@@ -48,51 +47,6 @@ export function StaffTag({ role }: { role: UserRole }) {
       />
     </Tooltip>
   )
-}
-
-/**
- * Reglas del nombre de usuario, para reconocer una mención dentro de un texto.
- *
- * Se para en 3 caracteres por abajo porque menos que eso son casi siempre falsos
- * positivos (una dirección de correo cortada, un `@` suelto), y en 30 por arriba porque
- * es lo que acepta el registro. El `(?<![\w@])` evita lo importante: que dentro de
- * `hola@ejemplo.com` el `@ejemplo` se convierta en un enlace a un perfil inventado.
- */
-const MENCION = /(?<![\w@.])@([a-zA-Z0-9_.-]{3,30})/g
-
-/**
- * Un texto con sus `@menciones` convertidas en enlaces al perfil.
- *
- * Nace de un uso real: un admin escribiendo «procedo a borrarla, las gotas se
- * eliminarán @macma». Esa mención es la única forma que tiene el mensaje de señalar a
- * quién va dirigido, y era texto muerto.
- *
- * **No se comprueba que el usuario exista.** Haría falta una petición por mensaje —o
- * una lista de todos los nombres en el cliente— para evitar, como mucho, llevar a un
- * 404 que ya sabe explicarse solo. El enlace se pinta siempre y la ficha de usuario se
- * encarga de lo demás.
- */
-export function ConMenciones({ texto }: { texto: string }) {
-  const partes: React.ReactNode[] = []
-  let ultimo = 0
-  for (const m of texto.matchAll(MENCION)) {
-    const i = m.index ?? 0
-    if (i > ultimo) partes.push(texto.slice(ultimo, i))
-    partes.push(
-      <Link
-        key={`${i}-${m[1]}`}
-        component={RouterLink}
-        to={`/users/${encodeURIComponent(m[1])}`}
-        sx={{ fontWeight: 700, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-      >
-        @{m[1]}
-      </Link>,
-    )
-    ultimo = i + m[0].length
-  }
-  if (ultimo === 0) return <>{texto}</>
-  partes.push(texto.slice(ultimo))
-  return <>{partes.map((p, i) => <Fragment key={i}>{p}</Fragment>)}</>
 }
 
 /**

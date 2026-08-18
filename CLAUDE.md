@@ -537,6 +537,31 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   registro, no por coordenadas del punto. **Pendiente:** poblarlas en producción y, más adelante,
   el modelo de permisos de "admins por región".
 
+## Texto escrito por la gente (`lib/richText.ts` + `TextoRico`)
+
+- Descripciones, reseñas e incidencias pintan sus **direcciones web y sus `@menciones`**
+  como enlaces. Un tokenizador puro (`tokeniza`) devuelve trozos y el componente hace
+  elementos de React: **no se genera HTML en ningún punto**, así que no hay camino por el
+  que un texto de usuario acabe siendo marcado.
+- **No se gana por nivel, y se pensó.** La dirección ya se ve escrita, así que un candado
+  ahí no impide copiarla — solo estorba a quien viene de buenas. Lo que mueve el spam de
+  enlaces es el SEO, y eso lo corta `rel="nofollow ugc"`, no un nivel; para el abuso ya
+  están las denuncias y los moderadores. Además haría que la misma frase se viera distinta
+  según quién la escribe. Es coherente con la regla de la escalera: los niveles dan poder
+  sobre el mapa, no sobre las personas.
+- **La descripción NO lleva menciones** (`menciones={false}`): el servidor solo avisa de
+  las de reseñas e incidencias, y subrayar a alguien a quien nadie va a avisar es justo lo
+  que la paridad cliente/servidor existe para impedir.
+- Que el esquema esté **dentro de la expresión regular** es la defensa: `javascript:` y
+  `data:` no pueden coincidir. No es una comprobación posterior que se pueda olvidar.
+- Los paréntesis se **cuentan**, no se recortan: `…/wiki/Fuente_(arquitectura)` termina en
+  uno que sí es suyo y `(mira …/wiki/Font)` en uno que no. Y los enlaces se buscan **antes**
+  que las menciones, o el `@algu` de `https://x.com/@algu` parte el enlace por la mitad.
+- **`web/` ya tiene tests**: `npm test` → `node --test scripts/*.test.ts`, con el runner y
+  el soporte de TypeScript **nativos de Node 24**, sin ninguna dependencia. Van dentro de
+  `npm run build`, así que también corren en CI. Aquí sí valía la pena montar esto —lo que
+  antes no— porque un parser tiene casos límite que se rompen en silencio.
+
 ## Compartir y buscadores (Cloudflare Pages Functions)
 
 - La web es un SPA: **un** `index.html` para las 60.000 fichas, así que todas compartían

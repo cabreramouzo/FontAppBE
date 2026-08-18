@@ -76,7 +76,8 @@ import { isStale, timeAgo } from '../lib/time'
 import { FreshnessChip } from '../components/FreshnessChip'
 import { freshnessOf } from '../lib/freshness'
 import { FontBadges } from '../components/FontBadges'
-import { Autor, ConMenciones } from '../components/AuthorLine'
+import { Autor } from '../components/AuthorLine'
+import { TextoRico } from '../components/RichText'
 import { FontHiddenNotice, FontMaintenance } from '../components/FontMaintenance'
 import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
@@ -187,7 +188,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
         </Typography>
       </Stack>
       {c.rating != null && <StarRating value={c.rating} size={18} />}
-      {c.body && <Typography sx={{ my: 0.5 }}><ConMenciones texto={c.body} /></Typography>}
+      {c.body && <Typography sx={{ my: 0.5 }}><TextoRico texto={c.body} /></Typography>}
       {c.image && (
         <Box>
           <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />
@@ -783,7 +784,12 @@ export function FontDetailPage() {
         <EditFontForm font={font} canManage={!!user && (user.isAdmin || font.creator?.id === user.id)} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load() }} />
       ) : (
         <>
-          {font.description && <Typography color="text.secondary">{font.description}</Typography>}
+          {font.description && (
+            <Typography color="text.secondary">
+              {/* Sin menciones: el servidor no avisa de las que se escriban aquí. */}
+              <TextoRico texto={font.description} menciones={false} />
+            </Typography>
+          )}
           {(() => {
             const src = sourceInfo(font.source)
             const dr = drinkableInfo(font.drinkable)
@@ -919,7 +925,7 @@ export function FontDetailPage() {
                     enlazadas: un aviso de moderación suele nombrar a quien afecta, y
                     ese @nombre era texto muerto. */}
                 <Typography variant="body2" sx={{ ...(r.resolvedAt && { color: 'text.secondary' }) }}>
-                  <Autor username={r.username} staff={r.staff} />: <ConMenciones texto={r.message} />
+                  <Autor username={r.username} staff={r.staff} />: <TextoRico texto={r.message} />
                 </Typography>
                 {/* Resuelta: se tacha el problema, no se esconde. Que la fuente estuvo
                     rota y volvió a manar es lo que mira quien duda si acercarse. */}

@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/check-i18n.mjs && tsc -b && vite build",
+    "build": "node scripts/check-i18n.mjs && npm test && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "check:i18n": "node scripts/check-i18n.mjs"
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "test": "node --test scripts/*.test.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
