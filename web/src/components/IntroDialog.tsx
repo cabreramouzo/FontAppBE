@@ -6,6 +6,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Link from '@mui/material/Link'
+import { useTurno } from '../lib/asks'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 
@@ -16,18 +17,19 @@ const SEEN_KEY = 'fontapp_intro_seen'
 export function IntroDialog() {
   const { user, loading } = useAuth()
   const { t } = useI18n()
-  const [open, setOpen] = useState(false)
+  const [listo, setListo] = useState(false)
+  const open = useTurno('intro', listo)
 
   useEffect(() => {
     if (loading || user) return // espera a restaurar sesión; no la muestres a logueados
     try {
       if (localStorage.getItem(SEEN_KEY)) return
     } catch { /* sin almacenamiento: la mostramos igualmente */ }
-    setOpen(true)
+    setListo(true)
   }, [user, loading])
 
   function close() {
-    setOpen(false)
+    setListo(false)
     try { localStorage.setItem(SEEN_KEY, '1') } catch { /* no se puede persistir: da igual */ }
   }
 

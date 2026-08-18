@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import InstallMobileIcon from '@mui/icons-material/InstallMobile'
 import IosShareIcon from '@mui/icons-material/IosShare'
+import { sesiones, useTurno } from '../lib/asks'
 import { useI18n } from '../i18n/I18nContext'
 
 // Aviso "añade a pantalla de inicio".
@@ -69,19 +70,23 @@ function isIOSSafari(): boolean {
 
 export function InstallPrompt() {
   const { t } = useI18n()
-  const [show, setShow] = useState(false)
+  const [listo, setListo] = useState(false)
+  const show = useTurno('install', listo)
   const [mode, setMode] = useState<'ios' | 'android'>('ios')
   const deferred = useRef<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
     if (dismissedRecently() || isInstalled()) return
+    // Nadie instala en su pantalla de inicio algo que ha visto una vez. A partir de la
+    // segunda visita ya hay una razón, y de paso deja limpia la pantalla del cartel.
+    if (sesiones() < 2) return
 
     // Android/Chromium: capturamos el evento para lanzar la instalación nosotros.
     const onBip = (e: Event) => {
       e.preventDefault()
       deferred.current = e as BeforeInstallPromptEvent
       setMode('android')
-      setShow(true)
+      setListo(true)
     }
     window.addEventListener('beforeinstallprompt', onBip)
 
@@ -89,14 +94,14 @@ export function InstallPrompt() {
     if (window.__bipEvent) {
       deferred.current = window.__bipEvent as BeforeInstallPromptEvent
       setMode('android')
-      setShow(true)
+      setListo(true)
     }
 
     // iOS Safari: aviso con la instrucción manual, tras un pequeño retardo.
     let timer: number | undefined
     if (isIOSSafari()) {
       setMode('ios')
-      timer = window.setTimeout(() => setShow(true), 3000)
+      timer = window.setTimeout(() => setListo(true), 3000)
     }
 
     return () => {
@@ -108,7 +113,7 @@ export function InstallPrompt() {
   function dismiss() {
     // Guardamos la fecha del descarte: reaparecerá pasado el enfriamiento (~1 mes).
     try { localStorage.setItem(STORAGE_KEY, String(Date.now())) } catch { /* modo privado: da igual */ }
-    setShow(false)
+    setListo(false)
   }
 
   async function install() {

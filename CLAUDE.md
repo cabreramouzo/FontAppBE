@@ -444,8 +444,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   (`youtube`, no `yt`) para que la tabla del panel se lea sola.
 
 ## Pendiente / deuda
-- `R2ImageStorage` (Soto) compila pero **sin probar** contra un bucket real (necesita credenciales `R2_*`); en local usa disco.
-- Correo (`MailSender`): en dev `LogMailSender` (solo loguea); en prod `ResendMailSender` si hay `RESEND_API_KEY` + `MAIL_FROM` (requiere dominio propio con SPF/DKIM/DMARC). Sin probar contra Resend real.
+- `R2ImageStorage` (Soto) **está en producción y funcionando** (comprobado el 18/08/2026: las
+  fotos se sirven desde `pub-….r2.dev` con 200 y los cinco secretos `R2_*` están puestos).
+  En local sigue usando disco. Ojo, `fly.toml` **no monta ningún volumen**: si R2 se cayera
+  a disco local, las fotos se perderían en cada despliegue.
+- Correo (`MailSender`): en dev `LogMailSender` (solo loguea); en prod `ResendMailSender` si hay `RESEND_API_KEY` + `MAIL_FROM` (requiere dominio propio con SPF/DKIM/DMARC). Los tres secretos (`RESEND_API_KEY`,
+  `MAIL_FROM`, `MAIL_REPLY_TO`) **están puestos en producción**; que un envío llegue de
+  verdad sigue sin comprobarse desde aquí.
   Plantillas en `Sources/App/Mail/`: bienvenida al registrarse (`WelcomeEmail`), reset de
   contraseña (`ResetEmail`, en AuthController), resumen semanal (`WeeklyDigest` calcula los
   datos, `WeeklyDigestEmail` los pinta) y **aviso de mención** (`MentionEmail` +
@@ -595,6 +600,28 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   ido a producción sin ninguna comprobación; el typecheck pescó seis errores a la primera.
   Usan `VITE_API_URL` —Pages expone las variables del panel también en ejecución—, así que
   no hay que configurar nada nuevo.
+
+## Interrupciones (`lib/asks.ts`)
+
+- **Como mucho un aviso a la vez.** Cada uno se escribió por su cuenta y ninguno sabía de
+  los otros: en una primera visita se apilaban tres en seis segundos —presentación,
+  «añádela a la pantalla de inicio» (3 s) y encuesta de la app nativa (6 s)— y en 393 px la
+  encuesta **tapaba el segundo botón de la presentación**, que es la llamada a crear una
+  cuenta. Justo lo que ve quien escanea el QR de un cartel.
+- `useTurno(quién, listo)`: el componente calcula sus propias condiciones y la cola decide
+  el turno por prioridad (`intro`/`welcome` → `badge` → `install` → `interest`). Al cerrarse
+  uno entra el siguiente. Añadir un aviso mañana es una línea en `PRIORIDAD`, y por eso ya
+  no puede volver a haber solapes por descuido.
+- El orden **no es por urgencia técnica sino por lo que cada uno se ha ganado el derecho a
+  interrumpir**: primero lo que explica qué es esto, luego el premio por algo que acabas de
+  hacer, y al final los dos que piden un favor.
+- Y hay puerta de entrada, no solo orden: **instalar** a partir de la 2ª visita y la
+  **encuesta** a partir de la 3ª (`sesiones()`, contadas con `sessionStorage`). Nadie
+  instala algo que ha visto una vez, y preguntarle a un desconocido si querría una app
+  nativa es pedirle una opinión que aún no puede tener mientras le gastas el único momento
+  en que te atendía.
+- El estado vive en un módulo y no en un contexto: son cinco componentes en dos árboles
+  (`App` y `Layout`) y un proveedor tendría que envolver los dos para nada más.
 
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).

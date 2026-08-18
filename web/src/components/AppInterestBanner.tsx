@@ -7,6 +7,7 @@ import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone'
+import { sesiones, useTurno } from '../lib/asks'
 import { useI18n } from '../i18n/I18nContext'
 import { submitAppInterest } from '../api/client'
 import type { AppPlatform } from '../api/types'
@@ -26,14 +27,20 @@ function detectPlatform(): AppPlatform {
 
 export function AppInterestBanner() {
   const { t } = useI18n()
-  const [open, setOpen] = useState(false)
+  const [listo, setListo] = useState(false)
+  const open = useTurno('interest', listo)
   const [thanks, setThanks] = useState(false)
 
   useEffect(() => {
     // Ya respondió (o lo cerró) antes: no volvemos a molestar.
     if (localStorage.getItem(STORAGE_KEY)) return
+    // Preguntarle a un desconocido si querría una app nativa es pedirle una opinión
+    // que todavía no puede tener, y gastarle el único momento en que te atendía. A la
+    // tercera visita ya sabe qué es esto. Con diez usuarios, además, la respuesta de
+    // alguien que acaba de llegar tampoco mide nada.
+    if (sesiones() < 3) return
     // Pequeño retardo para no aparecer nada más entrar.
-    const id = setTimeout(() => setOpen(true), 6000)
+    const id = setTimeout(() => setListo(true), 6000)
     return () => clearTimeout(id)
   }, [])
 
@@ -50,12 +57,12 @@ export function AppInterestBanner() {
       // Medición best-effort: si falla el envío, no molestamos al usuario.
     }
     // Cierre suave tras el agradecimiento.
-    setTimeout(() => setOpen(false), 2200)
+    setTimeout(() => setListo(false), 2200)
   }
 
   function dismiss() {
     remember('dismissed')
-    setOpen(false)
+    setListo(false)
   }
 
   return (

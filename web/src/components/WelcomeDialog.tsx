@@ -8,6 +8,7 @@ import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
+import { useTurno } from '../lib/asks'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 
@@ -15,6 +16,7 @@ import { useI18n } from '../i18n/I18nContext'
 export function WelcomeDialog() {
   const { justRegistered, dismissWelcome, user } = useAuth()
   const { t } = useI18n()
+  const abierto = useTurno('welcome', justRegistered)
 
   const bullets: Array<{ emoji: string; key: string }> = [
     { emoji: '🗺️', key: 'welcome.b1' },
@@ -27,7 +29,7 @@ export function WelcomeDialog() {
   ]
 
   return (
-    <Dialog open={justRegistered} onClose={dismissWelcome} maxWidth="xs" fullWidth
+    <Dialog open={abierto} onClose={dismissWelcome} maxWidth="xs" fullWidth
       slotProps={{ paper: { sx: { overflow: 'hidden' } } }}>
       {/* Cabecera: la ilustración a ancho completo. En vez de superponer color,
           desvanecemos la PROPIA imagen a transparente por abajo con una máscara,

@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import { useTheme } from '@mui/material/styles'
+import { useTurno } from '../lib/asks'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { BadgeArt } from './BadgeArt'
@@ -38,6 +39,8 @@ export function BadgeCelebration() {
   const { user } = useAuth()
   const modo = useTheme().palette.mode === 'dark' ? 'dark' : 'light'
   const [novedad, setNovedad] = useState<Novedad | null>(null)
+  // En la cola para que ni el aviso de instalar ni la encuesta se le pongan encima.
+  const miTurno = useTurno('badge', novedad !== null)
 
   // La dependencia es el identificador y no el objeto: `AuthContext` rehace el usuario
   // al refrescar la sesión, y con el objeto esto se dispararía otra vez sin que haya
@@ -66,7 +69,9 @@ export function BadgeCelebration() {
     }
   }, [userID])
 
-  if (!novedad) return null
+  // El guard va DESPUÉS de todos los hooks, como manda React (ya nos costó dos
+  // pantallas en blanco por ponerlo antes).
+  if (!novedad || !miTurno) return null
   const { badge, level, otras } = novedad
   // Dos celebraciones con la misma cara: subir de nivel y ganar una insignia. Comparten
   // diálogo a propósito — la fiesta es la misma y así el gesto se reconoce.
