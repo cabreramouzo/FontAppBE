@@ -36,6 +36,15 @@ export const MAP_LAYERS: MapLayer[] = [
     maxZoom: 17,
   },
   {
+    // Mapa base oficial del ICGC. El servicio WMTS publica teselas XYZ en
+    // Web Mercator, por lo que Leaflet puede consumirlo sin ningún adaptador.
+    id: 'icgc',
+    labelKey: 'layer.icgc',
+    url: 'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic/MON3857NW/{z}/{x}/{y}.png',
+    attribution: 'Catalunya &copy; <a href="https://www.icgc.cat/">ICGC</a> (CC BY 4.0); resta del món &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18,
+  },
+  {
     id: 'satelit',
     labelKey: 'layer.satellite',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
