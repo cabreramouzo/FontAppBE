@@ -744,7 +744,7 @@ select:not([class*="Mui"]) {
    Iba sin ninguna regla —era un `<a>` pelado— y por eso parecía lo que era: un enlace.
    Y en un mapa el objetivo se toca con el pulgar mientras andas, así que va a lo ancho
    del popup y con 40 px de alto, por encima del mínimo cómodo. */
-.leaflet-container a.popup-link {
+.popup-card .popup-link {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -770,20 +770,42 @@ select:not([class*="Mui"]) {
   transition: filter 0.15s ease;
 }
 
-.leaflet-container a.popup-link:hover {
+.popup-card:hover .popup-link {
   /* Oscurecer con un filtro y no con un segundo color: así vale igual para el azul claro
      y el oscuro sin declarar dos tonos más. */
   filter: brightness(0.92);
   text-decoration: none;
 }
 
-.leaflet-container a.popup-link:active { filter: brightness(0.85); }
+.popup-card:active .popup-link { filter: brightness(0.85); }
 
-.leaflet-container a.popup-link:focus-visible {
+.popup-card:focus-visible .popup-link {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .leaflet-container a.popup-link { transition: none; }
+  .popup-card .popup-link { transition: none; }
+}
+
+/* La tarjeta entera del popup es el enlace. El texto de dentro tiene que seguir siendo
+   texto: sin esto, el `.leaflet-container a { color: #0078A8 }` de Leaflet tiñe de azul
+   el nombre de la fuente y el distintivo de estado. */
+.leaflet-container a.popup-card {
+  display: block;
+  color: var(--fg);
+  text-decoration: none;
+  cursor: pointer;
+  /* Se estira hasta el borde del popup y recupera el hueco por dentro, para que el área
+     pulsable llegue a las esquinas en vez de dejar un marco muerto alrededor. */
+  margin: -4px;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.leaflet-container a.popup-card:hover { background: var(--border); }
+
+.leaflet-container a.popup-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }

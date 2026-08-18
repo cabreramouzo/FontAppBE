@@ -49,13 +49,23 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
       const srcText = src ? `${src.emoji} ${t(src.labelKey)}` : ''
       const drText = dr ? `${dr.emoji} ${t(dr.labelKey)}` : ''
       const el = document.createElement('div')
+      // Todo el popup es UN enlace, no solo el botón: en un mapa se toca con el pulgar
+      // mientras andas y el objetivo pequeño es el problema. Y va como `<a>` de verdad y
+      // no como un `<div>` con un `onclick`, para que siga funcionando con teclado, con
+      // «abrir en pestaña nueva» y con un lector de pantalla.
+      //
+      // El botón de dentro se queda como **señal**: sin algo que parezca pulsable, nadie
+      // descubre que la tarjeta entera lo es. Por eso es un `<span>` y no otro enlace —
+      // un enlace dentro de otro no es HTML válido.
       el.innerHTML = `
-        <strong>${escapeHtml(f.name)}</strong>
-        <div class="muted small">${srcText}${src && dr ? ' · ' : ''}${drText}</div>
-        ${ws ? `<div class="badge">${ws.emoji} ${t(`status.${ws.key}`)}</div>` : ''}
-        ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
-        <div><a href="/fonts/${f.id}" class="popup-link">${t('popup.detail')}</a></div>`
-      el.querySelector('.popup-link')?.addEventListener('click', (e) => {
+        <a href="/fonts/${f.id}" class="popup-card">
+          <strong>${escapeHtml(f.name)}</strong>
+          <div class="muted small">${srcText}${src && dr ? ' · ' : ''}${drText}</div>
+          ${ws ? `<div class="badge">${ws.emoji} ${t(`status.${ws.key}`)}</div>` : ''}
+          ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
+          <span class="popup-link">${t('popup.detail')}</span>
+        </a>`
+      el.querySelector('.popup-card')?.addEventListener('click', (e) => {
         e.preventDefault()
         navigate(`/fonts/${f.id}`)
       })

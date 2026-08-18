@@ -375,6 +375,23 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   enlace a una fuente concreta. El mapa te sigue hasta que tocas el mapa: arrastrar o
   hacer zoom desengancha el seguimiento; el botón «centrar en mí» lo vuelve a activar.
 
+## El popup del mapa
+
+- **Todo el popup es un enlace**, no solo el botón: se toca con el pulgar sobre un mapa en
+  movimiento y el objetivo pequeño era el problema. El área pulsable pasó de 142×40 a
+  150×93 px.
+- Va como `<a>` de verdad y no como un `<div>` con `onclick`, para que sigan funcionando el
+  teclado, «abrir en pestaña nueva» y los lectores de pantalla. El botón de dentro es un
+  `<span>` —un enlace dentro de otro no es HTML válido— y se queda como **señal**: sin algo
+  que parezca pulsable, nadie descubre que la tarjeta entera lo es.
+- El botón imita a MUI a mano porque **Leaflet no monta React**: los valores salen del tema
+  (radio 12, sin mayúsculas, peso 600) y el color de `--accent`, para no mantener un
+  segundo azul. Dos trampas que solo se ven midiendo: Leaflet trae
+  `.leaflet-container a { color: #0078A8 }` y gana a una clase suelta —el rótulo salía azul
+  sobre azul, y el nombre de la fuente también—, y el texto va **oscuro** porque es lo que
+  hace MUI (`getContrastText` ve este azul demasiado claro para blanco): 7,6:1 contra los
+  2,8:1 del blanco.
+
 ## Capas del mapa
 - Cinco capas elegibles (`web/src/lib/mapLayers.ts`, selector en `BaseLayers.tsx`, usado
   tanto en el mapa principal como en el de reubicar): OSM, OpenTopoMap, satélite de Esri
