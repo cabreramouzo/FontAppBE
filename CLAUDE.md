@@ -15,6 +15,8 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 
 ## Comandos
 - Build / tests backend: `swift build` · `swift test` (los tests de integración usan la DB `fontapp_test`).
+- ¿Toca ya generar miniaturas? `node web/scripts/peso-fotos.mjs` (mide producción).
+  Ver «Peso de las fotos» más abajo: la respuesta hoy es que no, y el script dice por qué.
 - Traducciones: `npm --prefix web run check:i18n` comprueba que los cinco diccionarios
   llevan **las mismas claves**. Va dentro de `npm run build`, así que también corre en CI.
   Existe porque un diccionario incompleto **no rompe nada visible**: `t()` devuelve la
@@ -649,6 +651,30 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   en que te atendía.
 - El estado vive en un módulo y no en un contexto: son cinco componentes en dos árboles
   (`App` y `Layout`) y un proveedor tendría que envolver los dos para nada más.
+
+## Peso de las fotos (decisión aplazada, con disparador)
+
+- Hay **un solo tamaño** por foto: `compressImage` a 1280 px y calidad 0,72. Esa misma
+  imagen se usa para la ficha, la `og:image` de la tarjeta de WhatsApp **y** los mosaicos
+  de 176 px de la rejilla de novedades y la galería.
+- Se planteó generar una miniatura y se **descartó por ahora, midiendo**. El cálculo a ojo
+  («385 KB para pintar 180 px») exageraba: medido sobre lo que de verdad se pinta, el
+  desperdicio es **~3×**, no un orden de magnitud —`maxDim` es un techo y muchas fotos
+  entran por debajo—, y **las 24 imágenes van con `loading="lazy"`**, así que los 6 MB del
+  feed solo los paga quien lo recorre entero.
+- **El disparador**: `node web/scripts/peso-fotos.mjs`. Más de **25 fotos distintas** en el
+  feed por defecto o más de **8 MB** en total. Hoy: 16 fotos y 6,0 MB (media 386 KB).
+  Crece solo si la tarjeta de entorno funciona y la gente empieza a subir fotos, que es
+  justamente cuando compensa.
+- **Qué hacer cuando toque**: la miniatura sale de `prepararFoto()` —único sitio por el que
+  pasa una foto, así que las cinco rutas de subida la heredan— a ~320 px y se guarda como
+  `<uuid>_t.jpg`. La rejilla y la galería la piden con respaldo `onError` a la grande, de
+  modo que **las fotos viejas siguen funcionando sin migración ni columna nueva**.
+- **A quién NO ayuda**, para no volver a discutirlo: el mapa (no carga fotos), la ficha
+  (quiere la grande) y la `og:image` (también).
+- Ojo al medirlo desde el navegador: R2 no manda `Timing-Allow-Origin`, así que
+  `transferSize` sale **0** y parece que las fotos no pesan nada. Hay que ir por
+  `Content-Length`, que es lo que hace el script.
 
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).
