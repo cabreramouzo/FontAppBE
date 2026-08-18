@@ -526,6 +526,28 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   `StaffBadge`. Es una exposición más estrecha que hacer público `UserResponse.role` —que
   se calla a propósito—: acompaña a un mensaje escrito en público, no responde «qué cargo
   tiene esta persona» sobre cualquiera.
+- **El service worker y el origen de la API.** El SW es un fichero estático de `public/`,
+  así que Vite **no** lo procesa y no puede leer `VITE_API_URL`. Enrutaba la API con
+  `pathname.startsWith('/api')`, que solo acierta en **desarrollo** (proxy de Vite en el
+  mismo origen): en producción el backend está en `fontapp.fly.dev` y hay un `return` para
+  todo lo ajeno, así que **no se cacheaba ni una respuesta** — comprobado en producción, el
+  caché `fontapp-api-v2` ni existía. Sin cobertura la app abría y no tenía ni una fuente.
+  Ahora el origen viaja en la URL de registro (`/sw.js?api=…`), que sobrevive a que el
+  navegador mate y reviva el SW; un `postMessage` no, porque el dato viviría en memoria.
+- **Nada autenticado se cachea**: la caché del SW la comparten todas las sesiones del
+  navegador. Se mira la cabecera `Authorization` y no una lista de rutas — la lista ya se
+  había quedado vieja (solo contemplaba `/gamification/me`, y `/notifications` se habría
+  cacheado en cuanto el enrutado funcionara). La lista se mantiene como segunda barrera.
+- **Teselas: todas las capas**, no solo OSM (`TILE_HOSTS`). Antes quien caminaba con el
+  topográfico del IGN —el que rotula las fuentes con su topónimo— se quedaba sin mapa al
+  perder cobertura. Al añadir una capa hay que tocar `mapLayers.ts` **y** `sw.js`, y el
+  primero lo avisa.
+- `scripts/sw-routing.test.ts` carga el `sw.js` con un `self` de mentira y le pregunta por
+  sus decisiones. No registra nada —eso no se puede en un test— pero cubre justo donde
+  estaba el fallo, que era lógica pura y nunca dio la cara.
+- **Lo que sigue sin cumplirse del cartel:** un caché no descarga lo que no has mirado, así
+  que «funciona sin cobertura» depende de haber pasado antes por la zona. Para prometerlo
+  de verdad haría falta una **descarga de zona** explícita.
 - **Service worker y redirecciones:** un SW no puede devolver una respuesta marcada como
   redirigida (WebKit: «Response served by service worker has redirections») y la marca
   sobrevive a la Cache API. `/index.html` responde **308 hacia `/`** en Cloudflare Pages,

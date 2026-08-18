@@ -3,16 +3,49 @@
 // - Teselas del mapa (OSM, otro dominio): cache-first con tope (LRU sencillo).
 // - API GET del mismo origen: stale-while-revalidate (sirve al instante, refresca si hay red).
 // - Navegación SPA: network-first con respaldo en el shell.
-const SHELL_CACHE = 'fontapp-shell-v3'
-const TILE_CACHE = 'fontapp-tiles-v1'
-const API_CACHE = 'fontapp-api-v2'
+const SHELL_CACHE = 'fontapp-shell-v4'
+const TILE_CACHE = 'fontapp-tiles-v2'
+const API_CACHE = 'fontapp-api-v3'
 // El shell NO se pide a `/index.html`: en Cloudflare Pages esa ruta responde 308 hacia
 // `/`, y `cache.addAll` guardaría la respuesta redirigida bajo esa misma clave — que es
 // justo la que sirve el respaldo sin conexión. Se pide `/` y se guarda bajo las dos.
 const SHELL_EXTRA = ['/manifest.webmanifest', '/icon.svg']
 const TILE_LIMIT = 700 // ~ suficiente para la zona de una ruta sin llenar el móvil
 
-const isTile = (url) => /(^|\.)tile\.openstreetmap\.org$/.test(url.hostname)
+// Servidores de teselas de TODAS las capas (ver `src/lib/mapLayers.ts`). Antes solo
+// estaba OpenStreetMap, así que quien caminaba con el topográfico del IGN —la capa que
+// rotula las fuentes con su topónimo, la más útil en el monte— se quedaba sin mapa en
+// cuanto perdía cobertura.
+//
+// La lista se duplica aquí a la fuerza: el service worker es un fichero estático y no
+// puede importar el registro de capas. Al añadir una capa nueva hay que tocar los dos
+// sitios, y `mapLayers.ts` lo dice.
+const TILE_HOSTS = [
+  /(^|\.)tile\.openstreetmap\.org$/,
+  /(^|\.)tile\.opentopomap\.org$/,
+  /(^|\.)arcgisonline\.com$/,
+  /(^|\.)ign\.es$/,
+  /(^|\.)icgc\.cat$/,
+]
+const isTile = (url) => TILE_HOSTS.some((re) => re.test(url.hostname))
+
+/// El origen del backend, que llega en la URL de registro del propio SW (ver `main.tsx`).
+/// Sin esto, en producción no se cacheaba nada de la API: está en otro dominio y aquí
+/// abajo hay un `return` para todo lo que no sea el origen propio.
+const API_ORIGIN = (() => {
+  try {
+    const crudo = new URL(self.location.href).searchParams.get('api')
+    return crudo ? new URL(crudo).origin : null
+  } catch {
+    return null
+  }
+})()
+
+/// ¿Es una llamada a nuestra API? Vale para los dos montajes: el proxy `/api` de
+/// desarrollo y el backend en otro dominio de producción.
+const isAPI = (url) =>
+  (url.origin === self.location.origin && url.pathname.startsWith('/api')) ||
+  (API_ORIGIN !== null && url.origin === API_ORIGIN)
 
 // Una respuesta que ha pasado por una redirección queda marcada (`res.redirected`), y un
 // service worker NO puede devolverla: WebKit corta con "Response served by service worker
@@ -108,27 +141,35 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // A partir de aquí, solo nuestro propio origen.
-  if (url.origin !== self.location.origin) return
+  // Fotos subidas, vengan del disco local o de R2 (otro dominio). Se mira la ruta y no
+  // el servidor a propósito: así vale para los dos sitios sin apuntar ninguno.
+  if (url.pathname.includes('/uploads/')) {
+    event.respondWith(cacheFirst(req, API_CACHE, { limit: 300 }))
+    return
+  }
 
-  // API (proxy /api en dev o backend en el mismo origen): stale-while-revalidate.
-  if (url.pathname.startsWith('/api')) {
-    // El perfil de gamificación es privado y cambia en cuanto se liquida una aportación
-    // o se despliega una familia nueva. Servir primero una copia antigua deja la vitrina
-    // congelada hasta la siguiente visita y, además, una respuesta autenticada no debe
-    // sobrevivir en una caché compartida entre sesiones del navegador.
-    if (url.pathname === '/api/gamification/me') {
+  // Nuestra API. Va ANTES del corte por origen porque en producción está en otro dominio.
+  if (isAPI(url)) {
+    // **Nada autenticado se guarda.** La caché del service worker la comparten todas las
+    // sesiones del navegador, así que una respuesta con `Authorization` podría acabar
+    // sirviéndosele a otra persona en el mismo móvil. Se mira la cabecera y no una lista
+    // de rutas: la lista se queda vieja en cuanto se añade un endpoint privado, y aquí ya
+    // pasó — solo estaba contemplado `/gamification/me`, y `/notifications` o
+    // `/gamification/guarded` se habrían cacheado en cuanto el enrutado funcionara.
+    // La lista se mantiene igualmente por si alguna cabecera no llegara hasta aquí.
+    const privada =
+      req.headers.has('authorization') ||
+      /\/(gamification\/(me|guarded|badges)|notifications|auth)(\/|$|\?)/.test(url.pathname)
+    if (privada) {
       event.respondWith(fetch(req))
       return
     }
     event.respondWith(staleWhileRevalidate(req, API_CACHE))
     return
   }
-  // Imágenes subidas: cache-first.
-  if (url.pathname.startsWith('/uploads')) {
-    event.respondWith(cacheFirst(req, API_CACHE, { limit: 300 }))
-    return
-  }
+
+  // A partir de aquí, solo nuestro propio origen.
+  if (url.origin !== self.location.origin) return
 
   // Navegación SPA: network-first, respaldo en el shell.
   if (req.mode === 'navigate') {

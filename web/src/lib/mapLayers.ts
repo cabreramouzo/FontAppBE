@@ -1,3 +1,6 @@
+// OJO: al añadir una capa, añade también su servidor a `TILE_HOSTS` en
+// `public/sw.js`, o sus teselas no se guardan y esa capa se queda en blanco sin
+// cobertura. El service worker es un fichero estático y no puede importar esto.
 // Capas del mapa que puede elegir el usuario.
 //
 // Añadir una capa es añadir una entrada aquí: el selector se construye solo, en el

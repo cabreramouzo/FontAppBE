@@ -37,7 +37,18 @@ document.addEventListener('gesturechange', (e) => { if (enElMapa(e.target)) e.pr
 // PWA: registramos el service worker solo en producción (en dev interferiría con el HMR de Vite).
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    // El origen de la API viaja en la URL del propio service worker.
+    //
+    // Hace falta porque el SW es un fichero estático de `public/`: Vite no lo procesa, así
+    // que no puede leer `VITE_API_URL`. Y sin saberlo no cacheaba **ni una** respuesta de
+    // la API en producción, donde el backend está en otro dominio — el filtro de
+    // `pathname.startsWith('/api')` solo acierta en desarrollo, con el proxy de Vite.
+    //
+    // En la URL y no por `postMessage` porque el navegador mata y revive el SW cuando le
+    // parece: un dato en memoria se pierde, y `self.location` no.
+    const api = import.meta.env.VITE_API_URL || ''
+    const sw = api ? `/sw.js?api=${encodeURIComponent(api)}` : '/sw.js'
+    navigator.serviceWorker.register(sw).catch(() => {
       // sin SW la app sigue funcionando; solo no será instalable/offline
     })
   })
