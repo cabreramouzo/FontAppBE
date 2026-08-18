@@ -192,15 +192,28 @@ cargado) no hace falta dedupe; junto a España conviene `--dedupe` para no dupli
    Ejemplo real, el Pirineo francés (bbox intersectado con el área de Francia para no
    colarse en España):
    ```overpassql
-   [out:json][timeout:240];
+   [out:json][timeout:540];
    area["ISO3166-1"="FR"][admin_level=2]->.fr;
    (
-     node["amenity"="drinking_water"](area.fr)(42.25,-1.95,43.35,3.25);
-     node["natural"="spring"]["drinking_water"](area.fr)(42.25,-1.95,43.35,3.25);
-     node["man_made"="water_tap"](area.fr)(42.25,-1.95,43.35,3.25);
+     node["amenity"="drinking_water"]["access"!~"^(no|private)$"](area.fr)(42.25,-1.95,45.05,4.90);
+     node["man_made"="water_tap"]["access"!~"^(no|private)$"](area.fr)(42.25,-1.95,45.05,4.90);
+     // Manantiales: solo los que **dicen algo de sí mismos**. Ver la nota de abajo.
+     node["natural"="spring"]["drinking_water"]["access"!~"^(no|private)$"](area.fr)(42.25,-1.95,45.05,4.90);
+     node["natural"="spring"]["name"]["access"!~"^(no|private)$"](area.fr)(42.25,-1.95,45.05,4.90);
+     node["natural"="spring"]["man_made"]["access"!~"^(no|private)$"](area.fr)(42.25,-1.95,45.05,4.90);
    );
    out body;
    ```
+
+   **Un `natural=spring` sin ningún otro tag no es una fuente.** Se comprobó mirando por
+   satélite diez al azar de ese grupo: son charcos o el nacimiento de un riachuelo, no
+   sitios a los que ir a beber. En la caja de Occitània eran **2.318 de 5.357** manantiales.
+   Los que sí valen se reconocen porque llevan **nombre**, una **captación** (`man_made`,
+   incluido `spring_box`) o algo dicho sobre **potabilidad** — de los diez de la primera
+   muestra, los buenos («La Fontaine du Pélerin», «Source de la Barben») todos lo cumplían.
+
+   Y fuera siempre lo de `access=no|private`: son captaciones de abastecimiento urbano.
+   Eran 108 más.
    ```bash
    swift run App import-fonts pirineu-frances-osm.json --unnamed Fontaine --unnamed-spring Source
    ```

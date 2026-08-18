@@ -431,6 +431,11 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   uno (`content_flags` acepta `photo`).
 
 ## Datos de fuentes
+- Al importar de OSM, un **`natural=spring` sin ningún otro tag no es una fuente**: se
+  miraron diez al azar por satélite y son charcos o nacimientos de riachuelo (2.318 de
+  5.357 en la caja de Occitània). Valen los que llevan nombre, captación o potabilidad.
+  Y fuera siempre `access=no|private`, que son captaciones de abastecimiento. La consulta
+  con los filtros está en DEPLOY.md.
 - Dos orígenes: **OpenStreetMap** (`import-fonts`, ODbL) y el **WFS abierto de la ACA**
   (`AIGUA:AIGUA_FONTS`, ~10.000 fuentes de Catalunya con topónimo oficial; es la capa que
   alimentaba la desaparecida app CercaFonts del ICGC). **La ACA autorizó el uso**; se atribuye
