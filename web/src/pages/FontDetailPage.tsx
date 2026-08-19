@@ -492,6 +492,12 @@ export function FontDetailPage() {
   // estado del agua y una valoración cuando lo único que había dicho es «tengo la foto».
   // El salto además era lo más raro de todo: pulsas arriba y la página se va a otro sitio.
   const [subiendoFoto, setSubiendoFoto] = useState(false)
+  // Tras subir la foto se pregunta el estado del agua. La foto ilustra la fuente, pero lo
+  // que la app viene a contestar es si mana HOY, y quien acaba de fotografiarla está
+  // delante: es el único momento en que esa pregunta se responde sola. Sin esto, el
+  // camino corto de la foto se come a la reseña —que era el riesgo de haberlo hecho tan
+  // evidente— en vez de llevar a ella.
+  const [preguntaEstado, setPreguntaEstado] = useState(false)
   async function subirFotoDePortada(file: File) {
     if (!font) return
     setSubiendoFoto(true)
@@ -503,6 +509,7 @@ export function FontDetailPage() {
       const image = await uploadImage(photo, meta)
       await setFontPhoto(font.id, image)
       toast.show(t('toast.photoAdded'))
+      setPreguntaEstado(true)
       load()
     } catch (e) {
       // Sin cobertura se queda en el móvil y sube sola al volver la red. Es justo el caso:
@@ -510,11 +517,30 @@ export function FontDetailPage() {
       if (isOffline(e)) {
         await enqueue({ kind: 'photo', fontID: font.id, photo, photoName: photo.name, photoMeta: meta })
         toast.show(t('offline.savedPhoto'))
+        // También sin cobertura: la reseña tiene su propia cola, y el estado del agua
+        // caduca mucho más deprisa que la foto.
+        setPreguntaEstado(true)
       } else {
         setError(describeError(e, t))
       }
     } finally {
       setSubiendoFoto(false)
+    }
+  }
+  async function publicaEstado(estado: string) {
+    if (!font) return
+    setPreguntaEstado(false)
+    try {
+      await createComment(font.id, { waterStatus: estado })
+      toast.show(t('toast.reviewPosted'))
+      load()
+    } catch (e) {
+      if (isOffline(e)) {
+        await enqueue({ kind: 'comment', fontID: font.id, data: { waterStatus: estado } })
+        toast.show(t('offline.savedUpdate'))
+      } else {
+        setError(describeError(e, t))
+      }
     }
   }
   const [creatorName, setCreatorName] = useState<string | null>(null)
@@ -876,28 +902,36 @@ export function FontDetailPage() {
             // HTML válido (misma trampa que el enlace dentro del enlace del popup). Se
             // queda como **señal**, porque sin algo que parezca pulsable nadie descubre
             // que la tarjeta entera lo es.
+            // Discreto a propósito, y esto se corrigió: la primera versión llevaba borde de
+            // 2 px en el color de acción y era lo más llamativo de la ficha. Sale en
+            // **64.150 de 64.295 fuentes**, o sea casi todas, así que eso convertía lo
+            // secundario en lo principal de casi toda la app y empujaba a poner foto en vez
+            // de contar si mana, que es a lo que la app viene. Una línea fina y bajo,
+            // suficiente para descubrirlo; el estado del agua manda.
             <Paper
               variant="outlined"
               {...(user && !subiendoFoto
-                ? { component: 'label' as const, 'aria-label': t('detail.addPhoto'), sx: { cursor: 'pointer' } }
+                ? { component: 'label' as const, 'aria-label': t('detail.addPhoto') }
                 : {})}
               sx={{
-                p: 2, my: 1, borderRadius: 2, textAlign: 'center',
-                width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5,
-                // Más marcada que un borde de tabla: 2 px y en el color de acción, para
-                // que se lea como un sitio donde falta algo y no como un aviso apagado.
-                border: '2px dashed', borderColor: user ? 'primary.main' : 'divider',
-                bgcolor: 'action.hover',
-                ...(user && !subiendoFoto && { cursor: 'pointer', '&:hover': { bgcolor: 'action.selected' } }),
+                px: 2, py: 1.25, my: 1, borderRadius: 2,
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                border: '1px dashed', borderColor: 'divider',
+                ...(user && !subiendoFoto && {
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'action.hover', borderColor: 'text.secondary' },
+                }),
               }}
             >
-              {subiendoFoto ? <CircularProgress size={24} /> : <PhotoCameraIcon color={user ? 'primary' : 'disabled'} />}
+              {subiendoFoto ? <CircularProgress size={18} /> : <PhotoCameraIcon fontSize="small" color="disabled" />}
               <Typography variant="body2" color="text.secondary">
                 {subiendoFoto ? t('image.uploading') : t('detail.noPhotoYet')}
               </Typography>
               {user && !subiendoFoto && (
                 <>
-                  <Typography component="span" variant="button" color="primary">{t('detail.addPhoto')}</Typography>
+                  <Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                    {t('detail.addPhoto')}
+                  </Typography>
                   {/* Toda la tarjeta es el `<label>`, así que se abre la cámara pulsando
                       donde sea. El input va oculto dentro: sin `<button>` de por medio no
                       hace falta pelearse con el anidamiento, y el selector nativo se
@@ -909,6 +943,33 @@ export function FontDetailPage() {
                 </>
               )}
             </Paper>
+          )}
+          {preguntaEstado && (
+            // Aparece donde el usuario acaba de mirar y con la respuesta a un toque. La
+            // reseña se publica **solo con el estado**, sin texto ni valoración: el
+            // servidor ya lo acepta, y pedir más aquí sería volver al formulario del que
+            // veníamos huyendo.
+            <Alert
+              severity="info" icon={false} sx={{ my: 1 }}
+              action={<Button size="small" color="inherit" onClick={() => setPreguntaEstado(false)}>{t('detail.notNow')}</Button>}
+            >
+              <Typography variant="body2" sx={{ mb: 1 }}>{t('detail.andHowIsIt')}</Typography>
+              <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+                {/* Fuera `unknown` y fuera `gone`. `unknown` no tiene sentido: acabas de
+                    estar delante. Y «ya no está» a un toque después de fotografiarla es
+                    casi una contradicción —si la has fotografiado, existe— y además es el
+                    estado más caro: con dos testimonios de personas distintas se puede
+                    retirar la fuente del mapa. Un atajo no debe llevar ahí; quien de
+                    verdad lo quiera decir tiene el formulario entero. */}
+                {WATER_STATUS_OPTIONS.filter((k) => k !== 'unknown' && k !== 'gone').map((k) => (
+                  <Chip
+                    key={k} clickable size="small" variant="outlined"
+                    label={`${WATER_STATUS[k].emoji} ${t(`status.${k}`)}`}
+                    onClick={() => publicaEstado(k)}
+                  />
+                ))}
+              </Stack>
+            </Alert>
           )}
           <LocationActions font={font} />
           {avg != null && (

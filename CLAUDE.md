@@ -509,6 +509,22 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   que al no traer `status` se tomaba por fallo transitorio y reintentaba para siempre.
 - El rótulo de dentro es solo **señal**, y sin sesión el hueco no es pulsable: no hay nada
   que hacer si no puedes aportar.
+- **El hueco va discreto, y esto se corrigió sobre la marcha.** La primera versión llevaba
+  borde de 2 px en el color de acción y era lo más llamativo de la ficha. Sale en **64.150
+  de 64.295 fuentes**, o sea casi todas: eso convertía lo secundario en lo principal de
+  casi toda la app y empujaba a poner foto en vez de contar si mana, que es a lo que la app
+  viene. Ahora es una línea fina de una sola fila; «informar del estado» es el botón lleno.
+- **Y después de la foto se pregunta el estado** (`preguntaEstado`): «Ya que estás, ¿cómo
+  mana?» con los chips a un toque, que publica una reseña **solo con el estado** —el
+  servidor ya lo acepta— sin texto ni valoración. Así el camino corto de la foto **lleva** a
+  la reseña en vez de comérsela. Y es honesto: quien acaba de fotografiar la fuente está
+  delante, que es el único momento en que esa pregunta se contesta sola.
+  Los chips **no incluyen `unknown` ni `gone`**: el primero no tiene sentido estando allí, y
+  «ya no está» a un toque justo después de fotografiarla es casi una contradicción y es
+  además el estado más caro —dos testimonios de personas distintas permiten retirar la
+  fuente del mapa—. Un atajo no debe llevar ahí; para eso está el formulario entero.
+  Ojo con el desequilibrio de fondo, que sigue: el baremo paga **primera foto 120** y
+  **primera reseña 80**, o sea que los puntos también empujan hacia la foto.
 - **Puntúa como siempre**, y hubo que arreglarlo para que fuera verdad. El baremo saca las
   aportaciones de foto de dos sitios: las reseñas con imagen y las **ediciones que cambian
   `image`**. La ruta directa deja una edición firmada, así que cobra «primera foto» (120) y
