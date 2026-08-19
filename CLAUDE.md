@@ -488,8 +488,16 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   agua** a propósito — «fuentes» a secas, sin contexto, es tipografía.
 - El diálogo de donación del pie **se ha borrado**: decía menos (solo dinero) y tener el
   mismo contenido en dos sitios garantiza que uno se quede viejo.
+- **Tres formas de pagar, y el orden importa**: mecenatge recurrente en Aixeta
+  (`fontapp.aixeta.cat`) **primero y en botón lleno**, Ko-fi debajo y en botón vacío, y
+  Bitcoin al final. Es lo que pide el texto de arriba —«la ayuda que más sirve es la que se
+  repite»—, y ofrecer primero el pago único después de decir eso sería contradecirse en dos
+  líneas.
+- Los dos son «un café», así que **cada uno lleva su línea debajo** («cada mes» / «un solo
+  pago»). Sin eso los dos botones se leen igual y no hay forma de saber cuál es el que se
+  acaba de pedir.
 - **Pendiente dicho por el autor:** pago directo con Apple Pay vía Stripe, que iría en el
-  bloque de costes junto a Ko-fi y Bitcoin.
+  bloque de costes junto a los demás.
 - **La regla de fondo, que vale para lo que venga:** móvil y escritorio se diseñan en
   paralelo, no se escala uno al otro. El corte es siempre `breakpoints.down('sm')` y la
   forma cambia de verdad —hoja, pantalla, barra de abajo—, no solo de tamaño.

@@ -18,6 +18,10 @@ import { comparteTexto } from '../lib/share'
 // cargar el script de terceros de Ko-fi.
 const KOFI_URL = 'https://ko-fi.com/G5G724DC37'
 const BTC_ADDRESS = 'bc1qu29jxn37wwwrqz6f6qyrwsaa8xn72xy9wmeh0w'
+// Mecenatge recurrent (Aixeta). Va PRIMER y en botón lleno porque es lo que el texto de
+// arriba pide —«la ayuda que más sirve es la que se repite»—, y sería raro pedir algo
+// mensual y ofrecer primero el pago único.
+const AIXETA_URL = 'https://fontapp.aixeta.cat/'
 
 // El enlace que se comparte lleva su código de campaña, como los carteles: así el panel
 // de administración puede decir cuánta gente entró porque un amigo se lo pasó, que es
@@ -99,13 +103,30 @@ export function SupportPage() {
       <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('support.costsTitle')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('support.costsBody')}</Typography>
 
+      {/* Dos cafés que no son lo mismo, así que **cada uno dice de qué va**: sin la línea
+          de debajo los dos botones se leen igual y no hay forma de saber cuál es el
+          mensual, que es justo el que se pide arriba. */}
       <Button
         fullWidth variant="contained" disableElevation startIcon={<LocalCafeIcon />}
+        component="a" href={AIXETA_URL} target="_blank" rel="noreferrer"
+        sx={{ textTransform: 'none' }}
+      >
+        {t('donate.aixeta')}
+      </Button>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5, mb: 1.5 }}>
+        {t('donate.monthly')}
+      </Typography>
+
+      <Button
+        fullWidth variant="outlined" startIcon={<LocalCafeIcon />}
         component="a" href={KOFI_URL} target="_blank" rel="noreferrer"
         sx={{ textTransform: 'none' }}
       >
         {t('donate.kofi')}
       </Button>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
+        {t('donate.oneOff')}
+      </Typography>
 
       <Divider sx={{ my: 2 }}>{t('donate.orBtc')}</Divider>
 
