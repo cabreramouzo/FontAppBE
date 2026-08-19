@@ -1088,8 +1088,27 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   no hay nada. Medido: metiendo esa banda, el fondo del mapa cae en 832 con la tab bar
   empezando en 756 —**76 px de mapa y sus botones tapados**— y la página desborda 20 px.
   Se vio en un iPhone ajeno, no aquí. Ahora son tarjetas flotantes bajo la barra: **tapan
-  en vez de empujar**, que en una página con scroll cuesta el encabezado durante un rato
-  y en el mapa cuesta llegar a los botones de filtros y capas hasta que se cierran.
+  en vez de empujar**, que en una página con scroll cuesta el encabezado durante un rato.
+- **En el mapa no tapan nada: los overlays de arriba bajan.** La franja publica su alto en
+  `--alto-avisos` y lo suman el buscador, los controles y la tarjeta de cercanas, que es
+  todo lo que cuelga del borde de arriba. Mismo trato que `--bajo-el-mapa` da a lo anclado
+  abajo, y **quien añada otro overlay arriba tiene que sumarla**. Con la franja vacía vale
+  `0px` y no se mueve nada.
+- El alto **se mide, no se calcula**: son uno o dos avisos y cuántas líneas ocupa cada uno
+  depende del idioma y del ancho. Cuelga del ciclo de React —el aviso entra, mide; se va,
+  mide; cambia el texto, mide— más un `resize` para cuando el móvil gira.
+- Se escribió primero con `ResizeObserver`, que es lo natural, y **se cambió porque no se
+  pudo verificar**: en el navegador con el que se comprobó esto no entrega ni una llamada
+  (medido aparte con un div que pasa de 10 a 50 px: cero disparos), porque su entrega va
+  atada al ciclo de pintado. Igual en un móvil va perfecto, pero eso es justo lo que no se
+  puede afirmar sin verlo, y el fallo sería **silencioso**: los avisos taparían los botones
+  y no saltaría ningún error.
+- **Cuidado: nada de `transition` en un `top` que salga de un `var()`.** Se puso para que
+  los controles deslizaran en vez de saltar, y con la transición puesta el motor **no
+  recalcula el valor** al cambiar la variable — medido: la variable llegaba al elemento con
+  182 px y el `top` calculado se quedaba en 110, el anterior, o sea que los controles se
+  quedaban debajo del aviso. Si algún día se quiere la animación, sobre `transform` y
+  comprobada en un WebKit de verdad.
 - **La posición vive en `FranjaDeAvisos` (`Avisos.tsx`) y no en cada aviso.** Son dos —el
   de instalar y el de aportaciones sin enviar (`PendingUploads`)— y **pueden coincidir**:
   el segundo no pasa por la cola de `lib/asks` porque no es una petición sino un estado, y

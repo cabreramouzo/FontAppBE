@@ -132,7 +132,14 @@ a:hover { text-decoration: underline; }
    La de arriba **no mide 56 en todas partes**: el `Toolbar` de MUI pasa a 64 desde `sm`,
    más 1 px de borde. Con el 56 fijo, en escritorio la página se pasaba 9 px del alto de
    la ventana y salía una barra de desplazamiento en el mapa, que no debería tener. */
-:root { --alto-barra: 65px; --bajo-el-mapa: 40px; }
+/* Lo que ocupan los avisos flotantes bajo la barra (`FranjaDeAvisos`), incluido el hueco
+   que dejan por arriba. Vale 0 casi siempre; la mide el propio componente con un
+   `ResizeObserver` y la escribe aquí, porque cambia con cuántos avisos hay y con cuánto
+   texto le quepa a cada uno en el ancho que sea.
+   **Todo lo que cuelga del borde de arriba del mapa tiene que sumarla**, o el aviso se
+   le pone encima: eso son el buscador, los controles y la tarjeta de cercanas. Es el
+   mismo trato que `--bajo-el-mapa` tiene con lo anclado abajo. */
+:root { --alto-barra: 65px; --bajo-el-mapa: 40px; --alto-avisos: 0px; }
 @media (max-width: 599.95px) {
   :root { --alto-barra: 57px; --bajo-el-mapa: calc(56px + env(safe-area-inset-bottom)); }
 }
@@ -173,6 +180,13 @@ a:hover { text-decoration: underline; }
 .locate-btn:hover { opacity: 1; background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
 .locate-btn:active { transform: scale(0.94); }
 .locate-btn svg { width: 22px; height: 22px; fill: currentColor; }
+/* **Sin `transition` en el `top` de estos tres**, aunque deslizar quedaría mejor que el
+   salto. Su `top` sale de un `calc()` con `var(--alto-avisos)`, y con una transición
+   puesta el motor **no recalcula el valor** al cambiar la variable: medido aquí mismo,
+   la variable llegaba al elemento con 182 px y el `top` calculado se quedaba en 110, el
+   anterior. O sea que los controles se quedaban debajo del aviso, que es exactamente lo
+   que esto viene a arreglar. Si algún día se quiere la animación, tendrá que ser sobre
+   `transform`, y comprobada en un WebKit de verdad. */
 /* Overlays de UI del mapa: no seleccionables, tacto limpio. */
 .map-controls, .legend, .search, .map-fabs, .nearby, .panel, .hint { user-select: none; }
 .hint {
@@ -425,7 +439,7 @@ select:not([class*="Mui"]) {
 /* Controles del mapa (arriba a la derecha). */
 .map-controls {
   position: absolute;
-  top: 12px;
+  top: calc(12px + var(--alto-avisos));
   right: 16px;
   z-index: 1000;
   display: flex;
@@ -527,12 +541,12 @@ select:not([class*="Mui"]) {
 /* Panel "cerca de mí" (derecha) — solo posición/tamaño; superficie por MUI Paper. */
 .nearby {
   position: absolute;
-  top: 96px;
+  top: calc(96px + var(--alto-avisos));
   right: 16px;
   z-index: 1000;
   width: 270px;
   max-width: calc(100% - 32px);
-  max-height: calc(100% - 120px);
+  max-height: calc(100% - 120px - var(--alto-avisos));
   overflow: hidden;
 }
 .nearby-head {
@@ -584,7 +598,7 @@ select:not([class*="Mui"]) {
 /* Buscador (arriba a la izquierda, dejando hueco al zoom). */
 .search {
   position: absolute;
-  top: 12px;
+  top: calc(12px + var(--alto-avisos));
   left: 60px;
   z-index: 1000;
   width: 240px;
@@ -726,12 +740,12 @@ select:not([class*="Mui"]) {
     right: max(12px, env(safe-area-inset-right));
     width: auto;
     max-width: none;
-    top: 12px;
+    top: calc(12px + var(--alto-avisos));
   }
   /* Plegado: solo la lupa. El resto de la franja superior vuelve a ser mapa. */
   .search.search--collapsed { right: auto; width: 48px; }
   /* Con el buscador ocupando arriba, los controles bajan bajo él. */
-  .map-controls { top: 90px; right: max(12px, env(safe-area-inset-right)); gap: 10px; }
+  .map-controls { top: calc(90px + var(--alto-avisos)); right: max(12px, env(safe-area-inset-right)); gap: 10px; }
   .fab { font-size: 15px; padding: 12px 16px; min-height: 48px; border-radius: 999px; }
   .nearby {
     top: auto;

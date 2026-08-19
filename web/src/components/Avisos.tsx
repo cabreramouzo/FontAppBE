@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 
@@ -26,9 +26,53 @@ import Paper from '@mui/material/Paper'
  * El orden importa y es el de urgencia: primero lo que dice que algo **tuyo** está sin
  * enviar, después lo que pide un favor.
  */
+/**
+ * Cómo la franja le dice al mapa cuánto ocupa.
+ *
+ * Cada aviso avisa al entrar, al salir y al cambiar de contenido, y la franja se mide
+ * entera. Se probó con `ResizeObserver`, que es lo natural, y se cambió: **no se pudo
+ * verificar**. En el navegador con el que se comprobó esto no entrega ni una llamada
+ * —medido aparte, con un div que pasa de 10 a 50 px de alto: cero— porque su entrega va
+ * atada al ciclo de pintado. Puede que sea cosa de ese entorno y en un móvil funcione
+ * perfectamente, pero eso es exactamente lo que no se puede afirmar sin verlo, y el
+ * fallo sería silencioso: los avisos taparían los botones y nadie vería ningún error.
+ *
+ * Esto, en cambio, cuelga del ciclo de React, que es lo único que aquí se sabe seguro
+ * que corre: el aviso entra, mide; se va, mide; cambia el texto, mide. Y lo único que
+ * quedaba fuera —que el texto se reparta en otras líneas al girar el móvil— lo cubre
+ * `resize`.
+ */
+const Medir = createContext<() => void>(() => {})
+
 export function FranjaDeAvisos({ children }: { children: ReactNode }) {
+  const caja = useRef<HTMLDivElement>(null)
+
+  const mide = useCallback(() => {
+    const nodo = caja.current
+    if (!nodo) return
+    const alto = nodo.getBoundingClientRect().height
+    // El `+ 8` es el hueco que la franja deja bajo la barra: sin él, lo de debajo sube
+    // esos píxeles y el último aviso lo roza.
+    document.documentElement.style.setProperty(
+      '--alto-avisos', alto > 0 ? `${Math.round(alto) + 8}px` : '0px',
+    )
+  }, [])
+
+  useEffect(() => {
+    mide()
+    // Girar el móvil no monta ni desmonta nada, pero puede repartir el texto en otro
+    // número de líneas.
+    window.addEventListener('resize', mide)
+    return () => {
+      window.removeEventListener('resize', mide)
+      document.documentElement.style.setProperty('--alto-avisos', '0px')
+    }
+  }, [mide])
+
   return (
+    <Medir.Provider value={mide}>
     <Box
+      ref={caja}
       sx={{
         position: 'fixed',
         top: 'calc(var(--alto-barra) + env(safe-area-inset-top) + 8px)',
@@ -46,11 +90,23 @@ export function FranjaDeAvisos({ children }: { children: ReactNode }) {
     >
       {children}
     </Box>
+    </Medir.Provider>
   )
 }
 
 /** La caja de un aviso. Compartida para que los dos no se separen con el tiempo. */
 export function TarjetaDeAviso({ children }: { children: ReactNode }) {
+  const mide = useContext(Medir)
+  // Sin lista de dependencias a propósito: también cambia el alto un aviso que se
+  // queda pero dice otra cosa («pendientes: 1» → «pendientes: 2», que en otro idioma
+  // puede pasar a dos líneas).
+  useLayoutEffect(() => {
+    mide()
+    // Al desmontarse, esta limpieza corre con el nodo **todavía** en el DOM; el
+    // microtask la deja para cuando React ya lo ha quitado.
+    return () => { queueMicrotask(mide) }
+  })
+
   return (
     <Paper
       elevation={6}
