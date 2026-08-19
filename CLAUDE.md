@@ -404,6 +404,26 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   diferida, así que su `<link>` se inyecta *después* que `index.css` y con la misma
   especificidad ganaría Leaflet por orden de aparición. Regla general para cualquier
   cosa de Leaflet que se quiera redefinir aquí.
+- **El popup se cerraba solo al segundo de abrirlo.** `ClusteredMarkers` reconstruye
+  **todos** los marcadores cuando cambia la identidad del array de fuentes, y eso se
+  lleva por delante el popup abierto. Sólo se reponía el de la fuente **enfocada**; el
+  que abres tocando un pin —el caso normal— se perdía. Se juntaban tres cosas: `shown`
+  se calculaba con un `.filter()` suelto, o sea **un array nuevo en cada render**, y el
+  padre repinta con **cada posición del GPS** (unos segundos caminando); `loadBounds`
+  reemplazaba el array en cada `moveend` aunque la respuesta fuera idéntica; y no había
+  nada que repusiera el popup. Ahora: `useMemo`, misma referencia si la firma no cambia,
+  y se repone lo que hubiera abierto.
+- **Reponerlo no puede colgar de `popupclose`**: markercluster quita y repone marcadores
+  al agrupar y desagrupar, así que ese evento salta sin que nadie haya cerrado nada —y
+  eso es justo lo que hay que reponer, no olvidar. Solo cuentan los **dos cierres
+  deliberados**: el aspa y tocar el mapa. Medido con un `MutationObserver` sobre el nodo
+  del popup: antes, un arrastre mínimo daba «quitado 1, puesto 0»; ahora una
+  reconstrucción de verdad (cambiar de idioma) da «quitado 2, puesto 2», y tras cerrarlo
+  con el aspa una reconstrucción lo deja cerrado.
+- Los botones flotantes del mapa (zoom, capas, rutas) son hijos de `.leaflet-container`,
+  así que pulsarlos dispara el `click` del mapa y Leaflet cierra el popup. Es de siempre
+  y queda así; si algún día molesta, la salida es `L.DomEvent.disableClickPropagation`
+  sobre ese contenedor, no tocar la lógica de reponer.
 
 ## Capas del mapa
 - Cinco capas elegibles (`web/src/lib/mapLayers.ts`, selector en `BaseLayers.tsx`, usado
