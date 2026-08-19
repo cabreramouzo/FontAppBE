@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { comparteTexto } from '../src/lib/share.ts'
+import { comparteTexto, type NavegadorQueComparte } from '../src/lib/share.ts'
 
 /**
  * Lo que se le entrega a la hoja del sistema.
@@ -18,7 +18,7 @@ function navFalso() {
     nav: {
       share: async (d: unknown) => { llamadas.push(d) },
       clipboard: { writeText: async (t: string) => { llamadas.push({ portapapeles: t }) } },
-    } as unknown as Pick<Navigator, 'share' | 'clipboard'>,
+    } as NavegadorQueComparte,
   }
 }
 
@@ -34,7 +34,7 @@ test('la dirección viaja dentro del texto, y NUNCA en el campo url', async () =
 
 test('sin hoja del sistema se copia el mensaje entero, no solo el enlace', async () => {
   const { nav, llamadas } = navFalso()
-  const sinShare = { clipboard: nav.clipboard } as unknown as Pick<Navigator, 'share' | 'clipboard'>
+  const sinShare: NavegadorQueComparte = { clipboard: nav.clipboard }
   const r = await comparteTexto('Frase y https://fontapp.net', sinShare)
   assert.equal(r, 'copiado')
   // Lo copiado es el mensaje completo: en el respaldo también se perdía la frase si se
@@ -46,6 +46,6 @@ test('cancelar la hoja no es un error que haya que contar', async () => {
   const nav = {
     share: async () => { throw new DOMException('Share canceled', 'AbortError') },
     clipboard: { writeText: async () => {} },
-  } as unknown as Pick<Navigator, 'share' | 'clipboard'>
+  } as NavegadorQueComparte
   assert.equal(await comparteTexto('x', nav), 'nada')
 })

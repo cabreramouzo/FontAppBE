@@ -1,5 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" fill="#0ea5e9"/>
-  <path fill="#ffffff" d="M256 96c0 0 128 136 128 224a128 128 0 0 1-256 0c0-88 128-224 128-224z"/>
-  <path fill="#0ea5e9" opacity="0.25" d="M256 168c0 0 72 84 72 152a72 72 0 0 1-144 0c0-68 72-152 72-152z"/>
+  <defs>
+    <linearGradient id="background" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16b8eb"/>
+      <stop offset="0.52" stop-color="#0e9fd0"/>
+      <stop offset="1" stop-color="#087f8c"/>
+    </linearGradient>
+    <linearGradient id="pin" x1="201" y1="205" x2="310" y2="407" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f607a"/>
+      <stop offset="1" stop-color="#123f43"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#background)"/>
+  <circle cx="458" cy="62" r="184" fill="#ffffff" opacity="0.055"/>
+  <circle cx="34" cy="482" r="154" fill="#073c4d" opacity="0.08"/>
+
+  <!-- Gota de agua reconocible incluso como favicon. -->
+  <path fill="#fff6de" d="M256 68C231 112 122 224 122 322c0 75 60 136 134 136s134-61 134-136C390 224 281 112 256 68Z"/>
+
+  <!-- El marcador interior convierte la gota en el símbolo propio de FontApp. -->
+  <path fill="url(#pin)" d="M256 188c-49 0-89 39-89 88 0 61 70 127 89 143 19-16 89-82 89-143 0-49-40-88-89-88Z"/>
+  <circle cx="256" cy="276" r="35" fill="#6ee7ef"/>
+  <circle cx="244" cy="264" r="11" fill="#ffffff" opacity="0.48"/>
+
+  <path fill="#ffffff" opacity="0.62" d="M203 144c-21 25-43 55-55 79-5 10-1 22 9 27 10 4 21 0 26-10 10-21 29-47 48-70 7-8 6-21-3-28-8-7-19-6-25 2Z"/>
 </svg>
