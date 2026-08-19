@@ -9,11 +9,16 @@ import Vapor
 ///
 /// Por qué existe: hasta ahora la única forma de que una foto llegara a la portada era
 /// que alguien pulsara «usar como foto principal», un botón que solo aparece dentro de la
-/// tarjeta de la reseña y **después** de publicarla. Prácticamente nadie lo pulsa. Medido
-/// en la base de desarrollo: 144 fuentes con portada y **168 más** con la foto esperando
-/// dentro de una reseña — o sea que la cobertura real era más del doble de la que se
-/// enseñaba. Esto es la pasada retroactiva; de aquí en adelante lo hace sola la propia
-/// publicación de la reseña (ver `CoverPhoto`).
+/// tarjeta de la reseña y **después** de publicarla. Prácticamente nadie lo pulsa. Esto es
+/// la pasada retroactiva; de aquí en adelante lo hace sola la propia publicación de la
+/// reseña (ver `CoverPhoto`).
+///
+/// **Cuántas eran de verdad: 4**, medido en producción el 19/08/2026 sobre 70.975 fuentes
+/// sin portada. La estimación previa —«168 esperando»— salió de una base de desarrollo
+/// **sembrada con `seed --demo`**, cuyas fotos son `/demo/*.svg`; descontándolas quedaba
+/// una. La moraleja vale para cualquier medición futura de este repo: una base local con
+/// datos de ejemplo no dice nada sobre producción, y aquí llegó a invertir la conclusión
+/// (de «esto duplica la cobertura de fotos» a «esto arregla cuatro fichas»).
 ///
 /// Se ataja por la reseña con foto **más antigua** de cada fuente: es la que lleva más
 /// tiempo siendo lo único que hay, y quien la subió no tuvo nunca la ocasión de

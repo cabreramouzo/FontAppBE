@@ -3,10 +3,15 @@ import Vapor
 
 /// La foto de portada de una fuente, cuando llega desde una reseña.
 ///
-/// Existe porque la gente **sí** hace fotos y **casi nunca** acaban en la ficha: medido,
-/// había 144 fuentes con portada y otras 168 con la foto esperando dentro de una reseña
-/// y la portada en blanco. La foto ya estaba hecha por alguien que estuvo delante; lo
-/// único que faltaba era decir que servía.
+/// Existe porque la gente **sí** hace fotos y no siempre acaban en la ficha: la foto ya
+/// estaba hecha por alguien que estuvo delante, y lo único que faltaba era decir que
+/// servía. El botón de ascenderla existía y casi nadie lo pulsaba — vive dentro de la
+/// tarjeta de la reseña y solo aparece **después** de publicarla.
+///
+/// El tamaño real del problema, medido en producción el 19/08/2026: **4** fuentes con la
+/// foto esperando dentro de una reseña. Pequeño, y conviene que quede escrito: la primera
+/// medición dio 168 y era `seed --demo` de una base local (ver `AdoptCoverPhotosCommand`).
+/// Lo que arregla esto de verdad no es el retroactivo sino lo de aquí en adelante.
 ///
 /// Un solo sitio para las tres puertas que ascienden una foto —publicar una reseña, el
 /// botón «usar como foto principal» y el comando retroactivo—, porque las tres tienen

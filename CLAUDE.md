@@ -648,10 +648,16 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   la reseña con foto **más antigua** de cada fuente sin portada. Salta las referencias que
   el almacén no sabe copiar (`/uploads/` en disco, `<base>/uploads/` en R2) — sin eso, en
   desarrollo salían 168 avisos por las fotos `/demo/*.svg` de `seed --demo`.
-- **Ojo al medir esto en local: `seed --demo` falsea la cuenta entera.** La primera
-  medición dio «144 portadas y 168 fotos esperando en reseñas» y era casi toda de
-  fixtures: descontando `/demo/`, quedaban 6 portadas y 2 fotos reales. Los números de
-  verdad solo se pueden sacar de producción.
+- **La cola real era de 4 fuentes**, medido en producción el 19/08/2026 sobre 70.975 sin
+  portada. Se lanza con `fly ssh console -a fontapp -C "/app/App adopt-cover-photos"`
+  (runbook en DEPLOY.md); en producción **no hay `swift run`**, solo el binario de `/app`.
+- **Ojo al medir esto en local: `seed --demo` falsea la cuenta entera, y aquí invirtió la
+  conclusión.** La primera medición dio «144 portadas y 168 fotos esperando» y era casi
+  toda de fixtures `/demo/*.svg`: descontándolas quedaban 6 portadas y 2 fotos reales, y en
+  producción eran 4. Se llegó a decir que el retroactivo «duplicaría la cobertura de fotos»
+  cuando arregla cuatro fichas. Lo que resuelve el problema de verdad es la adopción
+  automática de aquí en adelante, no la pasada. **Ninguna cifra de este repo vale si sale
+  de una base local sembrada.**
 
 ## Fotos de una fuente
 - La **portada** sigue en `fonts.image`, una columna. Las demás viven en `font_photos`
