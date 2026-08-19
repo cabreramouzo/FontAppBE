@@ -492,6 +492,18 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   queremos.
 - El aviso al usuario va **antes** de elegir la foto («la que pongas será la suya»), no
   después de publicarla. Ahí estaba el agujero entero.
+- El hueco de la ficha es **entero un botón** (`ButtonBase`), no solo el rótulo: misma
+  razón que el popup del mapa, y aquí el área ya estaba ahí ocupando el sitio de la foto
+  que falta. Por eso el rótulo de dentro es un `<span>` y no un `<Button>` —un botón
+  dentro de otro no es HTML válido, la misma trampa que el enlace dentro del enlace— y se
+  queda como **señal**. Sin sesión no es un botón: no hay nada que pulsar.
+- Pulsarlo **lleva hasta el formulario**, que vive más abajo; sin eso no cambiaba nada de
+  lo que se ve y parecía roto. Dos trampas medidas al hacerlo: el salto va en un
+  `useEffect` y no en el manejador (allí el formulario aún no está en el DOM y no se movía
+  ni un píxel), y la bandera va en una **`ref`** y no en un estado, porque apagarla dentro
+  del efecto cambiaba una dependencia, el efecto se relanzaba y su limpieza mataba el
+  temporizador: se cancelaba a sí mismo en silencio. Y `scrollIntoView` va **sin**
+  `behavior: 'smooth'` — medido, el suave no hace nada en algunos motores y falla callado.
 - `swift run App adopt-cover-photos [--dry-run] [--limit n]` hace la pasada retroactiva:
   la reseña con foto **más antigua** de cada fuente sin portada. Salta las referencias que
   el almacén no sabe copiar (`/uploads/` en disco, `<base>/uploads/` en R2) — sin eso, en

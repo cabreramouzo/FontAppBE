@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { capabilities, capabilityLevels } from '../lib/capabilities'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
+import ButtonBase from '@mui/material/ButtonBase'
 import IconButton from '@mui/material/IconButton'
 import TextField from '@mui/material/TextField'
 import MenuItem from '@mui/material/MenuItem'
@@ -263,7 +264,7 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; 
   }
 
   return (
-    <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+    <Box id="update-form" component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
       <Stack direction="row" sx={{ alignItems: "center", flexWrap: "wrap", gap: 2 }}>
         <StatusSelect value={waterStatus} onChange={setWaterStatus} label={t('update.status')} />
         <Box><Typography variant="caption" color="text.secondary">{t('update.rating')}</Typography><StarRating value={rating} onChange={setRating} size={22} /></Box>
@@ -484,6 +485,33 @@ export function FontDetailPage() {
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [updating, setUpdating] = useState(false) // formulario de nueva actualización desplegado
+
+  // Pulsar el hueco de la foto abre el formulario Y lleva hasta él: vive más abajo, así
+  // que sin esto pulsar arriba no cambiaba nada de lo que se ve y parecía roto.
+  // En una `ref` y no en un estado: apagar la bandera desde dentro del efecto cambiaría
+  // una de sus dependencias, el efecto se relanzaría y su limpieza mataría el temporizador
+  // antes de que llegara a saltar. Se cancelaba a sí mismo, en silencio.
+  const irAlFormulario = useRef(false)
+  useEffect(() => {
+    if (!updating || !irAlFormulario.current) return
+    irAlFormulario.current = false
+    // En un efecto y no dentro del manejador: allí el formulario todavía no está en el
+    // DOM y el `scrollIntoView` no encontraba nada (medido: la página no se movía ni un
+    // píxel). Y con un respiro además, porque en la otra rama el formulario sale de un
+    // `Collapse` que arranca midiendo cero.
+    const id = setTimeout(() => {
+      // Salto directo y no `behavior: 'smooth'`: medido, el suave **no hace nada** en
+      // algunos motores —la página se quedaba a cero— y falla en silencio. Además, con
+      // `prefers-reduced-motion` el suave ya es un salto, así que esto es lo que ve
+      // media pantalla de todas formas.
+      document.getElementById('update-form')?.scrollIntoView({ block: 'center' })
+    }, 320)
+    return () => clearTimeout(id)
+  }, [updating])
+  function abrirFormularioDeFoto() {
+    irAlFormulario.current = true
+    setUpdating(true)
+  }
   const [creatorName, setCreatorName] = useState<string | null>(null)
   // Insignia de creador (familia `discoverer`): se pide aparte porque es un dato de la
   // persona y no de la fuente, y porque no debe hacer esperar a la ficha.
@@ -834,13 +862,34 @@ export function FontDetailPage() {
             // deducir que faltaba algo ni que se podía arreglar, y por eso las fotos
             // acababan todas dentro de reseñas. El hueco es la mitad del arreglo; la otra
             // es que lleva al mismo formulario de siempre, no a un segundo camino.
-            <Paper variant="outlined" sx={{ p: 2, my: 1, borderRadius: 2, borderStyle: 'dashed', textAlign: 'center' }}>
-              <PhotoCameraIcon color="disabled" />
+            //
+            // El rectángulo ENTERO es el botón, no solo el rótulo de dentro: es la misma
+            // razón que en el popup del mapa —se toca con el pulgar y el objetivo pequeño
+            // era el problema—, y aquí además el hueco ya ocupa el sitio de la foto que
+            // falta, así que el área grande estaba ahí sin usar. Por eso el rótulo de
+            // dentro es un `<span>` y no un `<Button>`: un botón dentro de otro no es
+            // HTML válido (misma trampa que el enlace dentro del enlace del popup). Se
+            // queda como **señal**, porque sin algo que parezca pulsable nadie descubre
+            // que la tarjeta entera lo es.
+            <Paper
+              variant="outlined"
+              {...(user
+                ? { component: ButtonBase, onClick: abrirFormularioDeFoto, 'aria-label': t('detail.addPhoto') }
+                : {})}
+              sx={{
+                p: 2, my: 1, borderRadius: 2, textAlign: 'center',
+                width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5,
+                // Más marcada que un borde de tabla: 2 px y en el color de acción, para
+                // que se lea como un sitio donde falta algo y no como un aviso apagado.
+                border: '2px dashed', borderColor: user ? 'primary.main' : 'divider',
+                bgcolor: 'action.hover',
+                ...(user && { '&:hover': { bgcolor: 'action.selected' } }),
+              }}
+            >
+              <PhotoCameraIcon color={user ? 'primary' : 'disabled'} />
               <Typography variant="body2" color="text.secondary">{t('detail.noPhotoYet')}</Typography>
               {user && (
-                <Button size="small" startIcon={<PhotoCameraIcon />} onClick={() => setUpdating(true)} sx={{ mt: 0.5 }}>
-                  {t('detail.addPhoto')}
-                </Button>
+                <Typography component="span" variant="button" color="primary">{t('detail.addPhoto')}</Typography>
               )}
             </Paper>
           )}
