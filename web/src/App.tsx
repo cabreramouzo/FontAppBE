@@ -28,6 +28,7 @@ import { AdminActivityPage } from './pages/AdminActivityPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 
 const LegalPage = lazy(() => import('./pages/LegalPage').then((m) => ({ default: m.LegalPage })))
+const SupportPage = lazy(() => import('./pages/SupportPage').then((m) => ({ default: m.SupportPage })))
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })))
@@ -70,6 +71,7 @@ export default function App() {
                   <Route path="/admin/activity" element={<AdminActivityPage />} />
                   <Route path="/users/:id" element={<UserProfilePage />} />
                   <Route path="/unsubscribe" element={<UnsubscribePage />} />
+                  <Route path="/support" element={<SupportPage />} />
                   <Route path="/legal" element={<LegalPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

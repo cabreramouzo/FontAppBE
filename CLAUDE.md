@@ -436,6 +436,25 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Y se ve el precio de venir de Natural Earth: sale «La Coruña» y «Orense», no «A Coruña»
   ni «Ourense». Es el mismo problema que ya obligó al diccionario de dos grafías de
   `catalanRegions`, ahora a la vista del usuario.
+- **Apoyar el proyecto es una pantalla** (`/support`, `SupportPage.tsx`), a la que se llega
+  por un **corazón en la barra de arriba solo en móvil** —el hueco que dejó libre la tab
+  bar— y por el pie en todas partes. No es una pestaña porque no es un sitio donde se esté,
+  y no es un icono en escritorio porque allí el pie ya lo enseña con su nombre escrito.
+- **El orden de esa pantalla es el mensaje: primero invitar, después dinero.** Lo que le
+  falta a esta app no son euros, son personas mirando fuentes; y decirlo en ese orden evita
+  que se lea como un cepillo. El bloque de invitar va en tarjeta y con el botón grande; el
+  de costes, debajo y en texto llano, diciendo que no hace falta.
+- El enlace que se comparte lleva **su código de campaña** (`/?p=amigos`), como los
+  carteles: es lo único que puede decir si esta pantalla sirve para algo. No necesita
+  entrada en `_redirects` —eso es solo para los enlaces cortos—, porque `?p=` en la raíz ya
+  lo recoge `users.signup_source`.
+- Compartir usa la **hoja del sistema** (`navigator.share`) con el portapapeles de
+  respaldo, y **además** un botón directo de WhatsApp (`wa.me`): es por donde se mueve esto
+  de verdad aquí y abre la app instalada sin pasar por la hoja.
+- El diálogo de donación del pie **se ha borrado**: decía menos (solo dinero) y tener el
+  mismo contenido en dos sitios garantiza que uno se quede viejo.
+- **Pendiente dicho por el autor:** pago directo con Apple Pay vía Stripe, que iría en el
+  bloque de costes junto a Ko-fi y Bitcoin.
 - **La regla de fondo, que vale para lo que venga:** móvil y escritorio se diseñan en
   paralelo, no se escala uno al otro. El corte es siempre `breakpoints.down('sm')` y la
   forma cambia de verdad —hoja, pantalla, barra de abajo—, no solo de tamaño.

@@ -14,6 +14,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import NewspaperIcon from '@mui/icons-material/Newspaper'
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -191,6 +192,22 @@ export function Layout({ children }: { children: ReactNode }) {
                   '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
                 }}
               />
+            </IconButton>
+          </Tooltip>
+          {/* El corazón: apoyar el proyecto. Vive arriba y **solo en móvil**, en el sitio
+              que dejó libre la tab bar. No es una pestaña porque no es un lugar donde se
+              esté, es algo que se hace una vez; y no es un icono más en escritorio porque
+              allí el pie ya lo enseña con su nombre escrito, que se lee mejor. */}
+          <Tooltip title={t('support.title')}>
+            <IconButton
+              component={RouterLink}
+              to="/support"
+              color="inherit"
+              size="small"
+              aria-label={t('support.title')}
+              sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+            >
+              <FavoriteBorderIcon />
             </IconButton>
           </Tooltip>
           {/* Zonas: mismo sitio y mismo criterio que Novedades — navega fuera del mapa.
