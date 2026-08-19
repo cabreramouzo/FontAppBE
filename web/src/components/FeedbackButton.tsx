@@ -14,7 +14,12 @@ import { submitFeedback } from '../api/client'
 
 // Botón "sugerencias": mensaje libre + país/email opcionales. Sirve para recoger
 // ideas y saber qué zonas se piden (señal para ampliar los datos).
-export function FeedbackButton() {
+/**
+ * @param destacado Botón grande a lo ancho, para la pantalla de apoyar el proyecto. Solo
+ *   cambia el disparador: el formulario, el envío y el agradecimiento son los mismos, que
+ *   es justo lo que evita que las dos entradas se separen con el tiempo.
+ */
+export function FeedbackButton({ destacado = false }: { destacado?: boolean } = {}) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
@@ -50,8 +55,16 @@ export function FeedbackButton() {
 
   return (
     <>
-      <Button size="small" startIcon={<ForumOutlinedIcon />} onClick={() => setOpen(true)} sx={{ textTransform: 'none' }}>
-        {t('feedback.button')}
+      <Button
+        size={destacado ? 'large' : 'small'}
+        fullWidth={destacado}
+        variant={destacado ? 'contained' : 'text'}
+        disableElevation
+        startIcon={<ForumOutlinedIcon />}
+        onClick={() => setOpen(true)}
+        sx={{ textTransform: 'none' }}
+      >
+        {destacado ? t('support.feedbackCta') : t('feedback.button')}
       </Button>
 
       <Dialog open={open} onClose={close} maxWidth="xs" fullWidth>

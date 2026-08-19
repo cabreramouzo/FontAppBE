@@ -11,6 +11,7 @@ import LocalCafeIcon from '@mui/icons-material/LocalCafe'
 import WhatsAppIcon from '@mui/icons-material/WhatsApp'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
+import { FeedbackButton } from '../components/FeedbackButton'
 
 // Ko-fi real (ID G5G724DC37). El enlace directo equivale al widget embed, sin
 // cargar el script de terceros de Ko-fi.
@@ -91,6 +92,15 @@ export function SupportPage() {
         >
           {t('support.whatsapp')}
         </Button>
+      </Paper>
+
+      {/* Contar qué falla es la otra forma de ayudar que no cuesta dinero, así que va con
+          la de invitar y **antes** que la de pagar. Y es la que más rinde en una app tan
+          joven: un mensaje bien detallado vale más que un café. */}
+      <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, mb: 3 }}>
+        <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('support.feedbackTitle')}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('support.feedbackBody')}</Typography>
+        <FeedbackButton destacado />
       </Paper>
 
       {/* Y solo después, el dinero. */}

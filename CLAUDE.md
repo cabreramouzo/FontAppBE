@@ -450,6 +450,14 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   casi todo el mundo. Ahora nombra el coste, dice que **crece con la app**, y pide lo que
   de verdad sirve: **algo recurrente**, con la cifra puesta (un café al mes, o doce de una
   vez al año). Un importe concreto se decide; «lo que quieras» se aplaza.
+- **Tres bloques y en este orden: invitar, contar qué falla, pagar.** Los dos primeros no
+  cuestan dinero y van en tarjeta; el tercero, debajo y en texto llano. Contar qué falla va
+  antes que el dinero a propósito: en una app tan joven, un mensaje bien detallado rinde
+  más que un café.
+- El bloque de sugerencias **reutiliza `FeedbackButton`** con un `destacado` que solo
+  cambia el disparador (grande y a lo ancho en vez de un botón de texto). El formulario, el
+  envío y el agradecimiento son los mismos que los del pie: es lo que evita que las dos
+  entradas se separen con el tiempo.
 - El enlace que se comparte lleva **su código de campaña** (`/?p=amigos`), como los
   carteles: es lo único que puede decir si esta pantalla sirve para algo. No necesita
   entrada en `_redirects` —eso es solo para los enlaces cortos—, porque `?p=` en la raíz ya
