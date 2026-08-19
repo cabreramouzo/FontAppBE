@@ -26,6 +26,7 @@ import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import ListSubheader from '@mui/material/ListSubheader'
 import SearchIcon from '@mui/icons-material/Search'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import MyLocationIcon from '@mui/icons-material/MyLocation'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import NearMeIcon from '@mui/icons-material/NearMe'
@@ -395,6 +396,88 @@ function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; o
 
   const hasResults = matches.length > 0 || places.length > 0
 
+  // Los resultados, una sola vez. Cambia el tamaño de la fila —48 px para el pulgar en la
+  // pantalla completa, compacto con ratón— pero no qué se enseña ni en qué orden.
+  const resultados = (aPantallaCompleta: boolean) => (
+    <List dense={!aPantallaCompleta} disablePadding>
+      {matches.length > 0 && <ListSubheader>💧 {t('search.fountains')}</ListSubheader>}
+      {matches.map((f) => (
+        <ListItemButton
+          key={f.id}
+          onClick={() => { onSelect(f); compacto ? cerrar() : clear() }}
+          sx={aPantallaCompleta ? { minHeight: 56 } : undefined}
+        >
+          <ListItemText primary={f.name} />
+        </ListItemButton>
+      ))}
+      {places.length > 0 && <ListSubheader>📍 {t('search.places')}</ListSubheader>}
+      {places.map((p, i) => (
+        <ListItemButton
+          key={`p${i}`}
+          onClick={() => { onSelectPlace(p); compacto ? cerrar() : clear() }}
+          sx={aPantallaCompleta ? { minHeight: 56 } : undefined}
+        >
+          <ListItemText primary={p.name} sx={aPantallaCompleta ? undefined : { '& .MuiListItemText-primary': { fontSize: 13 } }} />
+        </ListItemButton>
+      ))}
+    </List>
+  )
+
+  // En móvil, buscar es una pantalla, no un campo flotante. Es lo que hace Maps y lo que
+  // espera cualquiera: al teclear sube el teclado, que se come media pantalla, y una lista
+  // de resultados metida en una tarjeta sobre el mapa se queda en dos filas visibles.
+  // A pantalla completa el teclado tapa lo que sobra y no lo que importa.
+  if (compacto && abierto) {
+    return (
+      <Dialog
+        fullScreen
+        open
+        onClose={cerrar}
+        // El foco tras la transición: puesto antes, iOS no sube el teclado.
+        slotProps={{ transition: { onEntered: () => inputRef.current?.focus() } }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            display: 'flex', alignItems: 'center', gap: 0.5, px: 0.5,
+            pt: 'env(safe-area-inset-top)',
+            borderBottom: 1, borderColor: 'divider', borderRadius: 0,
+          }}
+        >
+          <IconButton onClick={cerrar} aria-label={t('form.cancel')} size="large">
+            <ArrowBackIcon />
+          </IconButton>
+          <InputBase
+            inputRef={inputRef}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t('map.searchPlaceholder').replace(/^[^\p{L}]+/u, '')}
+            fullWidth
+            inputProps={{ maxLength: 80 }}
+            // 16 px o más, o iOS hace zoom al enfocar el campo y deja el mapa torcido.
+            sx={{ py: 1.5, fontSize: 16 }}
+          />
+          {q && (
+            <IconButton onClick={clear} aria-label={t('form.cancel')} size="small">
+              <CloseIcon />
+            </IconButton>
+          )}
+        </Paper>
+        <Box sx={{ flex: 1, overflowY: 'auto', pb: 'env(safe-area-inset-bottom)' }}>
+          {hasResults
+            ? resultados(true)
+            : (
+              // Ni resultados ni ruido: solo se dice qué se puede buscar. Sin esto la
+              // pantalla queda en blanco y parece que se ha roto algo.
+              <Typography variant="body2" color="text.secondary" sx={{ p: 3, textAlign: 'center' }}>
+                {t('search.hint')}
+              </Typography>
+            )}
+        </Box>
+      </Dialog>
+    )
+  }
+
   if (!abierto) {
     return (
       <Box className="search search--collapsed">
@@ -443,20 +526,7 @@ function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; o
       </Paper>
       {hasResults && (
         <Paper elevation={4} sx={{ mt: 0.5, borderRadius: 3, overflow: 'hidden', maxHeight: '50vh', overflowY: 'auto' }}>
-          <List dense disablePadding>
-            {matches.length > 0 && <ListSubheader>💧 {t('search.fountains')}</ListSubheader>}
-            {matches.map((f) => (
-              <ListItemButton key={f.id} onClick={() => { onSelect(f); compacto ? cerrar() : clear() }}>
-                <ListItemText primary={f.name} />
-              </ListItemButton>
-            ))}
-            {places.length > 0 && <ListSubheader>📍 {t('search.places')}</ListSubheader>}
-            {places.map((p, i) => (
-              <ListItemButton key={`p${i}`} onClick={() => { onSelectPlace(p); compacto ? cerrar() : clear() }}>
-                <ListItemText primary={p.name} sx={{ '& .MuiListItemText-primary': { fontSize: 13 } }} />
-              </ListItemButton>
-            ))}
-          </List>
+          {resultados(false)}
         </Paper>
       )}
     </Box>

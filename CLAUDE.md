@@ -414,6 +414,18 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   una hoja que termina justo en el indicador del iPhone se toca mal en la última fila.
   Está en `BottomSheet` y no en cada uso, para que la tercera hoja que se añada no tenga
   que acordarse.
+- **Buscar en móvil es una pantalla entera** (`Dialog fullScreen` en `SearchBox`), como en
+  Maps. El campo flotante con su lista en una tarjeta se quedaba en dos filas visibles: al
+  teclear sube el teclado y se come media pantalla. A pantalla completa el teclado tapa lo
+  que sobra y no lo que importa. En escritorio sigue siendo la píldora flotante con su
+  desplegable. Los resultados se pintan desde **una sola función**, igual que los filtros;
+  lo único que cambia es el alto de la fila (56 px con el pulgar, 36 con ratón).
+- Dos detalles de esa pantalla que se pagan caros si se tocan: el foco va en
+  `onEntered` de la transición —puesto antes, iOS no sube el teclado— y el campo va a
+  **16 px o más**, o iOS hace zoom al enfocarlo y deja el mapa torcido al volver.
+- **La regla de fondo, que vale para lo que venga:** móvil y escritorio se diseñan en
+  paralelo, no se escala uno al otro. El corte es siempre `breakpoints.down('sm')` y la
+  forma cambia de verdad —hoja, pantalla, barra de abajo—, no solo de tamaño.
 
 ## Mapa y ubicación
 - Seguimiento continuo con `watchPosition` (`MapPage`): el punto azul se actualiza solo
