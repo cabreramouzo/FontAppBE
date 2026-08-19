@@ -24,7 +24,7 @@ function cargaSW(hrefDelSW: string) {
     registration: {},
   }
   const fn = new Function('self', 'caches', 'fetch', 'Response', 'clients',
-    `${codigo}\n;return { isTile, isAPI, API_ORIGIN };`)
+    `${codigo}\n;return { isTile, isAPI, API_ORIGIN, peticionDeSalida, imagenDe };`)
   return fn(self, {}, () => {}, class {}, {})
 }
 
@@ -63,4 +63,37 @@ test('se guardan las teselas de TODAS las capas, no solo las de OSM', () => {
   assert.ok(!PROD.isTile(new URL('https://fontapp.net/icon.svg')))
   // Y que el ancla del dominio siga puesta: un dominio que solo *acabe* parecido, fuera.
   assert.ok(!PROD.isTile(new URL('https://noesign.es.example.com/1/2/3.png')))
+})
+
+// --- Bandeja de salida ------------------------------------------------------------
+//
+// Lo que se envía cuando vuelve la red. Se prueba aquí porque el fallo que hubo era
+// exactamente de esta forma: invisible con cobertura, y sin cobertura te comes la cola
+// atascada sin un solo mensaje de error.
+
+test('la foto suelta se manda con PUT a la ruta de la foto, no como reseña', () => {
+  const p = PROD.peticionDeSalida({ kind: 'photo', fontID: 'F1' }, '/api', '/uploads/a.jpg')
+  assert.deepEqual(p, { method: 'PUT', url: '/api/fonts/F1/photo', body: { image: '/uploads/a.jpg' } })
+})
+
+test('un elemento `photo` no lleva `data`, y leerlo no puede reventar', () => {
+  // Esto es el fallo real: `item.data.image` lanzaba un TypeError. Un error sin `status`
+  // se toma por transitorio, así que la cola lo reintentaba para siempre y se quedaba
+  // bloqueada — sin decir nada, porque nadie mira la consola del service worker.
+  assert.doesNotThrow(() => PROD.imagenDe({ kind: 'photo', fontID: 'F1' }))
+  assert.equal(PROD.imagenDe({ kind: 'photo', fontID: 'F1' }), undefined)
+  assert.equal(PROD.imagenDe({ kind: 'comment', data: { image: '/uploads/b.jpg' } }), '/uploads/b.jpg')
+})
+
+test('una foto que no llegó a subirse no manda nada', () => {
+  // El elemento ES la foto: sin ella no hay ninguna petición que tenga sentido, y desde
+  // luego no una que ponga la portada a `undefined`.
+  assert.equal(PROD.peticionDeSalida({ kind: 'photo', fontID: 'F1' }, '/api', undefined), null)
+})
+
+test('el alta y la reseña siguen yendo por donde iban', () => {
+  const alta = PROD.peticionDeSalida({ kind: 'font', data: { name: 'Font' } }, '/api', '/uploads/a.jpg')
+  assert.deepEqual(alta, { method: 'POST', url: '/api/fonts', body: { name: 'Font', image: '/uploads/a.jpg' } })
+  const resenya = PROD.peticionDeSalida({ kind: 'comment', fontID: 'F2', data: { body: 'raja' } }, '/api', undefined)
+  assert.deepEqual(resenya, { method: 'POST', url: '/api/fonts/F2/comments', body: { body: 'raja', image: undefined } })
 })

@@ -363,8 +363,15 @@ enum ContributionScore {
         }
         for e in edits where e.before.image != e.after.image && e.after.image != nil {
             guard let d = e.createdAt else { continue }
+            // Sin editor no hay a quién pagar **y** no debe ocupar sitio en la fila. Las
+            // ediciones de foto sin firmar son las que hace el sistema al ascender la foto
+            // de una reseña a portada (`CoverPhoto`), y esa foto ya viene contada por su
+            // reseña. Si se colaran aquí, además de no cobrarlas nadie, se llevarían el
+            // puesto 0 cuando el reloj las pusiera un pelo antes que la reseña, y quien
+            // hizo la foto cobraría «foto sustituida» (15) en vez de «primera foto» (120).
+            guard let editorID = e.$editor.id else { continue }
             photoEvents[e.$font.id, default: []].append(
-                PhotoEvent(userID: e.$editor.id, at: d, source: .edit, subject: e.id))
+                PhotoEvent(userID: editorID, at: d, source: .edit, subject: e.id))
         }
         // La foto que se sube **en el formulario de crear la fuente** no deja ninguno de
         // los dos rastros: no hay reseña y no hay edición, la columna nace con la imagen

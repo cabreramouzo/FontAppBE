@@ -253,6 +253,35 @@ async function post(url, token, body, isForm, queuedOffline = false, method = 'P
   return res.status === 204 ? null : res.json()
 }
 
+/**
+ * La imagen que ya traía un elemento de la cola, si la traía.
+ *
+ * Existe como función y no como `item.data.image` a pelo porque el tipo `photo` **no lleva
+ * `data`**: leerlo directamente reventaba con un `TypeError`, que al no traer `status` se
+ * tomaba por fallo transitorio y se reintentaba para siempre con la cola atascada.
+ */
+function imagenDe(item) {
+  return (item.data || {}).image
+}
+
+/**
+ * La petición principal de un elemento de la cola. **Pura**, y por eso se puede probar:
+ * es la decisión que se equivocó, y no daba la cara hasta estar sin cobertura.
+ *
+ * El alta de fuente tiene además un segundo envío (el estado inicial), que depende del id
+ * que devuelve el primero y por tanto se queda en `syncOutbox`.
+ */
+function peticionDeSalida(item, base, image) {
+  if (item.kind === 'font') {
+    return { method: 'POST', url: `${base}/fonts`, body: { ...item.data, image } }
+  }
+  if (item.kind === 'photo') {
+    // Sin imagen no hay nada que mandar: el elemento solo es la foto.
+    return image ? { method: 'PUT', url: `${base}/fonts/${item.fontID}/photo`, body: { image } } : null
+  }
+  return { method: 'POST', url: `${base}/fonts/${item.fontID}/comments`, body: { ...item.data, image } }
+}
+
 async function syncOutbox() {
   const db = await outboxDB()
   const session = await idb(db, 'meta', 'readonly', (s) => s.get('session'))
@@ -265,26 +294,21 @@ async function syncOutbox() {
     if (item.claimedAt && now - item.claimedAt < CLAIM_TTL_MS) continue // lo envía la página
     await idb(db, 'items', 'readwrite', (s) => s.put({ ...item, claimedAt: Date.now() }))
     try {
-      // `photo` no lleva `data`: es solo la foto de una fuente que ya existe. Sin este
-      // `|| {}` reventaba con un TypeError, que aquí no trae `status` y por tanto se
-      // trataba como fallo transitorio: reintento eterno y la cola atascada.
-      let image = (item.data || {}).image
+      let image = imagenDe(item)
       if (item.photo) {
         const form = new FormData()
         form.append('file', new File([item.photo], item.photoName || 'photo.jpg', { type: item.photo.type || 'image/jpeg' }))
         image = (await post(`${base}/images`, session.token, form, true)).url
       }
-      if (item.kind === 'font') {
-        const font = await post(`${base}/fonts`, session.token, { ...item.data, image }, false, true)
-        if (item.waterStatus) {
+      const peticion = peticionDeSalida(item, base, image)
+      if (peticion) {
+        const creada = await post(peticion.url, session.token, peticion.body, false, true, peticion.method)
+        // El estado que se indicó al crear la fuente, como primera actualización.
+        if (item.kind === 'font' && item.waterStatus) {
           try {
-            await post(`${base}/fonts/${font.id}/comments`, session.token, { waterStatus: item.waterStatus }, false, true)
+            await post(`${base}/fonts/${creada.id}/comments`, session.token, { waterStatus: item.waterStatus }, false, true)
           } catch (_) { /* la fuente ya está creada */ }
         }
-      } else if (item.kind === 'photo') {
-        if (image) await post(`${base}/fonts/${item.fontID}/photo`, session.token, { image }, false, true, 'PUT')
-      } else {
-        await post(`${base}/fonts/${item.fontID}/comments`, session.token, { ...item.data, image }, false, true)
       }
       await idb(db, 'items', 'readwrite', (s) => s.delete(item.id))
     } catch (e) {

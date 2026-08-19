@@ -114,7 +114,6 @@ struct FontCommentController: RouteCollection {
         var portadaAdoptada = false
         do {
             portadaAdoptada = try await CoverPhoto.adopt(font: font, from: comment,
-                                                         by: try user.requireID(),
                                                          storage: req.imageStorage, on: req.db)
         } catch {
             req.logger.error("No se pudo ascender la foto de la reseña a portada: \(error)")

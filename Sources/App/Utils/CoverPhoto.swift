@@ -21,7 +21,7 @@ enum CoverPhoto {
     /// Devuelve si de verdad ascendió algo, para que quien llama pueda decirlo en voz
     /// alta — un cambio silencioso en la ficha de otro es justo lo que no queremos.
     @discardableResult
-    static func adopt(font: Font, from comment: FontComment, by editorID: UUID?,
+    static func adopt(font: Font, from comment: FontComment,
                       storage: any ImageStorage, on db: any Database) async throws -> Bool {
         guard font.image == nil, let origen = comment.image else { return false }
         let before = FontInfoSnapshot(font)
@@ -32,7 +32,15 @@ enum CoverPhoto {
         // Rastro en el historial de moderación, igual que cualquier otra edición de la
         // ficha. Sin esto la portada aparecía de la nada y no se podía revertir desde el
         // panel, que es la red de seguridad de toda la edición abierta.
-        try await FontEdit(fontID: try font.requireID(), editorID: editorID,
+        //
+        // **Sin firmar, a propósito.** El baremo saca las aportaciones de foto de dos
+        // sitios: las reseñas con imagen y las ediciones que cambian `image`. Esta foto
+        // deja las dos huellas, así que firmando la edición la misma foto se cobraba dos
+        // veces — medido: «primera foto» **y** «foto sustituida», 15 gotas de más. El
+        // mérito ya lo lleva quien hizo la foto, por su reseña; esto es contabilidad, no
+        // una aportación nueva. Mismo criterio que la incidencia que se cierra sola, que
+        // queda «resuelta automáticamente» y no a nombre de quien pasó por allí.
+        try await FontEdit(fontID: try font.requireID(), editorID: nil,
                            before: before, after: FontInfoSnapshot(font)).save(on: db)
         return true
     }

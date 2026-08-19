@@ -169,7 +169,7 @@ struct FontController: RouteCollection {
             // Ya no lo comparte nadie (la reseña sigue con el suyo): se puede borrar.
             try? await req.imageStorage.delete(oldImage)
         } else {
-            try await CoverPhoto.adopt(font: font, from: comment, by: try? user.requireID(),
+            try await CoverPhoto.adopt(font: font, from: comment,
                                        storage: req.imageStorage, on: req.db)
         }
         return font

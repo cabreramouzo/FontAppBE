@@ -509,6 +509,39 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   que al no traer `status` se tomaba por fallo transitorio y reintentaba para siempre.
 - El rótulo de dentro es solo **señal**, y sin sesión el hueco no es pulsable: no hay nada
   que hacer si no puedes aportar.
+- **Puntúa como siempre**, y hubo que arreglarlo para que fuera verdad. El baremo saca las
+  aportaciones de foto de dos sitios: las reseñas con imagen y las **ediciones que cambian
+  `image`**. La ruta directa deja una edición firmada, así que cobra «primera foto» (120) y
+  cuenta para «Primera luz» — comprobado de punta a punta: cinco fotos por esa ruta dan la
+  insignia en bronce, y el registro de la fase 2 apunta cinco `firstPhoto` y ningún
+  `photoReplaced`.
+- Pero la adopción desde una reseña deja **las dos huellas a la vez**, y firmando su
+  edición la misma foto se cobraba **dos veces**: «primera foto» *más* «foto sustituida»,
+  15 gotas de más (medido: 680 gotas donde tocaban 665). Por eso esa edición va **sin
+  firmar** — el mérito ya lo lleva la reseña— y el escáner **descarta las ediciones de foto
+  sin editor**: sin editor no hay a quién pagar, y si se colaran se llevarían el puesto 0
+  cuando el reloj las pusiera un pelo antes que la reseña, dejando al autor con 15 gotas en
+  vez de 120. Hay test de las dos mitades: la del endpoint va firmada, la de la adopción no.
+- Los tests viven en `Tests/AppTests/PhotoScoringTests.swift` y **puntúan de verdad**
+  (`ContributionScore.compute` sobre la base del test), no comprueban invariantes alrededor:
+  el fallo dejaba la foto perfectamente puesta, así que ningún test de «¿está la foto?» lo
+  habría visto. Dos avisos de cómo escribirlos:
+  · Afirman **a quién** se le paga y no solo el tipo. La primera versión subía la foto con
+    la misma cuenta que creó la fuente y pasaba por el camino equivocado: con la edición sin
+    firmar, la regla de reserva del baremo se la atribuye igual al creador y el test no
+    notaba nada. Ahora la sube una cuenta distinta, que además es el caso real —las
+    importadas no tienen creador.
+  · Se verificaron **rompiendo el código a propósito**. Volver a firmar la adopción y quitar
+    la firma del endpoint salen en rojo; quitar el filtro de ediciones sin editor **no lo
+    caza nadie**, y se deja escrito: ese filtro solo protege de un empate de reloj entre la
+    reseña y su adopción, y en un test el orden es siempre el mismo.
+- **Cuidado con la grieta que esto abrió mientras no se lance el retroactivo:** la ficha
+  mira `fonts.image` y el baremo cuenta la foto esté donde esté. Una fuente cuya única foto
+  vive en una reseña vieja se enseña como «todavía no tiene ninguna foto», invita a ponerla
+  y luego paga **«foto sustituida» (15)** en vez de «primera foto» (120), porque para el
+  baremo la primera fue la de la reseña. Le pasó al autor de la app en su primera prueba.
+  No es un fallo del baremo —una foto es una foto, venga en reseña o en portada— sino la
+  cola de las fuentes sin ascender, y `adopt-cover-photos` es lo que la cierra.
 - Y una lección del intento fallido, por si vuelve: colgar un efecto secundario de una
   **transición** de estado falla siempre que el estado ya estaba donde lo quieres poner
   (`setUpdating(true)` estando ya a `true` no repinta, y pulsar no hacía nada).

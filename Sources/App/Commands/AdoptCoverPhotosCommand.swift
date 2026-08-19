@@ -82,7 +82,7 @@ struct AdoptCoverPhotosCommand: AsyncCommand {
                 // `editorID` nulo a propósito: no lo decidió nadie, lo decidió esta
                 // pasada. El historial lo enseñará sin firmar, igual que las incidencias
                 // que se cierran solas.
-                if try await CoverPhoto.adopt(font: font, from: c, by: nil, storage: storage, on: db) {
+                if try await CoverPhoto.adopt(font: font, from: c, storage: storage, on: db) {
                     hechas += 1
                 }
             } catch {

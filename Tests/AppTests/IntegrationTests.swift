@@ -696,6 +696,9 @@ final class IntegrationTests: XCTestCase {
             let ediciones = try await FontEdit.query(on: app.db).filter(\.$font.$id == fontID).all()
             XCTAssertEqual(ediciones.count, 1)
             XCTAssertNil(ediciones.first?.before.image)
+            // Y va FIRMADA: el baremo saca las aportaciones de foto de las ediciones que
+            // cambian `image`, así que sin editor esta ruta no pagaría «primera foto».
+            XCTAssertNotNil(ediciones.first?.$editor.id)
 
             // 2) Ya tiene: el extraño no la sustituye.
             try await app.test(.PUT, "fonts/\(fontID)/photo", headers: bearer(extraño), beforeRequest: { req in
@@ -747,6 +750,12 @@ final class IntegrationTests: XCTestCase {
             let ediciones = try await FontEdit.query(on: app.db).filter(\.$font.$id == vacia).all()
             XCTAssertEqual(ediciones.count, 1)
             XCTAssertNil(ediciones.first?.before.image)
+            // **Sin firmar**, y esto no es un detalle: el baremo cuenta una aportación de
+            // foto por cada reseña con imagen Y por cada edición que cambia `image`. Esta
+            // foto deja las dos huellas, así que firmándola se cobraba dos veces —medido:
+            // «primera foto» más «foto sustituida», 15 gotas de más—. El mérito lo lleva
+            // la reseña, que es de donde salió la foto.
+            XCTAssertNil(ediciones.first?.$editor.id)
 
             // 2) La siguiente reseña con foto ya no toca nada.
             let antes = conPortada?.image
