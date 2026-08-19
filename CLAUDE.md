@@ -423,6 +423,19 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Dos detalles de esa pantalla que se pagan caros si se tocan: el foco va en
   `onEntered` de la transición —puesto antes, iOS no sube el teclado— y el campo va a
   **16 px o más**, o iOS hace zoom al enfocarlo y deja el mapa torcido al volver.
+- **«Cerca de ti» también es una hoja en móvil.** Era una tarjeta lateral de 270 px que se
+  quedaba a medias: ni deja ver el mapa —lo tapa por la derecha— ni se lee cómoda, y la
+  flecha de ir a la ficha era un objetivo diminuto. En escritorio sigue siendo la tarjeta.
+- **Los resultados de fuentes dicen dónde están.** Buscar «font» devolvía **seis filas
+  seguidas llamadas «A Fonte»** sin nada que las distinga; en un desplegable pequeño se
+  disimulaba, a pantalla completa es que no se puede elegir. La segunda línea lleva la
+  **distancia** (solo si se sabe dónde estás) y la **demarcación**. Ojo: **no es el
+  municipio** — no hay columna de municipio, `fonts.region` son provincias, distritos o
+  départements (ver «Comarca ≠ provincia»), así que se dice lo que de verdad hay. Lo que
+  falte no sale; nada se inventa.
+- Y se ve el precio de venir de Natural Earth: sale «La Coruña» y «Orense», no «A Coruña»
+  ni «Ourense». Es el mismo problema que ya obligó al diccionario de dos grafías de
+  `catalanRegions`, ahora a la vista del usuario.
 - **La regla de fondo, que vale para lo que venga:** móvil y escritorio se diseñan en
   paralelo, no se escala uno al otro. El corte es siempre `breakpoints.down('sm')` y la
   forma cambia de verdad —hoja, pantalla, barra de abajo—, no solo de tamaño.

@@ -340,7 +340,7 @@ function ZoomControls() {
   )
 }
 
-function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; onSelectPlace: (p: Place) => void }) {
+function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => void; onSelectPlace: (p: Place) => void; me: [number, number] | null }) {
   const { t, lang } = useI18n()
   const theme = useTheme()
   // En móvil el buscador ocupaba la franja superior entera: era, con diferencia, lo que
@@ -396,6 +396,19 @@ function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; o
 
   const hasResults = matches.length > 0 || places.length > 0
 
+  // De qué fuente estamos hablando. Sin esto, buscar «font» devolvía **seis filas
+  // seguidas llamadas «A Fonte»** sin nada que las distinga: en un desplegable pequeño se
+  // disimulaba, ocupando la pantalla entera es que no se puede elegir.
+  //
+  // No hay columna de municipio —`fonts.region` son provincias, distritos o départements,
+  // ver «Comarca ≠ provincia»— así que se dice la **demarcación**, que es lo que de verdad
+  // hay. Y delante la **distancia**, que es lo que responde a «¿a cuál voy?», solo si se
+  // sabe dónde estás. Lo que falte simplemente no sale; nada se inventa.
+  const donde = (f: Font) => [
+    me ? formatDist(haversineKm(me[0], me[1], f.latitude, f.longitude)) : null,
+    f.region,
+  ].filter(Boolean).join(' · ')
+
   // Los resultados, una sola vez. Cambia el tamaño de la fila —48 px para el pulgar en la
   // pantalla completa, compacto con ratón— pero no qué se enseña ni en qué orden.
   const resultados = (aPantallaCompleta: boolean) => (
@@ -407,7 +420,7 @@ function SearchBox({ onSelect, onSelectPlace }: { onSelect: (f: Font) => void; o
           onClick={() => { onSelect(f); compacto ? cerrar() : clear() }}
           sx={aPantallaCompleta ? { minHeight: 56 } : undefined}
         >
-          <ListItemText primary={f.name} />
+          <ListItemText primary={f.name} secondary={donde(f) || undefined} />
         </ListItemButton>
       ))}
       {places.length > 0 && <ListSubheader>📍 {t('search.places')}</ListSubheader>}
@@ -679,6 +692,7 @@ function NearbyPanel({
   selectedID: string | null
 }) {
   const { t } = useI18n()
+  const movil = useMediaQuery((tema: Theme) => tema.breakpoints.down('sm'))
   const [items, setItems] = useState<FontSummary[] | null>(null)
   const posRef = useRef(pos)
   posRef.current = pos
@@ -694,13 +708,8 @@ function NearbyPanel({
       .catch(() => setItems([]))
   }, [casilla])
 
-  return (
-    <Paper className="nearby" elevation={6} sx={{ display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography sx={{ fontWeight: 700 }}>{t('map.nearbyTitle')}</Typography>
-        <IconButton size="small" onClick={onClose} aria-label="close"><CloseIcon fontSize="small" /></IconButton>
-      </Box>
-      <List dense sx={{ overflowY: 'auto' }}>
+  const lista = (enHoja: boolean) => (
+    <List dense={!enHoja} sx={{ overflowY: 'auto', py: 0 }}>
         {items === null && <ListItem><Typography color="text.secondary">{t('map.loading')}</Typography></ListItem>}
         {items?.map((f) => {
           const ws = waterStatusInfo(f.lastWaterStatus)
@@ -715,7 +724,7 @@ function NearbyPanel({
                 </IconButton>
               }
             >
-              <ListItemButton selected={f.id === selectedID} onClick={() => onFocus(f)}>
+              <ListItemButton selected={f.id === selectedID} onClick={() => onFocus(f)} sx={enHoja ? { minHeight: 56 } : undefined}>
                 <ListItemText
                   primary={f.name}
                   secondary={
@@ -733,7 +742,28 @@ function NearbyPanel({
           )
         })}
         {items?.length === 0 && <ListItem><Typography color="text.secondary">{t('map.nearbyEmpty')}</Typography></ListItem>}
-      </List>
+    </List>
+  )
+
+  // En móvil, hoja desde abajo. Era una tarjeta lateral de 270 px que se quedaba a medias:
+  // ni deja ver el mapa —lo tapa por la derecha— ni se lee cómoda, y la fila era un
+  // objetivo de escritorio con una flecha diminuta al final. En la hoja va a lo ancho, con
+  // filas de 56 px, y se cierra tocando fuera como cualquier otra.
+  if (movil) {
+    return (
+      <BottomSheet open onClose={onClose} titulo={t('map.nearbyTitle')}>
+        {lista(true)}
+      </BottomSheet>
+    )
+  }
+
+  return (
+    <Paper className="nearby" elevation={6} sx={{ display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography sx={{ fontWeight: 700 }}>{t('map.nearbyTitle')}</Typography>
+        <IconButton size="small" onClick={onClose} aria-label="close"><CloseIcon fontSize="small" /></IconButton>
+      </Box>
+      {lista(false)}
     </Paper>
   )
 }
@@ -1127,7 +1157,7 @@ export function MapPage() {
         {pos && <Marker position={pos} />}
       </MapContainer>
 
-      <SearchBox onSelect={(f) => { setGoto([f.latitude, f.longitude]); setSelectedID(f.id) }} onSelectPlace={setPlace} />
+      <SearchBox me={me} onSelect={(f) => { setGoto([f.latitude, f.longitude]); setSelectedID(f.id) }} onSelectPlace={setPlace} />
 
       <div className="map-controls">
         {/* Botón que despliega/esconde las herramientas. El puntito avisa si hay

@@ -13,6 +13,9 @@ export interface Font {
   source: WaterSource | null
   drinkable: Drinkable | null
   creator?: { id: string | null }
+  /** País y demarcación (provincia / distrito / département…). Los publica `Font`. */
+  country?: string | null
+  region?: string | null
   createdAt: string
   /** Id de la fuente buena si ésta es un duplicado. `null` si está en pie. */
   duplicateOf?: string | null
