@@ -57,6 +57,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { BaseLayerTile, LayerPicker, useBaseLayer } from '../components/BaseLayers'
+import { BottomSheet } from '../components/BottomSheet'
 import { MissionsPanel } from '../components/MissionsPanel'
 import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
 import { enqueue, isOffline } from '../lib/outbox'
@@ -740,6 +741,9 @@ export function MapPage() {
   const [goto, setGoto] = useState<[number, number] | null>(null)
   const [geoError, setGeoError] = useState('')
   // Los tres arrancan de lo último elegido en esta sesión, igual que la vista del mapa.
+  // `down('sm')` y no un ancho a mano: es el mismo corte que usan la tab bar, el pie y
+  // los controles de la cabecera, así que la app entera cambia de forma a la vez.
+  const movil = useMediaQuery((tema: Theme) => tema.breakpoints.down('sm'))
   const [filtrosGuardados] = useState(loadFilters)
   const [onlyWithWater, setOnlyWithWater] = useState(filtrosGuardados.onlyWithWater)
   const [showNonPotable, setShowNonPotable] = useState(filtrosGuardados.showNonPotable)
@@ -937,6 +941,69 @@ export function MapPage() {
   }
   locateRef.current = locate
 
+  // Los mismos controles en las dos formas. En una función y no copiados: dos listas de
+  // filtros se separan al primer añadido, y el que se olvide solo se nota en uno de los
+  // dos tamaños de pantalla. Lo único que cambia es la caja que los envuelve.
+  //
+  // En la hoja van a lo ancho y con 48 px de alto —el mínimo cómodo para un pulgar—; como
+  // chips flotantes se quedan con su tamaño de siempre, que con ratón se acierta.
+  const filtros = (donde: 'escritorio' | 'movil') => {
+    const enHoja = donde === 'movil'
+    const sxChip = (activo: boolean) => (enHoja
+      ? { width: '100%', height: 48, borderRadius: 3, justifyContent: 'flex-start', fontSize: 15, '& .MuiChip-label': { flexGrow: 1, textAlign: 'left' } }
+      : chipSx(activo))
+    return (
+      <>
+        <Chip clickable variant="outlined" icon={<MyLocationIcon />} label={noEmoji(t('map.near'))}
+              onClick={() => { locate(true); if (enHoja) setControlsOpen(false) }} sx={sxChip(false)} />
+        <Chip
+          clickable
+          variant={onlyWithWater ? 'filled' : 'outlined'}
+          color={enHoja && onlyWithWater ? 'primary' : undefined}
+          icon={<WaterDropIcon />}
+          label={noEmoji(t('map.onlyWater'))}
+          onClick={() => setOnlyWithWater((v) => !v)}
+          sx={sxChip(onlyWithWater)}
+        />
+        <Chip
+          clickable
+          variant={showNonPotable ? 'filled' : 'outlined'}
+          color={enHoja && showNonPotable ? 'primary' : undefined}
+          icon={<DoNotDisturbAltIcon />}
+          label={noEmoji(t('map.includeNonPotable'))}
+          onClick={() => setShowNonPotable((v) => !v)}
+          title={t('map.includeNonPotableTitle')}
+          sx={sxChip(showNonPotable)}
+        />
+        <Select
+          size="small"
+          fullWidth={enHoja}
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value as WaterSource | 'all')}
+          aria-label={t('map.filterType')}
+          renderValue={(v) => (v === 'all' ? `${t('map.filterType')}: ${t('map.allTypes')}` : `${SOURCE_EMOJI[v as WaterSource]} ${t(`source.${v}`)}`)}
+          sx={enHoja
+            ? { height: 48, borderRadius: 3, fontSize: 15 }
+            : {
+                height: 40,
+                borderRadius: '20px',
+                bgcolor: 'background.paper',
+                color: 'text.primary',
+                fontSize: 14,
+                fontWeight: 600,
+                boxShadow: 3,
+                '& .MuiOutlinedInput-notchedOutline': { border: 0 },
+              }}
+        >
+          <MenuItem value="all">{t('map.allTypes')}</MenuItem>
+          {SOURCE_OPTIONS.map((k) => (
+            <MenuItem key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</MenuItem>
+          ))}
+        </Select>
+      </>
+    )
+  }
+
   return (
     <div className="map-wrap">
       {/* Priming de ubicación tras la bienvenida: explica por qué la pedimos
@@ -1020,49 +1087,20 @@ export function MapPage() {
         >
           <RouteOutlinedIcon />
         </Fab>
-        <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
-        <Chip clickable variant="outlined" icon={<MyLocationIcon />} label={noEmoji(t('map.near'))} onClick={() => locate(true)} sx={chipSx(false)} />
-        <Chip
-          clickable
-          variant={onlyWithWater ? 'filled' : 'outlined'}
-          icon={<WaterDropIcon />}
-          label={noEmoji(t('map.onlyWater'))}
-          onClick={() => setOnlyWithWater((v) => !v)}
-          sx={chipSx(onlyWithWater)}
-        />
-        <Chip
-          clickable
-          variant={showNonPotable ? 'filled' : 'outlined'}
-          icon={<DoNotDisturbAltIcon />}
-          label={noEmoji(t('map.includeNonPotable'))}
-          onClick={() => setShowNonPotable((v) => !v)}
-          title={t('map.includeNonPotableTitle')}
-          sx={chipSx(showNonPotable)}
-        />
-        <Select
-          size="small"
-          value={sourceFilter}
-          onChange={(e) => setSourceFilter(e.target.value as WaterSource | 'all')}
-          aria-label={t('map.filterType')}
-          renderValue={(v) => (v === 'all' ? `${t('map.filterType')}: ${t('map.allTypes')}` : `${SOURCE_EMOJI[v as WaterSource]} ${t(`source.${v}`)}`)}
-          sx={{
-            height: 40,
-            borderRadius: '20px',
-            bgcolor: 'background.paper',
-            color: 'text.primary',
-            fontSize: 14,
-            fontWeight: 600,
-            boxShadow: 3,
-            '& .MuiOutlinedInput-notchedOutline': { border: 0 },
-          }}
-        >
-          <MenuItem value="all">{t('map.allTypes')}</MenuItem>
-          {SOURCE_OPTIONS.map((k) => (
-            <MenuItem key={k} value={k}>{SOURCE_EMOJI[k]} {t(`source.${k}`)}</MenuItem>
-          ))}
-        </Select>
-        </Collapse>
+        {/* En escritorio siguen desplegándose aquí mismo, junto al botón que las abre.
+            En móvil van a una hoja: una columna de chips flotando sobre el mapa tapa
+            justo lo que estás mirando, y son objetivos pequeños para el pulgar. */}
+        {!movil && (
+          <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
+            {filtros('escritorio')}
+          </Collapse>
+        )}
       </div>
+      {movil && (
+        <BottomSheet open={controlsOpen} onClose={() => setControlsOpen(false)} titulo={t('map.filters')}>
+          <Stack spacing={1.25}>{filtros('movil')}</Stack>
+        </BottomSheet>
+      )}
       {geoError && <div className="hint hint-error">{geoError}</div>}
 
       <MapLegend />

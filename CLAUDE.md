@@ -397,6 +397,23 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - El hueco para que el pie no quede debajo de la barra va **dentro del pie**, no en `.app`:
   la altura del mapa ya descuenta la barra por su cuenta, y un acolchado en el contenedor
   se la restaría dos veces.
+- **Los controles del mapa se abren como hojas en móvil** (`BottomSheet.tsx`, un `Drawer`
+  de abajo): filtros y capas. Antes eran una columna de chips flotando sobre el mapa y un
+  menú anclado al botón — las dos cosas tapan justo la zona que estás mirando y dejan
+  objetivos de 36 px para el pulgar. En la hoja van a lo ancho y con **48 px** de alto.
+- **En escritorio no cambia nada**: allí el ratón apunta fino, el chip flotante se ve junto
+  al botón que lo abrió y una hoja a pantalla completa sería un préstamo del móvil. Mismo
+  criterio que la tab bar y que `MoreMenu`.
+- Los filtros se pintan desde **una sola función** (`filtros(donde)`), no copiados en las
+  dos ramas: dos listas se separan al primer añadido y el que se olvide solo se nota en uno
+  de los dos tamaños de pantalla. Lo único que cambia es la caja y el tamaño de los
+  objetivos.
+- El corte es `theme.breakpoints.down('sm')` en todos lados —tab bar, pie, cabecera,
+  hojas—, así que la app entera cambia de forma a la vez y no por partes.
+- La hoja pone el acolchado inferior con `env(safe-area-inset-bottom)` **más un respiro**:
+  una hoja que termina justo en el indicador del iPhone se toca mal en la última fila.
+  Está en `BottomSheet` y no en cada uso, para que la tercera hoja que se añada no tenga
+  que acordarse.
 
 ## Mapa y ubicación
 - Seguimiento continuo con `watchPosition` (`MapPage`): el punto azul se actualiza solo

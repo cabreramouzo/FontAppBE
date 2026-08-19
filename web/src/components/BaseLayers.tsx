@@ -2,6 +2,11 @@ import { useState } from 'react'
 import { TileLayer } from 'react-leaflet'
 import Fab from '@mui/material/Fab'
 import Menu from '@mui/material/Menu'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import type { Theme } from '@mui/material/styles'
+import { BottomSheet } from './BottomSheet'
 import MenuItem from '@mui/material/MenuItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
@@ -62,6 +67,12 @@ export function LayerPicker({
 }) {
   const { t } = useI18n()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  // En móvil, hoja desde abajo: un menú anclado a un botón flotante deja opciones de 36 px
+  // que hay que acertar con el pulgar, y encima tapa el mapa justo al lado de donde miras.
+  const movil = useMediaQuery((tema: Theme) => tema.breakpoints.down('sm'))
+  const abierto = Boolean(anchor)
+  const cerrar = () => setAnchor(null)
+  const elegir = (l: MapLayer) => { onChange(l); cerrar() }
 
   return (
     <>
@@ -74,6 +85,18 @@ export function LayerPicker({
       >
         <LayersIcon />
       </Fab>
+      {movil ? (
+        <BottomSheet open={abierto} onClose={cerrar} titulo={t('map.layers')}>
+          <List sx={{ py: 0 }}>
+            {MAP_LAYERS.map((l) => (
+              <ListItemButton key={l.id} selected={l.id === layer.id} onClick={() => elegir(l)} sx={{ borderRadius: 2, minHeight: 48 }}>
+                <ListItemIcon sx={{ minWidth: 36 }}>{l.id === layer.id && <CheckIcon color="primary" />}</ListItemIcon>
+                <ListItemText primary={t(l.labelKey)} />
+              </ListItemButton>
+            ))}
+          </List>
+        </BottomSheet>
+      ) : (
       <Menu
         anchorEl={anchor}
         open={Boolean(anchor)}
@@ -95,6 +118,7 @@ export function LayerPicker({
           </MenuItem>
         ))}
       </Menu>
+      )}
     </>
   )
 }
