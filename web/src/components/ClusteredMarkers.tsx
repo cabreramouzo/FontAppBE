@@ -30,14 +30,23 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
   // Fuente cuyo popup ha cerrado el usuario a mano. Los marcadores se reconstruyen con
   // cada movimiento del mapa, y sin esto el popup volvía a salir una y otra vez.
   const cerradoPorElUsuario = useRef<string | null>(null)
+  // Y la inversa: fuente cuyo popup está abierto AHORA, para reponerlo. Reconstruir los
+  // marcadores destruye el popup, y eso solo se compensaba para la fuente enfocada; el
+  // que abres tocando un pin —el caso normal— se perdía. Con el GPS detrás de ti el mapa
+  // se recentra cada pocos segundos, así que desaparecía solo al segundo de abrirlo.
+  const popupAbierto = useRef<string | null>(null)
 
   useEffect(() => {
-    // El cleanup quita las capas, y quitar una capa con el popup abierto dispara
-    // `popupclose` igual que si lo hubiera cerrado el usuario. Esta bandera distingue
-    // los dos casos; si no, el primer movimiento del mapa ya lo daría por cerrado.
-    let desmontando = false
     const group = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 })
     let selectedMarker: L.Marker | null = null
+    const porID = new Map<string, L.Marker>()
+
+    // Los dos únicos cierres deliberados: el aspa del popup y tocar el mapa.
+    const cerrarAMano = () => {
+      if (popupAbierto.current === selectedID) cerradoPorElUsuario.current = selectedID ?? null
+      popupAbierto.current = null
+    }
+    map.on('click', cerrarAMano)
 
     for (const f of fonts) {
       const isSelected = !!f.id && f.id === selectedID
@@ -72,16 +81,22 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
       // autoPan off: al enfocar centramos el pin nosotros (arriba, sobre la lista);
       // el autoPan de Leaflet lo recentraba y quedaba tapado por el bottom-sheet.
       marker.bindPopup(el, { autoPan: false })
+      marker.on('popupopen', () => {
+        popupAbierto.current = f.id
+        // Abrir el popup de otra fuente cuenta como descartar el de la enfocada: si no,
+        // al reponer ganaría ella y le robaría el popup al pin que acabas de tocar.
+        cerradoPorElUsuario.current = isSelected ? null : (selectedID ?? null)
+        // El aspa es el ÚNICO cierre que se apunta desde aquí. `popupclose` no vale:
+        // markercluster quita y repone marcadores al agrupar, y nuestro propio ciclo de
+        // vida los quita enteros — los dos disparan `popupclose` sin que nadie haya
+        // cerrado nada, y eso es justo lo que hay que reponer, no olvidar.
+        const aspa = marker.getPopup()?.getElement()?.querySelector('.leaflet-popup-close-button')
+        aspa?.addEventListener('click', cerrarAMano, { once: true })
+      })
+      porID.set(f.id, marker)
       if (isSelected) {
         // Suelta sobre el mapa (fuera del cluster) → siempre visible.
         selectedMarker = marker
-        marker.on('popupclose', () => {
-          if (!desmontando) cerradoPorElUsuario.current = selectedID ?? null
-        })
-        // Si vuelve a abrirlo tocando el pin, se olvida el cierre: quiere verlo.
-        marker.on('popupopen', () => {
-          if (cerradoPorElUsuario.current === selectedID) cerradoPorElUsuario.current = null
-        })
         marker.addTo(map)
       } else {
         group.addLayer(marker)
@@ -89,13 +104,25 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
     }
     map.addLayer(group)
 
-    // Popup del seleccionado. Se reabre al reconstruirse los marcadores (zoom/pan)
-    // para que no desaparezca solo, pero NO si el usuario ya lo había cerrado. Nunca
-    // movemos el mapa: el encuadre es cosa de <FocusOn>.
-    if (selectedMarker && cerradoPorElUsuario.current !== selectedID) selectedMarker.openPopup()
+    // Repone el popup que estuviera abierto. Manda el seleccionado —salvo que el usuario
+    // ya lo hubiera descartado— y si no, el que abrió tocando un pin. Nunca movemos el
+    // mapa: el encuadre es cosa de <FocusOn>.
+    const reponer = () => {
+      if (selectedMarker && cerradoPorElUsuario.current !== selectedID) {
+        if (!selectedMarker.isPopupOpen()) selectedMarker.openPopup()
+        return
+      }
+      const m = popupAbierto.current ? porID.get(popupAbierto.current) : undefined
+      if (m && map.hasLayer(m) && !m.isPopupOpen()) m.openPopup()
+    }
+    reponer()
+    // Al hacer zoom, markercluster agrupa y desagrupa: quita el marcador y lo vuelve a
+    // poner sin que esto se reconstruya, así que el popup también hay que reponerlo ahí.
+    group.on('animationend', reponer)
 
     return () => {
-      desmontando = true
+      map.off('click', cerrarAMano)
+      group.off('animationend', reponer)
       map.removeLayer(group)
       if (selectedMarker) map.removeLayer(selectedMarker)
     }

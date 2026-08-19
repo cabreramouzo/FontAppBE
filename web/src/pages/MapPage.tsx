@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import { Link, useSearchParams } from 'react-router-dom'
 import Chip from '@mui/material/Chip'
@@ -203,6 +203,15 @@ const chipSx = (active: boolean) => ({
 
 const hasWater = (f: FontSummary) => f.lastWaterStatus === 'flowing' || f.lastWaterStatus === 'trickle'
 
+// Lo que `ClusteredMarkers` pinta de cada fuente, en una cadena comparable. Solo estos
+// campos: si mañana el popup enseña uno más, hay que añadirlo aquí o el mapa se quedaría
+// con el dato viejo hasta el siguiente cambio de verdad.
+function firmaDeFuentes(l: FontSummary[]): string {
+  return l
+    .map((f) => [f.id, f.latitude, f.longitude, f.name, f.source, f.drinkable, f.lastWaterStatus, f.lastUpdate].join('|'))
+    .join('~')
+}
+
 function FontMarkers({
   nonce,
   onlyWithWater,
@@ -227,7 +236,12 @@ function FontMarkers({
       maxLong: String(b.getEast()),
     })
     try {
-      setFonts(await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`))
+      const nuevas = await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`)
+      // Se conserva el array anterior si lo que se pinta no ha cambiado. Cambiar su
+      // identidad reconstruye TODOS los marcadores, que es caro y además se lleva por
+      // delante el popup abierto — y recentrar el mapa estando parado devuelve
+      // exactamente las mismas fuentes.
+      setFonts((prev) => (firmaDeFuentes(prev) === firmaDeFuentes(nuevas) ? prev : nuevas))
     } catch {
       // silencioso: mapa vacío si falla
     }
@@ -245,9 +259,17 @@ function FontMarkers({
     return () => clearTimeout(t)
   }, [map, loadBounds, nonce])
 
-  let shown = showNonPotable ? fonts : fonts.filter((f) => !isNotPotable(f.drinkable))
-  if (onlyWithWater) shown = shown.filter(hasWater)
-  if (sourceFilter !== 'all') shown = shown.filter((f) => f.source === sourceFilter)
+  // Memorizado a propósito, no por rendimiento: `.filter()` suelto devolvía un array
+  // nuevo en CADA render, y este componente repinta con cada posición del GPS (cada
+  // pocos segundos mientras caminas). Como `ClusteredMarkers` reconstruye los
+  // marcadores cuando cambia la identidad del array, el popup que acababas de abrir se
+  // destruía solo al segundo siguiente, sin que hubiera cambiado ni un dato.
+  const shown = useMemo(() => {
+    let l = showNonPotable ? fonts : fonts.filter((f) => !isNotPotable(f.drinkable))
+    if (onlyWithWater) l = l.filter(hasWater)
+    if (sourceFilter !== 'all') l = l.filter((f) => f.source === sourceFilter)
+    return l
+  }, [fonts, showNonPotable, onlyWithWater, sourceFilter])
   return <ClusteredMarkers fonts={shown} selectedID={selectedID} />
 }
 
