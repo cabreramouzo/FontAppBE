@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import Paper from '@mui/material/Paper'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -10,6 +9,7 @@ import IosShareIcon from '@mui/icons-material/IosShare'
 import { sesiones, useTurno } from '../lib/asks'
 import { estaInstalada, instalaAhora, instalacionDeUnToque, plataforma } from '../lib/install'
 import { useI18n } from '../i18n/I18nContext'
+import { TarjetaDeAviso } from './Avisos'
 
 // Aviso "añade a pantalla de inicio".
 // - Android/Chromium: usamos el evento nativo `beforeinstallprompt` para ofrecer
@@ -87,46 +87,7 @@ export function InstallPrompt() {
   if (!show) return null
 
   return (
-    // **Flota, no empuja.** Iba en flujo normal entre la barra y `<main>`, y eso rompe
-    // el mapa: su alto es `100dvh` menos la barra menos lo que va debajo, o sea una
-    // resta cuadrada al milímetro que da por hecho que ahí en medio no hay nada. Con el
-    // aviso puesto, los ~50 px suyos bajan la página entera y el fondo del mapa —con
-    // sus botones— se va por debajo de la tab bar. Visto en un iPhone.
-    //   Va **arriba** y no abajo, que es donde vive todo lo demás flotante de esta app,
-    // por dos razones: abajo ya están la tab bar, los toasts, la píldora de sin
-    // cobertura y la barra de Safari, y serían tres bandas apiladas en un móvil; y
-    // arriba es justo donde el aviso ya estaba, así que nada se mueve de sitio: lo
-    // único que cambia es que ahora tapa en vez de empujar.
-    <Box
-      sx={{
-        position: 'fixed',
-        top: 'calc(var(--alto-barra) + env(safe-area-inset-top) + 8px)',
-        left: 8,
-        right: 8,
-        zIndex: (theme) => theme.zIndex.appBar,
-        display: 'flex',
-        justifyContent: 'center',
-        // El contenedor no debe robar toques al mapa por los lados; solo la tarjeta.
-        pointerEvents: 'none',
-      }}
-    >
-    <Paper
-      elevation={6}
-      role="status"
-      sx={{
-        pointerEvents: 'auto',
-        width: '100%',
-        maxWidth: 460,
-        borderRadius: 3,
-        border: 1,
-        borderColor: 'divider',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1.5,
-        px: 2,
-        py: 1.25,
-      }}
-    >
+    <TarjetaDeAviso>
       <InstallMobileIcon color="primary" fontSize="small" />
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography variant="body2" sx={{ fontWeight: 600 }}>{t('install.title')}</Typography>
@@ -144,7 +105,6 @@ export function InstallPrompt() {
       <IconButton size="small" onClick={dismiss} aria-label={t('form.cancel')}>
         <CloseIcon fontSize="small" />
       </IconButton>
-    </Paper>
-    </Box>
+    </TarjetaDeAviso>
   )
 }

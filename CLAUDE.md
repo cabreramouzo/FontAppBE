@@ -1087,9 +1087,16 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   `100dvh - --alto-barra - --bajo-el-mapa`, una resta que da por hecho que ahí en medio
   no hay nada. Medido: metiendo esa banda, el fondo del mapa cae en 832 con la tab bar
   empezando en 756 —**76 px de mapa y sus botones tapados**— y la página desborda 20 px.
-  Se vio en un iPhone ajeno, no aquí. Ahora es una tarjeta `fixed` bajo la barra: **tapa
+  Se vio en un iPhone ajeno, no aquí. Ahora son tarjetas flotantes bajo la barra: **tapan
   en vez de empujar**, que en una página con scroll cuesta el encabezado durante un rato
-  y en el mapa no cuesta nada.
+  y en el mapa cuesta llegar a los botones de filtros y capas hasta que se cierran.
+- **La posición vive en `FranjaDeAvisos` (`Avisos.tsx`) y no en cada aviso.** Son dos —el
+  de instalar y el de aportaciones sin enviar (`PendingUploads`)— y **pueden coincidir**:
+  el segundo no pasa por la cola de `lib/asks` porque no es una petición sino un estado, y
+  decirte que algo tuyo está sin enviar no es opcional. Con `fixed` en cada uno se pintaban
+  encima el uno del otro; como hijos de la franja se apilan solos y el que se añada mañana
+  no tiene que acordarse de nada. El orden es de urgencia: primero lo tuyo sin enviar,
+  después el que pide un favor. La caja (`TarjetaDeAviso`) también es compartida.
 - Va **arriba y no abajo**, al revés que el resto de lo flotante de esta app, porque abajo
   ya están la tab bar, los toasts, la píldora de sin cobertura y la barra de Safari: en un
   iPhone serían tres bandas apiladas. Arriba es además donde el aviso ya estaba, así que
