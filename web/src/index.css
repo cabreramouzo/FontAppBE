@@ -809,3 +809,30 @@ select:not([class*="Mui"]) {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+/* El globo del popup sigue el tema de la app.
+
+   Leaflet trae `background: white; color: #333` escritos a mano en su hoja, así que el
+   popup era la única superficie de la app que no seguía el modo oscuro. Mientras el
+   texto lo pintaba Leaflet no se notaba; al hacer que toda la tarjeta fuera un enlace
+   con `color: var(--fg)`, en oscuro quedó #e5e7eb sobre blanco — 1,2:1, invisible.
+   Medido en producción: el nombre de la fuente y el aspa de cerrar no se veían y solo
+   quedaba el botón azul flotando en un rectángulo blanco.
+
+   No es cosa de Chrome ni de Android: es del modo oscuro del móvil, y por eso quien
+   miraba en Safari (en claro) no lo veía.
+
+   El selector lleva `.leaflet-container` delante **a propósito**: `leaflet.css` se
+   importa desde `MapPage`/`RelocateFont`, que son trozos con carga diferida, así que su
+   `<link>` se inyecta *después* que el de esta hoja. Con la misma especificidad ganaría
+   Leaflet por orden de aparición. Misma trampa que ya nos costó el rótulo azul del
+   botón. */
+.leaflet-container .leaflet-popup-content-wrapper,
+.leaflet-container .leaflet-popup-tip {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* El aspa de cerrar era un #757575 fijo, que sobre el fondo oscuro desaparecía igual. */
+.leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+.leaflet-container a.leaflet-popup-close-button:hover { color: var(--fg); }
