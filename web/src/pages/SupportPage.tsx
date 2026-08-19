@@ -14,9 +14,12 @@ import { useToast } from '../components/ToastContext'
 import { FeedbackButton } from '../components/FeedbackButton'
 import { comparteTexto } from '../lib/share'
 
-// Ko-fi real (ID G5G724DC37). El enlace directo equivale al widget embed, sin
-// cargar el script de terceros de Ko-fi.
-const KOFI_URL = 'https://ko-fi.com/G5G724DC37'
+// Ko-fi se retiró el 19/08/2026, cuando entró el mecenatge d'Aixeta. Dos botones que
+// decían «invita'm a un cafè» competían por ser lo mismo, y el texto de arriba pide algo
+// **recurrente**, que es justo lo que Ko-fi no era aquí. Se deja escrito el enlace porque
+// la razón para quitarlo puede caducar: si algún día llega gente que no puede pagar por
+// Aixeta, volver a ponerlo es un minuto y no una excavación.
+//   Ko-fi: https://ko-fi.com/G5G724DC37   (etiqueta antigua: 'donate.kofi')
 const BTC_ADDRESS = 'bc1qu29jxn37wwwrqz6f6qyrwsaa8xn72xy9wmeh0w'
 // Mecenatge recurrent (Aixeta). Va PRIMER y en botón lleno porque es lo que el texto de
 // arriba pide —«la ayuda que más sirve es la que se repite»—, y sería raro pedir algo
@@ -103,9 +106,8 @@ export function SupportPage() {
       <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('support.costsTitle')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('support.costsBody')}</Typography>
 
-      {/* Dos cafés que no son lo mismo, así que **cada uno dice de qué va**: sin la línea
-          de debajo los dos botones se leen igual y no hay forma de saber cuál es el
-          mensual, que es justo el que se pide arriba. */}
+      {/* La línea de debajo se queda aunque ya no haya con qué comparar: dice que es una
+          suscripción **antes** de pulsar, que es lo mínimo si el botón lleva a pagar. */}
       <Button
         fullWidth variant="contained" disableElevation startIcon={<LocalCafeIcon />}
         component="a" href={AIXETA_URL} target="_blank" rel="noreferrer"
@@ -113,19 +115,8 @@ export function SupportPage() {
       >
         {t('donate.aixeta')}
       </Button>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5, mb: 1.5 }}>
-        {t('donate.monthly')}
-      </Typography>
-
-      <Button
-        fullWidth variant="outlined" startIcon={<LocalCafeIcon />}
-        component="a" href={KOFI_URL} target="_blank" rel="noreferrer"
-        sx={{ textTransform: 'none' }}
-      >
-        {t('donate.kofi')}
-      </Button>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
-        {t('donate.oneOff')}
+        {t('donate.monthly')}
       </Typography>
 
       <Divider sx={{ my: 2 }}>{t('donate.orBtc')}</Divider>

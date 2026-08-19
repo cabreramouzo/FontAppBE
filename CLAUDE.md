@@ -488,14 +488,17 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   agua** a propósito — «fuentes» a secas, sin contexto, es tipografía.
 - El diálogo de donación del pie **se ha borrado**: decía menos (solo dinero) y tener el
   mismo contenido en dos sitios garantiza que uno se quede viejo.
-- **Tres formas de pagar, y el orden importa**: mecenatge recurrente en Aixeta
-  (`fontapp.aixeta.cat`) **primero y en botón lleno**, Ko-fi debajo y en botón vacío, y
-  Bitcoin al final. Es lo que pide el texto de arriba —«la ayuda que más sirve es la que se
-  repite»—, y ofrecer primero el pago único después de decir eso sería contradecirse en dos
-  líneas.
-- Los dos son «un café», así que **cada uno lleva su línea debajo** («cada mes» / «un solo
-  pago»). Sin eso los dos botones se leen igual y no hay forma de saber cuál es el que se
-  acaba de pedir.
+- **Dos formas de pagar**: mecenatge recurrente en Aixeta (`fontapp.aixeta.cat`) y Bitcoin.
+  El texto de arriba pide **lo que se repite**, así que ofrecer al lado un pago único era
+  contradecirse en dos líneas.
+- **Ko-fi se retiró el 19/08/2026**, al entrar Aixeta: dos botones que decían «invítame a
+  un café» competían por ser lo mismo. La condición para quitarlo era que Aixeta sirviera a
+  quien no es catalán —tiene página en catalán, castellano e inglés—, así que se cumplió.
+  El enlace queda **escrito en un comentario** de `SupportPage.tsx`, no borrado: la razón
+  puede caducar (si aparece gente que no puede pagar por Aixeta) y entonces volver a
+  ponerlo es un minuto.
+- El botón lleva debajo **«cada mes»** aunque ya no haya con qué compararlo: dice que es
+  una suscripción *antes* de pulsar, que es lo mínimo si el botón lleva a pagar.
 - **Pendiente dicho por el autor:** pago directo con Apple Pay vía Stripe, que iría en el
   bloque de costes junto a los demás.
 - **La regla de fondo, que vale para lo que venga:** móvil y escritorio se diseñan en
