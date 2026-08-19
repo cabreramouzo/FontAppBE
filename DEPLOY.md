@@ -629,6 +629,43 @@ La primera pasada vuelca **todo el historial** de golpe. Es lo esperado y es ide
 revisa el número de anuladas por techo diario antes de darlo por bueno: si sale alto, el techo
 está mal calibrado para los datos reales y más vale ajustarlo antes de que nadie vea puntos.
 
+## Portadas que están esperando dentro de una reseña
+
+Desde agosto de 2026, publicar una reseña con foto sobre una fuente **sin portada** se la
+pone como foto principal (`CoverPhoto`). Lo que queda es la cola de antes: fuentes cuya
+única foto vive dentro de una reseña vieja y nunca se ascendió, así que la ficha se enseña
+vacía. **Corre esto una vez tras desplegar**, porque mientras tanto la app invita a poner
+«la primera foto» en fuentes que el baremo ya da por fotografiadas, y quien la ponga cobra
+«foto sustituida» (80 gotas menos de lo que le tocaba).
+
+Primero, cuántas son:
+
+```bash
+fly ssh console -a fontapp -C "/app/App adopt-cover-photos --dry-run"
+```
+
+Enseña el recuento y las veinte primeras, sin escribir nada. Para verlo también en SQL:
+
+```bash
+fly postgres connect -a <tu-db> -c "SELECT (SELECT count(*) FROM fonts WHERE image IS NOT NULL) AS con_portada, (SELECT count(DISTINCT c.font_id) FROM font_comments c JOIN fonts f ON f.id=c.font_id WHERE c.image IS NOT NULL AND f.image IS NULL) AS esperando;"
+```
+
+Si el número es grande, una primera tanda corta para comprobar el resultado en la web:
+
+```bash
+fly ssh console -a fontapp -C "/app/App adopt-cover-photos --limit 20"
+```
+
+Y ya del todo:
+
+```bash
+fly ssh console -a fontapp -C "/app/App adopt-cover-photos"
+```
+
+Cada ascenso **copia** el objeto (la reseña conserva el suyo) y deja su entrada en el
+historial de ediciones, así que se revierte una a una desde el panel. Es idempotente: una
+fuente que ya tenga portada no se toca, así que repetirlo no hace nada.
+
 ## Cloudflare delante de la API (`api.fontapp.net`)
 
 ### Por qué
