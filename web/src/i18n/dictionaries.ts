@@ -4134,7 +4134,7 @@ const fr: Dict = {
   'game.kind.fontCreated': "Nouvelle fontaine",
   'game.kind.firstPhoto': "Première photo d'une fontaine",
   'game.kind.photoReplaced': "Remplacer une photo",
-  'game.kind.firstReview': "Premier aperçu d'une fontaine",
+  'game.kind.firstReview': "Premier avis sur une fontaine",
   'game.kind.updateReview': "Mise à jour du statut",
   'game.kind.relocation': "Fixation de l'emplacement",
   'game.kind.fieldCompleted': "Remplir un détail manquant",

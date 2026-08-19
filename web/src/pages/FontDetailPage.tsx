@@ -914,8 +914,13 @@ export function FontDetailPage() {
                 ? { component: 'label' as const, 'aria-label': t('detail.addPhoto') }
                 : {})}
               sx={{
-                px: 2, py: 1.25, my: 1, borderRadius: 2,
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                // Cuadrado y no una franja: ocupa el sitio de la foto que falta, así que
+                // tiene que parecerse a una foto. Lo que se bajó de tono al rebalancearlo
+                // fue el **color** —borde fino y gris en vez de 2 px en el de acción—, no
+                // el tamaño; una tira de una línea no se leía como un hueco de imagen.
+                px: 2, py: 3, my: 1, borderRadius: 2, textAlign: 'center',
+                width: '100%', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 0.75,
                 border: '1px dashed', borderColor: 'divider',
                 ...(user && !subiendoFoto && {
                   cursor: 'pointer',
@@ -923,7 +928,7 @@ export function FontDetailPage() {
                 }),
               }}
             >
-              {subiendoFoto ? <CircularProgress size={18} /> : <PhotoCameraIcon fontSize="small" color="disabled" />}
+              {subiendoFoto ? <CircularProgress size={22} /> : <PhotoCameraIcon color="disabled" />}
               <Typography variant="body2" color="text.secondary">
                 {subiendoFoto ? t('image.uploading') : t('detail.noPhotoYet')}
               </Typography>
