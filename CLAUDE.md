@@ -523,8 +523,16 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   «ya no está» a un toque justo después de fotografiarla es casi una contradicción y es
   además el estado más caro —dos testimonios de personas distintas permiten retirar la
   fuente del mapa—. Un atajo no debe llevar ahí; para eso está el formulario entero.
-  Ojo con el desequilibrio de fondo, que sigue: el baremo paga **primera foto 120** y
-  **primera reseña 80**, o sea que los puntos también empujan hacia la foto.
+  Y el baremo se corrigió con ello (**19/08/2026**): primera reseña y primera foto
+  **intercambiaron sus valores**, 120 y 80. Estaba al revés y empujaba justo al revés de lo
+  que hace esta app —la foto ilustra, pero lo que evita un desvío de tres kilómetros es
+  saber si mana hoy—. Se vio al hacer evidente el hueco de la foto: con el baremo antiguo,
+  el atajo estaba mejor pagado que el trabajo. **Lo ya repartido se queda como está**: las
+  gotas viajan congeladas con el valor del día en que se registraron, y esto no es un juego
+  de vida o muerte. Del cambio solo hubo que tocar **una constante y la documentación**:
+  `/gamification/scale` publica las cifras, el diálogo y la página pública las leen de ahí y
+  la lista **se reordena sola** (va ordenada de más a menos). Que eso funcionara es la
+  prueba de que valía la pena no escribir ni una cifra en el cliente.
 - **Puntúa como siempre**, y hubo que arreglarlo para que fuera verdad. El baremo saca las
   aportaciones de foto de dos sitios: las reseñas con imagen y las **ediciones que cambian
   `image`**. La ruta directa deja una edición firmada, así que cobra «primera foto» (120) y

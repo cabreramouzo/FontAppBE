@@ -210,14 +210,26 @@ final class AppTests: XCTestCase {
                                  "El techo combinado no puede acercarse a duplicar el baremo.")
     }
 
-    /// La primera foto tiene que pagar más que cualquier otra cosa: es el hueco medido
-    /// (0 de 49 fuentes de la muestra de producción) y es irrepetible por fuente.
-    func testFirstPhotoIsTheBestPaidContribution() throws {
-        let otras = ContributionScore.Kind.allCases.filter { $0 != .firstPhoto }
-        for k in otras {
-            XCTAssertGreaterThan(ContributionScore.Kind.firstPhoto.base, k.base,
-                                 "\(k.rawValue) no puede pagar más que la primera foto")
+    /// **Manda la primera reseña**, no la primera foto. Se cambió el 19/08/2026 y este
+    /// test cambió con ello: durante meses fijó lo contrario, con el argumento de que la
+    /// foto era el hueco más grande (0 de 49 fuentes de la muestra tenían) y que era
+    /// irrepetible por fuente. Las dos cosas siguen siendo ciertas y aun así el orden
+    /// estaba mal: una foto ilustra la fuente, pero lo que ahorra un desvío de tres
+    /// kilómetros es saber si mana **hoy**, y eso solo lo dice una reseña. Se vio al hacer
+    /// evidente en la ficha el hueco de la foto — con el baremo antiguo, el atajo estaba
+    /// mejor pagado que el trabajo.
+    ///
+    /// El test se queda porque la trampa sigue viva: es fácil subirle el valor a algo
+    /// puntual («esto también es importante») hasta que lo que sostiene la app deja de
+    /// encabezar la lista.
+    func testFirstReviewIsTheBestPaidContribution() throws {
+        for k in ContributionScore.Kind.allCases where k != .firstReview {
+            XCTAssertGreaterThan(ContributionScore.Kind.firstReview.base, k.base,
+                                 "\(k.rawValue) no puede pagar más que la primera reseña")
         }
+        // Y la foto sigue por debajo de crear la fuente, que es lo que se intercambió.
+        XCTAssertLessThan(ContributionScore.Kind.firstPhoto.base,
+                          ContributionScore.Kind.fontCreated.base)
     }
 
     /// El pulso reparte a la gente en dos listas, y las dos formas de equivocarse son

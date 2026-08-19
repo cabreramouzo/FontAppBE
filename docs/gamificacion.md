@@ -80,9 +80,9 @@ absolutos se pueden reescalar el día que se quiera.
 
 | Aportación | Por qué vale lo que vale | Gotas |
 |---|---|---:|
-| **Primera foto** de una fuente que no tenía | Es el hueco más grande que hay, y es irrepetible: solo se puede hacer una vez por fuente. | 120 |
-| **Fuente nueva** que no existía | Amplía el mapa. Alto, pero no el más alto: ya hay decenas de miles de fuentes y ninguna foto. | 100 |
-| **Primera reseña** de una fuente nunca visitada | Convierte un punto importado en una fuente verificada por una persona. | 80 |
+| **Primera reseña** de una fuente nunca visitada | Convierte un punto importado en una fuente verificada por una persona, y es lo único que contesta la pregunta por la que existe la app: si mana **hoy**. | 120 |
+| **Fuente nueva** que no existía | Amplía el mapa. Alto, pero no el más alto: una fuente en el mapa de la que nadie sabe nada todavía no sirve para decidir un desvío. | 100 |
+| **Primera foto** de una fuente que no tenía | Llena el hueco más visible de la ficha y es irrepetible —solo se puede hacer una vez por fuente—, pero una foto no dice si hay agua. | 80 |
 | **Reubicar** una fuente (aceptada) | Bajo arbolado el GPS se va decenas de metros; una fuente mal situada no se encuentra. | 60 |
 | **Reseña de actualización** | Escalada por antigüedad de la última — ver la curva de frescura. | 5–70 |
 | **Completar la ficha** (potabilidad, tipo, descripción real) | Por campo que pasa de vacío a lleno. No se paga dos veces el mismo campo. | 25 |
@@ -470,7 +470,9 @@ ejecución o si se lanza de más.
 **Las gotas quedan congeladas.** `gotes` se guarda con el valor que tenía el baremo el día
 que se registró la aportación. Si mañana se decide que una primera foto vale 150, quien la
 puso ayer no ve cambiar su marcador de golpe — que es exactamente lo que erosiona la
-confianza en un sistema de puntos. Para reescalar el histórico a propósito hay que vaciar la
+confianza en un sistema de puntos. Dejó de ser un ejemplo el **19/08/2026**: primera reseña
+y primera foto intercambiaron sus valores (80↔120) y **lo ya repartido se quedó como
+estaba**, a propósito. Para reescalar el histórico a propósito hay que vaciar la
 tabla y volver a sincronizar; es una decisión consciente, no un efecto secundario.
 
 **Se sincroniza, no se escribe desde los controladores.** Sería más inmediato registrar el
@@ -1000,9 +1002,9 @@ guanyen col·laborant i no es gasten en res: són un marcador de contribució, n
 
 | Aportació | Per què val el que val | Gotes |
 |---|---|---:|
-| **Primera foto** d'una font que no en tenia | És el buit més gran que hi ha, i és irrepetible: només es pot fer una vegada per font. | 120 |
-| **Font nova** que no existia | Amplia el mapa. Alt, però no el més alt: ja hi ha desenes de milers de fonts i cap foto. | 100 |
-| **Primera ressenya** d'una font mai visitada | Converteix un punt importat en una font verificada per una persona. | 80 |
+| **Primera ressenya** d'una font mai visitada | Converteix un punt importat en una font verificada per una persona, i és l'única cosa que contesta la pregunta per la qual existeix l'app: si raja **avui**. | 120 |
+| **Font nova** que no existia | Amplia el mapa. Alt, però no el més alt: una font al mapa de la qual ningú sap res encara no serveix per decidir una volta. | 100 |
+| **Primera foto** d'una font que no en tenia | Omple el buit més visible de la fitxa i és irrepetible —només es pot fer una vegada per font—, però una foto no diu si hi ha aigua. | 80 |
 | **Reubicar** una font (acceptada) | Sota arbrat el GPS se'n va desenes de metres; una font mal situada no es troba. | 60 |
 | **Ressenya d'actualització** | Escalada per antiguitat de l'última — vegeu la corba de frescor. | 5–70 |
 | **Completar la fitxa** (potabilitat, tipus, descripció real) | Per camp que passa de buit a ple. No es paga dues vegades el mateix camp. | 25 |

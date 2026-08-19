@@ -54,9 +54,17 @@ enum ContributionScore {
 
         var base: Int {
             switch self {
-            case .firstPhoto:     return 120
+            // **Primera reseña por encima de primera foto**, y se cambió a posta el
+            // 19/08/2026. Estaba al revés y empujaba justo al revés de lo que hace esta
+            // app: la foto ilustra la fuente, pero lo que alguien necesita saber antes de
+            // desviarse tres kilómetros es si mana HOY. Se vio al hacer evidente el hueco
+            // de la foto en la ficha — con el baremo antiguo, el atajo estaba mejor pagado
+            // que el trabajo. Las gotas ya repartidas se quedan como están: viajan
+            // congeladas con el valor del día en que se registraron, y esto no es un juego
+            // de vida o muerte.
+            case .firstReview:    return 120
             case .fontCreated:    return 100
-            case .firstReview:    return 80
+            case .firstPhoto:     return 80
             case .relocation:     return 60
             case .report:         return 40
             case .fieldCompleted: return 25
