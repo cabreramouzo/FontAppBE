@@ -443,7 +443,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - **El orden de esa pantalla es el mensaje: primero invitar, después dinero.** Lo que le
   falta a esta app no son euros, son personas mirando fuentes; y decirlo en ese orden evita
   que se lea como un cepillo. El bloque de invitar va en tarjeta y con el botón grande; el
-  de costes, debajo y en texto llano, diciendo que no hace falta.
+  de costes, debajo y en texto llano.
+- Pero **el bloque de costes pide de verdad**, y esto se corrigió sobre la marcha: decía
+  «Si quieres, ayuda con los costes» y «ninguna aportación es necesaria: la app funciona
+  igual». Era cortés y desactivaba la petición — dar permiso para no dar es lo que hace
+  casi todo el mundo. Ahora nombra el coste, dice que **crece con la app**, y pide lo que
+  de verdad sirve: **algo recurrente**, con la cifra puesta (un café al mes, o doce de una
+  vez al año). Un importe concreto se decide; «lo que quieras» se aplaza.
 - El enlace que se comparte lleva **su código de campaña** (`/?p=amigos`), como los
   carteles: es lo único que puede decir si esta pantalla sirve para algo. No necesita
   entrada en `_redirects` —eso es solo para los enlaces cortos—, porque `?p=` en la raíz ya
