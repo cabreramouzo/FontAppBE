@@ -465,6 +465,16 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Compartir usa la **hoja del sistema** (`navigator.share`) con el portapapeles de
   respaldo, y **además** un botón directo de WhatsApp (`wa.me`): es por donde se mueve esto
   de verdad aquí y abre la app instalada sin pasar por la hoja.
+- **La frase y el enlace van juntos en `text`, y NO se pasa `url`.** Con los dos campos
+  por separado —que es lo natural y lo que se hizo primero— medio destino se queda solo con
+  la dirección y tira la frase: llegaba un enlace pelado a un chat, que es lo que nadie
+  abre. Dentro del texto no hay nada que descartar, y WhatsApp y compañía enlazan igual la
+  dirección que encuentran (la tarjeta de vista previa la siguen poniendo las etiquetas
+  `og:`). Si algún día se toca esto, ése es el motivo.
+- Y el mensaje va en **primera persona y cuenta qué resuelve**, no qué es: «mira qué
+  utilidad acabo de encontrar… el estado de las fuentes de tu ruta o de tu pueblo». Lo pide
+  el canal: eso cae en un chat entre otras cosas y compite con ellas. Dice **fuentes de
+  agua** a propósito — «fuentes» a secas, sin contexto, es tipografía.
 - El diálogo de donación del pie **se ha borrado**: decía menos (solo dinero) y tener el
   mismo contenido en dos sitios garantiza que uno se quede viejo.
 - **Pendiente dicho por el autor:** pago directo con Apple Pay vía Stripe, que iría en el
