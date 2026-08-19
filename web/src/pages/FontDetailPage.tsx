@@ -492,6 +492,12 @@ export function FontDetailPage() {
   // una de sus dependencias, el efecto se relanzaría y su limpieza mataría el temporizador
   // antes de que llegara a saltar. Se cancelaba a sí mismo, en silencio.
   const irAlFormulario = useRef(false)
+  // Salto directo y no `behavior: 'smooth'`: medido, el suave **no hace nada** en algunos
+  // motores —la página se quedaba a cero— y falla en silencio. Además, con
+  // `prefers-reduced-motion` el suave ya es un salto de todas formas.
+  const llevaAlFormulario = useCallback(() => {
+    document.getElementById('update-form')?.scrollIntoView({ block: 'center' })
+  }, [])
   useEffect(() => {
     if (!updating || !irAlFormulario.current) return
     irAlFormulario.current = false
@@ -499,16 +505,15 @@ export function FontDetailPage() {
     // DOM y el `scrollIntoView` no encontraba nada (medido: la página no se movía ni un
     // píxel). Y con un respiro además, porque en la otra rama el formulario sale de un
     // `Collapse` que arranca midiendo cero.
-    const id = setTimeout(() => {
-      // Salto directo y no `behavior: 'smooth'`: medido, el suave **no hace nada** en
-      // algunos motores —la página se quedaba a cero— y falla en silencio. Además, con
-      // `prefers-reduced-motion` el suave ya es un salto, así que esto es lo que ve
-      // media pantalla de todas formas.
-      document.getElementById('update-form')?.scrollIntoView({ block: 'center' })
-    }, 320)
+    const id = setTimeout(llevaAlFormulario, 320)
     return () => clearTimeout(id)
-  }, [updating])
+  }, [updating, llevaAlFormulario])
   function abrirFormularioDeFoto() {
+    // Si ya está abierto, `setUpdating(true)` no cambia nada: React no repinta, el efecto
+    // no se relanza y **pulsar no hacía absolutamente nada**. Pasa en cuanto abres el
+    // formulario por el otro botón, o en cuanto vuelves arriba y pulsas el hueco otra
+    // vez. Aquí solo hay que llevar.
+    if (updating) { llevaAlFormulario(); return }
     irAlFormulario.current = true
     setUpdating(true)
   }

@@ -504,6 +504,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   del efecto cambiaba una dependencia, el efecto se relanzaba y su limpieza mataba el
   temporizador: se cancelaba a sí mismo en silencio. Y `scrollIntoView` va **sin**
   `behavior: 'smooth'` — medido, el suave no hace nada en algunos motores y falla callado.
+- Y la cuarta, que se coló hasta que la probó el autor: **si el formulario ya estaba
+  abierto, pulsar no hacía nada**. `setUpdating(true)` sobre un estado que ya es `true` no
+  repinta, así que el efecto no se relanza y no hay salto. Pasa en cuanto abres el
+  formulario por el otro botón, o en cuanto vuelves arriba y pulsas el hueco por segunda
+  vez. El manejador comprueba ahora si ya está abierto y entonces solo lleva. Moraleja del
+  patrón entero: colgar un efecto secundario de una **transición** de estado falla siempre
+  que el estado ya estaba donde lo quieres poner.
 - `swift run App adopt-cover-photos [--dry-run] [--limit n]` hace la pasada retroactiva:
   la reseña con foto **más antigua** de cada fuente sin portada. Salta las referencias que
   el almacén no sabe copiar (`/uploads/` en disco, `<base>/uploads/` en R2) — sin eso, en
