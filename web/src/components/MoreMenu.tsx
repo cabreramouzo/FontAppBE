@@ -10,11 +10,13 @@ import MenuItem from '@mui/material/MenuItem'
 import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
 import LogoutIcon from '@mui/icons-material/Logout'
+import InstallMobileIcon from '@mui/icons-material/InstallMobile'
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { useI18n } from '../i18n/I18nContext'
 import { LANGS, type Lang } from '../i18n/dictionaries'
 import { useThemeMode, type ThemePref } from '../theme/ThemeModeContext'
+import { estaInstalada } from '../lib/install'
 
 const TEMAS: { pref: ThemePref; key: string }[] = [
   { pref: 'system', key: 'theme.system' },
@@ -70,6 +72,16 @@ export function MoreMenu({ onLogout }: { onLogout?: () => void }) {
           <ListItemIcon><MapOutlinedIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t('zones.title')}</ListItemText>
         </MenuItem>
+        {/* Instalar vive aquí porque es el único sitio permanente al que se llega
+            **desde el mapa en móvil**, que es donde está la gente: allí el pie no se
+            pinta. Sin esto, quien solo usa el mapa no tenía dónde volver a mirarlo
+            después de cerrar el aviso. */}
+        {!estaInstalada() && (
+          <MenuItem component={RouterLink} to="/install" onClick={cerrar}>
+            <ListItemIcon><InstallMobileIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t('install.button')}</ListItemText>
+          </MenuItem>
+        )}
 
         <Divider />
         <ListSubheader sx={{ lineHeight: '28px', bgcolor: 'transparent' }}>{t('theme.label')}</ListSubheader>

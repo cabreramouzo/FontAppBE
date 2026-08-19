@@ -1080,6 +1080,47 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - El estado vive en un módulo y no en un contexto: son cinco componentes en dos árboles
   (`App` y `Layout`) y un proveedor tendría que envolver los dos para nada más.
 
+## Instalar la app (`lib/install.ts` + `/install`)
+
+- **Los avisos de arriba no pueden ir en flujo.** `InstallPrompt` se pintaba entre la
+  barra y `<main>` como una banda normal, y eso rompe el mapa: su alto es
+  `100dvh - --alto-barra - --bajo-el-mapa`, una resta que da por hecho que ahí en medio
+  no hay nada. Medido: metiendo esa banda, el fondo del mapa cae en 832 con la tab bar
+  empezando en 756 —**76 px de mapa y sus botones tapados**— y la página desborda 20 px.
+  Se vio en un iPhone ajeno, no aquí. Ahora es una tarjeta `fixed` bajo la barra: **tapa
+  en vez de empujar**, que en una página con scroll cuesta el encabezado durante un rato
+  y en el mapa no cuesta nada.
+- Va **arriba y no abajo**, al revés que el resto de lo flotante de esta app, porque abajo
+  ya están la tab bar, los toasts, la píldora de sin cobertura y la barra de Safari: en un
+  iPhone serían tres bandas apiladas. Arriba es además donde el aviso ya estaba, así que
+  nada cambia de sitio.
+- Del mismo día y la misma familia: el Snackbar de `AppInterestBanner` **tapaba la tab bar
+  entera**. MUI ancla los Snackbar a `bottom: 0` en pantallas estrechas y la tab bar llegó
+  después. Se levanta con `--bajo-el-mapa`, que es la variable que existe justo para esto.
+  **Cualquier cosa anclada abajo tiene que usarla.**
+- **Un aviso que se ve una vez no enseña nada.** Observado sobre amigos y familia: lo
+  cierran sin leerlo, y después no había ningún sitio donde volver a mirarlo. Por eso
+  existe `/install` (`InstallPage.tsx`), permanente, enlazada desde el **pie** y desde el
+  **cajón (⋮)**. El cajón no es redundante: en móvil el pie no se pinta en el mapa, que es
+  justo donde está la gente. Ninguno de los dos aparece si ya está instalada.
+  El aviso flotante se queda: interrumpe una vez, la página está siempre.
+- La página enseña **primero el dispositivo en el que estás** y las otras plataformas
+  plegadas —sirven para explicárselo a alguien por teléfono, que es el caso que trae aquí.
+- **En el iPhone solo vale Safari**, y eso es una rama propia (`iosOtro`), no un matiz:
+  Chrome y Firefox para iOS no traen «añadir a la pantalla de inicio», así que darles los
+  pasos de Safari es mandarles a buscar un botón que no existe y que concluyan que la app
+  está rota.
+- Toda la detección vive en `lib/install.ts` y no repetida en los dos componentes:
+  equivocarse aquí es caro y silencioso (ofrecer instalar a quien ya la tiene, dar pasos
+  de Safari a quien está en Chrome) y una segunda copia se queda vieja sola.
+- `plataforma()` pregunta por **Android antes que por iOS**. `esIOS()` lleva la heurística
+  de iPadOS —«platform MacIntel + pantalla táctil»—, que un navegador con emulación de
+  móvil cumple sin ser un iPad; se vio al probar esta página. Un iPad de verdad nunca lleva
+  «Android» en la UA, así que el orden no quita ningún caso y elimina el error caro.
+- El botón de instalación real solo existe en Chromium y **solo una vez**: `beforeinstallprompt`
+  se consume al usarlo. Quien lo pida tiene que saber vivir sin él — cuando falta, quedan
+  las instrucciones a mano, nunca las dos cosas a la vez.
+
 ## Peso de las fotos (decisión aplazada, con disparador)
 
 - Hay **un solo tamaño** por foto: `compressImage` a 1280 px y calidad 0,72. Esa misma

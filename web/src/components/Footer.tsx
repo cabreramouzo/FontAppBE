@@ -3,6 +3,7 @@ import Button from '@mui/material/Button'
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
 import { useI18n } from '../i18n/I18nContext'
 import { FeedbackButton } from './FeedbackButton'
+import { estaInstalada } from '../lib/install'
 
 
 export function Footer() {
@@ -21,6 +22,10 @@ export function Footer() {
       {/* La explicación del juego, en el pie y no en la barra: no es algo que se busque
           a diario, pero tiene que estar donde se mira cuando surge la duda. */}
       <RouterLink to="/gamification">{t('gamePage.title')}</RouterLink>
+      {/* Instalar, en el pie y también en el cajón (⋮): un aviso que se ve una vez no
+          enseña nada —la gente lo cierra sin leerlo— y después no había ningún sitio
+          donde volver a mirarlo. No se pinta si ya la tiene instalada. */}
+      {!estaInstalada() && <RouterLink to="/install">{t('install.button')}</RouterLink>}
       <RouterLink to="/legal">{t('footer.legal')}</RouterLink>
       <span className="muted">
         {t('footer.dataPrefix')}{' '}
