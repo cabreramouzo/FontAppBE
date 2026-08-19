@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Paper from '@mui/material/Paper'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -8,6 +8,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import InstallMobileIcon from '@mui/icons-material/InstallMobile'
 import IosShareIcon from '@mui/icons-material/IosShare'
 import { sesiones, useTurno } from '../lib/asks'
+import { estaInstalada, instalaAhora, instalacionDeUnToque, plataforma } from '../lib/install'
 import { useI18n } from '../i18n/I18nContext'
 
 // Aviso "añade a pantalla de inicio".
@@ -17,8 +18,8 @@ import { useI18n } from '../i18n/I18nContext'
 //   manual (Compartir → Afegeix a la pantalla d'inici).
 // No se muestra si ya está instalada (standalone). Si el usuario lo descarta, NO
 // desaparece para siempre: guardamos la fecha y volvemos a ofrecerlo pasado un mes
-// (por si lo cerró sin querer o cambió de idea). Una vez instalada, `isStandalone`
-// evita seguir insistiendo.
+// (por si lo cerró sin querer o cambió de idea). Una vez instalada, `estaInstalada()`
+// evita seguir insistiendo. Quién es quién lo decide `lib/install.ts`, no este fichero.
 const STORAGE_KEY = 'fontapp_install_hint'
 const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000 // ~1 mes
 
@@ -34,72 +35,34 @@ function dismissedRecently(): boolean {
   }
 }
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
-function isIOS(): boolean {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    // iPadOS se presenta como Mac con pantalla táctil.
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
-
-function isStandalone(): boolean {
-  return window.matchMedia('(display-mode: standalone)').matches ||
-    // Safari iOS expone su propio flag.
-    (navigator as unknown as { standalone?: boolean }).standalone === true
-}
-
-// ¿La tenemos por instalada? O bien corre en modo app (standalone), o bien la instaló
-// antes (evento `appinstalled`, persistido en main.tsx) aunque ahora esté en el navegador.
-function isInstalled(): boolean {
-  if (isStandalone()) return true
-  try {
-    return localStorage.getItem('fontapp_installed') === '1'
-  } catch {
-    return false
-  }
-}
-
-// La instalación manual solo funciona en Safari; Chrome/Firefox/Edge en iOS no.
-function isIOSSafari(): boolean {
-  const ua = navigator.userAgent
-  return isIOS() && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua)
-}
-
 export function InstallPrompt() {
   const { t } = useI18n()
   const [listo, setListo] = useState(false)
   const show = useTurno('install', listo)
   const [mode, setMode] = useState<'ios' | 'android'>('ios')
-  const deferred = useRef<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
-    if (dismissedRecently() || isInstalled()) return
+    if (dismissedRecently() || estaInstalada()) return
     // Nadie instala en su pantalla de inicio algo que ha visto una vez. A partir de la
     // segunda visita ya hay una razón, y de paso deja limpia la pantalla del cartel.
     if (sesiones() < 2) return
 
     // Android/Chromium: capturamos el evento para lanzar la instalación nosotros.
-    const onBip = (e: Event) => {
-      e.preventDefault()
-      deferred.current = e as BeforeInstallPromptEvent
+    const onBip = () => {
       setMode('android')
       setListo(true)
     }
     window.addEventListener('beforeinstallprompt', onBip)
 
     // Puede haberse disparado ANTES de montar (lo captura main.tsx en window).
-    if (window.__bipEvent) {
-      deferred.current = window.__bipEvent as BeforeInstallPromptEvent
+    if (instalacionDeUnToque()) {
       setMode('android')
       setListo(true)
     }
 
     // iOS Safari: aviso con la instrucción manual, tras un pequeño retardo.
     let timer: number | undefined
-    if (isIOSSafari()) {
+    if (plataforma() === 'ios') {
       setMode('ios')
       timer = window.setTimeout(() => setListo(true), 3000)
     }
@@ -117,21 +80,52 @@ export function InstallPrompt() {
   }
 
   async function install() {
-    const d = deferred.current
-    if (!d) return
-    await d.prompt()
-    await d.userChoice
+    if (!await instalaAhora()) return
     dismiss() // instale o no, no volvemos a insistir
   }
 
   if (!show) return null
 
   return (
+    // **Flota, no empuja.** Iba en flujo normal entre la barra y `<main>`, y eso rompe
+    // el mapa: su alto es `100dvh` menos la barra menos lo que va debajo, o sea una
+    // resta cuadrada al milímetro que da por hecho que ahí en medio no hay nada. Con el
+    // aviso puesto, los ~50 px suyos bajan la página entera y el fondo del mapa —con
+    // sus botones— se va por debajo de la tab bar. Visto en un iPhone.
+    //   Va **arriba** y no abajo, que es donde vive todo lo demás flotante de esta app,
+    // por dos razones: abajo ya están la tab bar, los toasts, la píldora de sin
+    // cobertura y la barra de Safari, y serían tres bandas apiladas en un móvil; y
+    // arriba es justo donde el aviso ya estaba, así que nada se mueve de sitio: lo
+    // único que cambia es que ahora tapa en vez de empujar.
+    <Box
+      sx={{
+        position: 'fixed',
+        top: 'calc(var(--alto-barra) + env(safe-area-inset-top) + 8px)',
+        left: 8,
+        right: 8,
+        zIndex: (theme) => theme.zIndex.appBar,
+        display: 'flex',
+        justifyContent: 'center',
+        // El contenedor no debe robar toques al mapa por los lados; solo la tarjeta.
+        pointerEvents: 'none',
+      }}
+    >
     <Paper
-      square
-      elevation={0}
+      elevation={6}
       role="status"
-      sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1, borderBottom: 1, borderColor: 'divider', bgcolor: 'action.hover' }}
+      sx={{
+        pointerEvents: 'auto',
+        width: '100%',
+        maxWidth: 460,
+        borderRadius: 3,
+        border: 1,
+        borderColor: 'divider',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        px: 2,
+        py: 1.25,
+      }}
     >
       <InstallMobileIcon color="primary" fontSize="small" />
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -151,5 +145,6 @@ export function InstallPrompt() {
         <CloseIcon fontSize="small" />
       </IconButton>
     </Paper>
+    </Box>
   )
 }

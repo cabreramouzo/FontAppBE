@@ -69,7 +69,15 @@ export function AppInterestBanner() {
     <Snackbar
       open={open}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      sx={{ maxWidth: 460, width: 'calc(100% - 32px)' }}
+      // Se levanta por encima de la tab bar. Sin esto la tapaba entera en móvil: es de
+      // MUI anclar los Snackbar a `bottom: 0` en pantallas estrechas, y la tab bar llegó
+      // después. `--bajo-el-mapa` es justo «lo que hay ocupado ahí abajo» y ya lo usan
+      // los toasts, así que el día que la barra cambie de alto esto la sigue sola.
+      sx={{
+        maxWidth: 460,
+        width: 'calc(100% - 32px)',
+        bottom: { xs: 'calc(var(--bajo-el-mapa) + 12px)', sm: 24 },
+      }}
     >
       <Paper elevation={6} sx={{ p: 2, borderRadius: 3, width: '100%', border: 1, borderColor: 'divider' }}>
         {thanks ? (
