@@ -33,6 +33,12 @@ struct FontController: RouteCollection {
         protected.group(":fontID") { font in
             font.put(use: update)
             font.delete(use: destroy)
+            // Poner la foto de la fuente, y nada más. Existe aparte de `update` porque
+            // «esta fuente no tiene foto y yo estoy delante» es una acción sola, no una
+            // edición de la ficha: mandar el `CreateFontDTO` entero obligaría al cliente
+            // a reenviar nombre y coordenadas que no ha tocado, y a pisarlos con su copia
+            // si alguien los ha corregido mientras tanto.
+            font.put("photo", use: setPhoto)
             // Promover la foto de una reseña a foto principal (creador/admin).
             font.post("photo", "from-comment", ":commentID", use: setPhotoFromComment)
             // Historial de ESTA fuente: admins y quien tenga `viewFontHistory` (nivel 4).
@@ -100,6 +106,36 @@ struct FontController: RouteCollection {
         }
         let creador = try await font.$creator.get(on: req.db)
         return PhotoAuthor(username: creador?.username)
+    }
+
+    /// PUT /fonts/:fontID/photo — pone la foto de la fuente y nada más.
+    ///
+    /// Misma asimetría de siempre (`update`): la **primera** la puede poner cualquiera
+    /// con sesión —casi ninguna fuente importada tiene creador, así que si solo pudiera
+    /// él, esas fichas no tendrían foto nunca— y **sustituir** una que ya existe sigue
+    /// siendo del creador o de un admin.
+    @Sendable func setPhoto(req: Request) async throws -> Font {
+        let font = try await find(req)
+        let user = try req.auth.require(User.self)
+        struct PhotoDTO: Content { let image: String }
+        let dto = try req.content.decode(PhotoDTO.self)
+        guard !dto.image.trimmingCharacters(in: .whitespaces).isEmpty else {
+            throw Abort(.badRequest, reason: "Falta la imagen")
+        }
+        let anterior = font.image
+        if anterior != nil, !canManage(user: user, font: font) {
+            throw Abort(.forbidden, reason: "Esta fuente ya tiene foto: solo el creador o un administrador puede cambiarla")
+        }
+        let before = FontInfoSnapshot(font)
+        font.image = dto.image
+        try await font.save(on: req.db)
+        // Rastro en el historial, como cualquier otro cambio de la ficha: así se puede
+        // revertir desde el panel y no aparece una foto de la nada.
+        try await FontEdit(fontID: try font.requireID(), editorID: try? user.requireID(),
+                           before: before, after: FontInfoSnapshot(font)).save(on: req.db)
+        // La anterior ya no la usa nadie.
+        if let anterior { try? await req.imageStorage.delete(anterior) }
+        return font
     }
 
     /// POST /fonts/:fontID/photo/from-comment/:commentID

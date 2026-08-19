@@ -3,7 +3,7 @@
 // - Teselas del mapa (OSM, otro dominio): cache-first con tope (LRU sencillo).
 // - API GET del mismo origen: stale-while-revalidate (sirve al instante, refresca si hay red).
 // - Navegación SPA: network-first con respaldo en el shell.
-const SHELL_CACHE = 'fontapp-shell-v4'
+const SHELL_CACHE = 'fontapp-shell-v5'
 const TILE_CACHE = 'fontapp-tiles-v2'
 const API_CACHE = 'fontapp-api-v3'
 // El shell NO se pide a `/index.html`: en Cloudflare Pages esa ruta responde 308 hacia
@@ -240,11 +240,11 @@ function idb(db, store, mode, run) {
 }
 
 // Lanza un error si la respuesta no es 2xx, distinguiendo lo transitorio.
-async function post(url, token, body, isForm, queuedOffline = false) {
+async function post(url, token, body, isForm, queuedOffline = false, method = 'POST') {
   const headers = { Authorization: `Bearer ${token}` }
   if (!isForm) headers['Content-Type'] = 'application/json'
   if (queuedOffline) headers['X-FontApp-Queued-Offline'] = '1'
-  const res = await fetch(url, { method: 'POST', headers, body: isForm ? body : JSON.stringify(body) })
+  const res = await fetch(url, { method, headers, body: isForm ? body : JSON.stringify(body) })
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status}`)
     err.status = res.status
@@ -265,7 +265,10 @@ async function syncOutbox() {
     if (item.claimedAt && now - item.claimedAt < CLAIM_TTL_MS) continue // lo envía la página
     await idb(db, 'items', 'readwrite', (s) => s.put({ ...item, claimedAt: Date.now() }))
     try {
-      let image = item.data.image
+      // `photo` no lleva `data`: es solo la foto de una fuente que ya existe. Sin este
+      // `|| {}` reventaba con un TypeError, que aquí no trae `status` y por tanto se
+      // trataba como fallo transitorio: reintento eterno y la cola atascada.
+      let image = (item.data || {}).image
       if (item.photo) {
         const form = new FormData()
         form.append('file', new File([item.photo], item.photoName || 'photo.jpg', { type: item.photo.type || 'image/jpeg' }))
@@ -278,6 +281,8 @@ async function syncOutbox() {
             await post(`${base}/fonts/${font.id}/comments`, session.token, { waterStatus: item.waterStatus }, false, true)
           } catch (_) { /* la fuente ya está creada */ }
         }
+      } else if (item.kind === 'photo') {
+        if (image) await post(`${base}/fonts/${item.fontID}/photo`, session.token, { image }, false, true, 'PUT')
       } else {
         await post(`${base}/fonts/${item.fontID}/comments`, session.token, { ...item.data, image }, false, true)
       }

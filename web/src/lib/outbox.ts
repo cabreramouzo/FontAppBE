@@ -1,5 +1,5 @@
 import type { PhotoUploadMeta } from './image'
-import { ApiError, createComment, createFont, uploadImage, type NewComment, type NewFont } from '../api/client'
+import { ApiError, createComment, createFont, setFontPhoto, uploadImage, type NewComment, type NewFont } from '../api/client'
 
 // Bandeja de salida para trabajar SIN COBERTURA (el escenario real de la app: monte).
 //
@@ -32,6 +32,11 @@ export type OutboxItem =
   | { kind: 'font'; data: NewFont; waterStatus?: string; photo?: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
   // Actualización/reseña sobre una fuente que YA existe.
   | { kind: 'comment'; fontID: string; data: NewComment; photo?: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
+  // Solo la foto de una fuente que ya existe, sin reseña. Está en la cola por lo mismo
+  // que las otras dos: cuando estás delante de una fuente sin foto es justo cuando peor
+  // cobertura hay, y perder la foto por eso sería perder la única aportación posible
+  // desde ahí.
+  | { kind: 'photo'; fontID: string; photo: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
 
 type StoredItem = OutboxItem & {
   id: number; queuedAt: number; attempts: number; claimedAt?: number
@@ -182,6 +187,11 @@ export async function flushOutbox(): Promise<number> {
               /* la fuente ya está creada: no la reencolamos por esto */
             }
           }
+        } else if (item.kind === 'photo') {
+          // Si mientras tanto alguien le puso foto, el servidor responde 403 y la cola lo
+          // trata como definitivo: se descarta tras unos intentos. Es lo correcto —
+          // sustituir no es de cualquiera, y la ficha ya no está vacía.
+          if (image) await setFontPhoto(item.fontID, image, true)
         } else {
           await createComment(item.fontID, { ...item.data, image: image ?? item.data.image }, true)
         }

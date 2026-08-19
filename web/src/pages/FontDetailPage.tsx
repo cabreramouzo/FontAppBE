@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { capabilities, capabilityLevels } from '../lib/capabilities'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import ButtonBase from '@mui/material/ButtonBase'
+import CircularProgress from '@mui/material/CircularProgress'
 import IconButton from '@mui/material/IconButton'
 import TextField from '@mui/material/TextField'
 import MenuItem from '@mui/material/MenuItem'
@@ -50,6 +50,7 @@ import {
   getUser,
   getUserBadges,
   setFavorite,
+  setFontPhoto,
   setFontPhotoFromComment,
   updateComment,
   updateFont,
@@ -264,7 +265,7 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; 
   }
 
   return (
-    <Box id="update-form" component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+    <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
       <Stack direction="row" sx={{ alignItems: "center", flexWrap: "wrap", gap: 2 }}>
         <StatusSelect value={waterStatus} onChange={setWaterStatus} label={t('update.status')} />
         <Box><Typography variant="caption" color="text.secondary">{t('update.rating')}</Typography><StarRating value={rating} onChange={setRating} size={22} /></Box>
@@ -485,37 +486,36 @@ export function FontDetailPage() {
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [updating, setUpdating] = useState(false) // formulario de nueva actualización desplegado
-
-  // Pulsar el hueco de la foto abre el formulario Y lleva hasta él: vive más abajo, así
-  // que sin esto pulsar arriba no cambiaba nada de lo que se ve y parecía roto.
-  // En una `ref` y no en un estado: apagar la bandera desde dentro del efecto cambiaría
-  // una de sus dependencias, el efecto se relanzaría y su limpieza mataría el temporizador
-  // antes de que llegara a saltar. Se cancelaba a sí mismo, en silencio.
-  const irAlFormulario = useRef(false)
-  // Salto directo y no `behavior: 'smooth'`: medido, el suave **no hace nada** en algunos
-  // motores —la página se quedaba a cero— y falla en silencio. Además, con
-  // `prefers-reduced-motion` el suave ya es un salto de todas formas.
-  const llevaAlFormulario = useCallback(() => {
-    document.getElementById('update-form')?.scrollIntoView({ block: 'center' })
-  }, [])
-  useEffect(() => {
-    if (!updating || !irAlFormulario.current) return
-    irAlFormulario.current = false
-    // En un efecto y no dentro del manejador: allí el formulario todavía no está en el
-    // DOM y el `scrollIntoView` no encontraba nada (medido: la página no se movía ni un
-    // píxel). Y con un respiro además, porque en la otra rama el formulario sale de un
-    // `Collapse` que arranca midiendo cero.
-    const id = setTimeout(llevaAlFormulario, 320)
-    return () => clearTimeout(id)
-  }, [updating, llevaAlFormulario])
-  function abrirFormularioDeFoto() {
-    // Si ya está abierto, `setUpdating(true)` no cambia nada: React no repinta, el efecto
-    // no se relanza y **pulsar no hacía absolutamente nada**. Pasa en cuanto abres el
-    // formulario por el otro botón, o en cuanto vuelves arriba y pulsas el hueco otra
-    // vez. Aquí solo hay que llevar.
-    if (updating) { llevaAlFormulario(); return }
-    irAlFormulario.current = true
-    setUpdating(true)
+  const toast = useToast()
+  // Poner la foto es una acción sola: se elige el fichero y se sube, y ya está. Antes
+  // esto abría el formulario de reseña y bajaba hasta él, que era pedirle al usuario el
+  // estado del agua y una valoración cuando lo único que había dicho es «tengo la foto».
+  // El salto además era lo más raro de todo: pulsas arriba y la página se va a otro sitio.
+  const [subiendoFoto, setSubiendoFoto] = useState(false)
+  async function subirFotoDePortada(file: File) {
+    if (!font) return
+    setSubiendoFoto(true)
+    setError('')
+    // Igual que en el resto de subidas: se lee el EXIF y se comprime en el mismo sitio,
+    // que es lo que impide que el orden vuelva a ser una decisión (`prepararFoto`).
+    const { photo, meta } = await prepararFoto(file)
+    try {
+      const image = await uploadImage(photo, meta)
+      await setFontPhoto(font.id, image)
+      toast.show(t('toast.photoAdded'))
+      load()
+    } catch (e) {
+      // Sin cobertura se queda en el móvil y sube sola al volver la red. Es justo el caso:
+      // delante de una fuente sin foto es donde peor se está de cobertura.
+      if (isOffline(e)) {
+        await enqueue({ kind: 'photo', fontID: font.id, photo, photoName: photo.name, photoMeta: meta })
+        toast.show(t('offline.savedPhoto'))
+      } else {
+        setError(describeError(e, t))
+      }
+    } finally {
+      setSubiendoFoto(false)
+    }
   }
   const [creatorName, setCreatorName] = useState<string | null>(null)
   // Insignia de creador (familia `discoverer`): se pide aparte porque es un dato de la
@@ -878,8 +878,8 @@ export function FontDetailPage() {
             // que la tarjeta entera lo es.
             <Paper
               variant="outlined"
-              {...(user
-                ? { component: ButtonBase, onClick: abrirFormularioDeFoto, 'aria-label': t('detail.addPhoto') }
+              {...(user && !subiendoFoto
+                ? { component: 'label' as const, 'aria-label': t('detail.addPhoto'), sx: { cursor: 'pointer' } }
                 : {})}
               sx={{
                 p: 2, my: 1, borderRadius: 2, textAlign: 'center',
@@ -888,13 +888,25 @@ export function FontDetailPage() {
                 // que se lea como un sitio donde falta algo y no como un aviso apagado.
                 border: '2px dashed', borderColor: user ? 'primary.main' : 'divider',
                 bgcolor: 'action.hover',
-                ...(user && { '&:hover': { bgcolor: 'action.selected' } }),
+                ...(user && !subiendoFoto && { cursor: 'pointer', '&:hover': { bgcolor: 'action.selected' } }),
               }}
             >
-              <PhotoCameraIcon color={user ? 'primary' : 'disabled'} />
-              <Typography variant="body2" color="text.secondary">{t('detail.noPhotoYet')}</Typography>
-              {user && (
-                <Typography component="span" variant="button" color="primary">{t('detail.addPhoto')}</Typography>
+              {subiendoFoto ? <CircularProgress size={24} /> : <PhotoCameraIcon color={user ? 'primary' : 'disabled'} />}
+              <Typography variant="body2" color="text.secondary">
+                {subiendoFoto ? t('image.uploading') : t('detail.noPhotoYet')}
+              </Typography>
+              {user && !subiendoFoto && (
+                <>
+                  <Typography component="span" variant="button" color="primary">{t('detail.addPhoto')}</Typography>
+                  {/* Toda la tarjeta es el `<label>`, así que se abre la cámara pulsando
+                      donde sea. El input va oculto dentro: sin `<button>` de por medio no
+                      hace falta pelearse con el anidamiento, y el selector nativo se
+                      dispara solo. */}
+                  <input
+                    type="file" accept="image/*" hidden
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) subirFotoDePortada(f) }}
+                  />
+                </>
               )}
             </Paper>
           )}

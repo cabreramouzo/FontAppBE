@@ -492,25 +492,26 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   queremos.
 - El aviso al usuario va **antes** de elegir la foto («la que pongas será la suya»), no
   después de publicarla. Ahí estaba el agujero entero.
-- El hueco de la ficha es **entero un botón** (`ButtonBase`), no solo el rótulo: misma
-  razón que el popup del mapa, y aquí el área ya estaba ahí ocupando el sitio de la foto
-  que falta. Por eso el rótulo de dentro es un `<span>` y no un `<Button>` —un botón
-  dentro de otro no es HTML válido, la misma trampa que el enlace dentro del enlace— y se
-  queda como **señal**. Sin sesión no es un botón: no hay nada que pulsar.
-- Pulsarlo **lleva hasta el formulario**, que vive más abajo; sin eso no cambiaba nada de
-  lo que se ve y parecía roto. Dos trampas medidas al hacerlo: el salto va en un
-  `useEffect` y no en el manejador (allí el formulario aún no está en el DOM y no se movía
-  ni un píxel), y la bandera va en una **`ref`** y no en un estado, porque apagarla dentro
-  del efecto cambiaba una dependencia, el efecto se relanzaba y su limpieza mataba el
-  temporizador: se cancelaba a sí mismo en silencio. Y `scrollIntoView` va **sin**
-  `behavior: 'smooth'` — medido, el suave no hace nada en algunos motores y falla callado.
-- Y la cuarta, que se coló hasta que la probó el autor: **si el formulario ya estaba
-  abierto, pulsar no hacía nada**. `setUpdating(true)` sobre un estado que ya es `true` no
-  repinta, así que el efecto no se relanza y no hay salto. Pasa en cuanto abres el
-  formulario por el otro botón, o en cuanto vuelves arriba y pulsas el hueco por segunda
-  vez. El manejador comprueba ahora si ya está abierto y entonces solo lleva. Moraleja del
-  patrón entero: colgar un efecto secundario de una **transición** de estado falla siempre
-  que el estado ya estaba donde lo quieres poner.
+- **Poner la foto es una acción sola, no una reseña.** El hueco de la ficha es entero un
+  `<label>` con el input de fichero dentro: pulsas donde sea y se abre la cámara; al
+  elegir, se sube y ya está. La primera versión abría el formulario de reseña y **bajaba
+  hasta él**, y estaba mal de raíz: pedirle el estado del agua y una valoración a quien
+  solo ha dicho «tengo la foto», y encima moverle la página a otro sitio, que es lo último
+  que espera. Se descartó entero, con su `useEffect`, su `ref` y su temporizador.
+- Sube por `PUT /fonts/:id/photo`, que existe **aparte de `update`** para no reenviar
+  nombre y coordenadas que nadie ha tocado —y no pisarlos con una copia vieja si alguien
+  los ha corregido mientras tanto—. Misma asimetría de siempre: la primera la pone
+  cualquiera, sustituir es del creador o de un admin. Deja rastro en el historial. Hay test.
+- Sin cobertura va a la **bandeja de salida** (`kind: 'photo'`), como el alta y la reseña:
+  delante de una fuente sin foto es justo donde peor se está de cobertura, y perderla ahí
+  sería perder la única aportación posible desde ese sitio. Ojo, el service worker leía
+  `item.data.image` a pelo y este tipo **no lleva `data`**: reventaba con un `TypeError`,
+  que al no traer `status` se tomaba por fallo transitorio y reintentaba para siempre.
+- El rótulo de dentro es solo **señal**, y sin sesión el hueco no es pulsable: no hay nada
+  que hacer si no puedes aportar.
+- Y una lección del intento fallido, por si vuelve: colgar un efecto secundario de una
+  **transición** de estado falla siempre que el estado ya estaba donde lo quieres poner
+  (`setUpdating(true)` estando ya a `true` no repinta, y pulsar no hacía nada).
 - `swift run App adopt-cover-photos [--dry-run] [--limit n]` hace la pasada retroactiva:
   la reseña con foto **más antigua** de cada fuente sin portada. Salta las referencias que
   el almacén no sabe copiar (`/uploads/` en disco, `<base>/uploads/` en R2) — sin eso, en

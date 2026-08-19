@@ -671,6 +671,54 @@ final class IntegrationTests: XCTestCase {
     /// Hacia dentro: `creator` tiene que seguir saliendo como `{"id": null}` y no como
     /// `{}` en las fuentes importadas, que son la mayoría. Un opcional omitido llega al
     /// navegador como `undefined`, y ese ya nos ha roto dos pantallas.
+    /// `PUT /fonts/:id/photo` — poner la foto y nada más. Misma asimetría que en todas
+    /// partes: la primera la pone cualquiera, sustituirla no.
+    func testSetFontPhotoIsFirstOnlyForStrangers() async throws {
+        try await withApp { app in
+            app.imageStorage = StubImageStorage()
+            _ = try await register(app, username: "duenyo")
+            let dueño = try await login(app, username: "duenyo")
+            _ = try await register(app, username: "cualquiera")
+            let extraño = try await login(app, username: "cualquiera")
+            let fontID = try await createFont(app, token: dueño, name: "Sin foto", lat: 41.2, long: 2.2)
+            struct PhotoDTO: Content { let image: String }
+            struct FontOut: Content { let image: String? }
+
+            // 1) No tiene foto: un extraño puede ponerla. Casi ninguna fuente importada
+            //    tiene creador, así que si no, esas fichas no tendrían foto nunca.
+            try await app.test(.PUT, "fonts/\(fontID)/photo", headers: bearer(extraño), beforeRequest: { req in
+                try req.content.encode(PhotoDTO(image: "/uploads/primera.jpg"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode(FontOut.self).image, "/uploads/primera.jpg")
+            })
+            // Queda en el historial: se puede revertir desde el panel.
+            let ediciones = try await FontEdit.query(on: app.db).filter(\.$font.$id == fontID).all()
+            XCTAssertEqual(ediciones.count, 1)
+            XCTAssertNil(ediciones.first?.before.image)
+
+            // 2) Ya tiene: el extraño no la sustituye.
+            try await app.test(.PUT, "fonts/\(fontID)/photo", headers: bearer(extraño), beforeRequest: { req in
+                try req.content.encode(PhotoDTO(image: "/uploads/otra.jpg"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+            // 3) El creador sí.
+            try await app.test(.PUT, "fonts/\(fontID)/photo", headers: bearer(dueño), beforeRequest: { req in
+                try req.content.encode(PhotoDTO(image: "/uploads/otra.jpg"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode(FontOut.self).image, "/uploads/otra.jpg")
+            })
+            // 4) Sin sesión, nada.
+            try await app.test(.PUT, "fonts/\(fontID)/photo", beforeRequest: { req in
+                try req.content.encode(PhotoDTO(image: "/uploads/x.jpg"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            })
+        }
+    }
+
     /// Las dos mitades de la regla: una reseña con foto **pone** la portada si no había
     /// ninguna, y **no la sustituye** si ya la hay. La segunda es la que sostiene que
     /// esto pueda ser automático: añadir donde no había nada solo puede mejorar la ficha.

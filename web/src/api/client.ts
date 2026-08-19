@@ -213,6 +213,18 @@ export async function setFontPhotoFromComment(fontID: string, commentID: string)
   return apiFetch<Font>(`/fonts/${fontID}/photo/from-comment/${commentID}`, { method: 'POST' })
 }
 
+// Pone la foto de la fuente, y nada más. No es una edición de la ficha: no manda nombre
+// ni coordenadas, así que no puede pisar lo que haya corregido otro mientras tanto.
+export async function setFontPhoto(fontID: string, image: string, queuedOffline = false): Promise<Font> {
+  const f = await apiFetch<Font>(`/fonts/${fontID}/photo`, {
+    method: 'PUT',
+    body: JSON.stringify({ image }),
+    headers: queuedOffline ? { 'X-FontApp-Queued-Offline': '1' } : undefined,
+  })
+  avisaDeAportacion()
+  return f
+}
+
 // Actualiza el perfil propio (self-only). Manda los campos actuales + los cambios.
 export async function updateProfile(id: string, data: { name: string; username: string; email: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean; mentionEmails?: boolean }): Promise<UserResponse> {
   return apiFetch<UserResponse>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) })

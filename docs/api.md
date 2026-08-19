@@ -177,6 +177,8 @@ guarda en la BD y solo sirve para desactivar el resumen de ese usuario concreto.
 | POST | `/fonts` | Bearer | `{name, latitude[-90,90], longitude[-180,180], image?, description?}` | 201 `Font` | 400, 401 |
 | PUT | `/fonts/:id` | Bearer | igual que POST | 200 `Font` | 400, 401, 404 |
 | DELETE | `/fonts/:id` | Bearer | — | 204 | 401, 404 |
+| PUT | `/fonts/:id/photo` | Bearer | `{image}` | 200 `Font` | 400, 401, 403 (ya tiene foto y no eres creador/admin), 404 |
+| POST | `/fonts/:id/photo/from-comment/:commentID` | Bearer | — | 200 `Font` | 400, 401, 403, 404 |
 
 **`Page<Font>`** (paginación de Fluent):
 ```json
@@ -216,6 +218,14 @@ rellenar `confirmedByMe`.
 ser la **portada de la fuente**. Solo puede ser `true` en el `POST` que la crea, y solo
 cuando la fuente **no tenía ninguna** — nunca sustituye a una que ya exista, que sigue
 siendo cosa del creador o de un admin (`POST /fonts/:id/photo/from-comment/:commentID`).
+
+`PUT /fonts/:id/photo` pone la foto de la fuente **y nada más**. Existe aparte de
+`PUT /fonts/:id` porque «esta fuente no tiene foto y yo estoy delante» es una acción sola
+y no una edición de la ficha: mandar el DTO entero obligaría al cliente a reenviar nombre
+y coordenadas que no ha tocado, y a pisarlos con su copia si alguien los ha corregido
+mientras tanto. Misma asimetría: la **primera** la pone cualquiera con sesión, sustituir
+una que ya existe es del creador o de un admin (403). Deja entrada en el historial de
+ediciones.
 Es un `Bool` y no un opcional: en el listado siempre sale `false`, para que el cliente no
 tenga que distinguir «no» de «el servidor no lo dijo». El ascenso deja su entrada en el
 historial de ediciones, o sea que es reversible desde el panel.
