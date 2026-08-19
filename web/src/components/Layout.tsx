@@ -13,7 +13,6 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
-import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import NewspaperIcon from '@mui/icons-material/Newspaper'
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import { useAuth } from '../auth/AuthContext'
@@ -31,6 +30,7 @@ import { PendingUploads } from './PendingUploads'
 import { RoleChip, StaffStripe, staffRole } from './StaffBadge'
 import { NotificationBell } from './NotificationBell'
 import { MoreMenu } from './MoreMenu'
+import { TabBar } from './TabBar'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -162,6 +162,10 @@ export function Layout({ children }: { children: ReactNode }) {
           {/* Novedades vive aquí y no sobre el mapa: los botones del mapa hacen cosas
               SOBRE el mapa (filtran, cambian la capa, te centran) y este navega a otra
               página. Mezclados, la columna del mapa se leía como un cajón de sastre. */}
+          {/* En móvil esto es una pestaña de abajo; aquí solo se queda donde no hay
+              tab bar. Y con ello se va el zumbido: el icono se movía unas cuantas veces
+              para que alguien descubriera que Novedades existía, que era un parche a un
+              problema de sitio. Una pestaña con su nombre escrito no necesita moverse. */}
           <Tooltip title={t('news.title')}>
             <IconButton
               component={RouterLink}
@@ -169,6 +173,7 @@ export function Layout({ children }: { children: ReactNode }) {
               color="inherit"
               size="small"
               aria-label={t('news.title')}
+              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
             >
               <NewspaperIcon
                 key={zumbidos}
@@ -224,16 +229,8 @@ export function Layout({ children }: { children: ReactNode }) {
               >
                 {t('nav.hello', { user: user.username })}
               </Button>
-              <IconButton
-                component={RouterLink}
-                to="/me"
-                color="inherit"
-                size="small"
-                aria-label={t('nav.profile')}
-                sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
-              >
-                <AccountCircleIcon />
-              </IconButton>
+              {/* El icono de perfil se ha ido a las pestañas: en móvil aquí no queda
+                  nada suyo. */}
               {/* Salir: botón con texto en anchas. En móvil ya no es un icono suelto
                   al lado del de perfil —era un vecino peligroso de tocar sin querer—,
                   vive en el cajón. Sigue pidiendo confirmación igual. */}
@@ -270,7 +267,12 @@ export function Layout({ children }: { children: ReactNode }) {
         </DialogActions>
       </Dialog>
 
-      <Footer />
+      {/* En el mapa y en móvil, fuera: la tab bar ya ocupa esa franja y Leaflet pinta su
+          propia atribución de OSM abajo a la derecha, así que la licencia sigue cubierta.
+          En el resto de páginas se queda al final del contenido, con la atribución
+          completa y lo legal. */}
+      <Box sx={enElMapa ? { display: { xs: 'none', sm: 'block' } } : undefined}><Footer /></Box>
+      <TabBar />
       <AppInterestBanner />
     </div>
   )

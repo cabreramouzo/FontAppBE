@@ -365,6 +365,39 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   Las tarjetas sin foto usan `welcome.jpg` oscurecida y con el encuadre variado por un
   hash del id — con el mismo recorte parecían tarjetas duplicadas.
 
+## Navegación: tab bar en móvil, barra de arriba en escritorio
+
+- **En móvil la navegación va abajo** (`TabBar.tsx`, `BottomNavigation` de MUI): Mapa ·
+  Novedades · Zonas · Yo. Es lo que espera cualquiera que use un teléfono, y la barra de
+  arriba había llegado al final de su cuerda — el aviso lo daban tres síntomas, no una
+  opinión: se había apretado **dos veces**, con la campana quedaban **9 px** de margen a
+  393 px, **Zonas estaba escondida** en pantallas estrechas (`xs: none`) y solo se llegaba
+  desde el pie, y **Novedades necesitaba una animación** que hiciera zumbar su icono para
+  que alguien descubriera que existía. Los tres eran la misma cosa: cuatro secciones
+  peleando por el hueco a la derecha de un logotipo.
+- **Solo en móvil.** En pantallas anchas la barra de arriba tiene sitio de sobra y una tab
+  bar sería un préstamo del móvil que allí no significa nada; el mismo criterio que ya
+  seguía `MoreMenu`.
+- **Lo que NO baja: la campana y el menú.** Las pestañas son los sitios donde se está, no
+  las cosas que se hacen; un aviso no es un destino y un cajón de ajustes tampoco.
+- La pestaña activa se decide **por prefijo** (`/me/badges` sigue siendo «Yo») salvo el
+  mapa, que va por igualdad o sería el prefijo de todo. Y sin sesión, «Yo» lleva a entrar:
+  una pestaña que da 401 no es una pestaña.
+- **El pie desaparece del mapa en móvil** y se queda en el resto de páginas. La atribución
+  de OSM/ICGC es obligación de licencia y no se pierde: en el mapa la pinta Leaflet abajo a
+  la derecha, y en las demás páginas sigue el pie entero.
+- Dos medidas que hay que respetar al tocar esto, las dos en `index.css`:
+  `--alto-barra` y `--bajo-el-mapa`. El mapa se dimensiona restándolas y los toasts se
+  levantan con la segunda. Van en variables porque son **cinco sitios** y el que se olvide
+  no se nota hasta tener el móvil en la mano.
+- Y ojo con `--alto-barra`: **no son 56 px en todas partes**. El `Toolbar` de MUI pasa a 64
+  desde `sm`, más 1 px de borde. Estaba escrito a mano como 56 y por eso en escritorio la
+  página se pasaba **9 px** del alto de la ventana y el mapa salía con barra de
+  desplazamiento. Venía de antes de la tab bar; se arregló al meter las variables.
+- El hueco para que el pie no quede debajo de la barra va **dentro del pie**, no en `.app`:
+  la altura del mapa ya descuenta la barra por su cuenta, y un acolchado en el contenedor
+  se la restaría dos veces.
+
 ## Mapa y ubicación
 - Seguimiento continuo con `watchPosition` (`MapPage`): el punto azul se actualiza solo
   mientras caminas. Filtro anti-temblor de 15 m (el GPS baila estando quieto), pausa con

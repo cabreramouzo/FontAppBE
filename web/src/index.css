@@ -107,15 +107,41 @@ a:hover { text-decoration: underline; }
   border-top: 1px solid var(--border);
   font-size: 13px;
 }
+/* La tab bar va `fixed`, así que se come los últimos 56 px de la página — y ahí es donde
+   está el pie, o sea la atribución de OSM/ICGC y lo legal. El hueco se pone DENTRO del
+   pie y no en `.app`: la altura del mapa ya descuenta la barra por su cuenta, y un
+   acolchado en el contenedor se la restaría dos veces y haría scroll una pantalla que no
+   debería tenerlo. Aquí solo afecta a las páginas que de verdad llevan pie. */
+@media (max-width: 599.95px) {
+  .footer { padding-bottom: calc(env(safe-area-inset-bottom) + 64px); }
+}
 
 .legal h2 { margin: 20px 0 6px; }
 .legal ul { margin: 6px 0; padding-left: 20px; }
 .legal li { margin: 3px 0; }
 .legal p { margin: 8px 0; }
 
-/* Mapa: ocupa el alto de la ventana menos la barra (56) y el footer (40). */
+/* Mapa: ocupa el alto de la ventana menos la barra (56) y el footer (40).
+   En móvil el pie no está —lo sustituye la tab bar, también de 56— y hay que descontar
+   el indicador del iPhone, que la barra lleva por dentro.
+   `--bajo-el-mapa` es lo que queda ocupado por debajo del mapa, y lo usan todos los
+   overlays anclados abajo para no quedar tapados. Vive aquí y no repetido en cada regla
+   porque son cinco sitios y el que se olvide no se nota hasta tener el móvil en la mano. */
+/* Lo que ocupan la barra de arriba y lo que haya debajo del mapa. Los dos cambian con el
+   tamaño de pantalla, y antes iban escritos a mano en una sola resta (`- 96px`).
+   La de arriba **no mide 56 en todas partes**: el `Toolbar` de MUI pasa a 64 desde `sm`,
+   más 1 px de borde. Con el 56 fijo, en escritorio la página se pasaba 9 px del alto de
+   la ventana y salía una barra de desplazamiento en el mapa, que no debería tener. */
+:root { --alto-barra: 65px; --bajo-el-mapa: 40px; }
+@media (max-width: 599.95px) {
+  :root { --alto-barra: 57px; --bajo-el-mapa: calc(56px + env(safe-area-inset-bottom)); }
+}
 .map-wrap { position: relative; touch-action: none; }
-.map-wrap, .map { height: calc(100vh - 96px); height: calc(100dvh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); width: 100%; }
+.map-wrap, .map {
+  height: calc(100vh - var(--alto-barra) - var(--bajo-el-mapa));
+  height: calc(100dvh - var(--alto-barra) - var(--bajo-el-mapa) - env(safe-area-inset-top));
+  width: 100%;
+}
 
 /* Overlays sobre el mapa (Leaflet usa z-index hasta ~700). */
 /* Botones flotantes abajo a la derecha (ubicación + añadir), apilados. */
@@ -567,7 +593,9 @@ select:not([class*="Mui"]) {
 .toasts {
   position: fixed;
   left: 50%;
-  bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
+  /* Por encima de la tab bar: un aviso medio tapado por la navegación es peor que no
+     darlo, y estos dicen cosas como «foto añadida» o «sin conexión, guardado». */
+  bottom: calc(var(--bajo-el-mapa) + 16px);
   transform: translateX(-50%);
   z-index: 2000;
   display: flex;
