@@ -216,7 +216,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
   )
 }
 
-function UpdateForm({ fontID, onPosted, onCancel }: { fontID: string; onPosted: () => void; onCancel?: () => void }) {
+function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; hasPhoto: boolean; onPosted: () => void; onCancel?: () => void }) {
   const { t } = useI18n()
   const toast = useToast()
   const [body, setBody] = useState('')
@@ -240,9 +240,12 @@ function UpdateForm({ fontID, onPosted, onCancel }: { fontID: string; onPosted: 
     const clear = () => { setBody(''); setRating(0); setWaterStatus(''); setFile(null) }
     try {
       const image = photo ? await uploadImage(photo, preparada?.meta) : undefined
-      await createComment(fontID, { ...data, image })
+      const creada = await createComment(fontID, { ...data, image })
       clear()
-      toast.show(t('toast.reviewPosted'))
+      // Si además se ha estrenado la portada, se dice. Un cambio silencioso en la ficha
+      // de una fuente que no es tuya es justo lo que no queremos: la foto la ha puesto
+      // esta persona y tiene que enterarse de que ahora ilustra la fuente entera.
+      toast.show(creada.coverAdopted ? t('toast.reviewPostedAndCover') : t('toast.reviewPosted'))
       onPosted()
     } catch (e) {
       // Sin cobertura: se guarda en el móvil y se envía en cuanto haya red.
@@ -267,6 +270,10 @@ function UpdateForm({ fontID, onPosted, onCancel }: { fontID: string; onPosted: 
       </Stack>
       <TextField value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('update.howNowOpt')} fullWidth multiline minRows={2} size="small" />
       <ImagePicker file={file} onChange={setFile} />
+      {/* Se dice ANTES de elegir la foto, no después de publicarla. Aquí estaba el
+          agujero: la gente fotografía la fuente, la adjunta porque es el único sitio
+          donde se la piden, y nadie le dice nunca que la ficha sigue en blanco. */}
+      {!hasPhoto && <Typography variant="caption" color="text.secondary">{t('update.willBeCover')}</Typography>}
       {error && <Alert severity="error">{error}</Alert>}
       <Stack direction="row" spacing={1}>
         <Button type="submit" variant="contained" disableElevation disabled={saving || empty}>
@@ -812,7 +819,7 @@ export function FontDetailPage() {
               </Stack>
             )
           })()}
-          {font.image && (
+          {font.image ? (
             <Box>
               <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={font.name} />
               <PhotoExifNote image={font.image} lat={font.latitude} long={font.longitude} />
@@ -822,6 +829,20 @@ export function FontDetailPage() {
                 </Box>
               )}
             </Box>
+          ) : (
+            // Antes, una fuente sin foto no enseñaba NADA aquí: ni un hueco. Nadie podía
+            // deducir que faltaba algo ni que se podía arreglar, y por eso las fotos
+            // acababan todas dentro de reseñas. El hueco es la mitad del arreglo; la otra
+            // es que lleva al mismo formulario de siempre, no a un segundo camino.
+            <Paper variant="outlined" sx={{ p: 2, my: 1, borderRadius: 2, borderStyle: 'dashed', textAlign: 'center' }}>
+              <PhotoCameraIcon color="disabled" />
+              <Typography variant="body2" color="text.secondary">{t('detail.noPhotoYet')}</Typography>
+              {user && (
+                <Button size="small" startIcon={<PhotoCameraIcon />} onClick={() => setUpdating(true)} sx={{ mt: 0.5 }}>
+                  {t('detail.addPhoto')}
+                </Button>
+              )}
+            </Paper>
           )}
           <LocationActions font={font} />
           {avg != null && (
@@ -880,7 +901,7 @@ export function FontDetailPage() {
                 <Collapse in={updating} unmountOnExit>
                   <Box sx={{ my: 1.5 }}>
                     <Typography variant="subtitle2">{t('detail.newUpdate')}</Typography>
-                    <UpdateForm fontID={font.id} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+                    <UpdateForm fontID={font.id} hasPhoto={!!font.image} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
                   </Box>
                 </Collapse>
               </>
@@ -898,7 +919,7 @@ export function FontDetailPage() {
                   {t('detail.reportStatus')}
                 </Button>
               ) : (
-                <UpdateForm fontID={font.id} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+                <UpdateForm fontID={font.id} hasPhoto={!!font.image} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
               )
             ) : (
               <Typography color="text.secondary" sx={{ my: 1 }}><Link href="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>

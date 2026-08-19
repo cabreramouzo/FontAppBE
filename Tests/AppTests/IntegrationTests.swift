@@ -359,13 +359,23 @@ final class IntegrationTests: XCTestCase {
             let ownerTok = try await login(app, username: "photoowner")
             let fontID = try await createFont(app, token: ownerTok, name: "F", lat: 40, long: -3)
 
+            // La reseña se publica SIN foto y se le añade después, editándola. Publicarla
+            // ya con foto estrenaría la portada ella sola (`CoverPhoto`), y entonces este
+            // test no probaría nada: llegaría al endpoint con la ficha ya puesta. Lo que
+            // se quiere fijar aquí son las reglas del endpoint, no las del alta.
             struct NewComment: Content { let body: String; let image: String? }
             var commentID = UUID()
             try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(ownerTok), beforeRequest: { req in
-                try req.content.encode(NewComment(body: "con foto", image: "/uploads/orig.jpg"))
+                try req.content.encode(NewComment(body: "sin foto aún", image: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .created)
+                XCTAssertFalse(try res.content.decode(CommentResponse.self).coverAdopted)
                 commentID = try XCTUnwrap(res.content.decode(CommentResponse.self).id)
+            })
+            try await app.test(.PUT, "fonts/\(fontID)/comments/\(commentID)", headers: bearer(ownerTok), beforeRequest: { req in
+                try req.content.encode(NewComment(body: "con foto", image: "/uploads/orig.jpg"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
             })
 
             // La fuente aún no tiene foto: un extraño SÍ puede poner la primera. Casi
@@ -661,6 +671,47 @@ final class IntegrationTests: XCTestCase {
     /// Hacia dentro: `creator` tiene que seguir saliendo como `{"id": null}` y no como
     /// `{}` en las fuentes importadas, que son la mayoría. Un opcional omitido llega al
     /// navegador como `undefined`, y ese ya nos ha roto dos pantallas.
+    /// Las dos mitades de la regla: una reseña con foto **pone** la portada si no había
+    /// ninguna, y **no la sustituye** si ya la hay. La segunda es la que sostiene que
+    /// esto pueda ser automático: añadir donde no había nada solo puede mejorar la ficha.
+    func testReviewPhotoBecomesCoverOnlyWhenThereIsNone() async throws {
+        try await withApp { app in
+            // El almacén COPIA el objeto, así que aquí va el de mentira y no se toca el
+            // disco. (Si la copia fallara de verdad, la reseña se guardaría igual y
+            // `coverAdopted` saldría `false`: la foto no puede costar la reseña.)
+            app.imageStorage = StubImageStorage()
+            _ = try await register(app, username: "portada")
+            let tok = try await login(app, username: "portada")
+
+            // 1) Fuente sin foto: la reseña se la pone, y la respuesta lo dice.
+            let vacia = try await createFont(app, token: tok, name: "Sin foto", lat: 41.1, long: 2.1)
+            try await app.test(.POST, "fonts/\(vacia)/comments", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(CreateCommentDTO(body: "raja", rating: nil, waterStatus: "flowing", image: "/uploads/a.jpg"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+                XCTAssertTrue(try res.content.decode(CommentResponse.self).coverAdopted)
+            })
+            let conPortada = try await Font.find(vacia, on: app.db)
+            XCTAssertNotNil(conPortada?.image)
+            // Se copia el objeto: la ficha no comparte fichero con la reseña.
+            XCTAssertNotEqual(conPortada?.image, "/uploads/a.jpg")
+            // Y queda rastro en el historial, o la portada aparecería de la nada.
+            let ediciones = try await FontEdit.query(on: app.db).filter(\.$font.$id == vacia).all()
+            XCTAssertEqual(ediciones.count, 1)
+            XCTAssertNil(ediciones.first?.before.image)
+
+            // 2) La siguiente reseña con foto ya no toca nada.
+            let antes = conPortada?.image
+            try await app.test(.POST, "fonts/\(vacia)/comments", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(CreateCommentDTO(body: "otra", rating: nil, waterStatus: "flowing", image: "/uploads/b.jpg"))
+            }, afterResponse: { res in
+                XCTAssertFalse(try res.content.decode(CommentResponse.self).coverAdopted)
+            })
+            let despues = try await Font.find(vacia, on: app.db)
+            XCTAssertEqual(despues?.image, antes)
+        }
+    }
+
     func testFontJSONHidesInternalColumns() async throws {
         try await withApp { app in
             _ = try await register(app, username: "shape")

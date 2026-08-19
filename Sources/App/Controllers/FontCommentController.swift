@@ -79,7 +79,8 @@ struct FontCommentController: RouteCollection {
     /// POST /fonts/:fontID/comments — añade una actualización/reseña.
     @Sendable func create(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
-        let fontID = try await requireFontID(req)
+        let font = try await requireFont(req)
+        let fontID = try font.requireID()
         try CreateCommentDTO.validate(content: req)
         let dto = try req.content.decode(CreateCommentDTO.self)
 
@@ -100,6 +101,24 @@ struct FontCommentController: RouteCollection {
             queuedOffline: req.headers.first(name: "X-FontApp-Queued-Offline") == "1"
         )
         try await comment.save(on: req.db)
+
+        // Si la fuente no tenía foto, ésta pasa a ser la suya. Es el arreglo de lo que
+        // más se repetía: la gente fotografía la fuente, la adjunta a la reseña porque es
+        // el único sitio donde se la piden, y la ficha se queda en blanco para siempre.
+        // Nadie le dijo nunca que faltaba lo otro, y el botón de ascenderla solo aparece
+        // DESPUÉS de publicar, dentro de su propia reseña, donde no vuelve a mirar.
+        //
+        // Va **en línea** y no en un `Task.detached` como los avisos: la respuesta tiene
+        // que poder decir que ha pasado. Pero no puede costar la reseña — la foto ya está
+        // guardada y la reseña también, así que si la copia falla se sigue adelante.
+        var portadaAdoptada = false
+        do {
+            portadaAdoptada = try await CoverPhoto.adopt(font: font, from: comment,
+                                                         by: try user.requireID(),
+                                                         storage: req.imageStorage, on: req.db)
+        } catch {
+            req.logger.error("No se pudo ascender la foto de la reseña a portada: \(error)")
+        }
 
         // Igual que en las incidencias: después de guardar y sin esperar.
         MentionNotifier.notify(text: body, by: user, fontID: fontID, on: req)
@@ -131,16 +150,22 @@ struct FontCommentController: RouteCollection {
 
         let response = Response(status: .created)
         try response.content.encode(
-            CommentResponse(comment, username: user.username, staff: user.role == .user ? nil : user.role))
+            CommentResponse(comment, username: user.username, staff: user.role == .user ? nil : user.role,
+                            coverAdopted: portadaAdoptada))
         return response
+    }
+
+    /// Verifica que la fuente existe (404 si no) y la devuelve.
+    private func requireFont(_ req: Request) async throws -> Font {
+        guard let font = try await Font.find(req.parameters.get("fontID"), on: req.db) else {
+            throw Abort(.notFound, reason: "No existe la fuente indicada")
+        }
+        return font
     }
 
     /// Verifica que la fuente existe (404 si no) y devuelve su id.
     private func requireFontID(_ req: Request) async throws -> UUID {
-        guard let font = try await Font.find(req.parameters.get("fontID"), on: req.db) else {
-            throw Abort(.notFound, reason: "No existe la fuente indicada")
-        }
-        return try font.requireID()
+        try await requireFont(req).requireID()
     }
 
     /// Carga el comentario indicado y comprueba que pertenece a la fuente de la ruta.
@@ -263,8 +288,13 @@ struct CommentResponse: Content {
     let confirmedByMe: Bool
     /// Fecha de la confirmación más reciente (refresca la frescura del estado).
     let lastConfirmedAt: Date?
+    /// Esta foto ha pasado además a ser la portada de la fuente (solo al publicarla).
+    /// Va como `Bool` y no como opcional a propósito: en la lista siempre sale `false` y
+    /// el cliente nunca tiene que distinguir «no» de «el servidor no lo dijo».
+    let coverAdopted: Bool
 
-    init(_ comment: FontComment, username: String?, staff: UserRole? = nil, confirm: ConfirmAgg? = nil) {
+    init(_ comment: FontComment, username: String?, staff: UserRole? = nil, confirm: ConfirmAgg? = nil,
+         coverAdopted: Bool = false) {
         self.id = comment.id
         self.fontID = comment.$font.id
         self.userID = comment.$user.id
@@ -275,6 +305,7 @@ struct CommentResponse: Content {
         self.waterStatus = comment.waterStatus
         self.image = comment.image
         self.createdAt = comment.createdAt
+        self.coverAdopted = coverAdopted
         self.confirmations = confirm?.count ?? 0
         self.confirmedByMe = confirm?.byViewer ?? false
         self.lastConfirmedAt = confirm?.lastAt

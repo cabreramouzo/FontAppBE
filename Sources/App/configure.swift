@@ -170,6 +170,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(WeeklyDigestCommand(), as: "send-weekly-digest")
     app.asyncCommands.use(ScoreContributionsCommand(), as: "score-contributions")
     app.asyncCommands.use(GamificationSyncCommand(), as: "gamification-sync")
+    app.asyncCommands.use(AdoptCoverPhotosCommand(), as: "adopt-cover-photos")
 
     // Rutas.
     try routes(app)

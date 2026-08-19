@@ -134,6 +134,8 @@ export interface CommentResponse {
   confirmations: number
   confirmedByMe: boolean
   lastConfirmedAt: string | null
+  /** Esta foto ha pasado además a ser la portada de la fuente (solo al publicarla). */
+  coverAdopted: boolean
 }
 
 /** Reseña propia con el nombre de la fuente (pantalla de perfil). */

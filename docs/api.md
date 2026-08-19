@@ -212,6 +212,14 @@ opcionalmente, `rating` (1-5), `waterStatus` y `image`. El más reciente es el e
 y refresca la frescura del estado. El `GET /comments` acepta Bearer opcional para
 rellenar `confirmedByMe`.
 
+`CommentResponse` lleva además **`coverAdopted`**: si la foto de esta reseña ha pasado a
+ser la **portada de la fuente**. Solo puede ser `true` en el `POST` que la crea, y solo
+cuando la fuente **no tenía ninguna** — nunca sustituye a una que ya exista, que sigue
+siendo cosa del creador o de un admin (`POST /fonts/:id/photo/from-comment/:commentID`).
+Es un `Bool` y no un opcional: en el listado siempre sale `false`, para que el cliente no
+tenga que distinguir «no» de «el servidor no lo dijo». El ascenso deja su entrada en el
+historial de ediciones, o sea que es reversible desde el panel.
+
 ## Favorites (fuentes guardadas)
 
 Un usuario puede **guardar** una fuente para tenerla a mano en su perfil

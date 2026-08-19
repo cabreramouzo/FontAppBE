@@ -466,6 +466,41 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Los movimientos quedan en `FontInfoSnapshot` (lat/long **opcionales**: las ediciones
   guardadas antes de esto no los tienen) y por tanto son reversibles desde el panel.
 
+## La foto de la reseña es la foto de la fuente
+
+- **El problema medido a ojo y confirmado leyendo el código:** la gente fotografía la
+  fuente, la adjunta a la reseña —que es el único sitio donde se la piden— y la ficha se
+  queda en blanco. La ficha de una fuente sin foto **no enseñaba nada**: ni un hueco, así
+  que nadie podía deducir que faltaba algo. El botón «usar como foto principal» existía
+  y lo podía pulsar cualquiera si la fuente no tenía foto, pero está **dentro de la
+  tarjeta de la reseña y solo aparece después de publicar**, o sea en un sitio al que ya
+  no se vuelve.
+- Ahora, publicar una reseña con foto sobre una fuente **sin portada se la pone**
+  (`CoverPhoto.adopt`, llamado desde `FontCommentController.create`). Se copia el objeto,
+  así que borrar la reseña no deja la ficha sin foto.
+- **Nunca sustituye.** Es la asimetría de siempre (`FontController.update`): añadir donde
+  no había nada solo puede mejorar la ficha, tapar una foto buena con una mala no. Es
+  justo lo que permite que esto sea automático — sustituir no podría serlo nunca. Hay
+  test de las dos mitades.
+- Deja **entrada en el historial de ediciones**, o la portada aparecería de la nada y no
+  habría forma de revertirla desde el panel. El botón manual pasa ahora por la misma
+  función, que antes no dejaba rastro.
+- Va **en línea** y no en un `Task.detached` como los avisos, porque la respuesta tiene
+  que poder decirlo: `CommentResponse.coverAdopted`. Pero un fallo de la copia **no cuesta
+  la reseña** — se registra y se sigue. Y se dice en voz alta («tu foto ya es la de la
+  fuente»): un cambio silencioso en la ficha de una fuente que no es tuya es lo que no
+  queremos.
+- El aviso al usuario va **antes** de elegir la foto («la que pongas será la suya»), no
+  después de publicarla. Ahí estaba el agujero entero.
+- `swift run App adopt-cover-photos [--dry-run] [--limit n]` hace la pasada retroactiva:
+  la reseña con foto **más antigua** de cada fuente sin portada. Salta las referencias que
+  el almacén no sabe copiar (`/uploads/` en disco, `<base>/uploads/` en R2) — sin eso, en
+  desarrollo salían 168 avisos por las fotos `/demo/*.svg` de `seed --demo`.
+- **Ojo al medir esto en local: `seed --demo` falsea la cuenta entera.** La primera
+  medición dio «144 portadas y 168 fotos esperando en reseñas» y era casi toda de
+  fixtures: descontando `/demo/`, quedaban 6 portadas y 2 fotos reales. Los números de
+  verdad solo se pueden sacar de producción.
+
 ## Fotos de una fuente
 - La **portada** sigue en `fonts.image`, una columna. Las demás viven en `font_photos`
   (`CreateFontPhoto`) y se piden **solo al abrir «Otras fotos»** (`GET /fonts/:id/photos`

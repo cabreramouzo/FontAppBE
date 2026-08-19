@@ -120,14 +120,22 @@ struct FontController: RouteCollection {
               comment.$font.id == fontID else {
             throw Abort(.notFound, reason: "La reseña no existe o no es de esta fuente")
         }
-        guard let sourceImage = comment.image else {
+        guard comment.image != nil else {
             throw Abort(.badRequest, reason: "La reseña no tiene foto")
         }
-        let oldImage = font.image
-        font.image = try await req.imageStorage.copy(sourceImage)
-        try await font.save(on: req.db)
-        // El objeto anterior ya no lo comparte nadie (la reseña sigue con el suyo): se puede borrar.
-        if let oldImage { try? await req.imageStorage.delete(oldImage) }
+        // Sustituir una portada que ya existe sigue siendo del creador o de un admin, y
+        // por eso se borra a mano la anterior. Poner la PRIMERA pasa por `CoverPhoto`,
+        // el mismo camino que recorre una reseña recién publicada: misma regla y mismo
+        // rastro en el historial.
+        if let oldImage = font.image {
+            font.image = try await req.imageStorage.copy(comment.image!)
+            try await font.save(on: req.db)
+            // Ya no lo comparte nadie (la reseña sigue con el suyo): se puede borrar.
+            try? await req.imageStorage.delete(oldImage)
+        } else {
+            try await CoverPhoto.adopt(font: font, from: comment, by: try? user.requireID(),
+                                       storage: req.imageStorage, on: req.db)
+        }
         return font
     }
 
