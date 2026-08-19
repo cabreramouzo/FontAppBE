@@ -391,6 +391,19 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   sobre azul, y el nombre de la fuente también—, y el texto va **oscuro** porque es lo que
   hace MUI (`getContrastText` ve este azul demasiado claro para blanco): 7,6:1 contra los
   2,8:1 del blanco.
+- **El globo lo pinta Leaflet, y no seguía el tema.** `leaflet.css` lleva
+  `background: white; color: #333` a fuego en `.leaflet-popup-content-wrapper`: era la
+  única superficie de la app ajena al modo oscuro. No se notaba mientras el texto lo
+  ponía Leaflet; al hacer que la tarjeta entera fuera un `<a>` con `color: var(--fg)`, en
+  oscuro quedó #e5e7eb sobre blanco — **1,2:1**, y en pantalla solo se veía el botón azul
+  flotando en un rectángulo blanco (medido en producción; el aspa de cerrar tampoco). Se
+  reportó como «pasa en Chrome/Android y no en Safari» y **no era del navegador**: era el
+  modo oscuro del móvil.
+- Al arreglarlo, el selector va prefijado con `.leaflet-container` **a propósito**:
+  `leaflet.css` se importa desde `MapPage`/`RelocateFont`, que son trozos de carga
+  diferida, así que su `<link>` se inyecta *después* que `index.css` y con la misma
+  especificidad ganaría Leaflet por orden de aparición. Regla general para cualquier
+  cosa de Leaflet que se quiera redefinir aquí.
 
 ## Capas del mapa
 - Cinco capas elegibles (`web/src/lib/mapLayers.ts`, selector en `BaseLayers.tsx`, usado
