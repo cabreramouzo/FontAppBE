@@ -424,7 +424,16 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 360, my: 2 }}>
       <Typography variant="caption" color="text.secondary">{t('detail.editInfoNote')}</Typography>
       <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} required size="small" />
-      <TextField label={t('detail.description')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" />
+      {/* Crece con lo que escribes y se para a las 6 líneas: la descripción es el único
+          campo libre de esta ficha —de dónde nace el agua, cómo llegar, qué hay al lado—
+          y en una sola línea no se relee lo escrito, así que nadie escribe más de cuatro
+          palabras. Es lo que ya hacen las reseñas y las incidencias; aquí se quedó sin
+          hacer. */}
+      <TextField
+        label={t('detail.description')} value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        size="small" multiline minRows={2} maxRows={6}
+      />
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
         <TextField select label={t('detail.type')} value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')} size="small" sx={{ flexGrow: 1 }}>
           <MenuItem value="">{t('detail.unknownType')}</MenuItem>

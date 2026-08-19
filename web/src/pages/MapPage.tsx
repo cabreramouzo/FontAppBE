@@ -642,7 +642,13 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
             <MenuItem key={k} value={k}>{WATER_STATUS[k].emoji} {t(`status.${k}`)}</MenuItem>
           ))}
         </TextField>
-        <TextField label={t('newFont.descriptionOpt')} value={description} onChange={(e) => setDescription(e.target.value)} size="small" />
+        {/* Igual que en la ficha, pero con el techo más bajo: este formulario flota sobre
+            el mapa y lo que crezca aquí empuja hacia arriba. */}
+        <TextField
+          label={t('newFont.descriptionOpt')} value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          size="small" multiline minRows={2} maxRows={4}
+        />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <TextField select label={t('detail.type')} value={source} onChange={(e) => setSource(e.target.value as WaterSource | '')} size="small" sx={{ flexGrow: 1 }}>
             <MenuItem value="">{t('detail.unknownType')}</MenuItem>

@@ -199,6 +199,12 @@ a:hover { text-decoration: underline; }
   border-radius: 10px;
   padding: 16px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  /* Este formulario flota sobre el mapa y crece hacia arriba: sin techo, en un móvil en
+     horizontal el nombre y el botón de crear se salían por encima del mapa y no había
+     forma de llegar a ellos. No lo trajo la descripción multilínea —ya pasaba con el
+     teclado abierto— pero dejarla crecer sin esto sí lo volvía fácil. */
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
 }
 .panel h3 { margin: 0 0 4px; }
 .panel .col { max-width: none; }

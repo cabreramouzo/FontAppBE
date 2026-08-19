@@ -713,6 +713,24 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   automática de aquí en adelante, no la pasada. **Ninguna cifra de este repo vale si sale
   de una base local sembrada.**
 
+## El campo de descripción
+
+- Era de **una sola línea**, y con eso nadie escribe más de cuatro palabras: no se relee lo
+  escrito, el cursor se va al final y corregir a mitad de frase es imposible. Es el único
+  campo libre de la ficha —de dónde nace el agua, cómo llegar, qué hay al lado— o sea justo
+  donde interesa que la gente se extienda.
+- La solución es la que ya usaba **todo lo demás** de la app (reseñas, incidencias,
+  sugerencias): `multiline` con `minRows` y `maxRows`. Crece a medida que escribes y se
+  para en el techo, y a partir de ahí rueda por dentro. No es una decisión de diseño que se
+  tomara distinta aquí: simplemente se quedó sin hacer.
+- **Techos distintos a propósito:** 6 líneas en la ficha, **4** en el formulario de crear
+  fuente. Ése flota sobre el mapa y crece **hacia arriba**.
+- Y al mirarlo salió un fallo latente que no lo traía esto: `.panel` no tenía **ni techo ni
+  desbordamiento**, así que en horizontal, o con el teclado abierto, el nombre y el botón
+  de crear se salían por encima del mapa y no había forma de llegar a ellos. Ahora
+  `max-height: calc(100% - 48px)` y `overflow-y: auto`. Dejar crecer la descripción sin eso
+  lo habría vuelto fácil de encontrar.
+
 ## Fotos de una fuente
 - La **portada** sigue en `fonts.image`, una columna. Las demás viven en `font_photos`
   (`CreateFontPhoto`) y se piden **solo al abrir «Otras fotos»** (`GET /fonts/:id/photos`
