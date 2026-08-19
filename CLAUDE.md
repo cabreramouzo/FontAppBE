@@ -466,11 +466,22 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   respaldo, y **además** un botón directo de WhatsApp (`wa.me`): es por donde se mueve esto
   de verdad aquí y abre la app instalada sin pasar por la hoja.
 - **La frase y el enlace van juntos en `text`, y NO se pasa `url`.** Con los dos campos
-  por separado —que es lo natural y lo que se hizo primero— medio destino se queda solo con
-  la dirección y tira la frase: llegaba un enlace pelado a un chat, que es lo que nadie
-  abre. Dentro del texto no hay nada que descartar, y WhatsApp y compañía enlazan igual la
-  dirección que encuentran (la tarjeta de vista previa la siguen poniendo las etiquetas
-  `og:`). Si algún día se toca esto, ése es el motivo.
+  por separado —que es lo natural y lo que había en los **tres** sitios que comparten—
+  medio destino se queda solo con la dirección y tira la frase: llegaba un enlace pelado a
+  un chat, que es lo que nadie abre. Dentro del texto no hay nada que descartar, y WhatsApp
+  y compañía enlazan igual la dirección que encuentran (la tarjeta de vista previa la
+  siguen poniendo las etiquetas `og:`).
+- Por eso compartir vive en **un solo sitio**, `lib/share.ts` (`comparteTexto`), que usan
+  la pantalla de apoyo, la ficha de una fuente y la invitación de la zona vacía. La regla
+  **no se deduce leyendo el código**: `{ text, url }` parece lo correcto, compila, no da
+  ningún error y falla solo en el móvil de otra persona. Se descubrió compartiendo la app
+  y mirando lo que caía en el chat, que es un sitio donde no llega ningún test.
+- `scripts/share.test.ts` la fija, y está comprobado que **rompe si alguien vuelve a
+  separar los campos**. También cubre el respaldo del portapapeles, que tenía media forma
+  del mismo fallo: en la ficha se copiaba solo la dirección, sin frase.
+- Lo que se comparte **dice qué es**, no solo dónde está: la ficha manda «"nombre" en
+  FontApp: cómo está el agua y cómo llegar», porque eso cae en un chat entre otras cosas y
+  tiene que explicarse sin que nadie pulse.
 - Y el mensaje va en **primera persona y cuenta qué resuelve**, no qué es: «mira qué
   utilidad acabo de encontrar… el estado de las fuentes de tu ruta o de tu pueblo». Lo pide
   el canal: eso cae en un chat entre otras cosas y compite con ellas. Dice **fuentes de

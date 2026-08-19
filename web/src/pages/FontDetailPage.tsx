@@ -72,6 +72,7 @@ import { enqueue, isOffline } from '../lib/outbox'
 import { PhotoExifNote } from '../components/PhotoExifNote'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { prepararFoto } from '../lib/image'
+import { comparteTexto } from '../lib/share'
 import { RelocateFont } from '../components/RelocateFont'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { DRINKABLE_EMOJI, DRINKABLE_OPTIONS, SOURCE_EMOJI, SOURCE_OPTIONS, drinkableInfo, sourceInfo } from '../lib/waterType'
@@ -305,11 +306,11 @@ function LocationActions({ font }: { font: Font }) {
   }
 
   async function share() {
-    const url = window.location.href
-    try {
-      if (navigator.share) await navigator.share({ title: font.name, url })
-      else { await navigator.clipboard.writeText(url); toast.show(t('toast.linkCopied')) }
-    } catch { /* diálogo cancelado */ }
+    // Con nombre y motivo, no la dirección a secas: llega a un chat entre otras cosas y
+    // tiene que decir qué es sin que nadie pulse. Ver `comparteTexto` para por qué el
+    // enlace va dentro del texto.
+    const mensaje = `${t('detail.shareText', { name: font.name })} ${window.location.href}`
+    if (await comparteTexto(mensaje) === 'copiado') toast.show(t('toast.linkCopied'))
   }
 
   return (

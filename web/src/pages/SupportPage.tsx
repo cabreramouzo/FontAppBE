@@ -12,6 +12,7 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { FeedbackButton } from '../components/FeedbackButton'
+import { comparteTexto } from '../lib/share'
 
 // Ko-fi real (ID G5G724DC37). El enlace directo equivale al widget embed, sin
 // cargar el script de terceros de Ko-fi.
@@ -39,24 +40,8 @@ export function SupportPage() {
   const [copiado, setCopiado] = useState(false)
 
   async function compartir() {
-    // La frase y el enlace van **juntos en `text`, y no se pasa `url`**. Con los dos
-    // campos por separado, medio destino se queda solo con la dirección y tira la frase:
-    // llegaba un enlace pelado a un chat, que es lo que nadie abre. Metido en el texto no
-    // hay nada que puedan descartar, y WhatsApp y compañía enlazan igual la dirección que
-    // encuentran dentro (la tarjeta de vista previa la siguen poniendo las etiquetas
-    // `og:` de la ficha).
-    const mensaje = `${t('support.shareText')} ${ENLACE}`
-    // La hoja nativa del sistema cuando existe —sale WhatsApp, Telegram, correo y lo que
-    // esa persona use— y el portapapeles cuando no. Nunca un callejón sin salida.
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: 'FontApp', text: mensaje })
-        return
-      }
-      await navigator.clipboard.writeText(mensaje)
+    if (await comparteTexto(`${t('support.shareText')} ${ENLACE}`) === 'copiado') {
       toast.show(t('toast.linkCopied'))
-    } catch {
-      /* diálogo cancelado o sin permiso: no es un error que contar */
     }
   }
 

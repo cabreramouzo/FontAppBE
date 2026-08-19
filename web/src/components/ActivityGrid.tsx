@@ -20,6 +20,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 import { askPosition, positionIfAllowed } from '../lib/quietPosition'
+import { comparteTexto } from '../lib/share'
 import { DryFountain } from './DryFountain'
 import { useToast } from './ToastContext'
 
@@ -303,18 +304,8 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
    * portapapeles. Sin depender de ninguna red social concreta.
    */
   async function invitar() {
-    const url = `${location.origin}/?p=invite`
-    const texto = t('activity.inviteText')
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: 'FontApp', text: texto, url })
-        return
-      }
-      await navigator.clipboard.writeText(`${texto} ${url}`)
-      show(t('activity.inviteCopied'))
-    } catch {
-      // El usuario ha cancelado la hoja de compartir: no hay nada que avisar.
-    }
+    const mensaje = `${t('activity.inviteText')} ${location.origin}/?p=invite`
+    if (await comparteTexto(mensaje) === 'copiado') show(t('activity.inviteCopied'))
   }
 
   /** "Cerca de mí" pulsado sin tener posición: ahí sí se puede pedir permiso. */
