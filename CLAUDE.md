@@ -815,6 +815,27 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   suya y no debería poder borrar el análisis que aportó otro. Denunciables desde el día
   uno (`content_flags` acepta `photo`).
 
+## `/me` son dos páginas: lo tuyo y lo que se toca
+
+- **Los ajustes viven en `/me/settings`** (`SettingsPage.tsx`), fuera del perfil. Antes
+  salían en `/me` en **tres islas separadas por contenido** —privacidad y avisos arriba, el
+  interruptor del nivel en medio, la zona de peligro al final— y esa alternancia, no la
+  cantidad de información, es lo que se leía como caos.
+- **Y el orden estaba del revés.** Abres tu perfil para ver lo tuyo, y lo primero eran
+  446 px de interruptores que se tocan una vez en la vida. Medido con una cuenta con datos
+  de verdad (21 favoritas, 12 fuentes, 8 reseñas): las favoritas no empezaban hasta
+  **1.458 px** en escritorio y **1.613** en móvil.
+- La regla del reparto es la misma que decide qué baja a la tab bar: **un sitio donde se
+  está frente a una cosa que se hace.** En `/me` está lo tuyo; en `/me/settings`, lo que se
+  toca (nombre, privacidad, avisos, compartir el nivel y borrar la cuenta).
+- **El botón de ajustes va arriba, pegado a la identidad.** Si no se ve de entrada, partir
+  la pantalla no arregla nada — esconde los ajustes.
+- En la pantalla de ajustes el nombre y el usuario van **siempre editables, sin modo
+  «editar»**: en una pantalla que existe para tocar cosas, un modo de edición es un paso de
+  más. El botón de guardar está apagado mientras no cambies nada, y el aviso de lo que
+  cuesta cambiar de nombre solo sale cuando de verdad lo has tocado.
+- La ruta es `/me/settings` **en inglés**, como el resto de rutas de la app.
+
 ## El ancho lo decide el contenido, no la página
 
 - **La regla:** una página se acota por lo que contiene. **Prosa 720** (más de ~75

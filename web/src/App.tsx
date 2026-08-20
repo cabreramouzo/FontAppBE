@@ -39,6 +39,7 @@ const NewsPage = lazy(() => import('./pages/NewsPage').then((m) => ({ default: m
 const ZonesPage = lazy(() => import('./pages/ZonesPage').then((m) => ({ default: m.ZonesPage })))
 const GamificationPage = lazy(() => import('./pages/GamificationPage').then((m) => ({ default: m.GamificationPage })))
 const BadgesPage = lazy(() => import('./pages/BadgesPage').then((m) => ({ default: m.BadgesPage })))
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
 export default function App() {
@@ -61,6 +62,7 @@ export default function App() {
                   <Route path="/zones" element={<ZonesPage />} />
                   <Route path="/gamification" element={<GamificationPage />} />
                   <Route path="/me/badges" element={<BadgesPage />} />
+                  <Route path="/me/settings" element={<SettingsPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
