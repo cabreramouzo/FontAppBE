@@ -263,10 +263,18 @@ Los 63 que caen son de dos familias, y las dos son de allí:
   cinco son `leisure=swimming_pool`; uno era un hotel. La regla europea «un manantial con
   nombre suele ser una fuente» **es falsa aquí**.
 
+Los dos ficheros están **en el repo**, así que el paso 1 no hay que repetirlo:
+`chile-osm-crudo.json` (448 nodos, lo que devolvió Overpass el 20/08/2026) y
+`chile-limpio.json` (los 319 que se importan). Se commitean los dos a propósito: con el
+crudo al lado, cualquiera puede volver a pasar el filtro y comprobar que salen 319 — que
+es lo único que convierte «se descartaron 63» en una afirmación verificable y no en una
+cifra de un mensaje.
+
 ```bash
 # 1. Descarga (query igual que la de Portugal, con area["ISO3166-1"="CL"]).
-# 2. Filtra. `--es` añade las reglas de Hispanoamérica; las de termas van siempre.
-python3 scripts/fonts-import-tools.py filtra --es chile-osm.json chile-limpio.json
+#    Ya hecha: chile-osm-crudo.json.
+# 2. Filtra. `--es` añade las reglas de Hispanoamérica y las de termas.
+python3 scripts/fonts-import-tools.py filtra --es chile-osm-crudo.json chile-limpio.json
 #    Ojo: `--es` incluye la regla de termas, y va ahí y no por defecto **a propósito**.
 #    Es una regla de nombres, o sea de idioma: activada siempre se llevaba «FONT DELS
 #    BANYS (BAÑOS)» de la ACA, que es una fuente real, y le cambiaba el resultado a una
