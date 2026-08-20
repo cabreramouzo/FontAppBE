@@ -1199,6 +1199,30 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   se consume al usarlo. Quien lo pida tiene que saber vivir sin él — cuando falta, quedan
   las instrucciones a mano, nunca las dos cosas a la vez.
 
+## El hueco de la tab bar en iOS (sin resolver, con sonda)
+
+- **Síntoma reportado**: en el primer arranque de la app instalada en un iPhone queda una
+  franja en blanco en la barra de abajo, y **se arregla al tocar otra pestaña**.
+- **No se ha reproducido, y no se ha intentado adivinar.** Tres causas distintas dan
+  exactamente el mismo síntoma: que `env(safe-area-inset-bottom)` valga 0 en el primer
+  pintado y pase a 34 después; que la ventana mida de más durante la transición desde la
+  pantalla de inicio, de modo que lo fijado abajo se coloque contra un alto que luego
+  cambia; o que el inset esté bien y falle otra cosa. Se distinguen mirando **cuándo**
+  cambia cada medida, no cuál es.
+- El simulador **no sirve** para esto: no reporta los insets igual que un aparato real, y
+  montarlo habría acabado sin poder afirmar nada — el mismo callejón que `ResizeObserver`
+  en la franja de avisos.
+- Por eso `SafeAreaProbe.tsx`: se enciende con `?debug=safearea`, **se queda encendida en
+  `localStorage`** —la app instalada arranca siempre en `/` sin parámetros, así que un
+  flag que solo viviera en la URL no llegaría nunca al arranque que hay que observar— y
+  toma muestras en `t=0`, 300 ms, 1500 ms, **al primer toque** (el gesto que según el
+  informe lo arregla) y al volver del segundo plano. Se apaga con `?debug=off`.
+- Va en `position: fixed`, que no es un detalle: en flujo empujaría la página y falsearía
+  justo lo que mide.
+- Lo que hay que mirar es `huecoBajoLaBarra` (si no es 0, la barra no llega al borde) y
+  `acolchadoDeLaBarra` comparado con `insetAbajo`: acolchado 0 con inset 34 significa que
+  el `pb: env(...)` de `TabBar` no se aplicó a tiempo.
+
 ## Peso de las fotos (decisión aplazada, con disparador)
 
 - Hay **un solo tamaño** por foto: `compressImage` a 1280 px y calidad 0,72. Esa misma

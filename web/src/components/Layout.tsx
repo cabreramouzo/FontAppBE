@@ -28,6 +28,7 @@ import { OfflineBanner } from './OfflineBanner'
 import { AppInterestBanner } from './AppInterestBanner'
 import { InstallPrompt } from './InstallPrompt'
 import { FranjaDeAvisos } from './Avisos'
+import { SafeAreaProbe } from './SafeAreaProbe'
 import { PendingUploads } from './PendingUploads'
 import { RoleChip, StaffStripe, staffRole } from './StaffBadge'
 import { NotificationBell } from './NotificationBell'
@@ -297,6 +298,8 @@ export function Layout({ children }: { children: ReactNode }) {
       <Box sx={enElMapa ? { display: { xs: 'none', sm: 'block' } } : undefined}><Footer /></Box>
       <TabBar />
       <AppInterestBanner />
+      {/* Apagada salvo que se encienda con `?debug=safearea`. Ver el componente. */}
+      <SafeAreaProbe />
     </div>
   )
 }
