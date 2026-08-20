@@ -891,6 +891,30 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   su perfil por un campo que no han tocado. Hay test de las dos mitades. El aviso de la
   interfaz dice lo que cuesta: el enlace viejo al perfil deja de funcionar, las menciones
   ya escritas apuntan a donde ya no estás, y es el nombre con el que entras.
+- **Sugerencias al escribir `@`** (`GET /mentions?q=` + `MentionInput.tsx` +
+  `lib/mentions.ts`): dos letras abren una lista de nombres. Va **solo en las tres cajas
+  donde una mención hace algo** —las dos de reseña y la de incidencia—; la descripción no,
+  porque el servidor no avisa de esas y sugerir ahí sería ofrecer avisar a alguien a quien
+  nadie va a avisar. Misma paridad de siempre.
+  La ruta es `/mentions` y **no `/users/search`**: `/users/:id` resuelve también por
+  nombre, y `search` es un nombre válido según `isMentionable`, así que se comería a quien
+  se llamara así. **Pide sesión**: los nombres ya se ven sobre contenido, pero un listado
+  que se recorre letra a letra hasta sacar el censo es otra cosa; y mencionar solo lo hace
+  quien escribe, o sea quien tiene sesión. Devuelve **solo el nombre**.
+  La detección vive en `lib/mentions.ts` con tests (`scripts/mentions.test.ts`) porque es
+  lo único con casos límite y todos fallan en silencio: el `@` de un correo, el cursor a
+  mitad de palabra, dos menciones en la misma frase. Lleva el mismo `(?<![\w@.])` que el
+  parser y que el servidor.
+  Ojo con el ratón: la lista se elige con `onMouseDown` y no con `onClick`, porque el clic
+  llega **después** del `blur` que ya la ha cerrado — con `onClick` no se elige nunca.
+- **Un nombre que no se puede mencionar ya no se puede crear.** El registro solo
+  comprobaba `.count(3...)`, así que «josé maría» entraba: no era cosa de cuentas
+  antiguas, era la puerta de entrada. Y el daño no es «no se le puede mencionar» sino que
+  la mención **acierta a otro**: `names(in:)` corta en el primer carácter que no vale, así
+  que `@josé maría` menciona a `jos`, enlaza a su perfil y, si existe, le avisa a él.
+  Ahora `create` aplica `Mentions.isMentionable` siempre. Las cuentas ya creadas se quedan
+  como están —el nombre es con el que entran— y se corrigen desde `/me`. Para saber
+  cuántas hay: `SELECT count(*) FROM users WHERE username !~ '^[a-zA-Z0-9_.-]{3,30}$'`.
 - **Menciones** (`Utils/Mentions.swift`): `@nombre` en una reseña o incidencia se pinta
   como enlace al perfil (`AuthorLine.tsx`) y avisa por correo. La regla del servidor y la
   del cliente tienen que decir lo mismo o se subraya a quien no se avisa; las dos llevan

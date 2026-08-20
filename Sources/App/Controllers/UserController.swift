@@ -153,6 +153,24 @@ struct UserController: RouteCollection {
         try CreateUserDTO.validate(content: req)
         let dto = try req.content.decode(CreateUserDTO.self)
 
+        // **La misma regla que al cambiarlo**, y aquí sí siempre. Faltaba: el registro
+        // solo comprobaba la longitud, así que se podía crear hoy mismo una cuenta
+        // llamada «josé maría» — no es cosa de cuentas antiguas, era la puerta de
+        // entrada.
+        //
+        // Y el daño no es «no se le puede mencionar», que ya sería malo. Es que la
+        // mención **acierta a otro**: `Mentions.names(in:)` corta en el primer carácter
+        // que no vale, así que `@josé maría` menciona a `jos`, enlaza a su perfil y, si
+        // ese usuario existe, le manda a él el aviso. Un nombre que no se puede escribir
+        // en una mención no debería poder existir.
+        //
+        // Las cuentas ya creadas se quedan como están: el nombre es con el que entran, y
+        // renombrarlas por nuestra cuenta las dejaría fuera. Se corrigen desde `/me`,
+        // donde el formulario ya exige esta regla.
+        guard Mentions.isMentionable(dto.username) else {
+            throw Abort(.badRequest, reason: "El nombre de usuario solo puede llevar letras sin acentos, números, punto, guion y guion bajo (3-30 caracteres)")
+        }
+
         // 409 limpio en vez de dejar que el constraint de unicidad reviente en 500.
         guard try await User.query(on: req.db).filter(\.$username == dto.username).first() == nil else {
             throw Abort(.conflict, reason: "El username '\(dto.username)' ya está en uso")

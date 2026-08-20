@@ -59,6 +59,7 @@ import {
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
+import { MentionInput } from '../components/MentionInput'
 import { StarRating } from '../components/StarRating'
 import { ImagePicker } from '../components/ImagePicker'
 import { Skeleton } from '../components/Skeleton'
@@ -172,7 +173,7 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
           <StatusSelect value={waterStatus} onChange={setWaterStatus} label={t('update.status')} />
           <Box><Typography variant="caption" color="text.secondary">{t('update.rating')}</Typography><StarRating value={rating} onChange={setRating} size={22} /></Box>
         </Stack>
-        <TextField value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('update.howNowOpt')} fullWidth multiline minRows={2} size="small" />
+        <MentionInput value={body} onChange={setBody} placeholder={t('update.howNowOpt')} fullWidth multiline minRows={2} size="small" />
         {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
         <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
           <Button type="submit" variant="contained" disableElevation size="small">{t('form.save')}</Button>
@@ -271,7 +272,7 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; 
         <StatusSelect value={waterStatus} onChange={setWaterStatus} label={t('update.status')} />
         <Box><Typography variant="caption" color="text.secondary">{t('update.rating')}</Typography><StarRating value={rating} onChange={setRating} size={22} /></Box>
       </Stack>
-      <TextField value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('update.howNowOpt')} fullWidth multiline minRows={2} size="small" />
+      <MentionInput value={body} onChange={setBody} placeholder={t('update.howNowOpt')} fullWidth multiline minRows={2} size="small" />
       <ImagePicker file={file} onChange={setFile} />
       {/* Se dice ANTES de elegir la foto, no después de publicarla. Aquí estaba el
           agujero: la gente fotografía la fuente, la adjunta porque es el único sitio
@@ -356,7 +357,7 @@ function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
 
   return (
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1.5 }}>
-      <TextField value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t('report.placeholder')} required fullWidth multiline minRows={2} size="small" />
+      <MentionInput value={message} onChange={setMessage} placeholder={t('report.placeholder')} required fullWidth multiline minRows={2} size="small" />
       {error && <Alert severity="error">{error}</Alert>}
       <Button type="submit" color="warning" variant="contained" disableElevation disabled={saving} startIcon={<ReportProblemIcon />} sx={{ alignSelf: 'flex-start' }}>
         {saving ? t('report.sending') : t('report.submit')}

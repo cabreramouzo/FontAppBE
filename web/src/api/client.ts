@@ -690,3 +690,16 @@ export async function getZoneRanking(region: string, month?: string): Promise<Zo
   if (month) q.set('month', month)
   return apiFetch<ZoneRanking>(`/zones/ranking?${q}`)
 }
+
+
+/**
+ * Nombres que empiezan por `q`, para sugerir una `@mención`.
+ *
+ * Pide sesión (el servidor devuelve 401 sin ella) y menos de dos letras devuelve vacío,
+ * así que la interfaz no tiene que repetir esas dos reglas: pregunta y pinta lo que
+ * venga.
+ */
+export async function searchMentions(q: string): Promise<string[]> {
+  const filas: { username: string }[] = await apiFetch(`/mentions?q=${encodeURIComponent(q)}`)
+  return filas.map((f) => f.username)
+}

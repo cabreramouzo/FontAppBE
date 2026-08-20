@@ -1282,6 +1282,71 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Sugerencias de `@mención`: lo que enseña y, sobre todo, lo que no.
+    ///
+    /// Es un listado de nombres de gente, así que lo que importa aquí no es que funcione
+    /// —eso es una línea de SQL— sino las cuatro cosas que tiene que negarse a hacer.
+    func testMentionSuggestions() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "mencion.yo")
+            _ = try await register(app, username: "maria_r")
+            _ = try await register(app, username: "marcos")
+            let tok = try await login(app, username: "mencion.yo")
+
+            // Sin sesión no hay directorio: los nombres se ven sobre contenido, no en
+            // una lista que se recorre letra a letra.
+            try await app.test(.GET, "mentions?q=ma", afterResponse: { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            })
+
+            try await app.test(.GET, "mentions?q=ma", headers: bearer(tok), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let out = try res.content.decode([MentionController.Suggestion].self).map(\.username)
+                XCTAssertEqual(out.sorted(), ["marcos", "maria_r"])
+            })
+
+            // Una sola letra sería el censo por orden alfabético, que no sugiere nada.
+            try await app.test(.GET, "mentions?q=m", headers: bearer(tok), afterResponse: { res in
+                XCTAssertEqual(try res.content.decode([MentionController.Suggestion].self).count, 0)
+            })
+
+            // Nunca a ti mismo: es lo que ya hace el aviso, y ofrecerlo sería prometer
+            // algo que después no pasa.
+            try await app.test(.GET, "mentions?q=mencion", headers: bearer(tok), afterResponse: { res in
+                XCTAssertEqual(try res.content.decode([MentionController.Suggestion].self).count, 0)
+            })
+
+            // Por delante y no por dentro: `art` no debe sacar a «marcos».
+            try await app.test(.GET, "mentions?q=arc", headers: bearer(tok), afterResponse: { res in
+                XCTAssertEqual(try res.content.decode([MentionController.Suggestion].self).count, 0)
+            })
+        }
+    }
+
+    /// Un nombre que no se puede escribir en una mención no debería poder crearse.
+    ///
+    /// El registro solo comprobaba la longitud, así que «jose maria» entraba. Y el daño
+    /// no era no poder mencionarle: `Mentions.names(in:)` corta en el primer carácter que
+    /// no vale, así que `@jose maria` menciona a `jose` — enlaza a otro perfil y, si
+    /// existe, le avisa a él.
+    func testRegistrationRejectsUnmentionableUsernames() async throws {
+        try await withApp { app in
+            try await app.test(.POST, "users", beforeRequest: { req in
+                try req.content.encode(CreateUserDTO(name: "Jose Maria", username: "jose maria",
+                                                     email: "jm@example.com", password: "password123"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+            // La regla que hace falta que siga siendo cierta: lo válido sigue entrando.
+            try await app.test(.POST, "users", beforeRequest: { req in
+                try req.content.encode(CreateUserDTO(name: "Jose Maria", username: "jose_maria",
+                                                     email: "jm2@example.com", password: "password123"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+            })
+        }
+    }
+
     /// El filtro por país acota **las cuatro fuentes de actividad**, no solo las altas.
     ///
     /// Se prueba porque es un fallo que no da la cara: si una de las tres consultas que
