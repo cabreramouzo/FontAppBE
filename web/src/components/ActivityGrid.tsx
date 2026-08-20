@@ -21,6 +21,7 @@ import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 import { askPosition, positionIfAllowed } from '../lib/quietPosition'
 import { comparteTexto } from '../lib/share'
+import { PAISES, TODOS, nombrePais, paisRecordado, recuerdaPais } from '../lib/countries'
 import { DryFountain } from './DryFountain'
 import { useToast } from './ToastContext'
 
@@ -286,18 +287,41 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
     return () => { vivo = false }
   }, [])
 
+  /**
+   * El país, **la misma preferencia que `/zones`** (ver `lib/countries.ts`): quien mira
+   * las zonas de Chile quiere las novedades de Chile, y decirlo dos veces convierte un
+   * acierto en una tarea.
+   *
+   * Con «cerca de mí» no se usa: ahí el recorte ya lo dan tus coordenadas, y dos filtros
+   * de zona a la vez confunden — el mismo motivo por el que la demarcación tampoco sale.
+   */
+  const [pais, setPais] = useState<string>(() => paisRecordado() ?? TODOS)
+
+  function eligePais(p: string) {
+    setPais(p)
+    recuerdaPais(p)
+    // La demarcación es de dentro de un país: al cambiar de país deja de existir, y
+    // conservarla daría una rejilla vacía sin decir por qué.
+    setRegion('')
+  }
+
   useEffect(() => {
     if (ubicando) return
     setItems(null)
     setFallo(false)
     const zona = cerca && pos ? { lat: pos[0], long: pos[1] } : {}
-    getActivity({ limit, region: cerca ? undefined : region || undefined, ...zona })
+    getActivity({
+      limit,
+      region: cerca ? undefined : region || undefined,
+      country: cerca || pais === TODOS ? undefined : pais,
+      ...zona,
+    })
       .then(setItems)
       .catch(() => {
         setFallo(true)
         setItems([])
       })
-  }, [limit, region, cerca, pos, ubicando, intento])
+  }, [limit, region, pais, cerca, pos, ubicando, intento])
 
   /**
    * Invitar: la hoja de compartir del sistema si la hay, y si no, el enlace al
@@ -318,6 +342,11 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
   }
 
   const regions = [...new Set((items ?? []).map((i) => i.region).filter(Boolean))] as string[]
+  // Los países salen de `PAISES` y no de los items, al revés que las demarcaciones: si
+  // se sacaran de lo cargado, filtrar por uno dejaría en la lista **solo ese**, y no
+  // habría forma de volver ni de cambiar. Con las demarcaciones no pasa porque están
+  // dentro del país que ya filtra.
+  const paises = PAISES
 
   return (
     <Box>
@@ -337,8 +366,17 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
           variant={!cerca ? 'filled' : 'outlined'}
           onClick={() => setCerca(false)}
         />
-        {/* La región solo tiene sentido mirando el global: con "cerca de mí" el
-            recorte ya lo dan las coordenadas, y dos filtros de zona a la vez confunden. */}
+        {/* País y demarcación solo tienen sentido mirando el global: con "cerca de mí"
+            el recorte ya lo dan las coordenadas, y dos filtros de zona a la vez confunden. */}
+        {!cerca && (
+          <TextField
+            select size="small" label={t('activity.country')} value={pais}
+            onChange={(e) => eligePais(e.target.value)} sx={{ minWidth: 150 }}
+          >
+            <MenuItem value={TODOS}>{t('zones.allCountries')}</MenuItem>
+            {paises.map((p) => <MenuItem key={p} value={p}>{nombrePais(p, t)}</MenuItem>)}
+          </TextField>
+        )}
         {showFilter && !cerca && regions.length > 1 && (
           <TextField
             select size="small" label={t('activity.region')} value={region}

@@ -1282,6 +1282,65 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// El filtro por país acota **las cuatro fuentes de actividad**, no solo las altas.
+    ///
+    /// Se prueba porque es un fallo que no da la cara: si una de las tres consultas que
+    /// cuelgan de una fuente se olvidara del país, la rejilla se llenaría de movimientos
+    /// de otro continente y no saltaría ningún error — lo notaría un chileno mirando su
+    /// portada, que es tarde y lejos.
+    ///
+    /// Y porque el país no se filtra como los demás ámbitos: la cercanía y la demarcación
+    /// se resuelven a una lista de identificadores y el país va como join, así que es
+    /// código aparte que ninguna otra prueba toca.
+    func testActivityFiltersByCountry() async throws {
+        try await withApp { app in
+            let userID = try await register(app, username: "pais-user")
+            try await setRole(app, userID: userID, role: .admin)   // para ver también las ediciones
+            let tok = try await login(app, username: "pais-user")
+
+            let aqui = try await createFont(app, token: tok, name: "Font d'aquí", lat: 41.8, long: 2.1)
+            let alla = try await createFont(app, token: tok, name: "Fuente de allá", lat: -33.45, long: -70.65)
+            for id in [aqui, alla] {
+                _ = try await addComment(app, token: tok, fontID: id, body: "Mana")
+                try await app.test(.POST, "fonts/\(id)/report", headers: bearer(tok), beforeRequest: { req in
+                    try req.content.encode(CreateReportDTO(message: "Grifo roto"))
+                }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+            }
+            // La zona la pone `populate-regions` en producción; aquí a mano.
+            for (id, pais) in [(aqui, "Spain"), (alla, "Chile")] {
+                let f = try await Font.find(id, on: app.db)
+                f?.country = pais
+                f?.region = pais == "Spain" ? "Barcelona" : "Región Metropolitana de Santiago"
+                try await f?.save(on: app.db)
+            }
+
+            try await app.test(.GET, "activity?limit=50&country=Chile", headers: bearer(tok), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let items = try res.content.decode([ActivityItem].self)
+                XCTAssertFalse(items.isEmpty, "Chile tiene movimientos y deberían salir")
+                // La afirmación que importa: **nada** de fuera del país, de ningún tipo.
+                XCTAssertTrue(items.allSatisfy { $0.fontName == "Fuente de allá" },
+                              "se ha colado algo de otro país: \(items.map(\.fontName))")
+                // Y que estén los tres tipos, o el test pasaría con una sola consulta
+                // acotando bien y las otras dos vacías por casualidad.
+                XCTAssertTrue(items.contains { $0.kind == .fontAdded })
+                XCTAssertTrue(items.contains { $0.kind == .review })
+                XCTAssertTrue(items.contains { $0.kind == .report })
+            })
+
+            try await app.test(.GET, "activity?limit=50&country=Spain", headers: bearer(tok), afterResponse: { res in
+                let items = try res.content.decode([ActivityItem].self)
+                XCTAssertTrue(items.allSatisfy { $0.fontName == "Font d'aquí" })
+            })
+
+            // Sin país, los dos. Si no, el filtro estaría puesto siempre.
+            try await app.test(.GET, "activity?limit=50", headers: bearer(tok), afterResponse: { res in
+                let nombres = Set(try res.content.decode([ActivityItem].self).map(\.fontName))
+                XCTAssertTrue(nombres.contains("Font d'aquí") && nombres.contains("Fuente de allá"))
+            })
+        }
+    }
+
     /// Dos movimientos de la misma fuente no salen pegados mientras haya con qué
     /// separarlos.
     ///

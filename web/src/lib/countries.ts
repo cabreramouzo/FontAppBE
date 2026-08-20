@@ -14,7 +14,21 @@
  * Al importar un país nuevo: añadirlo aquí y añadir sus seis traducciones. Si se olvida,
  * se nota poco y no se rompe nada — de ahí el aviso.
  */
-const TRADUCIDOS = new Set(['Spain', 'France', 'Portugal', 'Andorra', 'Chile'])
+/**
+ * Los países que la app conoce, **de más fuentes a menos**.
+ *
+ * Es la lista que pinta el selector de `/activity`, que no puede sacarla de los datos
+ * cargados como hace con las demarcaciones: filtrando por uno, lo cargado solo tendría
+ * ese, y no habría forma de volver ni de cambiar. `/zones` sí la deriva de su respuesta,
+ * que trae todas las zonas de una vez.
+ *
+ * Consecuencia asumida: un país importado y no apuntado aquí **sale en `/zones` y no en
+ * el selector de novedades**. Es la misma regla que las traducciones —al importar un
+ * país, se añade aquí— y por eso van juntas: una lista, un sitio, un despiste posible.
+ */
+export const PAISES = ['Spain', 'France', 'Portugal', 'Chile', 'Andorra']
+
+const TRADUCIDOS = new Set(PAISES)
 
 /** La clave de i18n de un país, o `null` si no lo tenemos traducido. */
 export function clavePais(bruto: string): string | null {
@@ -40,4 +54,26 @@ export function paisesDe(zonas: { country: string | null; fonts: number }[]): st
     suma.set(z.country, (suma.get(z.country) ?? 0) + z.fonts)
   }
   return [...suma.entries()].sort((a, b) => b[1] - a[1]).map(([p]) => p)
+}
+
+
+/**
+ * El país elegido, **compartido entre `/zones` y `/activity`**.
+ *
+ * Es una sola preferencia y no dos: quien mira las zonas de Chile quiere las novedades
+ * de Chile, y tener que decirlo en cada pestaña convierte un acierto en una tarea. Vive
+ * aquí y no en una de las dos pantallas para que la tercera que lo necesite no tenga que
+ * importar de la segunda.
+ */
+const RECUERDO = 'zones:country'
+
+/** Elegido explícitamente «todos». No es lo mismo que no haber elegido nunca. */
+export const TODOS = '*'
+
+export function paisRecordado(): string | null {
+  try { return localStorage.getItem(RECUERDO) } catch { return null }
+}
+
+export function recuerdaPais(pais: string): void {
+  try { localStorage.setItem(RECUERDO, pais) } catch { /* modo privado: da igual */ }
 }

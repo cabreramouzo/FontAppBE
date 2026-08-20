@@ -403,11 +403,14 @@ export interface ActivityItem {
 }
 
 export async function getActivity(
-  opts: { limit?: number; region?: string; lat?: number; long?: number; km?: number } = {},
+  opts: { limit?: number; region?: string; country?: string; lat?: number; long?: number; km?: number } = {},
 ): Promise<ActivityItem[]> {
   const q = new URLSearchParams()
   if (opts.limit) q.set('limit', String(opts.limit))
   if (opts.region) q.set('region', opts.region)
+  // El país es el corte ancho y la demarcación el fino; el servidor prefiere el más
+  // concreto si llegan los dos, igual que hace con la cercanía.
+  if (opts.country) q.set('country', opts.country)
   // Cercanía: manda sobre la región si vienen las dos (lo decide el backend).
   if (opts.lat !== undefined && opts.long !== undefined) {
     q.set('lat', String(opts.lat))

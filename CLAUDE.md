@@ -104,6 +104,36 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     un país nuevo hay que añadirlo ahí con sus seis traducciones.
     Ojo, `fonts.country` guarda **el nombre en inglés de Natural Earth** («Spain»,
     «France»): es clave, no rótulo.
+  - **El mismo filtro en `/activity`**, y ahí sí hubo que tocar el servidor: esa ruta
+    acota resolviendo la zona a **una lista de identificadores**, y eso vale para la
+    cercanía y para una demarcación (la mayor son 7.588 fuentes) pero **no para un país**
+    — España son 52.341, cuatro veces por visita dentro de un `IN (...)`. El país se
+    aplica como **join** sobre `fonts` y no se materializa nunca: medido, `/activity`
+    entero con `country=Spain` tarda 79 ms. De ahí `ActivityController.Ambito`, que
+    distingue `.fuentes([UUID])` de `.pais(String)`.
+    El `switch` está **copiado en las tres consultas** que cuelgan de una fuente, no
+    factorizado: se intentó con un protocolo y Swift no deja declarar `$font` en uno. Es
+    seguro porque el `switch` es exhaustivo — un caso nuevo rompe la compilación en los
+    tres sitios en vez de dejar uno viejo callado.
+    Ojo: el join **no** filtra por `Font.visible`, igual que no lo hace el camino de los
+    identificadores. Es una carencia que ya estaba; arreglarla solo en esa rama daría
+    resultados distintos según cómo hubieras filtrado.
+  - **El país es una sola preferencia para las dos pantallas** (`paisRecordado` /
+    `recuerdaPais` en `lib/countries.ts`): quien mira las zonas de Chile quiere las
+    novedades de Chile, y decirlo dos veces convierte un acierto en una tarea. Vive en el
+    módulo y no en una de las dos páginas para que la tercera que lo necesite no importe
+    de la segunda.
+    En novedades la lista sale de `PAISES` y **no** de los items cargados, al revés que
+    las demarcaciones: sacándola de lo cargado, filtrar por un país dejaría en la lista
+    solo ese y no habría forma de volver. Consecuencia asumida: un país importado y no
+    apuntado en `PAISES` sale en `/zones` y no en el selector de novedades — misma regla
+    que las traducciones, por eso van en el mismo fichero.
+    Con «cerca de mí» el país no se usa: el recorte ya lo dan tus coordenadas.
+  - El rótulo «POR DEMARCACIÓN» se quedó como está y **los chips subieron por encima**.
+    Debajo parecía que el rótulo nombraba los chips —y entonces habría que llamarlo «por
+    país»—, cuando lo que nombra es la lista de tarjetas, que son demarcaciones. El orden
+    dice la verdad: eliges país y dentro ves sus demarcaciones. Renombrarlo habría
+    deshecho lo de «Comarca ≠ provincia» más abajo.
   - El selector destapó que **el seed inventaba un país**: insertaba las 381 del Moianès
     como `España`/`Catalunya`, y las dos cosas estaban mal —`region` guarda admin-1, que en
     España son **provincias**, y `country` el nombre inglés—, así que toda base local tenía

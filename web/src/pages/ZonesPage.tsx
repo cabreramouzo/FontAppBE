@@ -15,7 +15,7 @@ import { getZoneRanking, getZones } from '../api/client'
 import type { ZoneCoverage, ZoneRanking } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
 import { CoverageBar } from '../components/CoverageBar'
-import { nombrePais, paisesDe } from '../lib/countries'
+import { TODOS, nombrePais, paisRecordado, paisesDe, recuerdaPais } from '../lib/countries'
 import { LocalGoalCard } from '../components/LocalGoalCard'
 import { Skeleton } from '../components/Skeleton'
 
@@ -29,10 +29,6 @@ import { Skeleton } from '../components/Skeleton'
  *
  * Por eso también la tabla va plegada: hay que ir a buscarla.
  */
-/** Dónde se recuerda el país elegido. `TODOS` es una elección, no la ausencia de una. */
-const RECUERDO = 'zones:country'
-const TODOS = '*'
-
 export function ZonesPage() {
   const { t, lang } = useI18n()
   const [zonas, setZonas] = useState<ZoneCoverage[] | null>(null)
@@ -44,13 +40,11 @@ export function ZonesPage() {
   // Que la elección explícita gane a la ubicación es lo que hace que el automatismo no
   // moleste: alguien que está en Francia mirando España a propósito no quiere que la
   // página se lo deshaga en cada visita.
-  const [pais, setPais] = useState<string | null>(() => {
-    try { return localStorage.getItem(RECUERDO) } catch { return null }
-  })
+  const [pais, setPais] = useState<string | null>(paisRecordado)
 
   function elige(p: string) {
     setPais(p)
-    try { localStorage.setItem(RECUERDO, p) } catch { /* modo privado: da igual */ }
+    recuerdaPais(p)
   }
 
   /** Lo dice la tarjeta de tu entorno. Solo vale si aún no habías elegido tú. */
@@ -104,14 +98,13 @@ export function ZonesPage() {
         <Alert severity="info">{t('zones.none')}</Alert>
       )}
 
-      {estado === 'ok' && !!zonas?.length && (
-        <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mt: 3, mb: 0.5 }}>
-          {t('zones.byRegion')}
-        </Typography>
-      )}
-
-      {/* El selector solo aparece si de verdad hay entre qué elegir: con un solo país es
-          un control que no hace nada y que además miente sobre el alcance de la app. */}
+      {/* El selector va **encima** del rótulo «por demarcación», no debajo. Debajo
+          parecía que el rótulo nombraba los chips —y entonces sí habría que llamarlo
+          «por país»—, cuando lo que nombra es la lista de tarjetas, que son
+          demarcaciones y no países. El orden cuenta la verdad: eliges país y dentro
+          ves sus demarcaciones.
+          Y solo aparece si hay entre qué elegir: con un solo país es un control que no
+          hace nada y que además miente sobre el alcance de la app. */}
       {estado === 'ok' && paises.length > 1 && (
         <Box sx={{ display: 'flex', gap: 1, mb: 2, overflowX: 'auto', pb: 0.5,
                    // Que la fila se pueda arrastrar en móvil sin cortar el chip de la
@@ -137,6 +130,11 @@ export function ZonesPage() {
         </Box>
       )}
 
+      {estado === 'ok' && !!visibles.length && (
+        <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mt: 1, mb: 0.5 }}>
+          {t('zones.byRegion')}
+        </Typography>
+      )}
       {estado === 'ok' && visibles.map((z) => <ZonaCard key={`${z.country}/${z.region}`} zona={z} lang={lang} />)}
     </Box>
   )

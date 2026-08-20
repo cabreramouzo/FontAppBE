@@ -61,6 +61,7 @@ struct ActivityController: RouteCollection {
 
         let limit = min(max(req.query[Int.self, at: "limit"] ?? 30, 1), 100)
         let region = req.query[String.self, at: "region"]?.trimmingCharacters(in: .whitespaces)
+        let country = req.query[String.self, at: "country"]?.trimmingCharacters(in: .whitespaces)
 
         // Cada visita son cuatro consultas más la resolución de la zona, y lo que
         // devuelven cambia como mucho cada pocos minutos. La caché evita repetir todo
@@ -68,21 +69,21 @@ struct ActivityController: RouteCollection {
         // al público, donde el coste ya no lo paga un puñado de administradores.
         // El ámbito entra en la clave: sin eso, la respuesta de un admin (que lleva
         // ediciones) se le serviría al siguiente visitante anónimo.
-        let clave = try cacheKey(req, limit: limit, region: region, esAdmin: esAdmin)
+        let clave = try cacheKey(req, limit: limit, region: region, country: country, esAdmin: esAdmin)
         if let guardado = await Self.cache.get(clave) { return guardado }
 
         // Acotar por zona es acotar el conjunto de fuentes, y después buscar movimientos
         // sobre ellas. Sin filtro no hace falta esa vuelta.
         // `let` y no `var`: se captura en las tareas concurrentes de abajo.
-        let fontIDsInRegion: [UUID]? = try await zoneFontIDs(req, region: region)
-        if fontIDsInRegion?.isEmpty == true { return [] }
+        let ambito: Ambito? = try await zoneFontIDs(req, region: region, country: country)
+        if case .fuentes(let ids) = ambito, ids.isEmpty { return [] }
 
         // Cada tipo trae como mucho `limit`: al mezclar y recortar, el resultado es el
         // mismo que si hubiéramos ordenado todo junto, sin traernos tablas enteras.
-        async let newFontsTask = fetchNewFonts(req, limit: limit, ids: fontIDsInRegion)
-        async let commentsTask = fetchComments(req, limit: limit, ids: fontIDsInRegion)
-        async let reportsTask = fetchReports(req, limit: limit, ids: fontIDsInRegion)
-        async let editsTask = esAdmin ? fetchEdits(req, limit: limit, ids: fontIDsInRegion) : []
+        async let newFontsTask = fetchNewFonts(req, limit: limit, ambito: ambito)
+        async let commentsTask = fetchComments(req, limit: limit, ambito: ambito)
+        async let reportsTask = fetchReports(req, limit: limit, ambito: ambito)
+        async let editsTask = esAdmin ? fetchEdits(req, limit: limit, ambito: ambito) : []
         let items = try await newFontsTask + commentsTask + reportsTask + editsTask
 
         let ordenados = items.sorted { $0.createdAt > $1.createdAt }
@@ -154,22 +155,42 @@ struct ActivityController: RouteCollection {
 
     static func snap(_ v: Double, step: Double) -> Double { (v / step).rounded() * step }
 
-    private func cacheKey(_ req: Request, limit: Int, region: String?, esAdmin: Bool) throws -> String {
+    private func cacheKey(_ req: Request, limit: Int, region: String?, country: String?, esAdmin: Bool) throws -> String {
         let ambito = esAdmin ? "a" : "p"
         if let lat = req.query[Double.self, at: "lat"], let long = req.query[Double.self, at: "long"] {
             let km = min(max(req.query[Double.self, at: "km"] ?? Self.defaultRadiusKm, 1), Self.maxRadiusKm)
             let step = Self.coordStep(forKm: km)
             return "\(ambito):n:\(limit):\(Self.snap(lat, step: step)):\(Self.snap(long, step: step)):\(km)"
         }
-        return "\(ambito):r:\(limit):\(region ?? "")"
+        return "\(ambito):r:\(limit):\(region ?? ""):\(country ?? "")"
     }
 
-    /// Fuentes de la zona pedida, o `nil` si no se ha pedido ninguna (= todas).
+    /// Cómo se acota la actividad a una zona.
     ///
-    /// Dos maneras de decir "mi zona", y no son intercambiables: por coordenadas
-    /// (lo que tienes alrededor, que es lo que le importa a quien va a caminar) y por
-    /// región administrativa (Catalunya entera). La primera gana si vienen las dos.
-    private func zoneFontIDs(_ req: Request, region: String?) async throws -> [UUID]? {
+    /// Son **dos formas distintas y no una con dos orígenes**, y la diferencia es de
+    /// tamaño. Cercanía y demarcación se resuelven a una lista de identificadores porque
+    /// están acotadas por definición: la demarcación más poblada son 7.588 fuentes. Un
+    /// país no: España son **52.341**, y meter eso en un `IN (...)` cuatro veces por
+    /// visita no es una consulta lenta, es otra cosa. Por eso el país se aplica como
+    /// join sobre `fonts` y nunca se materializa.
+    /// Las tres consultas que cuelgan de una fuente repiten este `switch` en vez de
+    /// compartir un ayudante. Se intentó con un protocolo y Swift no deja declarar
+    /// `$font` en uno («el prefijo `$` está reservado»), y la vuelta con `KeyPath`
+    /// costaba más de leer que las tres copias. **Copiar es seguro aquí precisamente por
+    /// el `switch`**: es exhaustivo, así que añadir un caso a este enum rompe la
+    /// compilación en los tres sitios en vez de dejar uno viejo en silencio.
+    enum Ambito {
+        case fuentes([UUID])
+        case pais(String)
+    }
+
+    /// El ámbito pedido, o `nil` si no se ha pedido ninguno (= todo).
+    ///
+    /// Tres maneras de decir "mi zona" y no son intercambiables: por coordenadas (lo que
+    /// tienes alrededor, que es lo que le importa a quien va a caminar), por demarcación
+    /// y por país. Ese es también el orden de preferencia si vienen varias, de lo más
+    /// concreto a lo más ancho.
+    private func zoneFontIDs(_ req: Request, region: String?, country: String?) async throws -> Ambito? {
         if let latCruda = req.query[Double.self, at: "lat"], let longCruda = req.query[Double.self, at: "long"] {
             let km = min(max(req.query[Double.self, at: "km"] ?? Self.defaultRadiusKm, 1), Self.maxRadiusKm)
             // Mismas coordenadas redondeadas que usa la clave de la caché (ver `snap`).
@@ -187,17 +208,20 @@ struct ActivityController: RouteCollection {
                 .limit(5000)
                 .all()
             // La caja es un cuadrado y el radio un círculo: el haversine recorta las esquinas.
-            return candidates.compactMap { f in
+            return .fuentes(candidates.compactMap { f in
                 haversineKm(lat, long, f.latitude, f.longitude) <= km ? f.id : nil
-            }
+            })
         }
-        guard let region, !region.isEmpty else { return nil }
-        return try await Font.query(on: req.db).filter(\.$region == region).all(\.$id)
+        if let region, !region.isEmpty {
+            return .fuentes(try await Font.query(on: req.db).filter(\.$region == region).all(\.$id))
+        }
+        if let country, !country.isEmpty { return .pais(country) }
+        return nil
     }
 
     // MARK: - Cada fuente de actividad
 
-    private func fetchNewFonts(_ req: Request, limit: Int, ids: [UUID]?) async throws -> [ActivityItem] {
+    private func fetchNewFonts(_ req: Request, limit: Int, ambito: Ambito?) async throws -> [ActivityItem] {
         // **Solo las que ha puesto una persona.** Una importación no es actividad: al
         // cargar el Pirineo francés entraron 11.043 fuentes de golpe y se comieron la
         // portada entera, tapando lo único que esta pantalla existe para enseñar — lo que
@@ -208,7 +232,11 @@ struct ActivityController: RouteCollection {
         let query = Font.visible(on: req.db)
             .filter(\.$creator.$id != nil)
             .sort(\.$createdAt, .descending).limit(limit)
-        if let ids { query.filter(\.$id ~~ ids) }
+        switch ambito {
+        case .fuentes(let ids): query.filter(\.$id ~~ ids)
+        case .pais(let pais): query.filter(\.$country == pais)
+        case nil: break
+        }
         let fonts = try await query.all()
         let authors = try await User.usernames(for: fonts.compactMap { $0.$creator.id }, on: req.db)
         return fonts.compactMap { f in
@@ -219,9 +247,18 @@ struct ActivityController: RouteCollection {
         }
     }
 
-    private func fetchComments(_ req: Request, limit: Int, ids: [UUID]?) async throws -> [ActivityItem] {
+    private func fetchComments(_ req: Request, limit: Int, ambito: Ambito?) async throws -> [ActivityItem] {
         let query = FontComment.query(on: req.db).sort(\.$createdAt, .descending).limit(limit)
-        if let ids { query.filter(\.$font.$id ~~ ids) }
+        // Acotar por país va como **join** y no resolviendo a identificadores: España son
+        // 52.341 fuentes y esto son cuatro consultas por visita. Ojo, el join no filtra
+        // por `Font.visible`, igual que no lo hace el camino de los identificadores;
+        // arreglarlo solo en esta rama daría resultados distintos según cómo filtres.
+        switch ambito {
+        case .fuentes(let ids): query.filter(\.$font.$id ~~ ids)
+        case .pais(let pais): query.join(Font.self, on: \FontComment.$font.$id == \Font.$id)
+                                   .filter(Font.self, \.$country == pais)
+        case nil: break
+        }
         let comments = try await query.all()
         let (fonts, authors) = try await context(req, fontIDs: comments.map { $0.$font.id },
                                                  userIDs: comments.compactMap { $0.$user.id })
@@ -235,9 +272,18 @@ struct ActivityController: RouteCollection {
         }
     }
 
-    private func fetchReports(_ req: Request, limit: Int, ids: [UUID]?) async throws -> [ActivityItem] {
+    private func fetchReports(_ req: Request, limit: Int, ambito: Ambito?) async throws -> [ActivityItem] {
         let query = FontReport.query(on: req.db).sort(\.$createdAt, .descending).limit(limit)
-        if let ids { query.filter(\.$font.$id ~~ ids) }
+        // Acotar por país va como **join** y no resolviendo a identificadores: España son
+        // 52.341 fuentes y esto son cuatro consultas por visita. Ojo, el join no filtra
+        // por `Font.visible`, igual que no lo hace el camino de los identificadores;
+        // arreglarlo solo en esta rama daría resultados distintos según cómo filtres.
+        switch ambito {
+        case .fuentes(let ids): query.filter(\.$font.$id ~~ ids)
+        case .pais(let pais): query.join(Font.self, on: \FontReport.$font.$id == \Font.$id)
+                                   .filter(Font.self, \.$country == pais)
+        case nil: break
+        }
         let reports = try await query.all()
         let (fonts, authors) = try await context(req, fontIDs: reports.map { $0.$font.id },
                                                  userIDs: reports.compactMap { $0.$user.id })
@@ -249,9 +295,18 @@ struct ActivityController: RouteCollection {
         }
     }
 
-    private func fetchEdits(_ req: Request, limit: Int, ids: [UUID]?) async throws -> [ActivityItem] {
+    private func fetchEdits(_ req: Request, limit: Int, ambito: Ambito?) async throws -> [ActivityItem] {
         let query = FontEdit.query(on: req.db).sort(\.$createdAt, .descending).limit(limit)
-        if let ids { query.filter(\.$font.$id ~~ ids) }
+        // Acotar por país va como **join** y no resolviendo a identificadores: España son
+        // 52.341 fuentes y esto son cuatro consultas por visita. Ojo, el join no filtra
+        // por `Font.visible`, igual que no lo hace el camino de los identificadores;
+        // arreglarlo solo en esta rama daría resultados distintos según cómo filtres.
+        switch ambito {
+        case .fuentes(let ids): query.filter(\.$font.$id ~~ ids)
+        case .pais(let pais): query.join(Font.self, on: \FontEdit.$font.$id == \Font.$id)
+                                   .filter(Font.self, \.$country == pais)
+        case nil: break
+        }
         let edits = try await query.all()
         let (fonts, authors) = try await context(req, fontIDs: edits.map { $0.$font.id },
                                                  userIDs: edits.compactMap { $0.$editor.id })
@@ -329,3 +384,5 @@ struct ActivityItem: Content, Sendable {
     let image: String?
     let createdAt: Date
 }
+
+
