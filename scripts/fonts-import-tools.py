@@ -183,7 +183,13 @@ def cmd_filtra(args):
     overpass = es_overpass(datos)
     elementos = datos['elements'] if overpass else datos['features']
 
-    reglas = [NO_ES_FUENTE, NO_ES_FUENTE_ES, TERMAL] if args.es else [NO_ES_FUENTE, TERMAL]
+    # TERMAL va **con `--es` y no siempre**, aunque el problema de las termas exista en
+    # todas partes. Es una regla de nombres, o sea de idioma: puesta por defecto se
+    # llevaba «FONT DELS BANYS (BAÑOS)» del dataset de la ACA, que es una fuente
+    # perfectamente real, y cambiaba el resultado de una importación ya medida y ya hecha.
+    # Lo que sí vale en todas partes es `dice_que_no_se_bebe`, que lee etiquetas y no
+    # topónimos.
+    reglas = [NO_ES_FUENTE, NO_ES_FUENTE_ES, TERMAL] if args.es else [NO_ES_FUENTE]
 
     for e in elementos:
         props = e.get('tags') or e.get('properties') or {}

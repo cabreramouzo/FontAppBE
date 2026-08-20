@@ -267,6 +267,11 @@ Los 63 que caen son de dos familias, y las dos son de allí:
 # 1. Descarga (query igual que la de Portugal, con area["ISO3166-1"="CL"]).
 # 2. Filtra. `--es` añade las reglas de Hispanoamérica; las de termas van siempre.
 python3 scripts/fonts-import-tools.py filtra --es chile-osm.json chile-limpio.json
+#    Ojo: `--es` incluye la regla de termas, y va ahí y no por defecto **a propósito**.
+#    Es una regla de nombres, o sea de idioma: activada siempre se llevaba «FONT DELS
+#    BANYS (BAÑOS)» de la ACA, que es una fuente real, y le cambiaba el resultado a una
+#    importación ya medida. Sin `--es`, Catalunya da exactamente lo mismo que antes
+#    (9.830 de 10.057), y hay que comprobarlo al tocar este fichero.
 # 3. Importa. Sin --dedupe: la caja de Chile (lat -53,9..-18,5) no toca nada de lo que hay.
 DATABASE_URL='...' swift run App import-fonts chile-limpio.json \
   --unnamed "Bebedero" --unnamed-spring "Vertiente"
