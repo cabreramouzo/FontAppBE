@@ -1007,8 +1007,24 @@ export function FontDetailPage() {
           alignItems: 'start',
         }}
       >
-        {/* Columna izquierda: la fuente. */}
-        <Box>
+        {/* Columna izquierda: la fuente.
+            **Se queda pegada al hacer scroll** (`sticky`): mide 797 frente a los 1.205 de
+            la derecha, así que sin esto las reseñas se leen contra una columna vacía. Lo
+            que era hueco pasa a ser contexto — la foto, cómo llegar y las coordenadas
+            siguen delante mientras lees lo que ha contado la gente.
+            Lleva **tope de alto y scroll propio** a propósito: sin acotarla, una ficha con
+            descripción larga se pega por arriba y su parte de abajo no hay forma de
+            alcanzarla. La barra interior solo aparece cuando de verdad no cabe.
+            **No mientras se edita**: un formulario dentro de una caja con scroll propio se
+            rellena fatal, y ahí la columna crece con el mapa de reubicar. */}
+        <Box
+          sx={dosColumnas && !editing ? {
+            position: 'sticky',
+            top: 'calc(var(--alto-barra) + 16px)',
+            maxHeight: 'calc(100vh - var(--alto-barra) - 32px)',
+            overflowY: 'auto',
+          } : undefined}
+        >
         {editing ? (
           <EditFontForm font={font} canManage={!!user && (user.isAdmin || font.creator?.id === user.id)} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load() }} />
         ) : (

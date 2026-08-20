@@ -854,9 +854,20 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   temprana (`if (!font) return …`) y colgarlo después cambia el número de hooks entre el
   render de carga y el de la ficha — «Rendered more hooks than during the previous
   render», y la pantalla entera al error boundary. Pasó.
-- **Pendiente, no hecho:** la columna izquierda sigue midiendo 797 frente a 1.205 la
-  derecha. Se puede hacer `sticky`, pero hay que acotarle el alto o una ficha con
-  descripción larga deja su parte de abajo inalcanzable.
+- **La columna izquierda se queda pegada** (`sticky`, commit aparte por si no gusta): mide
+  797 frente a los 1.205 de la derecha, así que sin esto las reseñas se leen contra una
+  columna vacía; con esto, lo que era hueco es contexto —foto, cómo llegar y coordenadas
+  siguen delante mientras lees—. Medido: se ancla a 81 px del borde y ahí se queda todo el
+  scroll.
+  · Lleva **tope de alto y scroll propio** (`maxHeight` + `overflowY: auto`), o una ficha
+    alta se pega por arriba y su parte de abajo no hay forma de alcanzarla. Comprobado
+    inyectando 900 px de contenido: se corta en 803, saca barra y el final sigue siendo
+    alcanzable.
+  · **No mientras se edita**: un formulario dentro de una caja con scroll propio se rellena
+    fatal, y ahí la columna crece con el mapa de reubicar.
+  · Aviso al medirlo: **en local ninguna ficha es larga** —4 reseñas como mucho— así que el
+    `sticky` casi no se aprecia y parece que no hace nada. Se probó alargando la columna
+    derecha a mano. Otra cara de «ninguna cifra que salga de una base local sembrada vale».
 
 ## Guardar y descartar, anclados abajo en móvil
 
