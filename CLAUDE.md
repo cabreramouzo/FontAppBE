@@ -835,6 +835,21 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   más. El botón de guardar está apagado mientras no cambies nada, y el aviso de lo que
   cuesta cambiar de nombre solo sale cuando de verdad lo has tocado.
 - La ruta es `/me/settings` **en inglés**, como el resto de rutas de la app.
+- **Las tres listas llevan tope** (`ListaConTope`, 6 filas y «verlas todas (N)»). No lo
+  tenían y crecen para siempre: con 21 favoritas ya ocupaban 1.068 px, y entre las tres
+  eran el **70 %** de lo que quedaba de página. Con 200, la página son 10.000 px.
+- El componente **se extrajo, no se escribió**: `GuardedFonts` ya tenía ese mismo corte con
+  su `slice` y su interruptor, así que había una copia a punto de multiplicarse por cuatro.
+  Ahora los cuatro sitios pasan por él, y las claves `guard.showAll` / `guard.showLess` se
+  reutilizan tal cual — el nombre se queda aunque ahora lo use más gente, como ya se hizo
+  con `profile.usernameRules`.
+- **Se descartaron pestañas** para Favoritas / Fuentes / Reseñas, que es lo primero que
+  apetece: la pregunta que se trae a esta pantalla es «¿qué tengo yo aquí?» y eso se
+  responde viendo las tres a la vez. Con pestañas se esconden dos tercios detrás de un
+  clic. Y se descartó plegar las **secciones** en acordeón: un interruptor no se lee mejor
+  plegado, y con dos abiertos la página vuelve a estar igual de larga.
+- Resultado medido de las dos cosas juntas: **4.082 → 2.328 px** en escritorio (4,5 → 2,6
+  pantallas) y **4.749 → 2.746** en móvil (5,8 → 3,4).
 
 ## El ancho lo decide el contenido, no la página
 

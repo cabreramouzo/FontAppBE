@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
-import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
@@ -11,10 +10,9 @@ import ShieldMoonIcon from '@mui/icons-material/ShieldOutlined'
 import { guardedFonts, type Guarded } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from './Skeleton'
+import { ListaConTope } from './ListaConTope'
 import { WorthChip } from './WorthChip'
 
-/** Cuántas se listan antes de plegar. Es un recordatorio, no un inventario. */
-const VISIBLES = 6
 
 /**
  * «Las fuentes que cuidas»: aquellas cuya última reseña es tuya.
@@ -36,7 +34,6 @@ const VISIBLES = 6
 export function GuardedFonts() {
   const { t } = useI18n()
   const [fuentes, setFuentes] = useState<Guarded[] | null>(null)
-  const [todas, setTodas] = useState(false)
 
   useEffect(() => { guardedFonts().then(setFuentes).catch(() => setFuentes([])) }, [])
 
@@ -46,7 +43,6 @@ export function GuardedFonts() {
   if (fuentes.length === 0) return null
 
   const viejas = fuentes.filter((f) => f.stale)
-  const lista = todas ? fuentes : fuentes.slice(0, VISIBLES)
 
   return (
     <Box component="section" sx={{ mb: 3 }}>
@@ -61,9 +57,11 @@ export function GuardedFonts() {
           : t('guard.summaryAllFresh', { n: String(fuentes.length) })}
       </Typography>
 
-      <List disablePadding>
-        {lista.map((f) => (
-          <ListItem key={f.fontID} disablePadding divider>
+      <ListaConTope
+        items={fuentes}
+        clave={(f) => f.fontID}
+        fila={(f) => (
+          <ListItem disablePadding divider>
             <ListItemButton component={RouterLink} to={`/fonts/${f.fontID}`}>
               <ListItemText
                 primary={f.name}
@@ -80,18 +78,8 @@ export function GuardedFonts() {
               )}
             </ListItemButton>
           </ListItem>
-        ))}
-      </List>
-
-      {fuentes.length > VISIBLES && (
-        <Typography
-          component="button" variant="body2"
-          onClick={() => setTodas((v) => !v)}
-          sx={{ mt: 1, background: 'none', border: 0, p: 0, color: 'primary.main', cursor: 'pointer' }}
-        >
-          {todas ? t('guard.showLess') : t('guard.showAll', { n: String(fuentes.length) })}
-        </Typography>
-      )}
+        )}
+      />
     </Box>
   )
 }

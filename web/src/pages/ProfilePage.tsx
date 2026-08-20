@@ -6,7 +6,6 @@ import Button from '@mui/material/Button'
 import Link from '@mui/material/Link'
 import Chip from '@mui/material/Chip'
 import Avatar from '@mui/material/Avatar'
-import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
@@ -22,6 +21,7 @@ import { timeAgo } from '../lib/time'
 import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
 import { GuardedFonts } from '../components/GuardedFonts'
+import { ListaConTope } from '../components/ListaConTope'
 
 /**
  * Tu perfil: **lo tuyo**, y nada de lo que se toca.
@@ -103,51 +103,63 @@ export function ProfilePage() {
         <Typography variant="h6" gutterBottom>{t('profile.myFavorites')}</Typography>
         {favorites === null && <Skeleton lines={2} />}
         {favorites?.length === 0 && <Typography color="text.secondary">{t('profile.noFavorites')}</Typography>}
-        <List disablePadding>
-          {favorites?.map((f) => (
-            <ListItem key={f.id} disablePadding divider>
-              <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
-                <ListItemText primary={f.name} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
+        {favorites && (
+          <ListaConTope
+            items={favorites}
+            clave={(f) => f.id}
+            fila={(f) => (
+              <ListItem disablePadding divider>
+                <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
+                  <ListItemText primary={f.name} />
+                </ListItemButton>
+              </ListItem>
+            )}
+          />
+        )}
       </Box>
 
       <Box component="section" sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{t('profile.myFonts')}</Typography>
         {fonts === null && <Skeleton lines={2} />}
         {fonts?.length === 0 && <Typography color="text.secondary">{t('profile.noFonts')}</Typography>}
-        <List disablePadding>
-          {fonts?.map((f) => (
-            <ListItem key={f.id} disablePadding divider>
-              <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
-                <ListItemText primary={f.name} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
+        {fonts && (
+          <ListaConTope
+            items={fonts}
+            clave={(f) => f.id}
+            fila={(f) => (
+              <ListItem disablePadding divider>
+                <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
+                  <ListItemText primary={f.name} />
+                </ListItemButton>
+              </ListItem>
+            )}
+          />
+        )}
       </Box>
 
       <Box component="section">
         <Typography variant="h6" gutterBottom>{t('profile.myReviews')}</Typography>
         {comments === null && <Skeleton lines={3} />}
         {comments?.length === 0 && <Typography color="text.secondary">{t('profile.noReviews')}</Typography>}
-        <List disablePadding>
-          {comments?.map((c) => {
-            const ws = waterStatusInfo(c.waterStatus)
-            return (
-              <ListItem key={c.id} divider alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
+        {comments && (
+          <ListaConTope
+            items={comments}
+            clave={(c) => c.id}
+            fila={(c) => {
+              const ws = waterStatusInfo(c.waterStatus)
+              return (
+                <ListItem divider alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Link component={RouterLink} to={`/fonts/${c.fontID}`} sx={{ fontWeight: 600 }}>{c.fontName ?? '—'}</Link>
                   {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`} />}
                   <Typography variant="caption" color="text.secondary">· {c.createdAt ? timeAgo(c.createdAt, t) : ''}</Typography>
                 </Box>
-                <Typography variant="body2" sx={{ mt: 0.5 }}>{c.body}</Typography>
-              </ListItem>
-            )
-          })}
-        </List>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>{c.body}</Typography>
+                </ListItem>
+              )
+            }}
+          />
+        )}
       </Box>
     </Box>
   )
