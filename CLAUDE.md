@@ -815,6 +815,35 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   suya y no debería poder borrar el análisis que aportó otro. Denunciables desde el día
   uno (`content_flags` acepta `photo`).
 
+## Guardar y descartar, anclados abajo en móvil
+
+- **El botón de guardar caía fuera de la pantalla al editar una fuente**, y quien editaba
+  no encontraba cómo confirmar. Medido nada más pulsar «editar», sin haber hecho scroll y
+  con el mapa de reubicar presente (el caso del creador, y de cualquiera desde el nivel 5):
+  el botón quedaba **223 px por debajo de la zona útil** en un iPhone de 812 px y **368 px**
+  en un SE de 667. Sin el mapa de reubicar se salvaba por poco (686 px), que es justo lo que
+  hace que el fallo parezca intermitente.
+- Ahora la pareja va **anclada abajo en móvil**, levantada con `--bajo-el-mapa`: la barra
+  termina exactamente donde empieza la tab bar (medido: 611 = 611). **Solo en móvil** — en
+  escritorio se midió que se ven sin scroll y una barra fija allí sería un préstamo del
+  móvil; el mismo corte `down('sm')` que el resto de la app.
+- **La jerarquía la da el peso, no el color.** Se propuso verde para guardar y rojo para
+  descartar y se descartó por tres razones: en esta app el **rojo ya significa «borrar, y
+  no hay vuelta»** —si también significa «cancelar», deja de significar nada—; verde/rojo
+  es justamente el par que se cae con daltonismo; y los **chips de potabilidad están dos
+  dedos más arriba** usando ese mismo par para decir otra cosa. Guardar es el azul de
+  acción de siempre, lleno y a lo ancho; descartar, un botón de texto.
+- Donde el rojo **sí** está es en el diálogo de confirmación, porque ahí el gesto sí es
+  irreversible.
+- **Anclar «descartar» obliga a preguntar.** Antes estaba al final del formulario, o sea
+  lejos; ahora está permanentemente a un toque del pulgar, y tirar lo escrito no puede
+  costar un roce. Se pregunta **solo si se ha tocado algo** (`sucio`): un diálogo para
+  confirmar que no pasa nada es ruido.
+- Dos medidas que se pagan si se tocan: los botones van a **48 px** con el pulgar (los 37
+  de serie de MUI son tamaño de ratón, y esta app ya usa 48 en las hojas del mapa), y el
+  formulario lleva **72 px de acolchado abajo** — la barra mide 65 (48 + 16 + 1 de borde) y
+  con 64 se quedaba 1 px corto, medido.
+
 ## Potabilidad: «no tratada» no es un matiz de «con condiciones»
 
 - `Drinkable` tiene cuatro valores: `yes` · `no` · `conditional` · **`untreated`**. Los

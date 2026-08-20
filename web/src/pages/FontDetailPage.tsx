@@ -13,6 +13,10 @@ import Chip from '@mui/material/Chip'
 import Alert from '@mui/material/Alert'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
 import Tooltip from '@mui/material/Tooltip'
 import Divider from '@mui/material/Divider'
 import Collapse from '@mui/material/Collapse'
@@ -397,6 +401,19 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
   }, [canManage])
   const puedeReubicar = canManage || porNivel
 
+  // ¿Ha tocado algo? Con la barra anclada, «descartar» pasa a estar SIEMPRE a un toque
+  // del pulgar, así que hay que preguntar antes de tirar lo escrito. Cuando no se ha
+  // tocado nada no se pregunta: un diálogo para confirmar que no pasa nada es ruido.
+  const sucio =
+    name !== font.name ||
+    description !== (font.description ?? '') ||
+    source !== (font.source ?? '') ||
+    drinkable !== (font.drinkable ?? '') ||
+    file !== null ||
+    coords.lat !== font.latitude ||
+    coords.lng !== font.longitude
+  const [confirmandoDescarte, setConfirmandoDescarte] = useState(false)
+
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError('')
@@ -422,7 +439,15 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
   }
 
   return (
-    <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 360, my: 2 }}>
+    <Box
+      component="form"
+      onSubmit={submit}
+      // El acolchado de abajo es el hueco de la barra anclada: sin él tapa el último
+      // campo, que es justo el que estás rellenando cuando llegas ahí. La barra mide 65
+      // (48 del botón + 16 de acolchado + 1 de borde), así que 72 deja holgura; con 64
+      // se quedaba 1 px corto, medido.
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 360, my: 2, pb: { xs: 9, sm: 0 } }}
+    >
       <Typography variant="caption" color="text.secondary">{t('detail.editInfoNote')}</Typography>
       <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} required size="small" />
       {/* Crece con lo que escribes y se para a las 6 líneas: la descripción es el único
@@ -480,10 +505,67 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
         </Box>
       )}
       {error && <Alert severity="error">{error}</Alert>}
-      <Stack direction="row" spacing={1}>
-        <Button type="submit" variant="contained" disableElevation disabled={saving}>{saving ? t('form.saving') : t('form.save')}</Button>
-        <Button onClick={onCancel} disabled={saving}>{t('form.cancel')}</Button>
-      </Stack>
+      {/* Guardar y descartar. **En móvil van anclados abajo**, sobre la tab bar.
+          En flujo quedaban fuera de la pantalla y nada avisaba de que estuvieran ahí:
+          medido nada más pulsar «editar», con el mapa de reubicar presente y sin haber
+          hecho scroll, el botón caía 223 px por debajo de la zona útil en un iPhone de
+          812 px y 368 px en un SE. Quien edita no ve cómo confirmar.
+          Se levanta con `--bajo-el-mapa`, que es la variable que existe justo para esto:
+          cualquier cosa anclada abajo tiene que usarla o se come la tab bar.
+          **Solo en móvil**: en escritorio se midió y se ven sin scroll, y una barra fija
+          allí sería un préstamo del móvil. Mismo corte que el resto de la app. */}
+      <Box
+        sx={{
+          position: { xs: 'fixed', sm: 'static' },
+          left: 0,
+          right: 0,
+          bottom: { xs: 'var(--bajo-el-mapa)', sm: 'auto' },
+          zIndex: (th) => th.zIndex.appBar,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: { xs: 2, sm: 0 },
+          py: { xs: 1, sm: 0 },
+          bgcolor: { xs: 'background.paper', sm: 'transparent' },
+          borderTop: { xs: 1, sm: 0 },
+          borderColor: 'divider',
+        }}
+      >
+        {/* Guardar es lo lleno y lo ancho; descartar, un botón de texto. La jerarquía la
+            da el peso y no el color: el verde/rojo que se propuso choca con que en esta
+            app el rojo ya significa «borrar, y no hay vuelta» y el verde/rojo es
+            justamente el par que se cae con daltonismo — y encima está a dos dedos de los
+            chips de potabilidad, donde ese mismo par significa otra cosa. */}
+        <Button
+          type="submit"
+          variant="contained"
+          disableElevation
+          disabled={saving}
+          // 48 px de alto con el pulgar, que es la medida que ya usan las hojas del mapa;
+          // los 37 de serie son el tamaño de un objetivo de ratón.
+          sx={{ flexGrow: { xs: 1, sm: 0 }, minHeight: { xs: 48, sm: 36 } }}
+        >
+          {saving ? t('form.saving') : t('form.save')}
+        </Button>
+        <Button
+          color="inherit"
+          onClick={() => (sucio ? setConfirmandoDescarte(true) : onCancel())}
+          disabled={saving}
+          sx={{ minHeight: { xs: 48, sm: 36 } }}
+        >
+          {t('form.discard')}
+        </Button>
+      </Box>
+      <Dialog open={confirmandoDescarte} onClose={() => setConfirmandoDescarte(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t('form.discardTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">{t('form.discardBody')}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmandoDescarte(false)}>{t('form.keepEditing')}</Button>
+          <Button color="error" onClick={onCancel}>{t('form.discard')}</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

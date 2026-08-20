@@ -133,9 +133,11 @@ a:hover { text-decoration: underline; }
    más 1 px de borde. Con el 56 fijo, en escritorio la página se pasaba 9 px del alto de
    la ventana y salía una barra de desplazamiento en el mapa, que no debería tener. */
 /* Lo que ocupan los avisos flotantes bajo la barra (`FranjaDeAvisos`), incluido el hueco
-   que dejan por arriba. Vale 0 casi siempre; la mide el propio componente con un
-   `ResizeObserver` y la escribe aquí, porque cambia con cuántos avisos hay y con cuánto
-   texto le quepa a cada uno en el ancho que sea.
+   que dejan por arriba. Vale 0 casi siempre; la mide el propio componente colgándose del
+   ciclo de React (más un `resize`) y la escribe aquí, porque cambia con cuántos avisos hay
+   y con cuánto texto le quepa a cada uno en el ancho que sea. **Con `ResizeObserver` no**:
+   se escribió así primero y en el navegador con el que se comprobó no entrega ni una
+   llamada, y el fallo sería silencioso.
    **Todo lo que cuelga del borde de arriba del mapa tiene que sumarla**, o el aviso se
    le pone encima: eso son el buscador, los controles y la tarjeta de cercanas. Es el
    mismo trato que `--bajo-el-mapa` tiene con lo anclado abajo. */
