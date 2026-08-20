@@ -240,6 +240,55 @@ cargado) no hace falta dedupe; junto a España conviene `--dedupe` para no dupli
    `import-fonts` no borra nada salvo que pases `--replace`; inserta en lotes de 500.
 3. Comprueba el recuento tras importar (psql v18): `SELECT count(*) FROM fonts;`.
 
+#### Chile, y por qué un país nuevo no se importa con la receta de Europa
+
+Chile (agosto 2026) es el primer país fuera de Europa, y lo primero que enseñó es que
+**los filtros del Pirineo no se trasladan**. Medido, no supuesto:
+
+| paso | quedan |
+|---|---|
+| todo lo que trae Overpass (`drinking_water` + `water_tap` + `spring`) | 448 |
+| menos `access=no\|private` y los manantiales pelados | 382 |
+| menos lo que **no es una fuente de beber** (`filtra --es`) | **319** |
+
+Los 63 que caen son de dos familias, y las dos son de allí:
+
+- **El sistema de abastecimiento tageado como `amenity=drinking_water`** (29): el APR
+  —Agua Potable Rural—, la cooperativa, el comité, el estanque, la planta potabilizadora,
+  la sanitaria (Esval, Aguas Andinas). De los 55 nodos con nombre u operador, **30 eran
+  eso**. Importarlos habría puesto en el mapa fuentes inexistentes con el nombre de una
+  oficina.
+- **Termas** (34): Chile es volcánico y sus `natural=spring` **con nombre** son termas,
+  pozones y géiseres, no sitios de beber. Siete lo dicen a mano con `drinking_water=no` y
+  cinco son `leisure=swimming_pool`; uno era un hotel. La regla europea «un manantial con
+  nombre suele ser una fuente» **es falsa aquí**.
+
+```bash
+# 1. Descarga (query igual que la de Portugal, con area["ISO3166-1"="CL"]).
+# 2. Filtra. `--es` añade las reglas de Hispanoamérica; las de termas van siempre.
+python3 scripts/fonts-import-tools.py filtra --es chile-osm.json chile-limpio.json
+# 3. Importa. Sin --dedupe: la caja de Chile (lat -53,9..-18,5) no toca nada de lo que hay.
+DATABASE_URL='...' swift run App import-fonts chile-limpio.json \
+  --unnamed "Bebedero" --unnamed-spring "Vertiente"
+# 4. Zona, o Chile no sale en /zones ni en el ranking ni en el correo semanal.
+DATABASE_URL='...' swift run App populate-regions fronteras-chile.geojson --fallback-nearest 10
+```
+
+`filtra` **ahora lee JSON de Overpass** además de GeoJSON: antes solo el segundo, así que
+la vía de OSM —la que trae países enteros— no tenía forma de filtrarse y por eso nadie
+había mirado nunca lo que entraba.
+
+**El rótulo de los que no tienen nombre es el de allí**: `Bebedero` (no «Fuente») y
+`Vertiente` (no «Manantial»), que son las palabras chilenas. Son 273 de 319, o sea que
+esa elección es la que más se ve. Ojo con lo de siempre: un manantial **potable o con
+caño** se lleva el `--unnamed`, así que los 8 `spring` con `drinking_water=yes` salen
+como «Bebedero» y no como «Vertiente». Es correcto, pero sorprende al contarlos.
+
+`fronteras-chile.geojson` (478 KB, Natural Earth admin-1 recortado a `admin: Chile`, solo
+las propiedades `admin` y `name`) trae las 16 regiones. Sin `--fallback-nearest 10`
+quedaban **12 sin clasificar**, las de costa — el mismo efecto de borde que ya se midió en
+Catalunya.
+
 #### Poblar país/región de las fuentes (`populate-regions`)
 
 `fonts.country` y `fonts.region` se rellenan **offline** por *point-in-polygon* contra un

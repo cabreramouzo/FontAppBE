@@ -36,6 +36,58 @@ NO_ES_FUENTE = re.compile(
     r'|CAPTACIÓ|CAPTACIO|PRESA|TORRENT|SURGÈNCIA|SURGENCIA)\b'
 )
 
+# Lo mismo para Hispanoamérica, y en particular para Chile, donde el problema es otro y
+# **no va por prefijo**: allí `amenity=drinking_water` se usa a menudo para el sistema de
+# abastecimiento —el APR (Agua Potable Rural), la cooperativa, el comité, el estanque, la
+# planta potabilizadora, la sanitaria— y no para el bebedero del que bebes. Medido sobre
+# los 275 nodos de Chile: de los 55 que llevan nombre u operador, **30 son eso**.
+#
+# Importarlos sería poner en el mapa fuentes que no existen, y encima con el nombre de una
+# oficina. Es el mismo criterio que ya dejó fuera los `natural=spring` pelados: si el dato
+# no describe un sitio al que ir a beber, no entra.
+#
+# Va sin anclar al principio («Agua Potable Casma», «Comité de APR») y sobre nombre **y**
+# operador. Se queda deliberadamente corto: ante la duda, entra — una fuente de más la
+# corrige cualquiera desde la app, y una de menos no la echa en falta nadie.
+# Un manantial **termal** no es una fuente de la que beber, y en Chile eso no es un caso
+# raro sino la norma: es un país volcánico y sus `natural=spring` con nombre son termas,
+# pozones y géiseres. Medido sobre los suyos: de 76 con nombre, la mayoría son «Termas
+# de…», y varios llevan `drinking_water=no` a mano. Alguno es directamente un hotel o un
+# muelle.
+#
+# La regla europea —«un manantial con nombre suele ser una fuente»— vale en los Pirineos y
+# **no se traslada**; esta es la corrección. Se mira el nombre y también las etiquetas,
+# que es lo que de verdad lo dice: `leisure=swimming_pool`, `tourism=hotel` o un
+# `drinking_water=no` explícito no dejan lugar a la duda.
+TERMAL = re.compile(
+    r'\b(TERMAS?|TERMAL(ES)?|AGUAS? CALIENTES?|HOT SPRING|G[EÉ]YSER|GEISER'
+    r'|FUMAROLAS?|POZONES?|BA[NÑ]OS?|BALNEARIO|PISCINA)\b'
+)
+
+# Etiquetas que dicen «esto no se bebe» sin ambigüedad ninguna. Valen para cualquier país.
+def dice_que_no_se_bebe(tags):
+    if tags.get('drinking_water') == 'no':
+        return 'drinking_water=no'
+    if tags.get('leisure') in ('swimming_pool', 'bathing_place', 'water_park'):
+        return 'leisure=' + tags['leisure']
+    if tags.get('sport') == 'swimming':
+        return 'sport=swimming'
+    if tags.get('tourism') in ('hotel', 'motel', 'guest_house'):
+        return 'tourism=' + tags['tourism']
+    if tags.get('natural') == 'hot_spring' or tags.get('hot_spring') == 'yes':
+        return 'termal'
+    return None
+
+
+NO_ES_FUENTE_ES = re.compile(
+    r'\b(A\.?P\.?R\.?|AGUA POTABLE|AGUAS ANDINAS|COOPERATIVA|COOP\b|COMIT[EÉ]'
+    r'|PLANTA|POTABILIZADORA|ESTANQUE|SANITARIA|ESVAL|ALCANTARILLADO'
+    r'|CAPTACI[OÓ]N|BOCATOMA|TRANQUE|EMBALSE|POZO'
+    # Y lo que está sencillamente mal etiquetado en el origen: en la muestra de Chile
+    # había un muelle, una laguna y un salto de agua declarados `natural=spring`.
+    r'|LAGUNA|LAGO|MUELLE|SALTO)\b'
+)
+
 # Palabras sin valor para comparar topónimos ("Font de la Roca" ≡ "Roca").
 VACIAS = {"font", "fonts", "fontica", "de", "del", "dels", "la", "les", "el", "els",
           "d", "l", "o", "en", "des", "na", "ca", "can", "sa"}
@@ -115,22 +167,56 @@ def mismo_nombre(a, b):
 
 # --------------------------------------------------------------------------- filtra
 
+def es_overpass(datos):
+    """El JSON de Overpass trae `elements`; un GeoJSON, `features`."""
+    return 'elements' in datos and 'features' not in datos
+
+
 def cmd_filtra(args):
     datos = json.load(open(args.geojson, encoding='utf-8'))
     fuera = collections.Counter()
     buenas = []
-    for f in datos['features']:
-        nombre = str((f.get('properties') or {}).get(args.name_field) or '').upper()
-        m = NO_ES_FUENTE.match(nombre)
-        if m:
-            fuera[m.group(1)] += 1
+
+    # Dos formatos porque son los dos orígenes reales: GeoJSON para los datos oficiales
+    # (ACA, ICGC) y JSON de Overpass para OSM. Antes solo leía el primero, así que la
+    # importación desde OSM —la que trae países enteros— no tenía forma de filtrarse.
+    overpass = es_overpass(datos)
+    elementos = datos['elements'] if overpass else datos['features']
+
+    reglas = [NO_ES_FUENTE, NO_ES_FUENTE_ES, TERMAL] if args.es else [NO_ES_FUENTE, TERMAL]
+
+    for e in elementos:
+        props = e.get('tags') or e.get('properties') or {}
+        campos = [str(props.get(args.name_field) or '')]
+        if overpass:
+            campos = [str(props.get('name') or ''), str(props.get('operator') or '')]
+        # Primero las etiquetas: son afirmaciones de quien mapeó, no conjeturas sobre
+        # un nombre. Un `drinking_water=no` cierra la discusión.
+        descartado = dice_que_no_se_bebe(props) if overpass else None
+        if not descartado:
+            for texto in campos:
+                for regla in reglas:
+                    m = regla.search(texto.upper())
+                    if m:
+                        descartado = m.group(1)
+                        break
+                if descartado:
+                    break
+        if descartado:
+            fuera[descartado] += 1
         else:
-            buenas.append(f)
-    json.dump({'type': 'FeatureCollection', 'features': buenas},
-              open(args.salida, 'w', encoding='utf-8'))
-    print(f"{len(datos['features'])} → se quedan {len(buenas)} · se descartan {sum(fuera.values())}")
+            buenas.append(e)
+
+    if overpass:
+        salida = dict(datos)
+        salida['elements'] = buenas
+    else:
+        salida = {'type': 'FeatureCollection', 'features': buenas}
+    json.dump(salida, open(args.salida, 'w', encoding='utf-8'), ensure_ascii=False)
+
+    print(f"{len(elementos)} → se quedan {len(buenas)} · se descartan {sum(fuera.values())}")
     for palabra, n in fuera.most_common():
-        print(f"   {palabra:<12} {n}")
+        print(f"   {palabra:<14} {n}")
     print(f"→ {args.salida}")
 
 
@@ -234,6 +320,8 @@ def main():
     f.add_argument('geojson')
     f.add_argument('salida')
     f.add_argument('--name-field', default='NOM')
+    f.add_argument('--es', action='store_true',
+                   help='añade las reglas de Hispanoamérica (APR, cooperativa, estanque…)')
     f.set_defaults(func=cmd_filtra)
 
     l = sub.add_parser('llindar', help='Histograma de distancias: en qué metro poner el --dedupe (ejecutar ANTES de importar)')
