@@ -121,7 +121,8 @@ export function ProfilePage() {
 
       <Box>
       <Box component="section" sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>{t('profile.myFavorites')}</Typography>
+        <Typography variant="h6">{t('profile.myFavorites')}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('profile.myFavoritesHint')}</Typography>
         {favorites === null && <Skeleton lines={2} />}
         {favorites?.length === 0 && <Typography color="text.secondary">{t('profile.noFavorites')}</Typography>}
         {favorites && (
@@ -140,7 +141,8 @@ export function ProfilePage() {
       </Box>
 
       <Box component="section" sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>{t('profile.myFonts')}</Typography>
+        <Typography variant="h6">{t('profile.myFonts')}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('profile.myFontsHint')}</Typography>
         {fonts === null && <Skeleton lines={2} />}
         {fonts?.length === 0 && <Typography color="text.secondary">{t('profile.noFonts')}</Typography>}
         {fonts && (

@@ -859,6 +859,28 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Resultado medido de las tres cosas: **4.082 → 1.692 px** en escritorio (4,5 → 1,9
   pantallas) y **4.749 → 3.534** en móvil (5,8 → 4,4) **con más contenido que antes**, porque
   la cuenta con la que se midió al final ya tiene marcador de gamificación y la primera no.
+- **Las cuatro secciones dicen qué relación son, y hablan de tú.** Eran tres cosas
+  distintas con nombres que no las distinguían: «Mis fuentes» y «Mis fuentes favoritas»
+  empezaban igual —la segunda se leía como un subconjunto de la primera— y «Fuentes que
+  cuidas» sonaba todavía más a propiedad que las otras dos. Encima dos hablaban de *mí* y
+  una de *ti*. Lo detectó el autor de la app preguntando cuál era la diferencia, que es la
+  prueba de que el rótulo estaba mal.
+  · «Fuentes que cuidas» → **«Fuentes que dependen de ti»**, y el resumen la define en las
+    primeras palabras: «eres la última persona que comprobó N fuentes».
+  · «Mis fuentes» → **«Fuentes que has añadido»** + «las que pusiste tú en el mapa».
+  · «Mis fuentes favoritas» → **«Tus favoritas»** + «las que has marcado con la estrella;
+    avisar de una incidencia también la marca» — eso último pasa desde que reportar sigue
+    la fuente, y no se decía en ninguna parte.
+  · Se descartó **«últimas fuentes reseñadas»**, que era la propuesta: chocaba con «Tus
+    reseñas» justo al lado, y describía un orden que no es — la consulta va
+    `ORDER BY last_at ASC`, la más olvidada primero. Y tampoco es «las que has reseñado»:
+    una fuente **se cae de la lista** en cuanto otra persona reseña después de ti.
+  · Las **claves no se renombran** (`profile.myFonts`, `guard.title`): renombrar en seis
+    diccionarios no arregla nada, misma regla que con `profile.usernameRules`.
+- Al tocar esas cadenas salieron **dos traducciones francesas rotas**: `guard.summaryStale`
+  decía «Vous entretenez les fontaines {n}», colocando el número como si fuera un nombre, y
+  `guard.checkedAgo` decía «tu l'as vérifié il y a quelques jours {d}» — mal construida y
+  además tuteando donde el resto del francés trata de usted.
 - Ojo al medir esto: **con el usuario de prueba vacío la pantalla no dice nada**. Hubo que
   darle 21 favoritas, 12 fuentes y 8 reseñas y lanzarle `gamification-sync` para ver la
   página real. Otra vez lo de siempre con las bases locales.
