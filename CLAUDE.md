@@ -815,6 +815,49 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   suya y no debería poder borrar el análisis que aportó otro. Denunciables desde el día
   uno (`content_flags` acepta `photo`).
 
+## El ancho lo decide el contenido, no la página
+
+- **La regla:** una página se acota por lo que contiene. **Prosa 720** (más de ~75
+  caracteres por línea se lee peor de forma medible: al saltar de renglón el ojo pierde la
+  línea), **tarjetas y rejillas 1.040–1.200**, **formularios 360**. No hay un número global,
+  y subir el de `.pad` sería empeorar las páginas de texto para arreglar las otras.
+- El problema medido no era «la app es estrecha» sino que a páginas que **no son prosa** se
+  les aplicaba la regla de la prosa. En un portátil de 1440: la ficha de fuente dejaba el
+  **50 % exacto de la ventana en blanco** y aun así partía sus cinco botones de acción en
+  dos filas; `/zones` apilaba 53 demarcaciones en una columna, **10.674 px de página
+  (11,9 pantallas)**, con 540 px de blanco al lado de cada tarjeta.
+- **`/zones` es ahora una rejilla** de 1.200 con `repeat(auto-fill, minmax(360px, 1fr))`:
+  3 columnas en 1440, 2 en tablet, 1 en móvil, **4,4 pantallas**. Sin puntos de corte a
+  mano, que envejecen en cuanto cambia el contenido de la tarjeta.
+  · `auto-fill` y **no** `auto-fit`: con `auto-fit`, filtrar por un país de una sola
+    demarcación estiraría esa tarjeta a los 1.200 px.
+  · `alignItems: start`, o desplegar la tabla de una tarjeta estira a sus vecinas de fila
+    (medido: 733 frente a 184).
+  · El mínimo son **360 y no 320 porque está medido en euskera**, el idioma más largo: a
+    325 px de tarjeta se partían 49 filas de cobertura. Un mínimo elegido en castellano
+    deja la página rota en un idioma que nadie de aquí mira. De ahí también el `nowrap` de
+    la cifra en `CoverageBar`: se partía como «3.641(e)tik 5 ·» / «% 0», y **un número
+    partido no se lee**; quien cede es la etiqueta, que sí puede.
+- **La ficha de fuente son dos columnas desde `md`** (1.180 de ancho): a la izquierda **lo
+  que ES la fuente** —foto, tipo, potabilidad, cómo llegar, insignias—, a la derecha **lo
+  que la gente ha contado** —estado, reseñas, incidencias—. De 2.244 px a 1.496, **un 33 %
+  menos**. El corte no es estético sino de contenido, y cae por la línea por la que el
+  código ya estaba partido. En móvil no cambia nada: una columna y 720.
+- **Cuidado al partir una página en dos: el orden vertical de móvil cambia solo.** Al
+  llevar `FontBadges` a la columna izquierda, en móvil las insignias pasaron a salir
+  **antes** de las reseñas —lo contrario de lo que la ficha tenía decidido— porque una
+  rejilla de dos columnas colapsa poniendo toda la primera antes que la segunda. Se pinta
+  **una sola vez**, en un hueco o en el otro, según `useMediaQuery(up('md'))`: dos copias
+  con `display:none` montan las dos. Se detectó **midiendo el orden de los títulos**, no
+  mirando.
+- Y ese `useMediaQuery` va **arriba con el resto de hooks**: más abajo hay una salida
+  temprana (`if (!font) return …`) y colgarlo después cambia el número de hooks entre el
+  render de carga y el de la ficha — «Rendered more hooks than during the previous
+  render», y la pantalla entera al error boundary. Pasó.
+- **Pendiente, no hecho:** la columna izquierda sigue midiendo 797 frente a 1.205 la
+  derecha. Se puede hacer `sticky`, pero hay que acotarle el alto o una ficha con
+  descripción larga deja su parte de abajo inalcanzable.
+
 ## Guardar y descartar, anclados abajo en móvil
 
 - **El botón de guardar caía fuera de la pantalla al editar una fuente**, y quien editaba

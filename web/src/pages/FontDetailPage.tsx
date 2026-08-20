@@ -13,6 +13,8 @@ import Chip from '@mui/material/Chip'
 import Alert from '@mui/material/Alert'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import type { Theme } from '@mui/material/styles'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -656,6 +658,18 @@ export function FontDetailPage() {
   const [mirando, setMirando] = useState<
     { key: string; tier: string | null; locked: boolean; subtitle?: string } | null
   >(null)
+  // Las insignias de la fuente cambian de sitio con la forma de la página. Con dos
+  // columnas van al final de la columna de la fuente, que si no se queda con 660 px en
+  // blanco; con una sola vuelven al final del todo, que es donde tienen que estar: en
+  // una columna, ponerlas antes de las reseñas es ponerlas por delante de la información
+  // a la que viene la gente. Pasó exactamente eso al partir la página en dos, y se vio
+  // midiendo el orden de los títulos en un móvil.
+  //
+  // El hook va **aquí arriba y no junto a donde se usa**: más abajo hay una salida
+  // temprana (`if (!font) return …`) y colgarlo después cambia el número de hooks entre
+  // el render de carga y el de la ficha — «Rendered more hooks than during the previous
+  // render», la pantalla entera al error boundary.
+  const dosColumnas = useMediaQuery((tema: Theme) => tema.breakpoints.up('md'))
   // Cerrar incidencias ajenas lo abre el nivel 6. Se resuelve una vez por ficha y se
   // comparte con la caché de `lib/capabilities`, así que no cuesta una petición.
   const [puedeCerrarIncidencias, setPuedeCerrar] = useState(false)
@@ -833,8 +847,24 @@ export function FontDetailPage() {
   const ultimaComprobacion = latest?.lastConfirmedAt ?? latest?.createdAt ?? null
   const frescor = freshnessOf(ultimaComprobacion)
 
+  const insignias = (
+    <FontBadges
+      creatorName={creatorName}
+      creatorTier={creatorBadge?.tier ?? null}
+      pioneerUsername={pioneerUsername}
+      pioneerCounts={pioneerCountsAsBadge}
+      hasPhoto={!!font.image}
+      photoAuthor={photoAuthor}
+      daysSinceLastCheck={frescor.days}
+      neverChecked={frescor.level === 'never'}
+      onOpen={(key, tier, locked, subtitle) => setMirando({ key, tier, locked, subtitle })}
+    />
+  )
+
   return (
-    <Box className="detail pad" sx={{ maxWidth: 720, mx: 'auto' }}>
+    // 720 mientras es una columna —que es el ancho de lectura y en móvil no cambia
+    // nada— y 1180 desde `md`, cuando el contenido se reparte en dos.
+    <Box className="detail pad" sx={{ maxWidth: { xs: 720, md: 1180 }, mx: 'auto' }}>
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
 
       {/* Arriba del todo: si esta ficha ya no sale en el mapa, es lo primero que hay que
@@ -960,290 +990,303 @@ export function FontDetailPage() {
         </Typography>
       )}
 
-      {editing ? (
-        <EditFontForm font={font} canManage={!!user && (user.isAdmin || font.creator?.id === user.id)} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load() }} />
-      ) : (
-        <>
-          {font.description && (
-            <Typography color="text.secondary">
-              {/* Sin menciones: el servidor no avisa de las que se escriban aquí. */}
-              <TextoRico texto={font.description} menciones={false} />
-            </Typography>
-          )}
-          {(() => {
-            const src = sourceInfo(font.source)
-            const dr = drinkableInfo(font.drinkable)
-            if (!src && !dr) return null
-            return (
-              <Stack direction="row" sx={{ my: 1, flexWrap: "wrap", gap: 1, alignItems: 'center' }}>
-                {src && <Chip size="small" label={`${src.emoji} ${t(src.labelKey)}`} />}
-                {dr && <Chip size="small" color={font.drinkable === 'no' ? 'error' : 'default'} label={`${dr.emoji} ${t(dr.labelKey)}`} />}
-                {/* Leyenda: qué significa cada tipo y qué esperar del agua. */}
-                {src && <WaterTypeHelpButton />}
-              </Stack>
-            )
-          })()}
-          {font.image ? (
-            <Box>
-              <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={font.name} />
-              <PhotoExifNote image={font.image} lat={font.latitude} long={font.longitude} />
-              {user && (user.isAdmin || font.creator?.id === user.id) && (
-                <Box>
-                  <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={removeFontPhoto}>{t('image.remove')}</Button>
-                </Box>
-              )}
-            </Box>
-          ) : (
-            // Antes, una fuente sin foto no enseñaba NADA aquí: ni un hueco. Nadie podía
-            // deducir que faltaba algo ni que se podía arreglar, y por eso las fotos
-            // acababan todas dentro de reseñas. El hueco es la mitad del arreglo; la otra
-            // es que lleva al mismo formulario de siempre, no a un segundo camino.
-            //
-            // El rectángulo ENTERO es el botón, no solo el rótulo de dentro: es la misma
-            // razón que en el popup del mapa —se toca con el pulgar y el objetivo pequeño
-            // era el problema—, y aquí además el hueco ya ocupa el sitio de la foto que
-            // falta, así que el área grande estaba ahí sin usar. Por eso el rótulo de
-            // dentro es un `<span>` y no un `<Button>`: un botón dentro de otro no es
-            // HTML válido (misma trampa que el enlace dentro del enlace del popup). Se
-            // queda como **señal**, porque sin algo que parezca pulsable nadie descubre
-            // que la tarjeta entera lo es.
-            // Discreto a propósito, y esto se corrigió: la primera versión llevaba borde de
-            // 2 px en el color de acción y era lo más llamativo de la ficha. Sale en
-            // **64.150 de 64.295 fuentes**, o sea casi todas, así que eso convertía lo
-            // secundario en lo principal de casi toda la app y empujaba a poner foto en vez
-            // de contar si mana, que es a lo que la app viene. Una línea fina y bajo,
-            // suficiente para descubrirlo; el estado del agua manda.
-            <Paper
-              variant="outlined"
-              {...(user && !subiendoFoto
-                ? { component: 'label' as const, 'aria-label': t('detail.addPhoto') }
-                : {})}
-              sx={{
-                // Cuadrado y no una franja: ocupa el sitio de la foto que falta, así que
-                // tiene que parecerse a una foto. Lo que se bajó de tono al rebalancearlo
-                // fue el **color** —borde fino y gris en vez de 2 px en el de acción—, no
-                // el tamaño; una tira de una línea no se leía como un hueco de imagen.
-                px: 2, py: 3, my: 1, borderRadius: 2, textAlign: 'center',
-                width: '100%', display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 0.75,
-                border: '1px dashed', borderColor: 'divider',
-                ...(user && !subiendoFoto && {
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: 'action.hover', borderColor: 'text.secondary' },
-                }),
-              }}
-            >
-              {subiendoFoto ? <CircularProgress size={22} /> : <PhotoCameraIcon color="disabled" />}
-              <Typography variant="body2" color="text.secondary">
-                {subiendoFoto ? t('image.uploading') : t('detail.noPhotoYet')}
-              </Typography>
-              {user && !subiendoFoto && (
-                <>
-                  <Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-                    {t('detail.addPhoto')}
-                  </Typography>
-                  {/* Toda la tarjeta es el `<label>`, así que se abre la cámara pulsando
-                      donde sea. El input va oculto dentro: sin `<button>` de por medio no
-                      hace falta pelearse con el anidamiento, y el selector nativo se
-                      dispara solo. */}
-                  <input
-                    type="file" accept="image/*" hidden
-                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) subirFotoDePortada(f) }}
-                  />
-                </>
-              )}
-            </Paper>
-          )}
-          {preguntaEstado && (
-            // Aparece donde el usuario acaba de mirar y con la respuesta a un toque. La
-            // reseña se publica **solo con el estado**, sin texto ni valoración: el
-            // servidor ya lo acepta, y pedir más aquí sería volver al formulario del que
-            // veníamos huyendo.
-            <Alert
-              severity="info" icon={false} sx={{ my: 1 }}
-              action={<Button size="small" color="inherit" onClick={() => setPreguntaEstado(false)}>{t('detail.notNow')}</Button>}
-            >
-              <Typography variant="body2" sx={{ mb: 1 }}>{t('detail.andHowIsIt')}</Typography>
-              <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
-                {/* Fuera `unknown` y fuera `gone`. `unknown` no tiene sentido: acabas de
-                    estar delante. Y «ya no está» a un toque después de fotografiarla es
-                    casi una contradicción —si la has fotografiado, existe— y además es el
-                    estado más caro: con dos testimonios de personas distintas se puede
-                    retirar la fuente del mapa. Un atajo no debe llevar ahí; quien de
-                    verdad lo quiera decir tiene el formulario entero. */}
-                {WATER_STATUS_OPTIONS.filter((k) => k !== 'unknown' && k !== 'gone').map((k) => (
-                  <Chip
-                    key={k} clickable size="small" variant="outlined"
-                    label={`${WATER_STATUS[k].emoji} ${t(`status.${k}`)}`}
-                    onClick={() => publicaEstado(k)}
-                  />
-                ))}
-              </Stack>
-            </Alert>
-          )}
-          <LocationActions font={font} />
-          {avg != null && (
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><StarRating value={avg} size={20} /> <Typography>{avg.toFixed(1)} ({rated.length})</Typography></Stack>
-          )}
-        </>
-      )}
-
-      {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
-
-      <Box component="section" sx={{ mt: 3 }}>
-        <Typography variant="h6" gutterBottom>{t('detail.statusReviews')}</Typography>
-        {latest ? (
-          <>
-            {/* Tarjeta con el ESTADO ACTUAL, separada visualmente del formulario. */}
-            <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 2 }}>
-              <Typography variant="overline" color="text.secondary" sx={{ display: 'block', lineHeight: 1.6 }}>
-                {t('detail.currentStatus')}
-              </Typography>
-              {(() => {
-                const freshAt = latest.lastConfirmedAt ?? latest.createdAt
-                return freshAt && isStale(freshAt) ? <Alert severity="warning" sx={{ my: 1 }}>{t('detail.stale', { when: timeAgo(freshAt, t) })}</Alert> : null
-              })()}
-              <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
-              {latest.waterStatus && latest.lastConfirmedAt && (
-                <Typography variant="caption" color="text.secondary">
-                  {t('confirm.lastConfirmed', { when: timeAgo(latest.lastConfirmedAt, t) })}
-                </Typography>
-              )}
-            </Box>
-
-            {/* Acciones: sigue igual (1 clic) o ha cambiado (abre el formulario). */}
-            {user ? (
-              <>
-                {!updating && (
-                  <Stack direction="row" sx={{ my: 1.5, gap: 1, flexWrap: 'wrap' }}>
-                    {latest.waterStatus && (
-                      <Button
-                        variant={latest.confirmedByMe ? 'contained' : 'outlined'}
-                        color="success"
-                        disableElevation
-                        startIcon={<ThumbUpIcon />}
-                        onClick={toggleConfirm}
-                        disabled={confirming}
-                        title={latest.confirmedByMe ? t('confirm.titleActive') : t('confirm.titleInactive')}
-                        endIcon={latest.confirmations > 0 ? <Chip size="small" label={`+${latest.confirmations}`} sx={{ height: 20 }} /> : undefined}
-                      >
-                        {latest.confirmedByMe ? t('confirm.confirmed') : t('confirm.keepSame')}
-                      </Button>
-                    )}
-                    <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setUpdating(true)}>
-                      {t('detail.changed')}
-                    </Button>
-                  </Stack>
-                )}
-                <Collapse in={updating} unmountOnExit>
-                  <Box sx={{ my: 1.5 }}>
-                    <Typography variant="subtitle2">{t('detail.newUpdate')}</Typography>
-                    <UpdateForm fontID={font.id} hasPhoto={!!font.image} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
-                  </Box>
-                </Collapse>
-              </>
-            ) : (
-              <Typography color="text.secondary" sx={{ my: 1.5 }}><Link href="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
-            )}
-          </>
+      {/* Dos columnas en escritorio: **la fuente a la izquierda y la conversación a la
+          derecha**. En una sola columna de 720 la mitad de la ventana quedaba en blanco
+          (medido: 720 px de margen en una pantalla de 1440) y los cinco botones de acción
+          se partían igualmente en dos filas teniendo ese hueco al lado.
+          El corte no es estético sino de contenido, y por eso cae justo aquí: a un lado
+          lo que ES la fuente —foto, tipo, potabilidad, cómo llegar—, al otro lo que la
+          gente ha contado de ella. Es también la línea por la que ya estaba partido el
+          código.
+          En móvil no cambia nada: una columna, y el ancho sigue siendo 720. */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 5fr) minmax(0, 7fr)' },
+          gap: { xs: 0, md: 4 },
+          alignItems: 'start',
+        }}
+      >
+        {/* Columna izquierda: la fuente. */}
+        <Box>
+        {editing ? (
+          <EditFontForm font={font} canManage={!!user && (user.isAdmin || font.creator?.id === user.id)} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load() }} />
         ) : (
-          /* Sin actualizaciones aún: invita a informar. */
           <>
-            <Typography color="text.secondary">{t('detail.beFirst')}</Typography>
-            {user ? (
-              !updating ? (
-                <Button variant="contained" disableElevation startIcon={<EditIcon />} onClick={() => setUpdating(true)} sx={{ mt: 1 }}>
-                  {t('detail.reportStatus')}
-                </Button>
-              ) : (
-                <UpdateForm fontID={font.id} hasPhoto={!!font.image} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+            {font.description && (
+              <Typography color="text.secondary">
+                {/* Sin menciones: el servidor no avisa de las que se escriban aquí. */}
+                <TextoRico texto={font.description} menciones={false} />
+              </Typography>
+            )}
+            {(() => {
+              const src = sourceInfo(font.source)
+              const dr = drinkableInfo(font.drinkable)
+              if (!src && !dr) return null
+              return (
+                <Stack direction="row" sx={{ my: 1, flexWrap: "wrap", gap: 1, alignItems: 'center' }}>
+                  {src && <Chip size="small" label={`${src.emoji} ${t(src.labelKey)}`} />}
+                  {dr && <Chip size="small" color={font.drinkable === 'no' ? 'error' : 'default'} label={`${dr.emoji} ${t(dr.labelKey)}`} />}
+                  {/* Leyenda: qué significa cada tipo y qué esperar del agua. */}
+                  {src && <WaterTypeHelpButton />}
+                </Stack>
               )
-            ) : (
-              <Typography color="text.secondary" sx={{ my: 1 }}><Link href="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
-            )}
-          </>
-        )}
-
-        {rest.length > 0 && (
-          <>
-            <Divider sx={{ mt: 2 }} />
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
-            {rest.slice(0, shownRest).map((c) => (
-              <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
-            ))}
-            {rest.length > shownRest && (
-              <Button onClick={() => setShownRest((n) => n + REVIEWS_PAGE)} sx={{ mt: 1 }}>
-                {t('detail.showMoreReviews', { n: rest.length - shownRest })}
-              </Button>
-            )}
-          </>
-        )}
-      </Box>
-
-      <Box component="section" sx={{ mt: 3 }}>
-        <Typography variant="h6" gutterBottom>{t('detail.incidents', { n: reports.length })}</Typography>
-        {reports.length === 0 && <Typography color="text.secondary">{t('detail.noIncidents')}</Typography>}
-        <List disablePadding>
-          {reports.map((r) => (
-            <ListItem key={r.id} divider disableGutters secondaryAction={(user?.id === r.userID || user?.isAdmin) ? (
-              <IconButton edge="end" size="small" color="error" onClick={() => removeReport(r.id)} aria-label={t('detail.delete')}><DeleteOutlineIcon fontSize="small" /></IconButton>
-            ) : undefined}>
+            })()}
+            {font.image ? (
               <Box>
-                {/* Firma con distintivo si es del equipo, y el texto con sus menciones
-                    enlazadas: un aviso de moderación suele nombrar a quien afecta, y
-                    ese @nombre era texto muerto. */}
-                <Typography variant="body2" sx={{ ...(r.resolvedAt && { color: 'text.secondary' }) }}>
-                  <Autor username={r.username} staff={r.staff} />: <TextoRico texto={r.message} />
-                </Typography>
-                {/* Resuelta: se tacha el problema, no se esconde. Que la fuente estuvo
-                    rota y volvió a manar es lo que mira quien duda si acercarse. */}
-                {r.resolvedAt ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
-                    <Chip size="small" color="success" variant="outlined" label={t('report.resolved')} sx={{ height: 20 }} />
-                    {/* Sin `resolvedBy` no es que falte el dato: es que no la cerró
-                        nadie, se cerró sola al llegar una reseña diciendo que mana. */}
-                    <Typography variant="caption" color="text.secondary">
-                      {r.resolvedBy ? t('report.resolvedBy', { user: r.resolvedBy }) : t('report.resolvedAuto')} · {timeAgo(r.resolvedAt, t)}
-                    </Typography>
-                    {puedeResolver(r) && (
-                      <Button size="small" onClick={() => cambiaResuelta(r, false)} sx={{ textTransform: 'none' }}>
-                        {t('report.reopen')}
-                      </Button>
-                    )}
+                <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={font.name} />
+                <PhotoExifNote image={font.image} lat={font.latitude} long={font.longitude} />
+                {user && (user.isAdmin || font.creator?.id === user.id) && (
+                  <Box>
+                    <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={removeFontPhoto}>{t('image.remove')}</Button>
                   </Box>
-                ) : puedeResolver(r) && (
-                  <Button size="small" onClick={() => cambiaResuelta(r, true)} sx={{ textTransform: 'none', ml: -1 }}>
-                    {t('report.resolve')}
-                  </Button>
                 )}
               </Box>
-            </ListItem>
-          ))}
-        </List>
-        <Divider sx={{ my: 1 }} />
-        {user ? (
-          <ReportForm fontID={font.id} onPosted={load} />
-        ) : (
-          <Typography color="text.secondary"><Link href="/login">{t('nav.enter')}</Link> {t('report.loginToReport')}</Typography>
+            ) : (
+              // Antes, una fuente sin foto no enseñaba NADA aquí: ni un hueco. Nadie podía
+              // deducir que faltaba algo ni que se podía arreglar, y por eso las fotos
+              // acababan todas dentro de reseñas. El hueco es la mitad del arreglo; la otra
+              // es que lleva al mismo formulario de siempre, no a un segundo camino.
+              //
+              // El rectángulo ENTERO es el botón, no solo el rótulo de dentro: es la misma
+              // razón que en el popup del mapa —se toca con el pulgar y el objetivo pequeño
+              // era el problema—, y aquí además el hueco ya ocupa el sitio de la foto que
+              // falta, así que el área grande estaba ahí sin usar. Por eso el rótulo de
+              // dentro es un `<span>` y no un `<Button>`: un botón dentro de otro no es
+              // HTML válido (misma trampa que el enlace dentro del enlace del popup). Se
+              // queda como **señal**, porque sin algo que parezca pulsable nadie descubre
+              // que la tarjeta entera lo es.
+              // Discreto a propósito, y esto se corrigió: la primera versión llevaba borde de
+              // 2 px en el color de acción y era lo más llamativo de la ficha. Sale en
+              // **64.150 de 64.295 fuentes**, o sea casi todas, así que eso convertía lo
+              // secundario en lo principal de casi toda la app y empujaba a poner foto en vez
+              // de contar si mana, que es a lo que la app viene. Una línea fina y bajo,
+              // suficiente para descubrirlo; el estado del agua manda.
+              <Paper
+                variant="outlined"
+                {...(user && !subiendoFoto
+                  ? { component: 'label' as const, 'aria-label': t('detail.addPhoto') }
+                  : {})}
+                sx={{
+                  // Cuadrado y no una franja: ocupa el sitio de la foto que falta, así que
+                  // tiene que parecerse a una foto. Lo que se bajó de tono al rebalancearlo
+                  // fue el **color** —borde fino y gris en vez de 2 px en el de acción—, no
+                  // el tamaño; una tira de una línea no se leía como un hueco de imagen.
+                  px: 2, py: 3, my: 1, borderRadius: 2, textAlign: 'center',
+                  width: '100%', display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: 0.75,
+                  border: '1px dashed', borderColor: 'divider',
+                  ...(user && !subiendoFoto && {
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'action.hover', borderColor: 'text.secondary' },
+                  }),
+                }}
+              >
+                {subiendoFoto ? <CircularProgress size={22} /> : <PhotoCameraIcon color="disabled" />}
+                <Typography variant="body2" color="text.secondary">
+                  {subiendoFoto ? t('image.uploading') : t('detail.noPhotoYet')}
+                </Typography>
+                {user && !subiendoFoto && (
+                  <>
+                    <Typography component="span" variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                      {t('detail.addPhoto')}
+                    </Typography>
+                    {/* Toda la tarjeta es el `<label>`, así que se abre la cámara pulsando
+                        donde sea. El input va oculto dentro: sin `<button>` de por medio no
+                        hace falta pelearse con el anidamiento, y el selector nativo se
+                        dispara solo. */}
+                    <input
+                      type="file" accept="image/*" hidden
+                      onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) subirFotoDePortada(f) }}
+                    />
+                  </>
+                )}
+              </Paper>
+            )}
+            {preguntaEstado && (
+              // Aparece donde el usuario acaba de mirar y con la respuesta a un toque. La
+              // reseña se publica **solo con el estado**, sin texto ni valoración: el
+              // servidor ya lo acepta, y pedir más aquí sería volver al formulario del que
+              // veníamos huyendo.
+              <Alert
+                severity="info" icon={false} sx={{ my: 1 }}
+                action={<Button size="small" color="inherit" onClick={() => setPreguntaEstado(false)}>{t('detail.notNow')}</Button>}
+              >
+                <Typography variant="body2" sx={{ mb: 1 }}>{t('detail.andHowIsIt')}</Typography>
+                <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  {/* Fuera `unknown` y fuera `gone`. `unknown` no tiene sentido: acabas de
+                      estar delante. Y «ya no está» a un toque después de fotografiarla es
+                      casi una contradicción —si la has fotografiado, existe— y además es el
+                      estado más caro: con dos testimonios de personas distintas se puede
+                      retirar la fuente del mapa. Un atajo no debe llevar ahí; quien de
+                      verdad lo quiera decir tiene el formulario entero. */}
+                  {WATER_STATUS_OPTIONS.filter((k) => k !== 'unknown' && k !== 'gone').map((k) => (
+                    <Chip
+                      key={k} clickable size="small" variant="outlined"
+                      label={`${WATER_STATUS[k].emoji} ${t(`status.${k}`)}`}
+                      onClick={() => publicaEstado(k)}
+                    />
+                  ))}
+                </Stack>
+              </Alert>
+            )}
+            <LocationActions font={font} />
+            {avg != null && (
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><StarRating value={avg} size={20} /> <Typography>{avg.toFixed(1)} ({rated.length})</Typography></Stack>
+            )}
+          </>
         )}
+
+        {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
+          {dosColumnas && insignias}
+        </Box>
+
+      {/* Columna derecha: lo que la gente ha contado. */}
+      <Box>
+
+        <Box component="section" sx={{ mt: { xs: 3, md: 0 } }}>
+          <Typography variant="h6" gutterBottom>{t('detail.statusReviews')}</Typography>
+          {latest ? (
+            <>
+              {/* Tarjeta con el ESTADO ACTUAL, separada visualmente del formulario. */}
+              <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 2 }}>
+                <Typography variant="overline" color="text.secondary" sx={{ display: 'block', lineHeight: 1.6 }}>
+                  {t('detail.currentStatus')}
+                </Typography>
+                {(() => {
+                  const freshAt = latest.lastConfirmedAt ?? latest.createdAt
+                  return freshAt && isStale(freshAt) ? <Alert severity="warning" sx={{ my: 1 }}>{t('detail.stale', { when: timeAgo(freshAt, t) })}</Alert> : null
+                })()}
+                <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
+                {latest.waterStatus && latest.lastConfirmedAt && (
+                  <Typography variant="caption" color="text.secondary">
+                    {t('confirm.lastConfirmed', { when: timeAgo(latest.lastConfirmedAt, t) })}
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Acciones: sigue igual (1 clic) o ha cambiado (abre el formulario). */}
+              {user ? (
+                <>
+                  {!updating && (
+                    <Stack direction="row" sx={{ my: 1.5, gap: 1, flexWrap: 'wrap' }}>
+                      {latest.waterStatus && (
+                        <Button
+                          variant={latest.confirmedByMe ? 'contained' : 'outlined'}
+                          color="success"
+                          disableElevation
+                          startIcon={<ThumbUpIcon />}
+                          onClick={toggleConfirm}
+                          disabled={confirming}
+                          title={latest.confirmedByMe ? t('confirm.titleActive') : t('confirm.titleInactive')}
+                          endIcon={latest.confirmations > 0 ? <Chip size="small" label={`+${latest.confirmations}`} sx={{ height: 20 }} /> : undefined}
+                        >
+                          {latest.confirmedByMe ? t('confirm.confirmed') : t('confirm.keepSame')}
+                        </Button>
+                      )}
+                      <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setUpdating(true)}>
+                        {t('detail.changed')}
+                      </Button>
+                    </Stack>
+                  )}
+                  <Collapse in={updating} unmountOnExit>
+                    <Box sx={{ my: 1.5 }}>
+                      <Typography variant="subtitle2">{t('detail.newUpdate')}</Typography>
+                      <UpdateForm fontID={font.id} hasPhoto={!!font.image} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+                    </Box>
+                  </Collapse>
+                </>
+              ) : (
+                <Typography color="text.secondary" sx={{ my: 1.5 }}><Link href="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+              )}
+            </>
+          ) : (
+            /* Sin actualizaciones aún: invita a informar. */
+            <>
+              <Typography color="text.secondary">{t('detail.beFirst')}</Typography>
+              {user ? (
+                !updating ? (
+                  <Button variant="contained" disableElevation startIcon={<EditIcon />} onClick={() => setUpdating(true)} sx={{ mt: 1 }}>
+                    {t('detail.reportStatus')}
+                  </Button>
+                ) : (
+                  <UpdateForm fontID={font.id} hasPhoto={!!font.image} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+                )
+              ) : (
+                <Typography color="text.secondary" sx={{ my: 1 }}><Link href="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+              )}
+            </>
+          )}
+
+          {rest.length > 0 && (
+            <>
+              <Divider sx={{ mt: 2 }} />
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
+              {rest.slice(0, shownRest).map((c) => (
+                <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
+              ))}
+              {rest.length > shownRest && (
+                <Button onClick={() => setShownRest((n) => n + REVIEWS_PAGE)} sx={{ mt: 1 }}>
+                  {t('detail.showMoreReviews', { n: rest.length - shownRest })}
+                </Button>
+              )}
+            </>
+          )}
+        </Box>
+
+        <Box component="section" sx={{ mt: 3 }}>
+          <Typography variant="h6" gutterBottom>{t('detail.incidents', { n: reports.length })}</Typography>
+          {reports.length === 0 && <Typography color="text.secondary">{t('detail.noIncidents')}</Typography>}
+          <List disablePadding>
+            {reports.map((r) => (
+              <ListItem key={r.id} divider disableGutters secondaryAction={(user?.id === r.userID || user?.isAdmin) ? (
+                <IconButton edge="end" size="small" color="error" onClick={() => removeReport(r.id)} aria-label={t('detail.delete')}><DeleteOutlineIcon fontSize="small" /></IconButton>
+              ) : undefined}>
+                <Box>
+                  {/* Firma con distintivo si es del equipo, y el texto con sus menciones
+                      enlazadas: un aviso de moderación suele nombrar a quien afecta, y
+                      ese @nombre era texto muerto. */}
+                  <Typography variant="body2" sx={{ ...(r.resolvedAt && { color: 'text.secondary' }) }}>
+                    <Autor username={r.username} staff={r.staff} />: <TextoRico texto={r.message} />
+                  </Typography>
+                  {/* Resuelta: se tacha el problema, no se esconde. Que la fuente estuvo
+                      rota y volvió a manar es lo que mira quien duda si acercarse. */}
+                  {r.resolvedAt ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
+                      <Chip size="small" color="success" variant="outlined" label={t('report.resolved')} sx={{ height: 20 }} />
+                      {/* Sin `resolvedBy` no es que falte el dato: es que no la cerró
+                          nadie, se cerró sola al llegar una reseña diciendo que mana. */}
+                      <Typography variant="caption" color="text.secondary">
+                        {r.resolvedBy ? t('report.resolvedBy', { user: r.resolvedBy }) : t('report.resolvedAuto')} · {timeAgo(r.resolvedAt, t)}
+                      </Typography>
+                      {puedeResolver(r) && (
+                        <Button size="small" onClick={() => cambiaResuelta(r, false)} sx={{ textTransform: 'none' }}>
+                          {t('report.reopen')}
+                        </Button>
+                      )}
+                    </Box>
+                  ) : puedeResolver(r) && (
+                    <Button size="small" onClick={() => cambiaResuelta(r, true)} sx={{ textTransform: 'none', ml: -1 }}>
+                      {t('report.resolve')}
+                    </Button>
+                  )}
+                </Box>
+              </ListItem>
+            ))}
+          </List>
+          <Divider sx={{ my: 1 }} />
+          {user ? (
+            <ReportForm fontID={font.id} onPosted={load} />
+          ) : (
+            <Typography color="text.secondary"><Link href="/login">{t('nav.enter')}</Link> {t('report.loginToReport')}</Typography>
+          )}
+        </Box>
+        </Box>
       </Box>
 
       <FontMaintenance font={font} onChanged={() => { load().catch(() => {}) }} />
 
-      {/* Va al final y no arriba: es lo último que se mira, después de haber leído si hay
-          agua. Puesto antes competiría con la información de la fuente, que es a lo que
-          viene la gente. */}
-      <FontBadges
-        creatorName={creatorName}
-        creatorTier={creatorBadge?.tier ?? null}
-        pioneerUsername={pioneerUsername}
-        pioneerCounts={pioneerCountsAsBadge}
-        hasPhoto={!!font.image}
-        photoAuthor={photoAuthor}
-        daysSinceLastCheck={frescor.days}
-        neverChecked={frescor.level === 'never'}
-        onOpen={(key, tier, locked, subtitle) => setMirando({ key, tier, locked, subtitle })}
-      />
+      {!dosColumnas && insignias}
 
       <BadgeShowcase
         open={!!mirando}
