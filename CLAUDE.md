@@ -865,6 +865,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     alcanzable.
   · **No mientras se edita**: un formulario dentro de una caja con scroll propio se rellena
     fatal, y ahí la columna crece con el mapa de reubicar.
+  · **`sticky` crea contexto de apilamiento, y eso rompió el visor de fotos.** El
+    lightbox de `ZoomableImage` es `position: fixed` con `z-index: 2500` y aun así las
+    reseñas de la columna de al lado se pintaban **encima de la foto ampliada**: dentro de
+    un contexto de apilamiento no hay número que valga, el 2500 se resuelve ahí dentro y
+    no puede subir por encima de los hermanos del ancestro. El arreglo es sacar el visor
+    del árbol con `createPortal` a `document.body`, no tocar el `z-index`. Así queda
+    inmune a cualquier contenedor futuro —un `transform` o una opacidad hacen lo mismo—.
+    Vale la pena recordarlo antes de poner `sticky`, `transform` o `opacity` en cualquier
+    contenedor que tenga dentro algo a pantalla completa.
   · Aviso al medirlo: **en local ninguna ficha es larga** —4 reseñas como mucho— así que el
     `sticky` casi no se aprecia y parece que no hace nada. Se probó alargando la columna
     derecha a mano. Otra cara de «ninguna cifra que salga de una base local sembrada vale».
