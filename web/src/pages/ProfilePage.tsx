@@ -28,6 +28,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { waterStatusInfo } from '../lib/waterStatus'
+import { esNombreValido } from '../lib/username'
 import { timeAgo } from '../lib/time'
 import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
@@ -39,7 +40,6 @@ import { capabilitiesEnabled } from '../lib/capabilities'
  * lado de un comentario que lo dice: un nombre que aquí pase y allí no da un 400 que el
  * usuario no puede interpretar, y al revés deja crear nombres que nadie puede mencionar.
  */
-const USERNAME_OK = /^[a-zA-Z0-9_.-]{3,30}$/
 
 export function ProfilePage() {
   const { user, loading, logout, refresh } = useAuth()
@@ -86,7 +86,7 @@ export function ProfilePage() {
     e.preventDefault()
     const limpio = usuario.trim()
     if (!nombre.trim()) { setError(t('profile.nameEmpty')); return }
-    if (!USERNAME_OK.test(limpio)) { setError(t('profile.usernameRules')); return }
+    if (!esNombreValido(limpio)) { setError(t('profile.usernameRules')); return }
     const ok = await savePrivacy({ name: nombre.trim(), username: limpio })
     if (ok) setEditando(false)
   }
@@ -181,7 +181,7 @@ export function ProfilePage() {
             label={t('profile.username')} value={usuario} onChange={(e) => setUsuario(e.target.value)}
             size="small" fullWidth
             slotProps={{ htmlInput: { maxLength: 30, autoCapitalize: 'none', spellCheck: false } }}
-            error={!!usuario && !USERNAME_OK.test(usuario)}
+            error={!!usuario && !esNombreValido(usuario)}
             helperText={t('profile.usernameRules')}
           />
           {/* Cambiar de nombre no es gratis y conviene decirlo ANTES, no en un error

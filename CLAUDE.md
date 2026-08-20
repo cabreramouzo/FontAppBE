@@ -915,6 +915,20 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   Ahora `create` aplica `Mentions.isMentionable` siempre. Las cuentas ya creadas se quedan
   como están —el nombre es con el que entran— y se corrigen desde `/me`. Para saber
   cuántas hay: `SELECT count(*) FROM users WHERE username !~ '^[a-zA-Z0-9_.-]{3,30}$'`.
+- La regla del nombre se comprueba **también en el cliente**, en el registro y en `/me`
+  (`lib/username.ts`, con tests). No es defensa —el servidor ya lo rechaza— sino idioma y
+  momento: **todos los `reason` de esta API están en castellano** y la app se lee en seis
+  idiomas, así que un francés registrándose como «José» recibía la regla en un idioma que
+  no es el suyo. Y llegaba **después** de enviar el formulario, o sea con todo que
+  rellenar otra vez por una letra. Ahora la regla se ve siempre bajo el campo, traducida,
+  y en rojo solo cuando de verdad está mal. El error del servidor queda de red de
+  seguridad para quien llame a la API directamente.
+  Reutiliza la clave `profile.usernameRules`, que ya existía en los seis idiomas; el
+  nombre de la clave se queda aunque ahora también la use el registro, porque renombrarla
+  en seis diccionarios no arregla nada.
+  Pendiente y **más ancho que esto**: el resto de errores del servidor (correo repetido,
+  usuario en uso) siguen llegando en castellano a todo el mundo. Se arregla devolviendo un
+  código traducible, no frase a frase.
 - **Menciones** (`Utils/Mentions.swift`): `@nombre` en una reseña o incidencia se pinta
   como enlace al perfil (`AuthorLine.tsx`) y avisa por correo. La regla del servidor y la
   del cliente tienen que decir lo mismo o se subraya a quien no se avisa; las dos llevan

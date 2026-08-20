@@ -7,6 +7,7 @@ import Link from '@mui/material/Link'
 import Alert from '@mui/material/Alert'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
+import { esNombreValido } from '../lib/username'
 import { describeError } from '../api/client'
 
 // Formulario de ALTA, en su propia URL (ver la nota de LoginPage: un propósito por
@@ -29,6 +30,15 @@ export function RegisterPage() {
   async function submit(e: FormEvent) {
     e.preventDefault()
     setError('')
+    // Se comprueba **aquí y no solo en el servidor**, que ya lo rechaza. Dos razones: el
+    // servidor contesta en castellano —como todos los `reason` de esta API— y esta
+    // pantalla se lee en seis idiomas; y un error que llega **después** de enviar el
+    // formulario obliga a rellenarlo otra vez para arreglar una letra.
+    //
+    // La regla es la misma que la del servidor a propósito (ver `lib/username.ts`): un
+    // nombre que el servidor aceptara y el parser de menciones no reconociera mandaría
+    // los avisos a otra persona.
+    if (!esNombreValido(username.trim())) { setError(t('profile.usernameRules')); return }
     setBusy(true)
     try {
       await register(name, username, email, password)
@@ -67,6 +77,11 @@ export function RegisterPage() {
           fullWidth
           size="small"
           slotProps={{ htmlInput: { autoComplete: 'username', autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false } }}
+          // La regla, siempre a la vista y no solo cuando ya te has equivocado: aquí se
+          // elige un nombre para siempre, y enterarse de que no vale al pulsar «crear»
+          // es tarde. En rojo solo cuando de verdad está mal.
+          error={!!username && !esNombreValido(username.trim())}
+          helperText={t('profile.usernameRules')}
         />
 
         <TextField
