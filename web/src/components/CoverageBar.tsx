@@ -32,7 +32,10 @@ export function CoverageBar({ icon, label, hint, done, total, pct, lang }: {
         </Tooltip>
         {/* El porcentaje y el recuento juntos: «2 %» sobre 2 622 fuentes suena a nada,
             y «52 fuentes» sin el total suena a mucho. Ninguno de los dos solo es honesto. */}
-        <Typography variant="body2" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+        {/* `nowrap` porque la cifra es una unidad: en la rejilla de zonas, con la tarjeta
+            estrecha y en euskera —que es el idioma más largo—, se partía como
+            «3.641(e)tik 5 ·» / «% 0». Quien cede es la etiqueta, que sí puede. */}
+        <Typography variant="body2" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
           {t('zones.ofTotal', { n: done.toLocaleString(lang), m: total.toLocaleString(lang), p: String(pct) })}
         </Typography>
       </Box>

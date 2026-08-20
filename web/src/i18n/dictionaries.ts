@@ -4450,7 +4450,7 @@ const fr: Dict = {
   'zones.withPhotoHint': "Fontaines avec au moins une photographie. C’est le plus grand écart de la carte.",
   'zones.checked': "Vérifié récemment",
   'zones.checkedHint': "Fontaines avec un examen au cours des six derniers mois.",
-  'zones.ofTotal': "{n} ou {m} · {p}%",
+  'zones.ofTotal': "{n} sur {m} · {p} %",
   'zones.monthTable': "Qui a contribué ce mois-ci",
   'zones.monthHint': "Ce mois-ci uniquement : chaque mois commence à zéro, donc rejoindre aujourd'hui, c'est rejoindre le temps.",
   'zones.noRanking': "Aucune cotisation réglée dans cette zone pour l'instant ce mois-ci.",

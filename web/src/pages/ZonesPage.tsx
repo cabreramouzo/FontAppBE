@@ -73,9 +73,13 @@ export function ZonesPage() {
   const visibles = filtra ? (zonas ?? []).filter((z) => z.country === pais) : (zonas ?? [])
 
   return (
-    <Box className="pad" sx={{ maxWidth: 900, mx: 'auto' }}>
+    // 1200 y no 900: esta página son tarjetas, no prosa, y el ancho de una página lo
+    // decide lo que contiene. Con 900 las 53 demarcaciones caían en una sola columna y
+    // la página medía 11,9 pantallas de scroll en un portátil de 1440, con 540 px de
+    // blanco al lado de cada tarjeta. La cabecera sí es prosa y se queda acotada.
+    <Box className="pad" sx={{ maxWidth: 1200, mx: 'auto' }}>
       <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>🗺️ {t('zones.title')}</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('zones.intro')}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: '68ch' }}>{t('zones.intro')}</Typography>
 
       {/* Primero lo que se puede terminar y después lo que no. Al revés, la página
           abría con una barra al 0,3 % que no se mueve en meses. */}
@@ -135,7 +139,29 @@ export function ZonesPage() {
           {t('zones.byRegion')}
         </Typography>
       )}
-      {estado === 'ok' && visibles.map((z) => <ZonaCard key={`${z.country}/${z.region}`} zona={z} lang={lang} />)}
+      {/* Rejilla que se cuenta sola: `auto-fill` reparte tantas columnas como quepan a
+          partir de 360 px, así que no hay puntos de corte escritos a mano que se queden
+          viejos al cambiar el contenido de la tarjeta. En un portátil de 1440 salen tres.
+          El mínimo son 360 y no 320 **porque está medido en euskera**, que es el idioma
+          más largo: a 325 px de tarjeta, 49 de las filas de cobertura se partían en dos
+          líneas. Un mínimo elegido en castellano habría dejado la página rota en un
+          idioma que no se mira.
+          `auto-fill` y no `auto-fit` a propósito: con `auto-fit`, filtrar por un país de
+          una sola demarcación estiraría esa tarjeta a los 1200 px de ancho.
+          `alignItems: start` es lo que evita que desplegar la tabla de una tarjeta estire
+          a sus vecinas de la misma fila hasta su alto. */}
+      {estado === 'ok' && (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+            gap: 1.5,
+            alignItems: 'start',
+          }}
+        >
+          {visibles.map((z) => <ZonaCard key={`${z.country}/${z.region}`} zona={z} lang={lang} />)}
+        </Box>
+      )}
     </Box>
   )
 }
@@ -145,7 +171,9 @@ function ZonaCard({ zona, lang }: { zona: ZoneCoverage; lang: string }) {
   const [abierta, setAbierta] = useState(false)
 
   return (
-    <Card variant="outlined" sx={{ mb: 1.5, borderRadius: 2 }}>
+    // Sin `mb`: la separación la pone el `gap` de la rejilla, y con las dos cosas las
+    // filas quedaban más separadas que las columnas.
+    <Card variant="outlined" sx={{ borderRadius: 2 }}>
       <Box sx={{ p: 2, pb: 1.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
           <Typography sx={{ fontWeight: 800, fontSize: '1.1rem' }}>{zona.region}</Typography>
