@@ -121,9 +121,28 @@ struct FontReportController: RouteCollection {
         MentionNotifier.notify(text: dto.message, by: user, fontID: fontID, on: req)
 
         // Y a quien sigue la fuente: una avería es exactamente lo que quiere saber quien
-        // la tiene guardada antes de ir.
+        // la tiene en favoritas antes de ir.
         let quienID = try user.requireID()
         let db = req.db
+
+        // **Avisar de algo te pone la fuente en favoritas.**
+        //
+        // Sin esto, quien reporta un fallo escribe al vacío: los avisos van a quien tiene
+        // la fuente en favoritas, y poner una incidencia no lo hacía. Pasó de verdad — un
+        // usuario avisó de que una fuente constaba como potable sin serlo, se le contestó
+        // en la propia ficha, y no se enteró; hubo que escribirle un correo a mano.
+        //
+        // Quien se molesta en avisar de que algo está mal es exactamente la persona a la
+        // que quieres poder responder, así que la suscripción es el caso normal y no la
+        // excepción. Se puede deshacer con el mismo botón de siempre.
+        //
+        // Solo al **crear**, y sin duplicar si ya la tenía. Quien la quitó a mano y
+        // vuelve a reportar sí se la encuentra marcada otra vez: no guardamos el «no la
+        // quiero», y quien vuelve a avisar de algo quiere que le respondan. `try?` porque
+        // perder la incidencia por no poder marcar una favorita sería absurdo — es lo
+        // mismo que ya se hace con los avisos.
+        try? await FontFavorite.follow(fontID: fontID, userID: quienID, on: db)
+
         Task.detached {
             await FontWatchNotifier.notify(fontID: fontID, change: .report, actorID: quienID, on: db)
         }

@@ -1161,6 +1161,24 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 
 ## Seguir una fuente (`FontWatchNotifier`)
 
+- **Avisar de algo te pone la fuente en favoritas** (`FontFavorite.follow`, desde
+  `FontReportController.create`). Sin esto, quien reporta un fallo **escribe al vacío**:
+  los avisos van a quien la tiene en favoritas y reportar no lo hacía. Pasó de verdad —
+  alguien avisó de que una fuente constaba como potable sin serlo, se le contestó en la
+  propia ficha, no se enteró, y hubo que escribirle un correo a mano. Quien se molesta en
+  avisar de que algo está mal es exactamente la persona a la que quieres poder responder.
+  Solo al **crear**, sin duplicar, y con `try?`: perder la incidencia por no poder marcar
+  una favorita sería absurdo. Ojo con lo que **no** hace: no recuerda que alguien la
+  quitara a mano, así que reportar otra cosa la vuelve a marcar. Se acepta; para que
+  dejara de pasar habría que guardar el «no la quiero», que hoy no existe.
+- **Estrella amarilla, no marcapáginas, y «favoritas», no «guardar».** «Guardar» describía
+  el gesto y no lo que significa; una estrella la entiende cualquiera sin leer el rótulo.
+  Además ahora la marca pasa sola al reportar, y «se ha añadido a tus favoritas» se
+  explica mejor que «se ha guardado». Son cinco cadenas en seis idiomas y un icono; la
+  relación y el endpoint (`FontFavorite`, `/fonts/:id/favorite`) **no cambian de nombre**,
+  que sería churn sin ganancia.
+
+
 - **Guardar una fuente es seguirla.** No hay tabla de suscripciones: la relación ya
   existía (`FontFavorite`, el botón de la ficha y la lista de `/me`). Guardar una fuente y
   querer saber si se seca son la misma intención dicha dos veces; separarlas obligaría a

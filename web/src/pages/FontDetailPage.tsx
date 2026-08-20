@@ -23,8 +23,8 @@ import DirectionsIcon from '@mui/icons-material/Directions'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ShareIcon from '@mui/icons-material/Share'
 import ThumbUpIcon from '@mui/icons-material/ThumbUp'
-import BookmarkIcon from '@mui/icons-material/Bookmark'
-import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder'
+import StarIcon from '@mui/icons-material/Star'
+import StarBorderIcon from '@mui/icons-material/StarBorder'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
@@ -765,13 +765,22 @@ export function FontDetailPage() {
             color={favorite?.favorited ? 'primary' : 'default'}
             onClick={toggleFavorite}
             disabled={savingFavorite}
-            // Guardar una fuente **es** seguirla: desde que la campana avisa de los
-            // cambios, el marcador dejó de ser solo un apunte. El rótulo lo dice, porque
-            // si no, nadie descubre que recibirá avisos hasta que le llegue el primero.
+            // Favorita **es** seguirla: desde que la campana avisa de los cambios, el
+            // marcador dejó de ser solo un apunte. El rótulo lo dice, porque si no, nadie
+            // descubre que recibirá avisos hasta que le llegue el primero.
+            //
+            // Estrella amarilla y no marcapáginas: «guardar» describía el gesto y no lo
+            // que significa, y una estrella la entiende cualquiera sin leer el rótulo. Es
+            // además lo que ahora pasa solo al reportar algo (`FontReportController`), y
+            // «se ha añadido a tus favoritas» se explica mejor que «se ha guardado».
             aria-label={favorite?.favorited ? t('favorite.saved') : t('favorite.save')}
             title={`${favorite?.favorited ? t('favorite.saved') : t('favorite.save')} · ${t('detail.saveWatch')}`}
           >
-            {favorite?.favorited ? <BookmarkIcon /> : <BookmarkBorderIcon />}
+            {favorite?.favorited
+              // El amarillo solo cuando está puesta: una estrella amarilla vacía parece
+              // encendida de reojo, y el punto es distinguirlo de un vistazo.
+              ? <StarIcon sx={{ color: '#f5b301' }} />
+              : <StarBorderIcon />}
           </IconButton>
           {favorite && favorite.count > 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>{favorite.count}</Typography>

@@ -1282,6 +1282,42 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Poner una incidencia te pone la fuente en favoritas, y por tanto te llegan las
+    /// respuestas.
+    ///
+    /// Es la mitad que faltaba: los avisos van a quien la tiene en favoritas, y reportar
+    /// no lo hacía, así que quien avisaba de un fallo escribía al vacío. Pasó de verdad.
+    func testReportingAFountainFollowsIt() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "reporta.uno")
+            let tok = try await login(app, username: "reporta.uno")
+            let fontID = try await createFont(app, token: tok, name: "Font seguida", lat: 41.8, long: 2.1)
+
+            try await app.test(.GET, "fonts/\(fontID)/favorite", headers: bearer(tok), afterResponse: { res in
+                XCTAssertFalse(try res.content.decode(FavoriteStatus.self).favorited,
+                               "crear una fuente no la pone en favoritas; solo reportar")
+            })
+
+            try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(CreateReportDTO(message: "El agua no es potable"))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+
+            try await app.test(.GET, "fonts/\(fontID)/favorite", headers: bearer(tok), afterResponse: { res in
+                XCTAssertTrue(try res.content.decode(FavoriteStatus.self).favorited)
+            })
+
+            // Una segunda incidencia no duplica la fila: `count` es el total de gente que
+            // la tiene, así que dos filas de la misma persona lo inflarían.
+            try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(CreateReportDTO(message: "Y además está rota"))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+
+            try await app.test(.GET, "fonts/\(fontID)/favorite", headers: bearer(tok), afterResponse: { res in
+                XCTAssertEqual(try res.content.decode(FavoriteStatus.self).count, 1)
+            })
+        }
+    }
+
     /// Los errores llevan un **código** para que el cliente los traduzca.
     ///
     /// Lo que se prueba no es que exista el campo, sino las dos mitades del contrato:
