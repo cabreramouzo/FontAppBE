@@ -57,9 +57,10 @@ export function RoleChip({ role, count = 0 }: { role: UserRole; count?: number }
   const { t } = useI18n()
   return (
     <Tooltip title={t('nav.staffWarning')}>
-      {/* El contador va FUERA del chip, no encima: sobre la etiqueta tapaba el final
-          de la palabra, y "Propietario" es justo la más larga. El hueco a la derecha
-          se reserva con el margen para que no se salga de la barra. */}
+      {/* El contador va FUERA del chip, no encima: sobre la etiqueta tapaba el final de
+          la palabra. El hueco a la derecha se reserva con el margen para que no se salga
+          de la barra. (Antes el caso peor era «Propietario»; ahora la etiqueta es siempre
+          la misma y corta, pero el contador sigue sin caber encima.) */}
       <Badge
         badgeContent={count}
         color="error"
@@ -71,7 +72,14 @@ export function RoleChip({ role, count = 0 }: { role: UserRole; count?: number }
         clickable
         size="small"
         icon={<ShieldIcon sx={{ fontSize: 14, color: '#fff !important' }} />}
-        label={t(`role.${role}`)}
+        // La misma etiqueta que la pública: lo que hay que recordar aquí es «estás con
+        // una cuenta del equipo», no cuál de los tres roles. El `data-role` de la franja
+        // sigue llevando el rol para quien lo necesite depurar.
+        label={t('staff.tag')}
+        // El rol ya no se pinta, pero se conserva en el DOM **aquí y no en el distintivo
+        // público**: esta barra solo la ve tu sesión, así que sirve para depurar sin
+        // publicar nada. Es lo mismo que hace `StaffStripe`.
+        data-role={role}
         sx={{
           height: 22,
           fontSize: 11,

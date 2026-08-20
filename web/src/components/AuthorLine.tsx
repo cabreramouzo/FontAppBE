@@ -23,14 +23,29 @@ export const STAFF_COLOR = '#7c3aed'
  * una opinión. Sin distinguirlos, o no te crees el aviso de verdad, o te crees el que
  * no lo es.
  */
-export function StaffTag({ role }: { role: UserRole }) {
+/**
+ * «Lo firma alguien del equipo», y nada más.
+ *
+ * **No recibe el rol a propósito.** Lo recibía y lo pintaba, así que en público salía
+ * «PROPIETARIO» en morado al lado de un aviso sobre una fuente — que queda raro y además
+ * publica quién es el owner, justo lo que `UserResponse.role` se calla a propósito. Aquí
+ * no hay ningún `data-role` por lo mismo: no se filtra por el DOM lo que se ha quitado
+ * de la etiqueta.
+ */
+export function StaffTag() {
   const { t } = useI18n()
   return (
     <Tooltip title={t('staff.tagHint')}>
       <Chip
         size="small"
         icon={<ShieldIcon sx={{ fontSize: 12, color: '#fff !important' }} />}
-        label={t(`role.${role}`)}
+        // **Una sola etiqueta para todo el equipo**, no el rol. Lo que este distintivo
+        // existe para decir es «esto lo firma alguien de FontApp», que es justo lo que
+        // pone el tooltip; el cargo exacto es asunto interno y además quedaba raro
+        // —«PROPIETARIO» en morado al lado de un aviso sobre una fuente—. De paso deja de
+        // publicar quién es el owner, que es coherente con que `UserResponse.role` se
+        // calle a propósito.
+        label={t('staff.tag')}
         sx={{
           height: 18,
           fontSize: 10,
@@ -73,7 +88,7 @@ export function Autor({ username, staff }: { username: string | null; staff?: Us
       >
         {username}
       </Link>
-      {staff && <StaffTag role={staff} />}
+      {staff && <StaffTag />}
     </Box>
   )
 }

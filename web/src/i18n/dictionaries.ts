@@ -767,6 +767,7 @@ const ca: Dict = {
   'maint.field.description': 'Descripció',
   'maint.field.source': 'Tipus',
   'maint.field.drinkable': 'Potabilitat',
+  'staff.tag': 'Equip',
   'staff.tagHint': 'Membre de l’equip de FontApp',
   'review.confirmDelete': 'Esborrar aquesta ressenya?',
 
@@ -1605,6 +1606,7 @@ const es: Dict = {
   'maint.field.description': 'Descripción',
   'maint.field.source': 'Tipo',
   'maint.field.drinkable': 'Potabilidad',
+  'staff.tag': 'Equipo',
   'staff.tagHint': 'Miembro del equipo de FontApp',
   'review.confirmDelete': '¿Borrar esta reseña?',
 
@@ -2435,6 +2437,7 @@ const gl: Dict = {
   'maint.field.description': 'Descrición',
   'maint.field.source': 'Tipo',
   'maint.field.drinkable': 'Potabilidade',
+  'staff.tag': 'Equipo',
   'staff.tagHint': 'Membro do equipo de FontApp',
   'review.confirmDelete': 'Borrar esta reseña?',
 
@@ -3265,6 +3268,7 @@ const eu: Dict = {
   'maint.field.description': 'Deskribapena',
   'maint.field.source': 'Mota',
   'maint.field.drinkable': 'Edangarritasuna',
+  'staff.tag': 'Taldea',
   'staff.tagHint': 'FontApp taldeko kidea',
   'review.confirmDelete': 'Iritzi hau ezabatu?',
 
@@ -4095,6 +4099,7 @@ const en: Dict = {
   'maint.field.description': 'Description',
   'maint.field.source': 'Type',
   'maint.field.drinkable': 'Drinkability',
+  'staff.tag': 'Team',
   'staff.tagHint': 'FontApp team member',
   'review.confirmDelete': 'Delete this review?',
 
@@ -4908,6 +4913,7 @@ const fr: Dict = {
   'maint.field.description': "Description",
   'maint.field.source': "Taper",
   'maint.field.drinkable': "Potabilité",
+  'staff.tag': 'Équipe',
   'staff.tagHint': "Membre de l'équipe FontApp",
   'review.confirmDelete': "Supprimer cet avis ?",
   'image.add': "📷 Ajouter une photo",

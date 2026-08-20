@@ -996,6 +996,14 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   `StaffBadge`. Es una exposición más estrecha que hacer público `UserResponse.role` —que
   se calla a propósito—: acompaña a un mensaje escrito en público, no responde «qué cargo
   tiene esta persona» sobre cualquiera.
+  **La etiqueta dice «Equipo», no el rol** (`staff.tag`). Pintaba `role.<rol>`, así que en
+  público salía «PROPIETARIO» en morado al lado de un aviso sobre una fuente: queda raro y
+  además publica quién es el owner, que es justo lo que `UserResponse.role` se calla. Lo
+  que este distintivo existe para decir es «esto lo firma alguien de FontApp», que es lo
+  mismo que ya ponía su tooltip. `StaffTag` **no recibe el rol** y no lo deja en ningún
+  `data-role`: no se filtra por el DOM lo que se ha quitado de la etiqueta. El chip de tu
+  propia barra sí lo conserva ahí, porque esa barra solo la ve tu sesión. Los nombres de
+  los roles siguen existiendo donde importan: la tabla de `RolesHelp` y el panel.
 - **El service worker y el origen de la API.** El SW es un fichero estático de `public/`,
   así que Vite **no** lo procesa y no puede leer `VITE_API_URL`. Enrutaba la API con
   `pathname.startsWith('/api')`, que solo acierta en **desarrollo** (proxy de Vite en el
