@@ -21,29 +21,17 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(TOKEN_KEY)
 }
 
-export class ApiError extends Error {
-  status: number // 0 = fallo de red / servidor inalcanzable
-  constructor(status: number, message: string) {
-    super(message)
-    this.status = status
-  }
-}
-
-/** Traduce un error de red/API a un mensaje legible en el idioma actual. */
-export function describeError(e: unknown, t: (key: string) => string): string {
-  if (e instanceof ApiError) {
-    if (e.status === 0) return t('error.network')
-    if (e.status === 401) return t('error.unauthorized')
-    return e.message || t('error.generic')
-  }
-  return (e as Error)?.message || t('error.generic')
-}
+// Re-exportado a propósito: `ApiError` y `describeError` los importan una docena de
+// pantallas desde aquí, y moverlos de sitio no tiene por qué obligarlas a cambiar.
+export { ApiError, describeError } from '../lib/apiError'
+// Y también importado, porque este fichero lo lanza (`parse`, y el corte por timeout).
+import { ApiError } from '../lib/apiError'
 
 async function parse(res: Response) {
   const text = await res.text()
   const data = text ? JSON.parse(text) : null
   if (!res.ok) {
-    throw new ApiError(res.status, data?.reason ?? res.statusText)
+    throw new ApiError(res.status, data?.reason ?? res.statusText, data?.code)
   }
   return data
 }

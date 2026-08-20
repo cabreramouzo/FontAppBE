@@ -28,7 +28,7 @@ struct ImageController: RouteCollection {
 
         let ext = (payload.file.extension ?? "").lowercased()
         guard Self.allowedExtensions.contains(ext) else {
-            throw Abort(.unsupportedMediaType, reason: "Formato no soportado (jpg, png, webp)")
+            throw AppError(.unsupportedMediaType, "image.badFormat", "Formato no soportado (jpg, png, webp)")
         }
 
         let url = try await req.imageStorage.save(payload.file.data, ext: ext)

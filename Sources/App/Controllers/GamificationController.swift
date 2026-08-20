@@ -305,7 +305,7 @@ struct GamificationController: RouteCollection {
         } else {
             user = try await User.query(on: req.db).filter(\.$username == param).first()
         }
-        guard let user else { throw Abort(.notFound, reason: "Usuario no encontrado") }
+        guard let user else { throw AppError(.notFound, "user.notFound", "Usuario no encontrado") }
         // La clave lleva el UUID resuelto y no el parámetro: si no, el mismo perfil
         // ocuparía dos entradas y una podría quedarse vieja respecto de la otra.
         let userID = try user.requireID()

@@ -79,14 +79,14 @@ struct AuthController: RouteCollection {
         let dto = try req.content.decode(ResetDTO.self)
 
         guard let reset = try await PasswordReset.query(on: req.db).filter(\.$token == dto.token).first() else {
-            throw Abort(.badRequest, reason: "Enlace de recuperación no válido")
+            throw AppError(.badRequest, "auth.resetInvalid", "Enlace de recuperación no válido")
         }
         guard reset.expiresAt > Date() else {
             try await reset.delete(on: req.db)
-            throw Abort(.badRequest, reason: "El enlace de recuperación ha caducado")
+            throw AppError(.badRequest, "auth.resetExpired", "El enlace de recuperación ha caducado")
         }
         guard let user = try await User.find(reset.$user.id, on: req.db) else {
-            throw Abort(.badRequest, reason: "Enlace de recuperación no válido")
+            throw AppError(.badRequest, "auth.resetInvalid", "Enlace de recuperación no válido")
         }
         user.passwordHash = try req.password.hash(dto.password)
         try await user.save(on: req.db)

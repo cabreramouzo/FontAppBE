@@ -1282,6 +1282,48 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Los errores llevan un **código** para que el cliente los traduzca.
+    ///
+    /// Lo que se prueba no es que exista el campo, sino las dos mitades del contrato:
+    /// que el código llega **y** que un error sin convertir sigue funcionando sin él.
+    /// Esa segunda mitad es la que permite ir convirtiéndolos poco a poco; si se
+    /// rompiera, la conversión pasaría a ser todo-o-nada.
+    func testErrorsCarryATranslatableCode() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "codigo.uno")
+
+            struct Cuerpo: Content { let error: Bool; let reason: String; let code: String? }
+
+            // Correo repetido: código, y la frase en castellano para quien llame a pelo.
+            try await app.test(.POST, "users", beforeRequest: { req in
+                try req.content.encode(CreateUserDTO(name: "Dos", username: "codigo.dos",
+                                                     email: "codigo.uno@example.com", password: "password123"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .conflict)
+                let c = try res.content.decode(Cuerpo.self)
+                XCTAssertEqual(c.code, "user.emailTaken")
+                XCTAssertFalse(c.reason.isEmpty, "la frase se queda: un código suelto no dice nada en un log")
+            })
+
+            // Nombre imposible de mencionar: su propio código.
+            try await app.test(.POST, "users", beforeRequest: { req in
+                try req.content.encode(CreateUserDTO(name: "Tres", username: "jose maria",
+                                                     email: "tres@example.com", password: "password123"))
+            }, afterResponse: { res in
+                XCTAssertEqual(try res.content.decode(Cuerpo.self).code, "user.usernameChars")
+            })
+
+            // Y un error **sin convertir** sigue igual que siempre: sin `code`, con su
+            // frase, y el cliente cae en ella.
+            try await app.test(.GET, "zones/ranking?region=", afterResponse: { res in
+                XCTAssertEqual(res.status, .badRequest)
+                let c = try res.content.decode(Cuerpo.self)
+                XCTAssertNil(c.code)
+                XCTAssertFalse(c.reason.isEmpty)
+            })
+        }
+    }
+
     /// Sugerencias de `@mención`: lo que enseña y, sobre todo, lo que no.
     ///
     /// Es un listado de nombres de gente, así que lo que importa aquí no es que funcione

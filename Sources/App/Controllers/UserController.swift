@@ -168,16 +168,16 @@ struct UserController: RouteCollection {
         // renombrarlas por nuestra cuenta las dejaría fuera. Se corrigen desde `/me`,
         // donde el formulario ya exige esta regla.
         guard Mentions.isMentionable(dto.username) else {
-            throw Abort(.badRequest, reason: "El nombre de usuario solo puede llevar letras sin acentos, números, punto, guion y guion bajo (3-30 caracteres)")
+            throw AppError(.badRequest, "user.usernameChars", "El nombre de usuario solo puede llevar letras sin acentos, números, punto, guion y guion bajo (3-30 caracteres)")
         }
 
         // 409 limpio en vez de dejar que el constraint de unicidad reviente en 500.
         guard try await User.query(on: req.db).filter(\.$username == dto.username).first() == nil else {
-            throw Abort(.conflict, reason: "El username '\(dto.username)' ya está en uso")
+            throw AppError(.conflict, "user.usernameTaken", "El username '\(dto.username)' ya está en uso")
         }
         let email = dto.email.lowercased()
         guard try await User.query(on: req.db).filter(\.$email == email).first() == nil else {
-            throw Abort(.conflict, reason: "El correo '\(email)' ya está registrado")
+            throw AppError(.conflict, "user.emailTaken", "El correo '\(email)' ya está registrado")
         }
 
         let user = User(
@@ -230,10 +230,10 @@ struct UserController: RouteCollection {
     @Sendable func unsubscribe(req: Request) async throws -> HTTPStatus {
         let dto = try req.content.decode(UnsubscribeDTO.self)
         guard let userID = UUID(uuidString: dto.user), UnsubscribeToken.verify(dto.token, userID: userID) else {
-            throw Abort(.badRequest, reason: "Enlace de baja no válido")
+            throw AppError(.badRequest, "auth.unsubscribeInvalid", "Enlace de baja no válido")
         }
         guard let user = try await User.find(userID, on: req.db) else {
-            throw Abort(.badRequest, reason: "Enlace de baja no válido")
+            throw AppError(.badRequest, "auth.unsubscribeInvalid", "Enlace de baja no válido")
         }
         if dto.kind == "mentions" {
             user.mentionEmails = false
@@ -279,19 +279,19 @@ struct UserController: RouteCollection {
         // Si el username cambia a uno que ya tiene OTRO usuario -> 409.
         if let clash = try await User.query(on: req.db).filter(\.$username == dto.username).first(),
            clash.id != user.id {
-            throw Abort(.conflict, reason: "El username '\(dto.username)' ya está en uso")
+            throw AppError(.conflict, "user.usernameTaken", "El username '\(dto.username)' ya está en uso")
         }
         // Los caracteres solo se comprueban **cuando el nombre cambia**. Las cuentas
         // antiguas se registraron sin esta regla, y aplicarla siempre dejaría a quien
         // tenga un nombre raro sin poder guardar ni un interruptor de su perfil: el
         // formulario le devolvería un error sobre un campo que no ha tocado.
         if dto.username != user.username, !Mentions.isMentionable(dto.username) {
-            throw Abort(.badRequest, reason: "El nombre de usuario solo puede llevar letras sin acentos, números, punto, guion y guion bajo (3-30 caracteres)")
+            throw AppError(.badRequest, "user.usernameChars", "El nombre de usuario solo puede llevar letras sin acentos, números, punto, guion y guion bajo (3-30 caracteres)")
         }
         let email = dto.email.lowercased()
         if let clash = try await User.query(on: req.db).filter(\.$email == email).first(),
            clash.id != user.id {
-            throw Abort(.conflict, reason: "El correo '\(email)' ya está registrado")
+            throw AppError(.conflict, "user.emailTaken", "El correo '\(email)' ya está registrado")
         }
 
         user.name = dto.name
@@ -363,7 +363,7 @@ struct UserController: RouteCollection {
     private func requireSelf(_ req: Request, target: User) throws {
         let authUser = try req.auth.require(User.self)
         guard authUser.id == target.id else {
-            throw Abort(.forbidden, reason: "Solo puedes modificar tu propia cuenta")
+            throw AppError(.forbidden, "user.selfOnly", "Solo puedes modificar tu propia cuenta")
         }
     }
 }

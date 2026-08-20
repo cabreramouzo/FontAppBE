@@ -915,6 +915,42 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   Ahora `create` aplica `Mentions.isMentionable` siempre. Las cuentas ya creadas se quedan
   como están —el nombre es con el que entran— y se corrigen desde `/me`. Para saber
   cuántas hay: `SELECT count(*) FROM users WHERE username !~ '^[a-zA-Z0-9_.-]{3,30}$'`.
+## Errores del servidor, en el idioma de quien lee (`AppError` + `err.*`)
+
+- Todos los errores viajaban como una frase **en castellano** dentro de `reason`, y el
+  cliente la enseñaba tal cual. La app se lee en seis idiomas: a un portugués con el
+  correo repetido le llegaba «El correo ya está registrado» — y es un mensaje que hay que
+  **entender para poder arreglar** lo que has hecho mal.
+- `AppError(status, code, reason)` lleva **las dos cosas**: el código (`user.emailTaken`),
+  que es lo que el cliente traduce, y la frase en castellano, que se queda para quien
+  llame a la API a pelo — `curl`, un script, un log —, donde un código suelto no dice
+  nada. El código es **contrato**: renombrarlo rompe a quien tenga una versión vieja
+  cargada.
+- Es **aditivo a propósito**: `code` es opcional, así que los `Abort` sin convertir siguen
+  igual y el cliente cae en la frase del servidor. Con 86 sitios, eso es la diferencia
+  entre hacerlo y no hacerlo. Hoy hay **28 convertidos**, los que alcanza un usuario
+  normal; lo de administradores y las validaciones de API se quedaron fuera.
+- **`CodedErrorMiddleware` sustituye al de Vapor, no se añade al lado.** Vapor mete su
+  `ErrorMiddleware` por su cuenta y, al quedar **por dentro**, atrapa el error primero y
+  lo convierte en respuesta: el nuestro no lo ve nunca y el `code` no sale. Se descubrió
+  porque las respuestas seguían llegando sin él. Por eso `app.middleware = .init()` y se
+  monta la pila entera, con **CORS por fuera de los errores** — sin eso, el navegador
+  convierte un 409 legible en un fallo de CORS y el usuario no ve el motivo.
+- En el cliente, `traduceCodigo` devuelve **`null`** cuando no hay traducción, y ese
+  `null` es todo el diseño: `t()` devuelve la clave cruda si falta, así que un código
+  nuevo —o uno viejo en un cliente sin actualizar— pintaría «err.user.emailTaken» dentro
+  de un Alert. Misma regla que los nombres de país en `lib/countries.ts`.
+- Los códigos de capacidad salen del **`rawValue` del propio enum**
+  (`capability.retireFont`) y no escritos en los siete sitios que llaman: una lista
+  paralela se separa del enum a la primera capacidad nueva.
+- `ApiError` y `describeError` se movieron a `lib/apiError.ts`. No es orden por gusto:
+  `api/client.ts` lee `import.meta.env` al cargarse y **no se puede importar desde un test
+  de Node**, que es justo lo que hay que probar. `scripts/errors.test.ts` cubre las dos
+  mitades — código conocido gana, código desconocido cae en la frase.
+- Al convertir un error nuevo hay que añadir su clave `err.<código>` en los seis
+  diccionarios. Si se olvida no se rompe nada visible, que es exactamente por qué conviene
+  acordarse.
+
 - La regla del nombre se comprueba **también en el cliente**, en el registro y en `/me`
   (`lib/username.ts`, con tests). No es defensa —el servidor ya lo rechaza— sino idioma y
   momento: **todos los `reason` de esta API están en castellano** y la app se lee en seis

@@ -89,12 +89,12 @@ struct FontReportController: RouteCollection {
     private func cambiaEstado(_ req: Request, resolviendo: Bool) async throws -> ReportResponse {
         let user = try req.auth.require(User.self)
         guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {
-            throw Abort(.notFound, reason: "Incidencia no encontrada")
+            throw AppError(.notFound, "report.notFound", "Incidencia no encontrada")
         }
         let userID = try user.requireID()
         var puede = report.$user.id == userID || user.canModerate
         if !puede { puede = try await Capabilities.has(.resolveIncident, user, on: req.db) }
-        guard puede else { throw Abort(.forbidden, reason: "Todavía no puedes cerrar incidencias ajenas") }
+        guard puede else { throw AppError(.forbidden, "capability.resolveIncident", "Todavía no puedes cerrar incidencias ajenas") }
 
         report.resolvedAt = resolviendo ? Date() : nil
         report.$resolver.id = resolviendo ? userID : nil
@@ -137,7 +137,7 @@ struct FontReportController: RouteCollection {
     /// Verifica que la fuente existe (404 si no) y devuelve su id.
     private func requireFontID(_ req: Request) async throws -> UUID {
         guard let font = try await Font.find(req.parameters.get("fontID"), on: req.db) else {
-            throw Abort(.notFound, reason: "No existe la fuente indicada")
+            throw AppError(.notFound, "font.notFound", "No existe la fuente indicada")
         }
         return try font.requireID()
     }
@@ -149,7 +149,7 @@ struct FontReportController: RouteCollection {
             throw Abort(.notFound)
         }
         guard user.canModerate || report.$user.id == user.id else {
-            throw Abort(.forbidden, reason: "Solo puedes borrar tus propias incidencias")
+            throw AppError(.forbidden, "report.selfOnly", "Solo puedes borrar tus propias incidencias")
         }
         try await report.delete(on: req.db)
         return .noContent

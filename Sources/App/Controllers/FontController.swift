@@ -76,10 +76,10 @@ struct FontController: RouteCollection {
 
     @Sendable func photoAuthor(req: Request) async throws -> PhotoAuthor {
         guard let fontID = req.parameters.get("fontID", as: UUID.self) else {
-            throw Abort(.badRequest, reason: "Identificador de fuente no válido")
+            throw AppError(.badRequest, "font.badID", "Identificador de fuente no válido")
         }
         guard let font = try await Font.query(on: req.db).filter(\.$id == fontID).first() else {
-            throw Abort(.notFound, reason: "Fuente no encontrada")
+            throw AppError(.notFound, "font.notFound", "Fuente no encontrada")
         }
         guard font.image != nil else { return PhotoAuthor(username: nil) }
 
@@ -120,11 +120,11 @@ struct FontController: RouteCollection {
         struct PhotoDTO: Content { let image: String }
         let dto = try req.content.decode(PhotoDTO.self)
         guard !dto.image.trimmingCharacters(in: .whitespaces).isEmpty else {
-            throw Abort(.badRequest, reason: "Falta la imagen")
+            throw AppError(.badRequest, "image.missing", "Falta la imagen")
         }
         let anterior = font.image
         if anterior != nil, !canManage(user: user, font: font) {
-            throw Abort(.forbidden, reason: "Esta fuente ya tiene foto: solo el creador o un administrador puede cambiarla")
+            throw AppError(.forbidden, "font.photoExists", "Esta fuente ya tiene foto: solo el creador o un administrador puede cambiarla")
         }
         let before = FontInfoSnapshot(font)
         font.image = dto.image
@@ -149,15 +149,15 @@ struct FontController: RouteCollection {
         let font = try await find(req)
         let user = try req.auth.require(User.self)
         if font.image != nil, !canManage(user: user, font: font) {
-            throw Abort(.forbidden, reason: "Esta fuente ya tiene foto: solo el creador o un administrador puede cambiarla")
+            throw AppError(.forbidden, "font.photoExists", "Esta fuente ya tiene foto: solo el creador o un administrador puede cambiarla")
         }
         let fontID = try font.requireID()
         guard let comment = try await FontComment.find(req.parameters.get("commentID"), on: req.db),
               comment.$font.id == fontID else {
-            throw Abort(.notFound, reason: "La reseña no existe o no es de esta fuente")
+            throw AppError(.notFound, "comment.notFound", "La reseña no existe o no es de esta fuente")
         }
         guard comment.image != nil else {
-            throw Abort(.badRequest, reason: "La reseña no tiene foto")
+            throw AppError(.badRequest, "comment.noPhoto", "La reseña no tiene foto")
         }
         // Sustituir una portada que ya existe sigue siendo del creador o de un admin, y
         // por eso se borra a mano la anterior. Poner la PRIMERA pasa por `CoverPhoto`,
@@ -340,7 +340,7 @@ struct FontController: RouteCollection {
             throw Abort(.notFound)
         }
         guard let font = try await Font.find(edit.$font.id, on: req.db) else {
-            throw Abort(.notFound, reason: "La fuente ya no existe")
+            throw AppError(.notFound, "font.notFound", "La fuente ya no existe")
         }
         let before = FontInfoSnapshot(font)
         font.name = edit.before.name
@@ -393,7 +393,12 @@ struct FontController: RouteCollection {
         let user = try req.auth.require(User.self)
         if user.isAdmin { return user }
         guard try await Capabilities.has(cap, user, on: req.db) else {
-            throw Abort(.forbidden, reason: reason)
+            // El código sale de la **propia capacidad** (`capability.retireFont`) y no
+            // se escribe en cada sitio que llama: son siete y una lista paralela se
+            // separaría del enum a la primera capacidad nueva. Al añadir una, la
+            // traducción que falte hace que el cliente caiga en la frase del servidor,
+            // que es castellano pero no es una clave cruda en pantalla.
+            throw AppError(.forbidden, "capability.\(cap.rawValue)", reason)
         }
         return user
     }
@@ -433,16 +438,16 @@ struct FontController: RouteCollection {
         let dto = try req.content.decode(DuplicateDTO.self)
         let id = try font.requireID()
         guard dto.of != id else {
-            throw Abort(.badRequest, reason: "Una fuente no puede ser duplicada de sí misma")
+            throw AppError(.badRequest, "font.duplicateSelf", "Una fuente no puede ser duplicada de sí misma")
         }
         guard let buena = try await Font.find(dto.of, on: req.db) else {
-            throw Abort(.notFound, reason: "La fuente indicada no existe")
+            throw AppError(.notFound, "font.notFound", "La fuente indicada no existe")
         }
         // Sin cadenas: si la buena ya apunta a otra, se apunta al final de la cadena. Con
         // A→B y luego B→C, A se quedaba señalando a una ficha escondida y el enlace de
         // «ver la buena» no llevaba a ninguna parte.
         guard buena.$duplicateOf.id == nil else {
-            throw Abort(.conflict, reason: "Esa fuente ya está marcada como duplicada de otra")
+            throw AppError(.conflict, "font.alreadyDuplicate", "Esa fuente ya está marcada como duplicada de otra")
         }
         font.$duplicateOf.id = dto.of
         try await font.save(on: req.db)
@@ -614,7 +619,7 @@ struct FontController: RouteCollection {
     private func requireCanManage(_ req: Request, font: Font) throws {
         let user = try req.auth.require(User.self)
         guard canManage(user: user, font: font) else {
-            throw Abort(.forbidden, reason: "Solo el creador o un administrador puede borrar o reubicar esta fuente")
+            throw AppError(.forbidden, "font.ownerOnly", "Solo el creador o un administrador puede borrar o reubicar esta fuente")
         }
     }
 

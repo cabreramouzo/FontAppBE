@@ -51,7 +51,7 @@ struct FontFavoriteController: RouteCollection {
     /// Verifica que la fuente existe (404 si no) y devuelve su id.
     private func requireFontID(_ req: Request) async throws -> UUID {
         guard let font = try await Font.find(req.parameters.get("fontID"), on: req.db) else {
-            throw Abort(.notFound, reason: "No existe la fuente indicada")
+            throw AppError(.notFound, "font.notFound", "No existe la fuente indicada")
         }
         return try font.requireID()
     }

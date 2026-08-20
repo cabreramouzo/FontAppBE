@@ -75,7 +75,7 @@ struct FontPhotoController: RouteCollection {
     /// GET /fonts/:fontID/photos — la galería. Pública.
     @Sendable func index(req: Request) async throws -> [PhotoResponse] {
         guard let fontID = req.parameters.get("fontID", as: UUID.self) else {
-            throw Abort(.badRequest, reason: "Identificador de fuente no válido")
+            throw AppError(.badRequest, "font.badID", "Identificador de fuente no válido")
         }
         let fotos = try await FontPhoto.query(on: req.db)
             .filter(\.$font.$id == fontID)
@@ -100,17 +100,17 @@ struct FontPhotoController: RouteCollection {
     @Sendable func create(req: Request) async throws -> PhotoResponse {
         let user = try req.auth.require(User.self)
         guard let fontID = req.parameters.get("fontID", as: UUID.self) else {
-            throw Abort(.badRequest, reason: "Identificador de fuente no válido")
+            throw AppError(.badRequest, "font.badID", "Identificador de fuente no válido")
         }
         guard try await Font.find(fontID, on: req.db) != nil else {
-            throw Abort(.notFound, reason: "Fuente no encontrada")
+            throw AppError(.notFound, "font.notFound", "Fuente no encontrada")
         }
         let dto = try req.content.decode(CreatePhotoDTO.self)
         guard !dto.url.trimmingCharacters(in: .whitespaces).isEmpty else {
-            throw Abort(.badRequest, reason: "Falta la imagen")
+            throw AppError(.badRequest, "image.missing", "Falta la imagen")
         }
         if let caption = dto.caption, caption.count > 200 {
-            throw Abort(.badRequest, reason: "La descripción es demasiado larga")
+            throw AppError(.badRequest, "photo.descriptionTooLong", "La descripción es demasiado larga")
         }
 
         let userID = try user.requireID()
@@ -118,7 +118,7 @@ struct FontPhotoController: RouteCollection {
         // Los documentos pasan sin puerta; ver el comentario de arriba.
         if dto.kind != .document {
             guard try await Capabilities.has(.addSecondaryPhoto, user, on: req.db) else {
-                throw Abort(.forbidden, reason: "Todavía no puedes añadir fotos de la fuente")
+                throw AppError(.forbidden, "capability.addSecondaryPhoto", "Todavía no puedes añadir fotos de la fuente")
             }
             let mias = try await FontPhoto.query(on: req.db)
                 .filter(\.$font.$id == fontID)
@@ -126,7 +126,7 @@ struct FontPhotoController: RouteCollection {
                 .filter(\.$kind != PhotoKind.document)
                 .count()
             guard mias < Self.perPersonLimit else {
-                throw Abort(.tooManyRequests, reason: "Ya has añadido bastantes fotos de esta fuente")
+                throw AppError(.tooManyRequests, "photo.limit", "Ya has añadido bastantes fotos de esta fuente")
             }
         }
 
@@ -147,7 +147,7 @@ struct FontPhotoController: RouteCollection {
         let user = try req.auth.require(User.self)
         guard let photoID = req.parameters.get("photoID", as: UUID.self),
               let foto = try await FontPhoto.find(photoID, on: req.db) else {
-            throw Abort(.notFound, reason: "Foto no encontrada")
+            throw AppError(.notFound, "photo.notFound", "Foto no encontrada")
         }
         let userID = try user.requireID()
         // Quien la subió o un moderador, y nadie más. Estuvo abierta por nivel
@@ -156,7 +156,7 @@ struct FontPhotoController: RouteCollection {
         // que todas las capacidades se deshacen— y la presión que aliviaba no existe,
         // porque ya hay tope de 3 fotos por persona y fuente y son denunciables.
         let puede = foto.$uploader.id == userID || user.canModerate
-        guard puede else { throw Abort(.forbidden, reason: "No puedes borrar esta foto") }
+        guard puede else { throw AppError(.forbidden, "photo.deleteForbidden", "No puedes borrar esta foto") }
         // El fichero se borra en best-effort, igual que en fuentes y reseñas: si falla,
         // queda un huérfano en el disco y no una petición rota.
         try? await req.imageStorage.delete(foto.url)

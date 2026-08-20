@@ -65,7 +65,17 @@ public func configure(_ app: Application) async throws {
         allowedMethods: [.GET, .POST, .PUT, .DELETE, .OPTIONS],
         allowedHeaders: [.accept, .authorization, .contentType, .origin]
     ))
-    app.middleware.use(cors, at: .beginning)
+    // La pila se monta **desde cero**, y esto no es una manía de orden. Vapor añade su
+    // `ErrorMiddleware` por su cuenta, y como queda **por dentro** del nuestro atrapa el
+    // error primero y lo convierte en respuesta: el nuestro no llega a verlo nunca y el
+    // `code` no sale. Se descubrió porque las respuestas seguían llegando sin él.
+    //
+    // El orden que queda: CORS por fuera de los errores, para que una respuesta de error
+    // también lleve sus cabeceras — sin eso, el navegador convierte un 409 legible en un
+    // fallo de CORS y el usuario no ve el motivo.
+    app.middleware = .init()
+    app.middleware.use(cors)
+    app.middleware.use(CodedErrorMiddleware())
 
     // Sin APP_SECRET los enlaces de baja del resumen semanal se firman con una clave
     // aleatoria por proceso: dejarían de valer en cada reinicio (y un enlace de baja

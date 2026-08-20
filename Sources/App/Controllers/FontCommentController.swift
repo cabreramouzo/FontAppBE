@@ -88,7 +88,7 @@ struct FontCommentController: RouteCollection {
         // Pero algo hay que aportar (texto o estado); si no, no tiene sentido.
         let body = dto.body?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !body.isEmpty || dto.waterStatus != nil else {
-            throw Abort(.badRequest, reason: "Indica el estado o escribe un comentario")
+            throw AppError(.badRequest, "comment.empty", "Indica el estado o escribe un comentario")
         }
 
         let comment = FontComment(
@@ -157,7 +157,7 @@ struct FontCommentController: RouteCollection {
     /// Verifica que la fuente existe (404 si no) y la devuelve.
     private func requireFont(_ req: Request) async throws -> Font {
         guard let font = try await Font.find(req.parameters.get("fontID"), on: req.db) else {
-            throw Abort(.notFound, reason: "No existe la fuente indicada")
+            throw AppError(.notFound, "font.notFound", "No existe la fuente indicada")
         }
         return font
     }
@@ -235,7 +235,7 @@ struct FontCommentController: RouteCollection {
             throw Abort(.notFound)
         }
         guard user.canModerate || comment.$user.id == user.id else {
-            throw Abort(.forbidden, reason: "Solo puedes modificar tus propias reseñas")
+            throw AppError(.forbidden, "comment.selfOnly", "Solo puedes modificar tus propias reseñas")
         }
         return comment
     }
