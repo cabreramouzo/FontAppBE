@@ -248,10 +248,15 @@ Chile (agosto 2026) es el primer país fuera de Europa, y lo primero que enseñ�
 | paso | quedan |
 |---|---|
 | todo lo que trae Overpass (`drinking_water` + `water_tap` + `spring`) | 448 |
-| menos `access=no\|private` y los manantiales pelados | 382 |
-| menos lo que **no es una fuente de beber** (`filtra --es`) | **319** |
+| menos los `natural=spring` pelados (65) y `access=private` (1) | 382 |
+| menos lo que **no es una fuente de beber** | **319** |
 
-Los 63 que caen son de dos familias, y las dos son de allí:
+Las tres cosas las hace `filtra --es` de una vez. Las dos primeras vivían solo dentro de
+la query de Overpass del apartado de Portugal, así que quien reusara un fichero ya
+descargado se las comía; ahora están en la herramienta, y por eso del crudo al importable
+hay **un solo paso** — que es lo que permite volver a comprobar el 319.
+
+De los 129 que caen, 66 son los de siempre (manantiales pelados y captaciones privadas). Los otros 63 son de dos familias, y las dos son de allí:
 
 - **El sistema de abastecimiento tageado como `amenity=drinking_water`** (29): el APR
   —Agua Potable Rural—, la cooperativa, el comité, el estanque, la planta potabilizadora,

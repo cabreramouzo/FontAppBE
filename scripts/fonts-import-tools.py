@@ -66,6 +66,23 @@ TERMAL = re.compile(
 
 # Etiquetas que dicen «esto no se bebe» sin ambigüedad ninguna. Valen para cualquier país.
 def dice_que_no_se_bebe(tags):
+    # Captaciones de abastecimiento urbano. Estaba escrito en la query de Overpass del
+    # runbook y aquí no, así que quien reusara un fichero ya descargado se las comía.
+    if tags.get('access') in ('no', 'private'):
+        return 'access=' + tags['access']
+    # **Un `natural=spring` sin ningún otro tag no es una fuente.** Se comprobó por
+    # satélite con diez al azar en Occitània: charcos y nacimientos de riachuelo, no
+    # sitios a los que ir a beber; allí eran 2.318 de 5.357 y en Chile 65 de 137. Valen
+    # los que dicen algo de sí mismos: nombre, captación (`man_made`) o potabilidad.
+    #   Esta regla también vivía solo en la query de Overpass. Tenerla aquí es lo que
+    # hace que del fichero crudo al importable haya **un solo paso**, y por tanto que
+    # «se descartan N» se pueda volver a comprobar.
+    if (tags.get('natural') == 'spring'
+            and tags.get('amenity') != 'drinking_water'
+            and not tags.get('name')
+            and not tags.get('man_made')
+            and 'drinking_water' not in tags):
+        return 'spring pelado'
     if tags.get('drinking_water') == 'no':
         return 'drinking_water=no'
     if tags.get('leisure') in ('swimming_pool', 'bathing_place', 'water_park'):
