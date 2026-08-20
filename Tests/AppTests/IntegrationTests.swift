@@ -1282,6 +1282,35 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// El perfil se encuentra escribas el nombre como lo escribas.
+    ///
+    /// Las dos mitades de una mención decían cosas distintas: `MentionNotifier` resuelve
+    /// en minúsculas —`@sebas` avisa a `Sebas`— pero `/users/:id` comparaba exacto, así
+    /// que el enlace del texto llevaba a un 404. Recibías el aviso y, al ir a mirar, tu
+    /// propio perfil no existía. En producción le pasaba a 4 de 15 autores recientes.
+    func testUsernameLookupIgnoresCase() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "Sebas")
+
+            for escrito in ["Sebas", "sebas", "SEBAS", "sEbAs"] {
+                try await app.test(.GET, "users/\(escrito)", afterResponse: { res in
+                    XCTAssertEqual(res.status, .ok, "no encuentra el perfil escrito «\(escrito)»")
+                    XCTAssertEqual(try res.content.decode(UserResponse.self).username, "Sebas",
+                                   "y devuelve el nombre REAL, no el que se tecleó")
+                })
+            }
+
+            // Y no se pueden crear dos que solo difieran en mayúsculas: si se pudiera, la
+            // búsqueda de arriba sería ambigua y `@sebas` no sabría a quién avisar.
+            try await app.test(.POST, "users", beforeRequest: { req in
+                try req.content.encode(CreateUserDTO(name: "Otro", username: "sebas",
+                                                     email: "otro@example.com", password: "password123"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .conflict)
+            })
+        }
+    }
+
     /// Poner una incidencia te pone la fuente en favoritas, y por tanto te llegan las
     /// respuestas.
     ///

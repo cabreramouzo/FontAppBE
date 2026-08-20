@@ -965,6 +965,24 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   Pendiente y **más ancho que esto**: el resto de errores del servidor (correo repetido,
   usuario en uso) siguen llegando en castellano a todo el mundo. Se arregla devolviendo un
   código traducible, no frase a frase.
+- **El nombre de usuario se busca sin distinguir mayúsculas** (`User.findByUsername`).
+  Las dos mitades de una mención decían cosas distintas: `MentionNotifier` ya resolvía en
+  minúsculas —`@sebas` avisa a `Sebas`— pero `/users/:id` comparaba exacto, así que el
+  enlace que se pinta en el texto llevaba a un **404**: recibías el aviso y, al ir a
+  mirar, tu propio perfil no existía. Medido en producción: `sebas` → 404 y `Sebas` → 200,
+  y **4 de 15 autores recientes** llevan mayúsculas.
+  La **unicidad también** es insensible ahora, o se podían crear `sebas` y `Sebas` y la
+  búsqueda pasaba a ser ambigua (comprobado que hoy no hay ninguna pareja así).
+  Va por `lower() = lower()` y **no** por `ILIKE`: los nombres admiten `_`, que en `LIKE`
+  es un comodín de un carácter, así que `Dani_Ccir` habría casado con `DaniXCcir`.
+- **Un nombre de usuario que es un correo burla `emailPublic`.** Esa preferencia nace
+  apagada y el perfil oculta el campo `email` como debe… mientras el mismo correo está al
+  lado como nombre, firmando cada reseña en público. Son **2 de 15** en producción. Las
+  cuentas nuevas ya no pueden (`@` no está en el juego de caracteres), y a las que existen
+  **no se las puede renombrar** —el nombre es con el que entran y `PUT /users/:id` es
+  self-only—, así que lo único posible es avisarles: `ProfilePage` pinta un aviso si su
+  nombre parece un correo, y otro distinto si no es mencionable por otra razón (espacios).
+  Solo lo ve a quien le toca.
 - **Menciones** (`Utils/Mentions.swift`): `@nombre` en una reseña o incidencia se pinta
   como enlace al perfil (`AuthorLine.tsx`) y avisa por correo. La regla del servidor y la
   del cliente tienen que decir lo mismo o se subraya a quien no se avisa; las dos llevan

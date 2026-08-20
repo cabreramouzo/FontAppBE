@@ -17,3 +17,19 @@ const VALIDO = /^[a-zA-Z0-9_.-]{3,30}$/
 export function esNombreValido(nombre: string): boolean {
   return VALIDO.test(nombre)
 }
+
+/**
+ * ¿El nombre de usuario es una dirección de correo?
+ *
+ * Se pregunta para **avisar a quien lo tiene**, no para prohibirlo: prohibirlo ya lo hace
+ * `esNombreValido` (una `@` no está en el juego de caracteres), pero eso solo vale para
+ * las cuentas nuevas. Las que ya existían siguen enseñando su correo **firmando cada
+ * reseña, en público**, y lo más probable es que ni lo sepan.
+ *
+ * Es peor de lo que parece porque **burla una preferencia**: `emailPublic` nace apagada y
+ * el perfil oculta el correo como debe… mientras el mismo correo está ahí al lado como
+ * nombre de usuario. Medido en producción: 2 de 15 autores recientes.
+ */
+export function pareceCorreo(nombre: string): boolean {
+  return /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(nombre.trim())
+}

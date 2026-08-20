@@ -28,7 +28,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { waterStatusInfo } from '../lib/waterStatus'
-import { esNombreValido } from '../lib/username'
+import { esNombreValido, pareceCorreo } from '../lib/username'
 import { timeAgo } from '../lib/time'
 import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
@@ -187,6 +187,17 @@ export function ProfilePage() {
           {/* Cambiar de nombre no es gratis y conviene decirlo ANTES, no en un error
               después: el enlace a tu perfil es `/users/<nombre>`, así que el viejo deja
               de funcionar y las menciones ya escritas apuntan a donde ya no estás. */}
+          {/* Dos avisos para las cuentas creadas antes de que el registro exigiera la
+              regla. No se pintan casi nunca —hoy, 4 de 15 autores recientes— pero a quien
+              le toca no tiene forma de enterarse por su cuenta.
+              El del correo va primero y en `warning` porque es de privacidad: su
+              dirección está firmando cada reseña en público, y además burla su propia
+              preferencia (`emailPublic` nace apagada y el perfil sí oculta el campo). */}
+          {pareceCorreo(user.username) ? (
+            <Alert severity="warning" sx={{ mt: 1.5 }}>{t('profile.usernameIsEmail')}</Alert>
+          ) : !esNombreValido(user.username) && (
+            <Alert severity="warning" sx={{ mt: 1.5 }}>{t('profile.usernameUnmentionable')}</Alert>
+          )}
           <Alert severity="info" sx={{ mt: 1.5 }}>{t('profile.usernameWarning')}</Alert>
           <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
             <Button type="submit" variant="contained" disableElevation size="small" disabled={savingPrivacy}>

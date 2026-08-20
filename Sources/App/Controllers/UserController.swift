@@ -172,7 +172,12 @@ struct UserController: RouteCollection {
         }
 
         // 409 limpio en vez de dejar que el constraint de unicidad reviente en 500.
-        guard try await User.query(on: req.db).filter(\.$username == dto.username).first() == nil else {
+        // Insensible a mayúsculas **a propósito**: con la comparación exacta se podían
+        // crear `sebas` y `Sebas`, y entonces la búsqueda por nombre —que ahora ignora
+        // las mayúsculas, como el aviso de menciones— no sabría a cuál de los dos se
+        // refiere `@sebas`. Comprobado en producción que hoy no hay ninguna pareja así;
+        // esto es para que siga sin haberlas.
+        guard try await User.findByUsername(dto.username, on: req.db) == nil else {
             throw AppError(.conflict, "user.usernameTaken", "El username '\(dto.username)' ya está en uso")
         }
         let email = dto.email.lowercased()
@@ -277,7 +282,7 @@ struct UserController: RouteCollection {
         let dto = try req.content.decode(UpdateUserDTO.self)
 
         // Si el username cambia a uno que ya tiene OTRO usuario -> 409.
-        if let clash = try await User.query(on: req.db).filter(\.$username == dto.username).first(),
+        if let clash = try await User.findByUsername(dto.username, on: req.db),
            clash.id != user.id {
             throw AppError(.conflict, "user.usernameTaken", "El username '\(dto.username)' ya está en uso")
         }
@@ -353,7 +358,9 @@ struct UserController: RouteCollection {
         if let id = UUID(uuidString: param) {
             user = try await User.find(id, on: req.db)
         } else {
-            user = try await User.query(on: req.db).filter(\.$username == param).first()
+            // Sin distinguir mayúsculas, como ya hacía el aviso de menciones: si no,
+            // `@sebas` avisa a `Sebas` y el enlace del texto da 404.
+            user = try await User.findByUsername(param, on: req.db)
         }
         guard let user else { throw Abort(.notFound) }
         return user

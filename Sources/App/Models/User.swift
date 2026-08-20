@@ -1,3 +1,4 @@
+import SQLKit
 import Fluent
 import Vapor
 
@@ -183,5 +184,29 @@ struct UserResponse: Content {
         self.mentionEmails = includeEmail ? user.mentionEmails : nil
         self.anonymized = user.anonymizedAt != nil
         self.createdAt = user.createdAt
+    }
+}
+
+extension User {
+    /// Busca por nombre de usuario **sin distinguir mayúsculas**.
+    ///
+    /// Existe porque las dos mitades de una mención decían cosas distintas:
+    /// `MentionNotifier` ya resolvía en minúsculas —`@sebas` avisa a `Sebas`— pero
+    /// `/users/:id` comparaba exacto, así que el enlace que se pinta en el texto llevaba
+    /// a un **404**. La persona recibía el aviso y, al ir a mirar, su propio perfil no
+    /// existía. Medido en producción: de 15 autores recientes, **4** llevan mayúsculas.
+    ///
+    /// Va por `lower() = lower()` y no por `ILIKE` a propósito: los nombres admiten `_`,
+    /// que en `LIKE` es un comodín de un carácter, así que `Dani_Ccir` habría casado
+    /// también con `DaniXCcir`. Aquí no hay comodines que escapar porque no hay `LIKE`.
+    static func findByUsername(_ name: String, on db: any Database) async throws -> User? {
+        guard let sql = db as? SQLDatabase else {
+            return try await User.query(on: db).filter(\.$username == name).first()
+        }
+        struct Fila: Decodable { let id: UUID }
+        let fila = try await sql.raw("SELECT id FROM users WHERE lower(username) = lower(\(bind: name)) LIMIT 1")
+            .first(decoding: Fila.self)
+        guard let fila else { return nil }
+        return try await User.find(fila.id, on: db)
     }
 }
