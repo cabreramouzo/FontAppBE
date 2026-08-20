@@ -60,7 +60,7 @@ import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { BaseLayerTile, LayerPicker, useBaseLayer } from '../components/BaseLayers'
 import { BottomSheet } from '../components/BottomSheet'
 import { MissionsPanel } from '../components/MissionsPanel'
-import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
+import { WaterTypeHelpButton, DrinkableHelpButton } from '../components/WaterHelp'
 import { enqueue, isOffline } from '../lib/outbox'
 import { ImagePicker } from '../components/ImagePicker'
 import { NO_STATUS_COLOR, WATER_STATUS, WATER_STATUS_OPTIONS, waterStatusInfo } from '../lib/waterStatus'
@@ -656,10 +656,13 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
           </TextField>
           <WaterTypeHelpButton />
         </Box>
-        <TextField select label={t('detail.drinkability')} value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')} size="small">
-          <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
-          {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
-        </TextField>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <TextField select label={t('detail.drinkability')} value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')} size="small" sx={{ flexGrow: 1 }}>
+            <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
+            {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
+          </TextField>
+          <DrinkableHelpButton />
+        </Box>
         <ImagePicker file={file} onChange={pickFile} />
         {gpsHint && (
           <Alert

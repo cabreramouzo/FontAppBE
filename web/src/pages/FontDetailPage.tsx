@@ -63,7 +63,7 @@ import { MentionInput } from '../components/MentionInput'
 import { StarRating } from '../components/StarRating'
 import { ImagePicker } from '../components/ImagePicker'
 import { Skeleton } from '../components/Skeleton'
-import { WaterTypeHelpButton } from '../components/WaterTypeHelp'
+import { WaterTypeHelpButton, DrinkableHelpButton } from '../components/WaterHelp'
 import { useTheme } from '@mui/material/styles'
 import { BadgeIcon } from '../components/BadgeIcon'
 import { TIER_COLOR } from '../lib/tierColors'
@@ -442,10 +442,13 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
         </TextField>
         <WaterTypeHelpButton />
       </Box>
-      <TextField select label={t('detail.drinkability')} value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')} size="small">
-        <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
-        {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
-      </TextField>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <TextField select label={t('detail.drinkability')} value={drinkable} onChange={(e) => setDrinkable(e.target.value as Drinkable | '')} size="small" sx={{ flexGrow: 1 }}>
+          <MenuItem value="">{t('detail.unknownDrink')}</MenuItem>
+          {DRINKABLE_OPTIONS.map((k) => (<MenuItem key={k} value={k}>{DRINKABLE_EMOJI[k]} {t(`drink.${k}`)}</MenuItem>))}
+        </TextField>
+        <DrinkableHelpButton />
+      </Box>
       {puedeReubicar ? (
         <RelocateFont
           lat={coords.lat}

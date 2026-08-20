@@ -769,6 +769,51 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// `untreated` viaja entera: se acepta al editar y sale igual al leer.
+    ///
+    /// Parece de perogrullo y no lo es: `Drinkable` se decodifica desde el `rawValue`,
+    /// así que quitar el caso no rompe la compilación de nada — deja un 400 «Cannot
+    /// initialize Drinkable from invalid String value untreated» en la única pantalla
+    /// donde se usa. Es exactamente el fallo que dio un binario sin recompilar.
+    func testUntreatedRoundTrips() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "notractada")
+            let tok = try await login(app, username: "notractada")
+            let id = try await createFont(app, token: tok, name: "Font del Montnegre", lat: 41.6, long: 2.6)
+
+            try await app.test(.PUT, "fonts/\(id)", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Font del Montnegre", latitude: 41.6, longitude: 2.6,
+                                                     image: nil, description: nil, source: .mountain, drinkable: .untreated))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok, "PUT con drinkable=untreated debería aceptarse")
+            })
+
+            try await app.test(.GET, "fonts/\(id)") { res in
+                XCTAssertEqual(res.status, .ok)
+                let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                XCTAssertEqual(json?["drinkable"] as? String, "untreated")
+            }
+        }
+    }
+
+    /// No tratada NO es no potable: son la mitad de las fuentes de montaña y esconderlas
+    /// del mapa vaciaría justo la zona a la que se va. Lo fija aquí y no en el cliente
+    /// porque el listado es el que las tiene que seguir devolviendo.
+    func testUntreatedIsNotHiddenFromTheMap() async throws {
+        try await withApp { app in
+            try await Font(name: "Deu sense tractar", latitude: 41.7, longitude: 2.7,
+                           source: .mountain, drinkable: .untreated).create(on: app.db)
+
+            try await app.test(.GET, "fonts") { res in
+                XCTAssertEqual(res.status, .ok)
+                let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                let items = json?["items"] as? [[String: Any]] ?? []
+                XCTAssertTrue(items.contains { $0["drinkable"] as? String == "untreated" },
+                              "una fuente no tratada tiene que salir en el listado público")
+            }
+        }
+    }
+
     func testFontJSONHidesInternalColumns() async throws {
         try await withApp { app in
             _ = try await register(app, username: "shape")

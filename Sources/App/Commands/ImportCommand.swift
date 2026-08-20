@@ -95,6 +95,10 @@ struct ImportCommand: AsyncCommand {
     }
 
     /// Mapea el tag OSM `drinking_water` a nuestra potabilidad (ausente ⇒ desconocido).
+    ///
+    /// Nunca devuelve `.untreated`: OSM no tiene ningún tag que lo diga, y deducirlo del
+    /// tipo de punto sería inventarse un dato que luego nadie distingue del que puso una
+    /// persona delante de la fuente. Esa etiqueta la ponen los usuarios.
     private static func drinkable(from tags: [String: String]) -> Drinkable? {
         switch tags["drinking_water"] {
         case "yes": return .yes

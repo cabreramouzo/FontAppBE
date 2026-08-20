@@ -1,7 +1,7 @@
 // Tipos del contrato de la API — ver ../../../docs/api.md.
 
 export type WaterSource = 'tap' | 'mountain' | 'spring' | 'well' | 'fountain' | 'other'
-export type Drinkable = 'yes' | 'no' | 'conditional'
+export type Drinkable = 'yes' | 'no' | 'conditional' | 'untreated'
 
 export interface Font {
   id: string

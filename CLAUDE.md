@@ -815,6 +815,48 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   suya y no debería poder borrar el análisis que aportó otro. Denunciables desde el día
   uno (`content_flags` acepta `photo`).
 
+## Potabilidad: «no tratada» no es un matiz de «con condiciones»
+
+- `Drinkable` tiene cuatro valores: `yes` · `no` · `conditional` · **`untreated`**. Los
+  tres primeros son calcados del tag OSM `drinking_water`; el cuarto es nuestro y **el
+  importador no lo escribe nunca** — OSM no lo dice, y deducirlo del tipo de punto sería
+  inventar un dato que después nadie distingue del que puso alguien delante de la fuente.
+- Lo pidió un usuario y tenía razón: *«a la font del Montnegre jo no puc dir si és potable
+  o no; el que sí que és correcte és informar que l'aigua no és tractada»*. Es el caso de
+  casi toda font de muntanya.
+- **La opción que faltaba no era una cuarta casilla, era una afirmación.** Ya había cuatro
+  —la otra es «— desconeguda —», o sea `null`— y se la lleva el **93,8 %** de la base
+  (83,7 % en montaña y manantial). Pero eso es la AUSENCIA de dato, y lo que su vecino sí
+  puede afirmar es un dato: nadie la trata. Por eso es un valor y no un hueco.
+- **No se renombró `conditional`,** que era la salida barata y estaba propuesta. Tres
+  razones: el importador lo escribe desde OSM, así que la próxima importación metería «no
+  tratada» donde OSM dijo «conditional»; **significan cosas distintas** —`conditional` es
+  una salvedad sobre CUÁNDO o CÓMO (hiérvela, solo en temporada) y `untreated` es de DÓNDE
+  viene el agua, así que una fuente puede ser no tratada **y** estar declarada potable—; y
+  habría cambiado el significado de las que ya lo tienen sin que nadie las tocara. Medido
+  antes de decidir: `conditional` la llevan **5 de cada 5.100** (~70 en toda la base), así
+  que el renombre era casi gratis en datos y aun así falso.
+- No hizo falta migración: la columna es `.string`, no un enum de Postgres.
+- **`untreated` NO cuenta como no potable** (`isNotPotable` sigue siendo `d === 'no'`).
+  Esconderla del mapa vaciaría justo la zona a la que se va a andar. Hay test.
+- El orden del desplegable es **de más a menos garantía** (`yes`, `untreated`,
+  `conditional`, `no`) y no el de aparición: con cuatro opciones el orden ya es
+  información, y enterrar `untreated` la dejaría sin usar siendo la que toca casi siempre.
+- **Botón (?) con la leyenda** (`DrinkableHelpButton` en `WaterHelp.tsx`). Incluye
+  «desconeguda» aunque no sea un valor de `Drinkable`: es justo la que hay que distinguir
+  a mano de «no tractada» —nadie lo ha mirado, frente a sabemos que nadie la trata— y sin
+  esa fila la ayuda explicaría todo menos lo que de verdad se confunde. Cierra con la nota
+  de que **ninguna fuente natural tiene garantía sanitaria**, que es lo que dicen los
+  rótulos de la ACA y lo que hace entender la etiqueta de golpe.
+- Las dos leyendas —tipo de fuente y potabilidad— se pintan desde **una sola función**
+  (`BotonLeyenda`), no copiadas: dos diálogos separados se separan de verdad al primer
+  arreglo, y el que se olvide solo se nota en uno de los dos. Por eso el fichero pasó de
+  `WaterTypeHelp.tsx` a `WaterHelp.tsx`.
+- Los tests fijan el `rawValue` **porque es el contrato del cable**: quitar el caso rompe
+  la compilación y se ve, pero cambiarlo por `not_treated` compila perfectamente y deja un
+  400 en la única pantalla donde se usa. Verificado rompiéndolo a propósito: los dos salen
+  en rojo. Es el mismo fallo que dio un binario sin recompilar durante el desarrollo.
+
 ## Datos de fuentes
 - Al importar de OSM, un **`natural=spring` sin ningún otro tag no es una fuente**: se
   miraron diez al azar por satélite y son charcos o nacimientos de riachuelo (2.318 de

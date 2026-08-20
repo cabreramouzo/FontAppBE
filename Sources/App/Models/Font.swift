@@ -15,11 +15,23 @@ enum WaterSource: String, Codable, Sendable, CaseIterable {
     case other
 }
 
-/// Potabilidad, calcada del tag OSM `drinking_water` (ausente ⇒ desconocido/null).
+/// Potabilidad. `yes`/`no`/`conditional` son calcadas del tag OSM `drinking_water`
+/// (ausente ⇒ desconocido/null); `untreated` es nuestra y NO la escribe el importador.
+///
+/// `untreated` no es un matiz de `conditional`, es otra cosa: `conditional` es una
+/// salvedad sobre CUÁNDO o CÓMO se bebe (hiérvela, solo en temporada) y `untreated`
+/// dice de DÓNDE viene el agua — subterránea, sin tratar y sin control sanitario.
+/// Una fuente puede ser no tratada y estar declarada potable a la vez.
+///
+/// Existe porque el hueco que le quedaba a una font de muntanya era `nil`, o sea la
+/// AUSENCIA de dato, y lo que su vecino sí puede afirmar es un dato: nadie la trata.
+/// Medido antes de añadirla: el 83,7 % de las fuentes de montaña y manantial estaban
+/// sin potabilidad, y `conditional` la llevaban 5 de cada 5.100.
 enum Drinkable: String, Codable, Sendable, CaseIterable {
     case yes
     case no
     case conditional
+    case untreated
 }
 
 /// Una fuente de agua ("font" = fuente). Se localiza por latitud/longitud.
