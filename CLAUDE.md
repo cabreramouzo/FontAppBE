@@ -1222,6 +1222,12 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Lo que hay que mirar es `huecoBajoLaBarra` (si no es 0, la barra no llega al borde) y
   `acolchadoDeLaBarra` comparado con `insetAbajo`: acolchado 0 con inset 34 significa que
   el `pb: env(...)` de `TabBar` no se aplicó a tiempo.
+- **Antes que nada, `standalone`.** La primera medición llegó entera con `standalone=false`
+  —tomada en una pestaña de Safari y no en la app instalada—, y en esa condición el fallo
+  no existe: todo salía coherente y sin hueco. Se lee como «ya no pasa» cuando lo que
+  pasa es que se mira el sitio equivocado. Por eso el panel ahora lo avisa en rojo y
+  arriba del todo. En Safari los insets valen 0 con normalidad: su propia barra ocupa esa
+  franja.
 
 ## Peso de las fotos (decisión aplazada, con disparador)
 

@@ -109,6 +109,14 @@ export function SafeAreaProbe() {
     if (!on) return null
 
     const texto = lineas.join('\n')
+    // El aviso más importante del panel, y por eso va arriba y en rojo: la primera
+    // medición que se tomó salió entera con `standalone=false`, o sea desde una pestaña
+    // de Safari y no desde la app instalada — que es la única condición en la que el
+    // fallo existe. Todo lo demás salía coherente y sin hueco, y eso se lee como «ya no
+    // pasa» cuando lo que pasa es que se está mirando el sitio equivocado.
+    const enLaApp = window.matchMedia('(display-mode: standalone)').matches ||
+        (navigator as unknown as { standalone?: boolean }).standalone === true
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 99999,
@@ -116,6 +124,13 @@ export function SafeAreaProbe() {
             padding: '6px 8px', maxHeight: '45vh', overflow: 'auto',
             whiteSpace: 'pre-wrap', wordBreak: 'break-all', borderBottom: '2px solid #0f0',
         }}>
+            {!enLaApp && (
+                <div style={{ color: '#f66', fontWeight: 700, marginBottom: 6 }}>
+                    ⚠️ ESTO NO ES LA APP INSTALADA (standalone=false).{'\n'}
+                    El hueco solo sale abriendo desde el icono de la pantalla de inicio.{'\n'}
+                    Ciérrala del todo y ábrela desde ahí.
+                </div>
+            )}
             {texto || 'midiendo…'}
             <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
                 <button
