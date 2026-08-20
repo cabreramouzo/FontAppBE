@@ -303,6 +303,15 @@ export interface ZoneCoverageResponse {
  * desde tus coordenadas. Ver `ZoneStats.local` en el servidor para el porqué.
  */
 export interface ZoneLocal {
+  /**
+   * En qué país estás, deducido de las fuentes de alrededor (el más repetido de las 30).
+   *
+   * Puede no venir: si alrededor no hay ninguna fuente clasificada, el servidor no lo
+   * inventa. Opcional **y** nullable a propósito — aquí «no viene» y «null» significan
+   * lo mismo, «no lo sé», así que no hace falta el codificador explícito que sí necesitan
+   * `tier` y `fromDays`.
+   */
+  country?: string | null
   /** Cuántas ha juntado. Menos de 30 si alrededor no hay más. */
   fonts: number
   /** Hasta dónde ha tenido que llegar, en km. */

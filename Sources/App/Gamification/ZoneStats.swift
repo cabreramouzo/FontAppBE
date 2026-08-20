@@ -173,7 +173,7 @@ enum ZoneStats {
         let lat = snapLocal(rawLat)
         let long = snapLocal(rawLong)
         guard let sql = db as? SQLDatabase else {
-            return Local(fonts: 0, radiusKm: 0, withPhoto: 0, checkedRecently: 0, contributors: 0)
+            return Local(fonts: 0, radiusKm: 0, withPhoto: 0, checkedRecently: 0, contributors: 0, country: nil)
         }
         let corte = now.addingTimeInterval(-freshDays * 86_400)
         // Prefiltro por caja, igual que en el resto de consultas de cercanía: un grado de
@@ -189,11 +189,12 @@ enum ZoneStats {
             let radius_km: Double
             let contributors: Int
             let checked: Int
+            let country: String?
         }
 
         let fila = try await sql.raw("""
             WITH cercanas AS (
-                SELECT f.id, f.image,
+                SELECT f.id, f.image, f.country,
                        sqrt(power((f.latitude - \(bind: lat)) * 111.0, 2)
                           + power((f.longitude - \(bind: long)) * 111.0
                                   * cos(radians(\(bind: lat))), 2)) AS km
@@ -218,18 +219,29 @@ enum ZoneStats {
                 FROM font_comments
                 WHERE font_id IN (SELECT id FROM dentro)
             )
-            SELECT agg.fonts, agg.with_photo, agg.radius_km, com.contributors, com.checked
+            SELECT agg.fonts, agg.with_photo, agg.radius_km, com.contributors, com.checked,
+                   -- El país **más repetido** entre las cercanas, no el de la más cercana:
+                   -- en una frontera, la de al lado puede ser del otro lado y no es eso lo
+                   -- que se quiere responder. Va como subconsulta escalar y no como CTE
+                   -- unida, o un sitio sin ninguna fuente clasificada dejaría la fila
+                   -- entera vacía y la tarjeta se quedaría sin sus otros datos.
+                   (SELECT d.country FROM dentro d
+                     WHERE d.country IS NOT NULL AND d.country <> ''
+                     GROUP BY d.country ORDER BY count(*) DESC, d.country ASC LIMIT 1) AS country
             FROM agg, com
             """).first(decoding: Fila.self)
 
-        guard let fila else { return Local(fonts: 0, radiusKm: 0, withPhoto: 0, checkedRecently: 0, contributors: 0) }
+        guard let fila else {
+            return Local(fonts: 0, radiusKm: 0, withPhoto: 0, checkedRecently: 0, contributors: 0, country: nil)
+        }
         return Local(fonts: fila.fonts,
                      // Un decimal: el metro exacto ni se sabe ni importa, y «4,7 km»
                      // se lee de un vistazo donde «4,712834 km» no.
                      radiusKm: (fila.radius_km * 10).rounded() / 10,
                      withPhoto: fila.with_photo,
                      checkedRecently: fila.checked,
-                     contributors: fila.contributors)
+                     contributors: fila.contributors,
+                     country: fila.country)
     }
 
     struct Local: Content, Sendable {
@@ -251,8 +263,22 @@ enum ZoneStats {
         /// El corte de «comprobada hace poco», para que la interfaz lo explique sin
         /// repetir el número por su cuenta.
         let freshDays: Int
+        /// En qué país estás, deducido de las fuentes que tienes alrededor.
+        ///
+        /// Existe para que `/zones` pueda arrancar en tu país sin preguntar nada: el
+        /// cliente tiene coordenadas y la lista de zonas no tiene coordenadas, así que
+        /// sin esto no había forma de cruzarlos. Sale de los datos y no de la IP del
+        /// registro, que es lo que de verdad dice dónde estás **ahora**.
+        ///
+        /// Nulo si alrededor no hay ninguna fuente clasificada; ahí no se omite ni se
+        /// inventa nada, y la página se queda enseñándolo todo, que es la verdad.
+        /// (No hace falta el codificador explícito de `BadgeSlot.tier`: allí la ausencia
+        /// significaba lo contrario que `null`, y aquí las dos cosas quieren decir lo
+        /// mismo — «no lo sé».)
+        let country: String?
 
-        init(fonts: Int, radiusKm: Double, withPhoto: Int, checkedRecently: Int, contributors: Int) {
+        init(fonts: Int, radiusKm: Double, withPhoto: Int, checkedRecently: Int, contributors: Int,
+             country: String?) {
             self.fonts = fonts
             self.radiusKm = radiusKm
             self.withPhoto = withPhoto
@@ -262,6 +288,7 @@ enum ZoneStats {
             self.photoPct = pct(withPhoto)
             self.freshPct = pct(checkedRecently)
             self.freshDays = Int(ZoneStats.freshDays)
+            self.country = country
         }
     }
 

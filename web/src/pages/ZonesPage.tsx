@@ -15,6 +15,7 @@ import { getZoneRanking, getZones } from '../api/client'
 import type { ZoneCoverage, ZoneRanking } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
 import { CoverageBar } from '../components/CoverageBar'
+import { nombrePais, paisesDe } from '../lib/countries'
 import { LocalGoalCard } from '../components/LocalGoalCard'
 import { Skeleton } from '../components/Skeleton'
 
@@ -28,10 +29,35 @@ import { Skeleton } from '../components/Skeleton'
  *
  * Por eso también la tabla va plegada: hay que ir a buscarla.
  */
+/** Dónde se recuerda el país elegido. `TODOS` es una elección, no la ausencia de una. */
+const RECUERDO = 'zones:country'
+const TODOS = '*'
+
 export function ZonesPage() {
   const { t, lang } = useI18n()
   const [zonas, setZonas] = useState<ZoneCoverage[] | null>(null)
   const [estado, setEstado] = useState<'loading' | 'ok' | 'error'>('loading')
+
+  // Tres fuentes para el país, en este orden: lo que elegiste (gana siempre y para
+  // siempre), dónde estás, y si no se sabe ninguna de las dos, todos.
+  //
+  // Que la elección explícita gane a la ubicación es lo que hace que el automatismo no
+  // moleste: alguien que está en Francia mirando España a propósito no quiere que la
+  // página se lo deshaga en cada visita.
+  const [pais, setPais] = useState<string | null>(() => {
+    try { return localStorage.getItem(RECUERDO) } catch { return null }
+  })
+
+  function elige(p: string) {
+    setPais(p)
+    try { localStorage.setItem(RECUERDO, p) } catch { /* modo privado: da igual */ }
+  }
+
+  /** Lo dice la tarjeta de tu entorno. Solo vale si aún no habías elegido tú. */
+  const desdeTuUbicacion = useCallback((suyo: string | null) => {
+    if (!suyo) return
+    setPais((actual) => actual ?? suyo)
+  }, [])
 
   const cargar = useCallback(async () => {
     setEstado('loading')
@@ -46,6 +72,12 @@ export function ZonesPage() {
   useEffect(() => { void cargar() }, [cargar])
   useEffect(() => { document.title = `${t('zones.title')} · FontApp` }, [t])
 
+  const paises = zonas ? paisesDe(zonas) : []
+  // Un país recordado que ya no está en los datos (o el `*`) no filtra nada, así que se
+  // ve todo. Es preferible a no enseñar ninguna zona y parecer que la página está rota.
+  const filtra = pais !== null && pais !== TODOS && paises.includes(pais)
+  const visibles = filtra ? (zonas ?? []).filter((z) => z.country === pais) : (zonas ?? [])
+
   return (
     <Box className="pad" sx={{ maxWidth: 900, mx: 'auto' }}>
       <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>🗺️ {t('zones.title')}</Typography>
@@ -53,7 +85,7 @@ export function ZonesPage() {
 
       {/* Primero lo que se puede terminar y después lo que no. Al revés, la página
           abría con una barra al 0,3 % que no se mueve en meses. */}
-      <LocalGoalCard />
+      <LocalGoalCard onCountry={desdeTuUbicacion} />
 
       {estado === 'loading' && <Skeleton lines={6} />}
 
@@ -77,7 +109,35 @@ export function ZonesPage() {
           {t('zones.byRegion')}
         </Typography>
       )}
-      {estado === 'ok' && zonas?.map((z) => <ZonaCard key={z.region} zona={z} lang={lang} />)}
+
+      {/* El selector solo aparece si de verdad hay entre qué elegir: con un solo país es
+          un control que no hace nada y que además miente sobre el alcance de la app. */}
+      {estado === 'ok' && paises.length > 1 && (
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, overflowX: 'auto', pb: 0.5,
+                   // Que la fila se pueda arrastrar en móvil sin cortar el chip de la
+                   // punta contra el borde de la pantalla.
+                   mx: -2, px: 2, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
+          {paises.map((p) => (
+            <Chip
+              key={p}
+              label={nombrePais(p, t)}
+              onClick={() => elige(p)}
+              color={pais === p ? 'primary' : 'default'}
+              variant={pais === p ? 'filled' : 'outlined'}
+              sx={{ flexShrink: 0 }}
+            />
+          ))}
+          <Chip
+            label={t('zones.allCountries')}
+            onClick={() => elige(TODOS)}
+            color={pais === TODOS || pais === null ? 'primary' : 'default'}
+            variant={pais === TODOS || pais === null ? 'filled' : 'outlined'}
+            sx={{ flexShrink: 0 }}
+          />
+        </Box>
+      )}
+
+      {estado === 'ok' && visibles.map((z) => <ZonaCard key={`${z.country}/${z.region}`} zona={z} lang={lang} />)}
     </Box>
   )
 }

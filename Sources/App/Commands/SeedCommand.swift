@@ -61,9 +61,20 @@ struct SeedCommand: AsyncCommand {
         for (name, lat, long) in Self.moianesFonts {
             // El endpoint de zonas excluye deliberadamente las fuentes sin región. El
             // conjunto está íntegramente en el Moianès, así que podemos clasificarlo sin
-            // ejecutar `populate-regions`: Natural Earth admin-1 lo sitúa en Catalunya.
+            // ejecutar `populate-regions`.
+            //
+            // **`Spain`/`Barcelona` y no `España`/`Catalunya`**, que es lo que decía
+            // antes. Los dos valores estaban mal: `region` guarda lo que Natural Earth
+            // llame admin-1, y en España eso son **provincias** —Catalunya no aparece por
+            // ningún lado—; y `country` guarda el nombre en inglés que trae ese mismo
+            // fichero. Comprobado contra las fuentes reales importadas de esa caja: 1.123
+            // salen como `Spain`/`Barcelona`.
+            //
+            // No era cosmético: hacía que toda base local tuviera un país que no existe
+            // en producción. Se vio al poner el selector de país de `/zones`, donde
+            // salían dos chips llamados «España».
             let font = Font(name: name, latitude: lat, longitude: long,
-                            country: "España", region: "Catalunya")
+                            country: "Spain", region: "Barcelona")
             try await font.save(on: db)
             fonts.append(font)
         }

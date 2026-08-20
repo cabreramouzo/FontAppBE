@@ -89,6 +89,28 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
     que `/activity`), lo que de paso hace que los vecinos vean el mismo objetivo. Sale
     `contributors`, cuánta gente distinta ha reseñado alguna — solo cuántos, sin nombres,
     así que `gamification_opt_out` no aplica, igual que en las barras.
+  - **Filtro por país en `/zones`** (`lib/countries.ts` + chips en `ZonesPage`): con
+    Chile son 96 filas planas y cinco países, y la lista dejó de servir para mirar la
+    tuya. **No hizo falta tocar el endpoint**: `ZoneStats.Coverage` ya llevaba `country`.
+    Arranca en **tu país** —`ZoneStats.local` devuelve ahora `country`, el más repetido de
+    tus 30 cercanas, y `LocalGoalCard` lo sube a la página con un `onCountry`; se reporta
+    desde ahí y no con una segunda petición porque esa tarjeta ya tiene la posición y ya
+    ha llamado—. **Tu elección explícita gana siempre** y se recuerda (`zones:country`):
+    quien está en Francia mirando España a propósito no quiere que la página se lo deshaga
+    en cada visita. El selector no se pinta con un solo país.
+    Los nombres se traducen **por lista explícita** (`TRADUCIDOS`) y no con `t()` a pelo:
+    `t()` devuelve la clave cruda si falta, así que el día que entre Alemania saldría
+    «country.Germany» escrito en un chip; sin entrada, sale el nombre en bruto. Al importar
+    un país nuevo hay que añadirlo ahí con sus seis traducciones.
+    Ojo, `fonts.country` guarda **el nombre en inglés de Natural Earth** («Spain»,
+    «France»): es clave, no rótulo.
+  - El selector destapó que **el seed inventaba un país**: insertaba las 381 del Moianès
+    como `España`/`Catalunya`, y las dos cosas estaban mal —`region` guarda admin-1, que en
+    España son **provincias**, y `country` el nombre inglés—, así que toda base local tenía
+    un país que en producción no existe y salían **dos chips llamados «España»**. Medido
+    contra las importadas de esa misma caja: 1.123 son `Spain`/`Barcelona`. Corregido en
+    `SeedCommand`. Es otra cara de la regla de siempre: ninguna cifra ni ninguna forma de
+    los datos vale si sale de una base local sembrada.
   - Diez niveles (`ContributionScore.levels`), de `drop` a `aquifer`. El nivel y las
     insignias viajan como **clave**, no como nombre: el rótulo lo traduce el navegador.
   - Vitrina en `/me/badges` (`BadgesPage`): los diez niveles y las ocho familias,

@@ -37,7 +37,7 @@ import { Skeleton } from './Skeleton'
  * 1.482 en el centro de Barcelona, así que con un radio fijo el objetivo saldría
  * terminable en un sitio e imposible en el otro. Ver `ZoneStats.localFonts`.
  */
-export function LocalGoalCard() {
+export function LocalGoalCard({ onCountry }: { onCountry?: (pais: string | null) => void } = {}) {
   const { t, lang } = useI18n()
   const [datos, setDatos] = useState<ZoneLocal | null>(null)
   const [estado, setEstado] = useState<'ubicando' | 'sinPermiso' | 'cargando' | 'ok' | 'error'>('ubicando')
@@ -59,11 +59,19 @@ export function LocalGoalCard() {
         const d = await getLocalZone(lat, long)
         if (!vivo) return
         setDatos(d)
+        // El país sube a la página, que lo usa para arrancar el filtro en el tuyo. Se
+        // reporta desde aquí y no con una segunda petición porque esta tarjeta ya tiene
+        // la posición y ya ha llamado: pedirlo aparte sería duplicar la única consulta
+        // cara de la página.
+        onCountry?.(d.country ?? null)
         setEstado('ok')
       } catch {
         if (vivo) setEstado('error')
       }
     }
+    // `onCountry` NO va en las dependencias: es una función nueva en cada render del
+    // padre, y meterla relanzaría la petición en bucle. Solo se llama, nunca se observa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   /** Pulsado el botón: ahí sí se puede pedir permiso, porque es un gesto del usuario. */
@@ -72,7 +80,9 @@ export function LocalGoalCard() {
     if (!p) return
     setEstado('cargando')
     try {
-      setDatos(await getLocalZone(p[0], p[1]))
+      const d = await getLocalZone(p[0], p[1])
+      setDatos(d)
+      onCountry?.(d.country ?? null)
       setEstado('ok')
     } catch {
       setEstado('error')
