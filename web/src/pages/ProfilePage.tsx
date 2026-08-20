@@ -59,10 +59,29 @@ export function ProfilePage() {
   if (!user) return null
 
   return (
-    <Box className="pad profile" sx={{ maxWidth: 720, mx: 'auto' }}>
+    // 720 mientras es una columna y 1.180 desde `md`, igual que la ficha de fuente: el
+    // ancho lo decide lo que contiene, y esto son tarjetas y listas, no prosa.
+    <Box className="pad profile" sx={{ maxWidth: { xs: 720, md: 1180 }, mx: 'auto' }}>
       <Link component={RouterLink} to="/">{t('detail.backMap')}</Link>
       <Typography variant="h4" sx={{ my: 1, fontWeight: 800 }}>{t('nav.profile')}</Typography>
 
+      {/* Dos columnas en escritorio: **quién eres y qué estás haciendo** a la izquierda
+          —identidad, accesos, tu marcador y las fuentes que cuidas—, y **tus cosas** a la
+          derecha —favoritas, tus fuentes, tus reseñas—. La izquierda es el resumen y lo
+          accionable; la derecha, el archivo.
+          El orden en que colapsa en móvil es exactamente el que ya tenía la página, así
+          que aquí no hace falta el truco de pintar algo en uno de los dos huecos: partir
+          una página en dos reordena el móvil solo, y eso ya nos costó un arreglo en la
+          ficha de fuente. Comprobado midiendo el orden de los títulos. */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 5fr) minmax(0, 7fr)' },
+          gap: { xs: 0, md: 4 },
+          alignItems: 'start',
+        }}
+      >
+      <Box>
       <Box
         component="section"
         sx={{ mb: 3, p: 2, border: 1, borderColor: 'divider', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}
@@ -98,7 +117,9 @@ export function ProfilePage() {
           `gamificationOptOut` — cuidar una fuente no es puntuar, y quien apagó los puntos
           sigue queriendo saber qué se le está quedando viejo. */}
       <GuardedFonts />
+      </Box>
 
+      <Box>
       <Box component="section" sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{t('profile.myFavorites')}</Typography>
         {favorites === null && <Skeleton lines={2} />}
@@ -160,6 +181,8 @@ export function ProfilePage() {
             }}
           />
         )}
+      </Box>
+      </Box>
       </Box>
     </Box>
   )

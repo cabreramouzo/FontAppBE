@@ -848,8 +848,20 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   responde viendo las tres a la vez. Con pestañas se esconden dos tercios detrás de un
   clic. Y se descartó plegar las **secciones** en acordeón: un interruptor no se lee mejor
   plegado, y con dos abiertos la página vuelve a estar igual de larga.
-- Resultado medido de las dos cosas juntas: **4.082 → 2.328 px** en escritorio (4,5 → 2,6
-  pantallas) y **4.749 → 2.746** en móvil (5,8 → 3,4).
+- **Y dos columnas desde `md`** (1.180, igual que la ficha): a la izquierda **quién eres y
+  qué estás haciendo** —identidad, accesos, marcador y fuentes que cuidas—, a la derecha
+  **tus cosas** —favoritas, tus fuentes, tus reseñas—. La izquierda es el resumen y lo
+  accionable; la derecha, el archivo. Con el marcador puesto quedan **1.465 y 1.374 px**,
+  91 de diferencia.
+- Aquí **no** hizo falta el truco de pintar algo en un hueco o en el otro que sí pide la
+  ficha: el orden en que colapsa en móvil es exactamente el que la página ya tenía.
+  Comprobado midiendo el orden de los títulos, no mirando — es el mismo fallo silencioso.
+- Resultado medido de las tres cosas: **4.082 → 1.692 px** en escritorio (4,5 → 1,9
+  pantallas) y **4.749 → 3.534** en móvil (5,8 → 4,4) **con más contenido que antes**, porque
+  la cuenta con la que se midió al final ya tiene marcador de gamificación y la primera no.
+- Ojo al medir esto: **con el usuario de prueba vacío la pantalla no dice nada**. Hubo que
+  darle 21 favoritas, 12 fuentes y 8 reseñas y lanzarle `gamification-sync` para ver la
+  página real. Otra vez lo de siempre con las bases locales.
 
 ## El ancho lo decide el contenido, no la página
 
