@@ -5,7 +5,7 @@ import L from 'leaflet'
 import 'leaflet.markercluster'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
-import type { FontSummary } from '../api/types'
+import type { FontSummary, MapCluster } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
 import { statusIcon } from '../lib/statusMarker'
 import { waterStatusInfo } from '../lib/waterStatus'
@@ -25,7 +25,9 @@ function escapeHtml(s: string): string {
 //
 // La fuente seleccionada NO entra en el cluster: se añade suelta sobre el mapa para
 // que quede siempre visible (nunca se combina con las demás al alejar el zoom).
-export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; selectedID?: string | null }) {
+export function ClusteredMarkers({
+  fonts, clusters, selectedID,
+}: { fonts: FontSummary[]; clusters: MapCluster[]; selectedID?: string | null }) {
   const map = useMap()
   const navigate = useNavigate()
   const { t } = useI18n()
@@ -40,6 +42,7 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
 
   useEffect(() => {
     const group = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 })
+    const serverClusters = L.layerGroup()
     let selectedMarker: L.Marker | null = null
     const porID = new Map<string, L.Marker>()
 
@@ -108,6 +111,25 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
     }
     map.addLayer(group)
 
+    for (const cluster of clusters) {
+      const digits = String(cluster.count).length
+      const size = Math.min(64, 38 + Math.max(0, digits - 2) * 6)
+      const marker = L.marker([cluster.latitude, cluster.longitude], {
+        icon: L.divIcon({
+          className: 'server-map-cluster',
+          html: `<span>${cluster.count.toLocaleString()}</span>`,
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size / 2],
+        }),
+        title: t('map.clusterCount', { n: cluster.count }),
+      })
+      marker.on('click', () => {
+        map.setView([cluster.latitude, cluster.longitude], Math.min(18, map.getZoom() + 2))
+      })
+      serverClusters.addLayer(marker)
+    }
+    map.addLayer(serverClusters)
+
     // Repone el popup que estuviera abierto. Manda el seleccionado —salvo que el usuario
     // ya lo hubiera descartado— y si no, el que abrió tocando un pin. Nunca movemos el
     // mapa: el encuadre es cosa de <FocusOn>.
@@ -128,9 +150,10 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
       map.off('click', cerrarAMano)
       group.off('animationend', reponer)
       map.removeLayer(group)
+      map.removeLayer(serverClusters)
       if (selectedMarker) map.removeLayer(selectedMarker)
     }
-  }, [fonts, map, navigate, t, selectedID])
+  }, [fonts, clusters, map, navigate, t, selectedID])
 
   return null
 }

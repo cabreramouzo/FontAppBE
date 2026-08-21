@@ -17,6 +17,7 @@ struct FontController: RouteCollection {
         fonts.get("near", use: near)
         fonts.get("near", "download", use: nearDownload)
         fonts.get("in-bounds", use: inBounds)
+        fonts.get("map", use: mapItems)
         fonts.get(":fontID", use: show)
         fonts.get(":fontID", "photo-author", use: photoAuthor)
 
@@ -616,6 +617,80 @@ struct FontController: RouteCollection {
         return try await Font.summaries(for: fonts, on: req.db)
     }
 
+    /// GET /fonts/map?minLat=&maxLat=&minLong=&maxLong=&width=&height=
+    ///
+    /// Si caben, devuelve **todas** las fuentes del viewport. Si no, PostgreSQL las
+    /// agrega en una cuadrícula del tamaño aproximado de un cluster visual. A diferencia
+    /// del antiguo LIMIT aleatorio, cada fuente cuenta y ninguna zona desaparece.
+    @Sendable func mapItems(req: Request) async throws -> MapResponse {
+        try MapQuery.validate(query: req)
+        let q = try req.query.decode(MapQuery.self)
+        guard q.minLat < q.maxLat, q.minLong < q.maxLong else {
+            throw Abort(.badRequest, reason: "Los límites del mapa están invertidos o vacíos")
+        }
+        guard let sql = req.db as? SQLDatabase else {
+            // El driver real es PostgreSQL. Este camino mantiene útil el endpoint con
+            // adaptadores de test que no soporten SQL crudo.
+            let fonts = try await Font.visible(on: req.db)
+                .filter(\.$latitude >= q.minLat).filter(\.$latitude <= q.maxLat)
+                .filter(\.$longitude >= q.minLong).filter(\.$longitude <= q.maxLong)
+                .limit(Self.maxInBoundsResults).all()
+            let summaries = try await Font.summaries(for: fonts, on: req.db)
+            return MapResponse(total: fonts.count, fonts: summaries)
+        }
+
+        let countRow = try await sql.raw("""
+            SELECT count(*)::bigint AS total FROM fonts
+            WHERE \(unsafeRaw: Font.visibleSQL)
+              AND latitude >= \(bind: q.minLat) AND latitude <= \(bind: q.maxLat)
+              AND longitude >= \(bind: q.minLong) AND longitude <= \(bind: q.maxLong)
+            """).first()
+        let total64 = try countRow?.decode(column: "total", as: Int64.self) ?? 0
+        let total = Int(total64)
+        guard total > 0 else { return MapResponse(total: 0, fonts: [], clusters: []) }
+
+        if total <= Self.maxInBoundsResults {
+            let rows = try await sql.raw("""
+                SELECT id FROM fonts
+                WHERE \(unsafeRaw: Font.visibleSQL)
+                  AND latitude >= \(bind: q.minLat) AND latitude <= \(bind: q.maxLat)
+                  AND longitude >= \(bind: q.minLong) AND longitude <= \(bind: q.maxLong)
+                """).all()
+            let ids = try rows.map { try $0.decode(column: "id", as: UUID.self) }
+            let fonts = try await Font.query(on: req.db).filter(\.$id ~~ ids).all()
+            let summaries = try await Font.summaries(for: fonts, on: req.db)
+            return MapResponse(total: total, fonts: summaries)
+        }
+
+        // Una celda ocupa unos 70 px: suficientes para tocarla con el pulgar y cerca del
+        // radio visual de markercluster. Las cotas evitan una respuesta enorme si alguien
+        // llama a la API con dimensiones inventadas.
+        let columns = min(32, max(1, Int(ceil(Double(q.width ?? 390) / 70))))
+        let rowsCount = min(24, max(1, Int(ceil(Double(q.height ?? 844) / 70))))
+        let cellLong = (q.maxLong - q.minLong) / Double(columns)
+        let cellLat = (q.maxLat - q.minLat) / Double(rowsCount)
+        let rows = try await sql.raw("""
+            SELECT
+              floor((longitude - \(bind: q.minLong)) / \(bind: cellLong))::int AS grid_x,
+              floor((latitude - \(bind: q.minLat)) / \(bind: cellLat))::int AS grid_y,
+              avg(latitude)::double precision AS latitude,
+              avg(longitude)::double precision AS longitude,
+              count(*)::bigint AS quantity
+            FROM fonts
+            WHERE \(unsafeRaw: Font.visibleSQL)
+              AND latitude >= \(bind: q.minLat) AND latitude <= \(bind: q.maxLat)
+              AND longitude >= \(bind: q.minLong) AND longitude <= \(bind: q.maxLong)
+            GROUP BY grid_x, grid_y
+            ORDER BY grid_y, grid_x
+            """).all()
+        let clusters = try rows.map {
+            MapCluster(latitude: try $0.decode(column: "latitude", as: Double.self),
+                       longitude: try $0.decode(column: "longitude", as: Double.self),
+                       count: Int(try $0.decode(column: "quantity", as: Int64.self)))
+        }
+        return MapResponse(total: total, fonts: [], clusters: clusters)
+    }
+
     private func find(_ req: Request) async throws -> Font {
         guard let font = try await Font.find(req.parameters.get("fontID"), on: req.db) else {
             throw Abort(.notFound)
@@ -697,6 +772,44 @@ struct BoundsQuery: Content {
     let maxLat: Double
     let minLong: Double
     let maxLong: Double
+}
+
+struct MapQuery: Content {
+    let minLat: Double
+    let maxLat: Double
+    let minLong: Double
+    let maxLong: Double
+    let width: Int?
+    let height: Int?
+}
+
+extension MapQuery: Validatable {
+    static func validations(_ validations: inout Validations) {
+        validations.add("minLat", as: Double.self, is: .range(-90...90))
+        validations.add("maxLat", as: Double.self, is: .range(-90...90))
+        validations.add("minLong", as: Double.self, is: .range(-180...180))
+        validations.add("maxLong", as: Double.self, is: .range(-180...180))
+        validations.add("width", as: Int.self, is: .range(1...10_000), required: false)
+        validations.add("height", as: Int.self, is: .range(1...10_000), required: false)
+    }
+}
+
+struct MapCluster: Content {
+    let latitude: Double
+    let longitude: Double
+    let count: Int
+}
+
+struct MapResponse: Content {
+    let total: Int
+    let fonts: [FontSummary]
+    let clusters: [MapCluster]
+
+    init(total: Int, fonts: [FontSummary], clusters: [MapCluster] = []) {
+        self.total = total
+        self.fonts = fonts
+        self.clusters = clusters
+    }
 }
 
 extension BoundsQuery: Validatable {

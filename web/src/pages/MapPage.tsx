@@ -52,7 +52,7 @@ import { useHeading } from '../lib/useHeading'
 // Parchea L.Map para poder girar el mapa con dos dedos. Se importa por su efecto.
 import 'leaflet-rotate'
 
-import type { Drinkable, Font, FontSummary, Page, WaterSource } from '../api/types'
+import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, WaterSource } from '../api/types'
 import { apiFetch, createComment, createFont, describeError, uploadImage } from '../api/client'
 import { nombreFuente } from '../lib/fontName'
 import { useAuth } from '../auth/AuthContext'
@@ -220,6 +220,10 @@ function firmaDeFuentes(l: FontSummary[]): string {
     .join('~')
 }
 
+function firmaDeClusters(l: MapCluster[]): string {
+  return l.map((c) => [c.latitude, c.longitude, c.count].join('|')).join('~')
+}
+
 function FontMarkers({
   nonce,
   onlyWithWater,
@@ -235,23 +239,45 @@ function FontMarkers({
   sourceFilter: WaterSource | 'all'
   selectedID: string | null
 }) {
-  const [fonts, setFonts] = useState<FontSummary[]>([])
+  const [mapData, setMapData] = useState<{ fonts: FontSummary[]; clusters: MapCluster[] }>({
+    fonts: [], clusters: [],
+  })
+  // Una respuesta lenta de la vista anterior no puede borrar la vista nueva.
+  const requestNumber = useRef(0)
 
   const loadBounds = useCallback(async (map: LeafletMap) => {
     const b = map.getBounds()
+    const size = map.getSize()
     const params = new URLSearchParams({
       minLat: String(b.getSouth()),
       maxLat: String(b.getNorth()),
       minLong: String(b.getWest()),
       maxLong: String(b.getEast()),
+      width: String(Math.max(1, Math.round(size.x))),
+      height: String(Math.max(1, Math.round(size.y))),
     })
+    const mine = ++requestNumber.current
     try {
-      const nuevas = await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`)
+      let nuevas: MapResponse
+      try {
+        nuevas = await apiFetch<MapResponse>(`/fonts/map?${params}`)
+      } catch {
+        // Permite desplegar web y API en cualquier orden (y hacer rollback): un backend
+        // anterior todavía expone el endpoint limitado, aunque no tenga clusters de servidor.
+        const fonts = await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`)
+        nuevas = { total: fonts.length, fonts, clusters: [] }
+      }
+      if (mine !== requestNumber.current) return
       // Se conserva el array anterior si lo que se pinta no ha cambiado. Cambiar su
       // identidad reconstruye TODOS los marcadores, que es caro y además se lleva por
       // delante el popup abierto — y recentrar el mapa estando parado devuelve
       // exactamente las mismas fuentes.
-      setFonts((prev) => (firmaDeFuentes(prev) === firmaDeFuentes(nuevas) ? prev : nuevas))
+      setMapData((prev) => (
+        firmaDeFuentes(prev.fonts) === firmaDeFuentes(nuevas.fonts)
+        && firmaDeClusters(prev.clusters) === firmaDeClusters(nuevas.clusters)
+          ? prev
+          : { fonts: nuevas.fonts, clusters: nuevas.clusters }
+      ))
     } catch {
       // silencioso: mapa vacío si falla
     }
@@ -275,13 +301,13 @@ function FontMarkers({
   // marcadores cuando cambia la identidad del array, el popup que acababas de abrir se
   // destruía solo al segundo siguiente, sin que hubiera cambiado ni un dato.
   const shown = useMemo(() => {
-    let l = showNonPotable ? fonts : fonts.filter((f) => !isNotPotable(f.drinkable))
+    let l = showNonPotable ? mapData.fonts : mapData.fonts.filter((f) => !isNotPotable(f.drinkable))
     if (onlyWithWater) l = l.filter(hasWater)
     if (onlyReliable) l = l.filter(isReliable)
     if (sourceFilter !== 'all') l = l.filter((f) => f.source === sourceFilter)
     return l
-  }, [fonts, showNonPotable, onlyWithWater, onlyReliable, sourceFilter])
-  return <ClusteredMarkers fonts={shown} selectedID={selectedID} />
+  }, [mapData.fonts, showNonPotable, onlyWithWater, onlyReliable, sourceFilter])
+  return <ClusteredMarkers fonts={shown} clusters={mapData.clusters} selectedID={selectedID} />
 }
 
 // Captura el clic en el mapa para situar la nueva fuente.

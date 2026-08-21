@@ -44,6 +44,7 @@ const ca: Dict = {
 
   // Mapa
   'map.searchPlaceholder': '🔎 Cerca font o lloc…',
+  'map.clusterCount': '{n} fonts en aquesta zona',
   'map.near': '📍 A prop meu',
   'map.onlyWater': '💧 Només amb aigua',
   'map.includeNonPotable': '🚱 Inclou no potables',
@@ -934,6 +935,7 @@ const es: Dict = {
   'donate.otherWays': 'otras formas',
 
   'map.searchPlaceholder': '🔎 Buscar fuente o lugar…',
+  'map.clusterCount': '{n} fuentes en esta zona',
   'map.near': '📍 Cerca de mí',
   'map.onlyWater': '💧 Solo con agua',
   'map.includeNonPotable': '🚱 Incluir no potables',
@@ -1812,6 +1814,7 @@ const gl: Dict = {
   'donate.otherWays': 'outras formas',
 
   'map.searchPlaceholder': '🔎 Buscar fonte ou lugar…',
+  'map.clusterCount': '{n} fontes nesta zona',
   'map.near': '📍 Preto de min',
   'map.onlyWater': '💧 Só con auga',
   'map.includeNonPotable': '🚱 Incluír non potables',
@@ -2690,6 +2693,7 @@ const eu: Dict = {
   'donate.otherWays': 'beste aukera batzuk',
 
   'map.searchPlaceholder': '🔎 Bilatu iturria edo lekua…',
+  'map.clusterCount': '{n} iturri eremu honetan',
   'map.near': '📍 Nire ondoan',
   'map.onlyWater': '💧 Urarekin soilik',
   'map.includeNonPotable': '🚱 Sartu ez-edangarriak',
@@ -3568,6 +3572,7 @@ const en: Dict = {
   'donate.otherWays': 'other ways',
 
   'map.searchPlaceholder': '🔎 Search fountain or place…',
+  'map.clusterCount': '{n} fountains in this area',
   'map.near': '📍 Near me',
   'map.onlyWater': '💧 Only with water',
   'map.includeNonPotable': '🚱 Include non-potable',
@@ -4445,6 +4450,7 @@ const fr: Dict = {
   'donate.stripeThanks': 'Merci beaucoup de soutenir FontApp !',
   'donate.otherWays': 'autres moyens',
   'map.searchPlaceholder': "🔎 Recherche fontaine ou lieu…",
+  'map.clusterCount': '{n} fontaines dans cette zone',
   'map.near': "📍 Près de moi",
   'map.onlyWater': "💧 Uniquement avec de l'eau",
   'map.includeNonPotable': "🚱 Inclure les produits non potables",

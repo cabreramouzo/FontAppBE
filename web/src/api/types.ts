@@ -171,6 +171,19 @@ export interface FontSummary extends Font {
   recentStatusConflict: boolean
 }
 
+/** Agregado exacto del mapa cuando el viewport contiene demasiadas fuentes. */
+export interface MapCluster {
+  latitude: number
+  longitude: number
+  count: number
+}
+
+export interface MapResponse {
+  total: number
+  fonts: FontSummary[]
+  clusters: MapCluster[]
+}
+
 /** Estado de favoritos de una fuente (guardada por el usuario + recuento total). */
 export interface FavoriteStatus {
   favorited: boolean

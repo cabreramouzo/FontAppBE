@@ -886,3 +886,22 @@ select:not([class*="Mui"]) {
 /* El aspa de cerrar era un #757575 fijo, que sobre el fondo oscuro desaparecía igual. */
 .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
 .leaflet-container a.leaflet-popup-close-button:hover { color: var(--fg); }
+
+/* Agregados que ya vienen calculados por el servidor. No entran en markercluster:
+   cada círculo representa el recuento real de su celda, no una muestra del LIMIT. */
+.leaflet-container .server-map-cluster {
+  display: grid;
+  place-items: center;
+  border: 3px solid color-mix(in srgb, var(--accent) 70%, white);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 82%, transparent);
+  color: rgba(0, 0, 0, 0.87);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.leaflet-container .server-map-cluster:hover {
+  filter: brightness(0.92);
+}

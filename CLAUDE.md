@@ -567,6 +567,18 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   enlace a una fuente concreta. El mapa te sigue hasta que tocas el mapa: arrastrar o
   hacer zoom desengancha el seguimiento; el botón «centrar en mí» lo vuelve a activar.
 
+## Carga y agrupación del mapa
+
+- El mapa usa `GET /fonts/map` con el bounding box y el tamaño en píxeles del viewport.
+  Hasta 3.000 resultados devuelve todas las `FontSummary`; por encima, PostgreSQL agrupa
+  **todas** las fuentes visibles en una cuadrícula de unos 70 px y devuelve centro y
+  cantidad exacta por celda. No se debe volver a un `LIMIT` que deje zonas del mapa vacías.
+- Los agregados del servidor se pintan fuera de `markercluster`: al tocarlos acercan el
+  mapa y una petición posterior los sustituye por grupos más pequeños o fuentes reales.
+  Las respuestas llevan un número de secuencia en el cliente para que una petición vieja
+  no reemplace una vista nueva. `/fonts/in-bounds` queda solo como compatibilidad durante
+  despliegues o rollback; la web recurre a él si un backend anterior aún no tiene `/map`.
+
 ## El popup del mapa
 
 - **Todo el popup es un enlace**, no solo el botón: se toca con el pulgar sobre un mapa en

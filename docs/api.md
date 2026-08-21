@@ -186,7 +186,8 @@ guarda en la BD y solo sirve para desactivar el resumen de ese usuario concreto.
 | GET | `/fonts?page=&per=` | — | query de paginación | 200 `Page<Font>` | — |
 | GET | `/fonts/near?lat=&long=&quantity=` | — | `lat`,`long` req.; `quantity` opc. (máx 100, def 10) | 200 `[FontSummary]` (por distancia) | 400 |
 | GET | `/fonts/near/download?...` | — | igual que `near` | 200 `[FontSummary]` | 400 |
-| GET | `/fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=` | — | bounding box (para el mapa) | 200 `[FontSummary]` | 400 |
+| GET | `/fonts/map?minLat=&maxLat=&minLong=&maxLong=&width=&height=` | — | bounding box y tamaño del viewport | 200 `{ total, fonts, clusters }` | 400 |
+| GET | `/fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=` | — | endpoint legado del mapa (máx. 3.000) | 200 `[FontSummary]` | 400 |
 | GET | `/fonts/:id` | — | — | 200 `Font` | 404 |
 | POST | `/fonts` | Bearer | `{name, latitude[-90,90], longitude[-180,180], image?, description?}` | 201 `Font` | 400, 401 |
 | PUT | `/fonts/:id` | Bearer | campos de POST; `name` admite `null` o vacío para quitar el nombre | 200 `Font` | 400, 401, 404 |

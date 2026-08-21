@@ -8,6 +8,50 @@ import XCTVapor
 // Requiere Postgres corriendo y la base `fontapp_test` (owner `vapor`).
 final class IntegrationTests: XCTestCase {
 
+    func testMapEndpointReturnsEverythingOrExactServerClusters() async throws {
+        try await withApp { app in
+            guard let sql = app.db as? SQLDatabase else { return XCTFail("Postgres requerido") }
+
+            try await sql.raw("""
+                INSERT INTO fonts (id, name, latitude, longitude, created_at)
+                VALUES
+                  ('00000000-0000-0000-0000-000000000001', 'Una', 41.8, 2.1, now()),
+                  ('00000000-0000-0000-0000-000000000002', 'Dues', 41.81, 2.11, now())
+                """).run()
+            try await app.test(.GET, "fonts/map?minLat=41&maxLat=42&minLong=1&maxLong=3&width=390&height=800") { res in
+                XCTAssertEqual(res.status, .ok)
+                let map = try res.content.decode(MapResponse.self)
+                XCTAssertEqual(map.total, 2)
+                XCTAssertEqual(map.fonts.count, 2)
+                XCTAssertTrue(map.clusters.isEmpty)
+            }
+
+            try await sql.raw("""
+                INSERT INTO fonts (id, name, latitude, longitude, created_at)
+                SELECT md5(('map-cluster-' || i)::text)::uuid, NULL,
+                       0.01 + (i % 100)::double precision / 110.0,
+                       0.01 + (i % 97)::double precision / 107.0,
+                       now()
+                FROM generate_series(1, 3001) AS i
+                """).run()
+            try await app.test(.GET, "fonts/map?minLat=0&maxLat=1&minLong=0&maxLong=1&width=390&height=800") { res in
+                XCTAssertEqual(res.status, .ok)
+                let map = try res.content.decode(MapResponse.self)
+                XCTAssertEqual(map.total, 3001)
+                XCTAssertTrue(map.fonts.isEmpty)
+                XCTAssertFalse(map.clusters.isEmpty)
+                XCTAssertEqual(map.clusters.reduce(0) { $0 + $1.count }, 3001,
+                               "cada fuente tiene que estar representada en el recuento")
+                XCTAssertLessThanOrEqual(map.clusters.count, 72,
+                                         "390×800 a 70 px produce como mucho 6×12 celdas")
+            }
+
+            try await app.test(.GET, "fonts/map?minLat=42&maxLat=41&minLong=1&maxLong=3") { res in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+        }
+    }
+
     private func withApp(_ test: (Application) async throws -> Void) async throws {
         setenv("DATABASE_NAME", "fontapp_test", 1)
         let app = try await Application.make(.testing)
