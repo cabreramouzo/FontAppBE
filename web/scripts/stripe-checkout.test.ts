@@ -48,6 +48,29 @@ test('rejects donation kinds instead of accepting client-selected prices', async
   assert.deepEqual(await response.json(), { error: 'invalid_donation_kind' })
 })
 
+test('accepts a restricted key, which is the one this endpoint should be given', async () => {
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => Response.json({ url: 'https://checkout.stripe.com/c/pay/test' })
+  try {
+    const response = await onRequestPost({
+      request: request({ kind: 'once' }),
+      env: { ...env, STRIPE_SECRET_KEY: 'rk_test_example' },
+    })
+    assert.equal(response.status, 200)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
+test('rejects the publishable key, which is the easy one to paste by mistake', async () => {
+  const response = await onRequestPost({
+    request: request({ kind: 'once' }),
+    env: { ...env, STRIPE_SECRET_KEY: 'pk_test_example' },
+  })
+  assert.equal(response.status, 503)
+  assert.deepEqual(await response.json(), { error: 'stripe_not_configured' })
+})
+
 test('fails closed when the Stripe secret is absent', async () => {
   const response = await onRequestPost({ request: request({ kind: 'once' }), env: {} })
   assert.equal(response.status, 503)

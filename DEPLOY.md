@@ -495,7 +495,7 @@ reales). Ninguna lleva el prefijo `VITE_`, porque la clave secreta no puede entr
 
 | Variable | Contenido |
 |---|---|
-| `STRIPE_SECRET_KEY` | Clave secreta `sk_test_…` en Preview y `sk_live_…` en Production. |
+| `STRIPE_SECRET_KEY` | Clave de servidor: `…_test_…` en Preview y `…_live_…` en Production. Mejor **restringida** (`rk_`) que secreta (`sk_`) — aquí solo hace falta *Checkout Sessions: write*, y así una filtración no da acceso a clientes ni a mover dinero. Las dos valen; la publishable (`pk_`) se rechaza a propósito, que es la que se pega por error. |
 | `STRIPE_ONE_TIME_PRICE_ID` | `price_…` de un precio único en EUR. |
 | `STRIPE_MONTHLY_PRICE_ID` | `price_…` de un precio recurrente mensual en EUR. |
 

@@ -26,9 +26,24 @@ function priceFor(kind: DonationKind, env: Env) {
   return kind === 'monthly' ? env.STRIPE_MONTHLY_PRICE_ID : env.STRIPE_ONE_TIME_PRICE_ID
 }
 
+/**
+ * Las dos formas que puede tener una clave de servidor de Stripe.
+ *
+ * `sk_` lo puede todo sobre la cuenta; `rk_` (restricted) solo los permisos que le marcas
+ * al crearla. Para esto basta con **Checkout Sessions: write**, así que la restringida es
+ * la que conviene: si el fichero de secretos se filtra, lo peor que puede hacer quien la
+ * tenga es crear sesiones de pago hacia esta misma cuenta — no leer clientes, no mover
+ * dinero, no emitir devoluciones.
+ *
+ * Se comprueba el prefijo y no solo que haya algo porque el fallo típico es pegar la
+ * **publishable** (`pk_`), que se parece, se copia del mismo sitio y con ella Stripe
+ * responde 401. Mejor decir «no configurado» antes de salir a la red.
+ */
+const SERVER_KEY_PREFIXES = ['sk_', 'rk_']
+
 export async function onRequestPost({ request, env }: PagesContext): Promise<Response> {
   const secret = env.STRIPE_SECRET_KEY?.trim()
-  if (!secret || !secret.startsWith('sk_')) {
+  if (!secret || !SERVER_KEY_PREFIXES.some((p) => secret.startsWith(p))) {
     return json({ error: 'stripe_not_configured' }, 503)
   }
 

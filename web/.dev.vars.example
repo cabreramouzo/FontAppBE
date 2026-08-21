@@ -1,6 +1,10 @@
 # Copy this file to .dev.vars and use Stripe TEST-mode values.
 # Never prefix the secret with VITE_: Vite would expose it to the browser.
-STRIPE_SECRET_KEY=sk_test_replace_me
+#
+# Prefer a RESTRICTED key (rk_) over a full secret one (sk_): this endpoint only ever needs
+# "Checkout Sessions: write". Both prefixes are accepted; the publishable key (pk_) is not,
+# because pasting it here instead is the easy mistake and Stripe would answer 401.
+STRIPE_SECRET_KEY=rk_test_replace_me
 STRIPE_ONE_TIME_PRICE_ID=price_replace_me
 
 # Only needed if Stripe monthly donations are exposed again in the UI.
