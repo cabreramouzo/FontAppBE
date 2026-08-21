@@ -234,7 +234,7 @@ const ca: Dict = {
   'game.tier.special': 'especial',
     // Zones: cobertura col·lectiva i rànquing mensual (fase 5).
   'zones.title': 'Zones',
-  'zones.intro': 'Com va de coberta cada zona. No hi ha res a guanyar: la barra és del territori, no de ningú.',
+  'zones.intro': "Mira com va de coberta cada zona. Anima't i digues als teus amics que s'hi apuntin: entre uns quants es poblen molt més de pressa.",
   'zones.fonts': '{n} fonts',
   'zones.withPhoto': 'Amb foto',
   'zones.withPhotoHint': 'Fonts amb almenys una fotografia. És el forat més gran que té el mapa.',
@@ -1099,7 +1099,7 @@ const es: Dict = {
   'game.tier.special': 'especial',
     // Zones: cobertura col·lectiva i rànquing mensual (fase 5).
   'zones.title': 'Zonas',
-  'zones.intro': 'Cómo va de cubierta cada zona. No hay nada que ganar: la barra es del territorio, no de nadie.',
+  'zones.intro': 'Mira cómo va de cubierta cada zona. Anímate y dile a tus amigos que se unan: entre varios se puebla mucho más rápido.',
   'zones.fonts': '{n} fuentes',
   'zones.withPhoto': 'Con foto',
   'zones.withPhotoHint': 'Fuentes con al menos una fotografía. Es el hueco más grande que tiene el mapa.',
@@ -1955,7 +1955,7 @@ const gl: Dict = {
   'game.tier.special': 'especial',
     // Zones: cobertura col·lectiva i rànquing mensual (fase 5).
   'zones.title': 'Zonas',
-  'zones.intro': 'Como vai de cuberta cada zona. Non hai nada que gañar: a barra é do territorio, non de ninguén.',
+  'zones.intro': 'Mira como vai de cuberta cada zona. Anímate e dilles aos teus amigos que se unan: entre varios pobóase moito máis rápido.',
   'zones.fonts': '{n} fontes',
   'zones.withPhoto': 'Con foto',
   'zones.withPhotoHint': 'Fontes con polo menos unha fotografía. É o oco máis grande que ten o mapa.',
@@ -2811,7 +2811,7 @@ const eu: Dict = {
   'game.tier.special': 'berezia',
     // Zones: cobertura col·lectiva i rànquing mensual (fase 5).
   'zones.title': 'Eremuak',
-  'zones.intro': 'Eremu bakoitza nola dagoen estalita. Ez dago ezer irabazteko: barra lurraldearena da, ez inorena.',
+  'zones.intro': 'Begiratu eremu bakoitza nola dagoen estalita. Animatu eta esan lagunei bat egiteko: denen artean askoz azkarrago betetzen da.',
   'zones.fonts': '{n} iturri',
   'zones.withPhoto': 'Argazkiarekin',
   'zones.withPhotoHint': 'Gutxienez argazki bat duten iturriak. Mapak duen hutsunerik handiena da.',
@@ -3667,7 +3667,7 @@ const en: Dict = {
   'game.tier.special': 'special',
     // Zones: cobertura col·lectiva i rànquing mensual (fase 5).
   'zones.title': 'Zones',
-  'zones.intro': 'How well covered each zone is. Nothing to win here: the bar belongs to the territory, not to anyone.',
+  'zones.intro': 'See how well covered each zone is. Get your friends to join in — together it fills up much faster.',
   'zones.fonts': '{n} fountains',
   'zones.withPhoto': 'With a photo',
   'zones.withPhotoHint': 'Fountains with at least one photograph. It is the biggest gap the map has.',
@@ -4514,7 +4514,7 @@ const fr: Dict = {
   'game.tier.unique': "unique",
   'game.tier.special': "spécial",
   'zones.title': "Zones",
-  'zones.intro': "Dans quelle mesure chaque zone est-elle bien couverte. Ici, rien à gagner : le bar appartient au territoire, pas à n'importe qui.",
+  'zones.intro': "Regardez comme chaque zone est couverte. Invitez vos amis à s'y mettre : à plusieurs, ça se remplit bien plus vite.",
   'zones.fonts': "Fontaines {n}",
   'zones.withPhoto': "Avec une photo",
   'zones.withPhotoHint': "Fontaines avec au moins une photographie. C’est le plus grand écart de la carte.",
