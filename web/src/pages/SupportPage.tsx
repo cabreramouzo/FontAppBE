@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Alert from '@mui/material/Alert'
 import Divider from '@mui/material/Divider'
 import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
@@ -8,6 +9,7 @@ import Typography from '@mui/material/Typography'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import IosShareIcon from '@mui/icons-material/IosShare'
 import LocalCafeIcon from '@mui/icons-material/LocalCafe'
+import CreditCardIcon from '@mui/icons-material/CreditCard'
 import WhatsAppIcon from '@mui/icons-material/WhatsApp'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
@@ -45,6 +47,25 @@ export function SupportPage() {
   const { t } = useI18n()
   const toast = useToast()
   const [copiado, setCopiado] = useState(false)
+  const [pagant, setPagant] = useState<'once' | 'monthly' | null>(null)
+  const stripeResult = new URLSearchParams(window.location.search).get('stripe')
+
+  async function pagarAmbStripe(kind: 'once' | 'monthly') {
+    setPagant(kind)
+    try {
+      const response = await fetch('/stripe/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kind }),
+      })
+      const result = await response.json() as { url?: string }
+      if (!response.ok || !result.url) throw new Error('checkout unavailable')
+      window.location.assign(result.url)
+    } catch {
+      toast.show(t('donate.stripeError'))
+      setPagant(null)
+    }
+  }
 
   async function compartir() {
     if (await comparteTexto(`${t('support.shareText')} ${ENLACE}`) === 'copiado') {
@@ -106,6 +127,10 @@ export function SupportPage() {
       <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('support.costsTitle')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('support.costsBody')}</Typography>
 
+      {stripeResult === 'success' && (
+        <Alert severity="success" sx={{ mb: 2 }}>{t('donate.stripeThanks')}</Alert>
+      )}
+
       {/* La línea de debajo se queda aunque ya no haya con qué comparar: dice que es una
           suscripción **antes** de pulsar, que es lo mínimo si el botón lleva a pagar. */}
       <Button
@@ -117,6 +142,17 @@ export function SupportPage() {
       </Button>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
         {t('donate.monthly')}
+      </Typography>
+
+      <Button
+        fullWidth variant="outlined" startIcon={<CreditCardIcon />}
+        disabled={pagant !== null} onClick={() => pagarAmbStripe('once')}
+        sx={{ textTransform: 'none', mt: 2 }}
+      >
+        {pagant === 'once' ? t('donate.stripeOpening') : t('donate.stripeOnce')}
+      </Button>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
+        {t('donate.stripeSecure')}
       </Typography>
 
       <Divider sx={{ my: 2 }}>{t('donate.orBtc')}</Divider>

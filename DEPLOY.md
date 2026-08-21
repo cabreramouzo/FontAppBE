@@ -487,6 +487,26 @@ VITE_API_URL=https://api.tu-dominio.com npm run build   # genera web/dist
 Sube `web/dist` al hosting estático. En Cloudflare Pages / Netlify define `VITE_API_URL`
 como variable de entorno de build (ver `web/.env.example`).
 
+### Donaciones con Stripe Checkout
+
+`/support` crea Checkout Sessions desde una Cloudflare Pages Function. Configura estas
+variables **de ejecución** en Pages (Preview con valores de prueba; Production con valores
+reales). Ninguna lleva el prefijo `VITE_`, porque la clave secreta no puede entrar en el bundle:
+
+| Variable | Contenido |
+|---|---|
+| `STRIPE_SECRET_KEY` | Clave secreta `sk_test_…` en Preview y `sk_live_…` en Production. |
+| `STRIPE_ONE_TIME_PRICE_ID` | `price_…` de un precio único en EUR. |
+| `STRIPE_MONTHLY_PRICE_ID` | `price_…` de un precio recurrente mensual en EUR. |
+
+Crea los dos precios en el mismo modo que la clave (test o live); los objetos de prueba y de
+producción tienen identificadores distintos. En Stripe → Payment methods, deja activos los
+métodos dinámicos que quieras mostrar. Checkout ofrece tarjeta y los monederos compatibles
+con el dispositivo y el país; Apple Pay no aparece en todos los navegadores/dispositivos.
+Esta integración no necesita webhook mientras FontApp no conceda nada ni mantenga un estado
+propio por la donación. Si más adelante se muestra el estado de mecenas dentro de FontApp,
+añade un webhook firmado para `checkout.session.completed` y los eventos de suscripción.
+
 ### Analítica web (Cloudflare Web Analytics)
 
 Analítica **sin cookies** y sin datos personales (encaja con la página legal, no exige banner

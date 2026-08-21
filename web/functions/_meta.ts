@@ -10,6 +10,11 @@ export interface Env {
    *  configurar nada nuevo. `API_ORIGIN` existe solo por si algún día se separan. */
   API_ORIGIN?: string
   VITE_API_URL?: string
+  /** Stripe only exists at runtime in Pages Functions. Never expose these as VITE_ vars:
+   *  Vite deliberately embeds those in the browser bundle. */
+  STRIPE_SECRET_KEY?: string
+  STRIPE_ONE_TIME_PRICE_ID?: string
+  STRIPE_MONTHLY_PRICE_ID?: string
 }
 
 /** El origen del backend, o `null` si no está configurado. */
