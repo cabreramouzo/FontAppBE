@@ -124,7 +124,9 @@ test('a non-JSON reply from Stripe is an error response, not a crash', async () 
   console.error = () => {}
   try {
     const response = await onRequestPost({ request: request({ kind: 'once' }), env })
-    assert.equal(response.status, 502)
+    // 503 y no 502: Cloudflare tira el cuerpo de los 502 y el cliente no recibe el
+    // código. Comprobado en producción, ver el comentario de UPSTREAM_FAILED.
+    assert.equal(response.status, 503)
     assert.deepEqual(await response.json(), { error: 'checkout_creation_failed' })
   } finally {
     globalThis.fetch = originalFetch
@@ -146,6 +148,27 @@ test('the Stripe error is logged server-side, never returned to the caller', asy
     const body = await response.text()
     assert.ok(!body.includes('No such price'), 'el motivo no puede viajar al cliente')
     assert.equal(JSON.stringify(logged).includes('No such price'), true, 'pero sí al registro')
+  } finally {
+    globalThis.fetch = originalFetch
+    console.error = originalError
+  }
+})
+
+test('Stripe failures never answer 502, whose body Cloudflare replaces at the edge', async () => {
+  const originalFetch = globalThis.fetch
+  const originalError = console.error
+  console.error = () => {}
+  try {
+    for (const reply of [
+      async () => { throw new Error('network') },
+      async () => Response.json({ error: { message: 'nope' } }, { status: 400 }),
+    ]) {
+      globalThis.fetch = reply as typeof fetch
+      const response = await onRequestPost({ request: request({ kind: 'once' }), env })
+      assert.notEqual(response.status, 502, 'un 502 pierde el cuerpo en el borde')
+      assert.notEqual(response.status, 504, 'y un 504 igual')
+      assert.ok(typeof (await response.json() as { error?: string }).error === 'string')
+    }
   } finally {
     globalThis.fetch = originalFetch
     console.error = originalError

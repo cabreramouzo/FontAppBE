@@ -12,6 +12,25 @@ interface PagesContext {
   env: Env
 }
 
+/**
+ * El estado con el que se contesta cuando **Stripe** es el que falla.
+ *
+ * Es 503 y **no 502, que es lo que pide el diccionario de HTTP**, porque Cloudflare
+ * sustituye el cuerpo de las respuestas 502 por su propia página de error en texto plano.
+ * O sea que nuestro JSON —y con él el código del error— no llega nunca al cliente: se
+ * tira en el borde. Medido en producción, la misma función y la misma petición:
+ *
+ *   kind=monthly → 503 {"error":"stripe_not_configured"}   ← llega entero
+ *   kind=nope    → 400 {"error":"invalid_donation_kind"}   ← llega entero
+ *   kind=once    → 502 «error code: 502»                   ← lo pone Cloudflare
+ *
+ * Costó una tarde y tres despliegues, porque desde fuera es idéntico a que la función se
+ * esté muriendo: no hay respuesta nuestra, no hay pista, y todo apunta a un fallo en el
+ * código. La regla general, para cualquier función de este directorio: **no devolver 502
+ * ni 504 con un cuerpo que a alguien le importe.**
+ */
+const UPSTREAM_FAILED = 503
+
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -149,7 +168,7 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
       body: params,
     })
   } catch {
-    return json({ error: 'stripe_unavailable' }, 502)
+    return json({ error: 'stripe_unavailable' }, UPSTREAM_FAILED)
   }
 
   // El cuerpo se lee como texto y se parsea aparte **a propósito**. Con
@@ -179,7 +198,7 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
       code: result.error?.code,
       message: result.error?.message ?? raw.slice(0, 300),
     })
-    return json({ error: 'checkout_creation_failed' }, 502)
+    return json({ error: 'checkout_creation_failed' }, UPSTREAM_FAILED)
   }
 
   return json({ url: result.url })
