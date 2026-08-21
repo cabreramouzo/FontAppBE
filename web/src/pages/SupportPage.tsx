@@ -43,12 +43,41 @@ const ENLACE = 'https://fontapp.net/?p=amigos'
  * no son euros, son personas mirando fuentes; y decirlo en ese orden evita que la pantalla
  * se lea como un cepillo.
  */
+/**
+ * Interruptor temporal: esconde el pago con tarjeta aunque el servidor diga que puede.
+ *
+ * Stripe tiene «Cards» **en revisión** en la cuenta live desde el 21/08/2026, así que
+ * crear la sesión falla con `No valid payment method types` y el botón —que se pinta,
+ * porque la clave y el precio sí están puestos— lleva a un error. Cuidado con Apple Pay:
+ * el panel de Stripe lo da por activo y engaña, pero es una cartera que liquida por la
+ * red de tarjetas, así que sin Cards tampoco hay pago.
+ *
+ * Está en el código y no borrando la variable en Cloudflare **a propósito**: así queda en
+ * el repositorio, con la fecha y el motivo, en vez de ser un hueco en un panel que dentro
+ * de un mes nadie sabe explicar. Se quita revirtiendo este commit, y entonces manda otra
+ * vez lo que diga el servidor, que es lo que hay que hacer en cuanto aprueben.
+ */
+const CARDS_EN_REVISION = true
+
 export function SupportPage() {
   const { t } = useI18n()
   const toast = useToast()
   const [copiado, setCopiado] = useState(false)
   const [pagant, setPagant] = useState<'once' | 'monthly' | null>(null)
   const stripeResult = new URLSearchParams(window.location.search).get('stripe')
+/**
+ * Interruptor temporal: esconde el pago con tarjeta aunque el servidor diga que puede.
+ *
+ * Stripe tiene «Cards» **en revisión** en la cuenta live desde el 21/08/2026, así que
+ * crear la sesión falla con `No valid payment method types` y el botón, que se pinta
+ * porque la clave y el precio SÍ están configurados, lleva a un error. Ojo con Apple Pay:
+ * el panel lo da por activo y engaña, pero es una cartera que liquida por la red de
+ * tarjetas — sin Cards no hay raíl y tampoco funciona.
+ *
+ * Va aquí y no borrando la variable en Cloudflare a propósito: así queda **en el
+ * repositorio**, con la fecha y el motivo, en vez de ser un hueco en un panel que dentro
+ * de un mes nadie sabe explicar. Quitarlo es revertir este commit o poner `false`.
+ */
   // `null` mientras no se sabe, y mientras no se sabe **no se pinta nada**. Enseñar el
   // botón y quitarlo medio segundo después es peor que tardar medio segundo en ponerlo:
   // lo primero mueve la página bajo el dedo de quien ya iba a pulsar.
@@ -161,7 +190,7 @@ export function SupportPage() {
         {t('donate.monthly')}
       </Typography>
 
-      {potPagar && (
+      {potPagar && !CARDS_EN_REVISION && (
         <>
           <Button
             fullWidth variant="outlined" startIcon={<CreditCardIcon />}
