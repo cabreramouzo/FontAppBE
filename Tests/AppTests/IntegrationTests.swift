@@ -311,7 +311,12 @@ final class IntegrationTests: XCTestCase {
             let summaries = try await Font.summaries(for: [font], on: app.db)
             let summary = try XCTUnwrap(summaries.first)
             XCTAssertEqual(summary.latestConfirmations, 0)
-            XCTAssertEqual(summary.lastUpdate, comment.createdAt)
+            // Compara dos valores leídos de PostgreSQL. `comment.createdAt` conserva la
+            // precisión del reloj de Swift al guardar y el driver puede normalizarla al
+            // releerla; en Linux eso hacía el test inestable aunque ambas fechas fueran
+            // el mismo instante visible.
+            let storedComment = try await FontComment.find(comment.requireID(), on: app.db)
+            XCTAssertEqual(summary.lastUpdate, try XCTUnwrap(storedComment?.createdAt))
         }
     }
 
