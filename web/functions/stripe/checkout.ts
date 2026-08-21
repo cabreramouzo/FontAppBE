@@ -27,6 +27,57 @@ function priceFor(kind: DonationKind, env: Env) {
 }
 
 /**
+ * Si esta cuenta puede cobrar esta clase de donación **ahora mismo**.
+ *
+ * La usan el GET y el POST, y ese es el punto: si se escribieran dos veces, el día que
+ * cambie una condición la pantalla ofrecería un botón que el endpoint rechaza, que es
+ * justo el estado que esto viene a eliminar.
+ */
+function isConfigured(kind: DonationKind, env: Env) {
+  const secret = env.STRIPE_SECRET_KEY?.trim()
+  if (!secret || !SERVER_KEY_PREFIXES.some((p) => secret.startsWith(p))) return false
+  const price = priceFor(kind, env)?.trim()
+  return Boolean(price && price.startsWith('price_'))
+}
+
+/**
+ * Qué formas de donar puede ofrecer la pantalla.
+ *
+ * Existe porque un botón de pagar que falla es peor que no tener botón: el que falla se
+ * lee como «esta gente no sabe cobrar», y encima gasta el único momento en que alguien
+ * había decidido dar dinero. Pasó en producción — la función se desplegó antes de que las
+ * claves estuvieran puestas en Pages, y durante ese rato `/support` ofrecía un pago que
+ * contestaba «no podemos abrir el pago».
+ *
+ * Se pregunta al servidor y no se resuelve con una variable de compilación porque las
+ * claves son **de ejecución**: un `VITE_…` obligaría a reconstruir el sitio para encender
+ * el botón, y sobre todo obligaría a acordarse de hacerlo. Así el botón aparece solo en
+ * cuanto la configuración existe, y desaparece solo si un día deja de existir.
+ *
+ * No dice **por qué** no está configurado. Es una ruta pública: que falte la clave o que
+ * falte el precio no es asunto de quien pasa por la página, y el prefijo de una clave es
+ * justo la clase de dato que no se publica.
+ */
+export async function onRequestGet({ env }: Pick<PagesContext, 'env'>): Promise<Response> {
+  const body = { once: isConfigured('once', env), monthly: isConfigured('monthly', env) }
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      // El borde cachea cinco minutos (`s-maxage`) y el navegador **no cachea nada**
+      // (`max-age=0`). Los dos números importan y el segundo se puso mal a la primera:
+      // con `max-age=300` a secas, quien hubiera pasado por /support mientras la cuenta
+      // estaba sin configurar seguía sin ver el botón cinco minutos después de haberla
+      // configurado — su navegador se quedaba con el «no» viejo. Medido: la misma
+      // petición daba `once:false` de caché y `once:true` con `cache: 'reload'`.
+      // Así, encender el botón se nota en la siguiente carga; el ahorro de no despertar
+      // al worker lo sigue dando el borde.
+      'cache-control': 'public, max-age=0, s-maxage=300',
+    },
+  })
+}
+
+/**
  * Las dos formas que puede tener una clave de servidor de Stripe.
  *
  * `sk_` lo puede todo sobre la cuenta; `rk_` (restricted) solo los permisos que le marcas
@@ -43,9 +94,6 @@ const SERVER_KEY_PREFIXES = ['sk_', 'rk_']
 
 export async function onRequestPost({ request, env }: PagesContext): Promise<Response> {
   const secret = env.STRIPE_SECRET_KEY?.trim()
-  if (!secret || !SERVER_KEY_PREFIXES.some((p) => secret.startsWith(p))) {
-    return json({ error: 'stripe_not_configured' }, 503)
-  }
 
   let body: CheckoutBody
   try {
@@ -58,10 +106,12 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
     return json({ error: 'invalid_donation_kind' }, 400)
   }
 
-  const price = priceFor(body.kind, env)?.trim()
-  if (!price || !price.startsWith('price_')) {
+  // El orden importa: la clase se valida **antes** que la configuración, o un `kind`
+  // inventado se llevaba un 503 en vez de un 400 y parecía un problema del servidor.
+  if (!isConfigured(body.kind, env)) {
     return json({ error: 'stripe_not_configured' }, 503)
   }
+  const price = priceFor(body.kind, env)!.trim()
 
   const origin = siteOrigin(request)
   const params = new URLSearchParams({

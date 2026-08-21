@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Alert from '@mui/material/Alert'
@@ -49,6 +49,23 @@ export function SupportPage() {
   const [copiado, setCopiado] = useState(false)
   const [pagant, setPagant] = useState<'once' | 'monthly' | null>(null)
   const stripeResult = new URLSearchParams(window.location.search).get('stripe')
+  // `null` mientras no se sabe, y mientras no se sabe **no se pinta nada**. Enseñar el
+  // botón y quitarlo medio segundo después es peor que tardar medio segundo en ponerlo:
+  // lo primero mueve la página bajo el dedo de quien ya iba a pulsar.
+  const [potPagar, setPotPagar] = useState<boolean | null>(null)
+
+  // Si la cuenta de Stripe está configurada en ESTE entorno. Sin esto, el botón se
+  // desplegó a producción antes que las claves y durante ese rato ofrecía un pago que
+  // contestaba «no podemos abrir el pago» — que es la peor forma posible de pedir dinero.
+  // Falla cerrado: si la consulta no llega, no hay botón.
+  useEffect(() => {
+    let viu = true
+    fetch('/stripe/checkout')
+      .then((r) => (r.ok ? r.json() as Promise<{ once?: boolean }> : { once: false }))
+      .then((d) => { if (viu) setPotPagar(Boolean(d.once)) })
+      .catch(() => { if (viu) setPotPagar(false) })
+    return () => { viu = false }
+  }, [])
 
   async function pagarAmbStripe(kind: 'once' | 'monthly') {
     setPagant(kind)
@@ -144,16 +161,20 @@ export function SupportPage() {
         {t('donate.monthly')}
       </Typography>
 
-      <Button
-        fullWidth variant="outlined" startIcon={<CreditCardIcon />}
-        disabled={pagant !== null} onClick={() => pagarAmbStripe('once')}
-        sx={{ textTransform: 'none', mt: 2 }}
-      >
-        {pagant === 'once' ? t('donate.stripeOpening') : t('donate.stripeOnce')}
-      </Button>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
-        {t('donate.stripeSecure')}
-      </Typography>
+      {potPagar && (
+        <>
+          <Button
+            fullWidth variant="outlined" startIcon={<CreditCardIcon />}
+            disabled={pagant !== null} onClick={() => pagarAmbStripe('once')}
+            sx={{ textTransform: 'none', mt: 2 }}
+          >
+            {pagant === 'once' ? t('donate.stripeOpening') : t('donate.stripeOnce')}
+          </Button>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
+            {t('donate.stripeSecure')}
+          </Typography>
+        </>
+      )}
 
       <Divider sx={{ my: 2 }}>{t('donate.orBtc')}</Divider>
 

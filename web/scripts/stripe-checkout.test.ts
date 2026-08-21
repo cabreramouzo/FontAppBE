@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { onRequestPost } from '../functions/stripe/checkout.ts'
+import { onRequestGet, onRequestPost } from '../functions/stripe/checkout.ts'
 
 const env = {
   STRIPE_SECRET_KEY: 'sk_test_example',
@@ -75,4 +75,42 @@ test('fails closed when the Stripe secret is absent', async () => {
   const response = await onRequestPost({ request: request({ kind: 'once' }), env: {} })
   assert.equal(response.status, 503)
   assert.deepEqual(await response.json(), { error: 'stripe_not_configured' })
+})
+
+test('GET tells the page which donations this environment can actually take', async () => {
+  const response = await onRequestGet({ env })
+  assert.equal(response.status, 200)
+  assert.deepEqual(await response.json(), { once: true, monthly: true })
+})
+
+test('GET reports nothing available when the keys are missing, so no button is drawn', async () => {
+  // Éste es el estado real que rompió producción: función desplegada, claves sin poner.
+  const response = await onRequestGet({ env: {} })
+  assert.deepEqual(await response.json(), { once: false, monthly: false })
+})
+
+test('GET reports each kind separately: a missing monthly price hides only that button', async () => {
+  const response = await onRequestGet({ env: { ...env, STRIPE_MONTHLY_PRICE_ID: '' } })
+  assert.deepEqual(await response.json(), { once: true, monthly: false })
+})
+
+test('GET is not cached by the browser, so enabling the button is seen on the next load', async () => {
+  // Con `max-age=300` a secas, quien pasó por /support con la cuenta sin configurar
+  // seguía sin botón cinco minutos después de configurarla. El borde sí puede cachear.
+  const cc = (await onRequestGet({ env })).headers.get('cache-control') ?? ''
+  assert.match(cc, /max-age=0/)
+  assert.match(cc, /s-maxage=\d+/)
+})
+
+test('GET never leaks anything about the key beyond whether it works', async () => {
+  const body = await (await onRequestGet({ env })).text()
+  assert.ok(!body.includes('sk_'), 'la respuesta no puede contener la clave ni su prefijo')
+  assert.deepEqual(Object.keys(JSON.parse(body)).sort(), ['monthly', 'once'])
+})
+
+test('a bad kind is a client error, not a configuration one', async () => {
+  // Se validaba la configuración primero, así que un kind inventado se llevaba un 503 y
+  // parecía que el servidor estaba mal puesto.
+  const response = await onRequestPost({ request: request({ kind: 'nope' }), env: {} })
+  assert.equal(response.status, 400)
 })
