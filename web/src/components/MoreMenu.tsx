@@ -11,7 +11,7 @@ import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
 import LogoutIcon from '@mui/icons-material/Logout'
 import InstallMobileIcon from '@mui/icons-material/InstallMobile'
-import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
+import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { useI18n } from '../i18n/I18nContext'
 import { LANGS, type Lang } from '../i18n/dictionaries'
@@ -69,7 +69,7 @@ export function MoreMenu({ onLogout }: { onLogout?: () => void }) {
       </Tooltip>
       <Menu anchorEl={ancla} open={!!ancla} onClose={cerrar} slotProps={{ list: { dense: true } }}>
         <MenuItem component={RouterLink} to="/zones" onClick={cerrar}>
-          <ListItemIcon><MapOutlinedIcon fontSize="small" /></ListItemIcon>
+          <ListItemIcon><PublicOutlinedIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t('zones.title')}</ListItemText>
         </MenuItem>
         {/* Instalar vive aquí porque es el único sitio permanente al que se llega

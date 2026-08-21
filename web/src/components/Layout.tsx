@@ -16,6 +16,7 @@ import DialogActions from '@mui/material/DialogActions'
 import NewspaperIcon from '@mui/icons-material/Newspaper'
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
+import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { getFlags, getNewUsers } from '../api/client'
@@ -162,6 +163,22 @@ export function Layout({ children }: { children: ReactNode }) {
               </Box>
             )}
           </Box>
+          {/* El mapa, que es a donde vuelve todo el mundo. En móvil es la primera
+              pestaña de abajo; aquí no había ninguna forma de volver salvo el logotipo,
+              que no todo el mundo sabe que es un enlace. El orden de los tres iconos es
+              el mismo que el de la tab bar: mapa, novedades, zonas. */}
+          <Tooltip title={t('nav.map')}>
+            <IconButton
+              component={RouterLink}
+              to="/"
+              color="inherit"
+              size="small"
+              aria-label={t('nav.map')}
+              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+            >
+              <MapOutlinedIcon />
+            </IconButton>
+          </Tooltip>
           {/* Novedades vive aquí y no sobre el mapa: los botones del mapa hacen cosas
               SOBRE el mapa (filtran, cambian la capa, te centran) y este navega a otra
               página. Mezclados, la columna del mapa se leía como un cajón de sastre. */}
@@ -214,7 +231,10 @@ export function Layout({ children }: { children: ReactNode }) {
           </Tooltip>
           {/* Zonas: mismo sitio y mismo criterio que Novedades — navega fuera del mapa.
               Se esconde en pantallas estrechas, donde la barra ya iba justa y esta es la
-              menos urgente de las dos; se llega igual desde el pie. */}
+              menos urgente de las dos; se llega igual desde el pie.
+              El icono es un **globo** y no un mapa: el mapa es el mapa, y tenerlo aquí
+              apuntando a otro sitio era la razón de que nadie encontrara ninguno de los
+              dos. Zonas es cobertura por territorios, que es lo que un globo dice. */}
           <Tooltip title={t('zones.title')}>
             <IconButton
               component={RouterLink}
@@ -224,7 +244,7 @@ export function Layout({ children }: { children: ReactNode }) {
               aria-label={t('zones.title')}
               sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
             >
-              <MapOutlinedIcon />
+              <PublicOutlinedIcon />
             </IconButton>
           </Tooltip>
           {/* La campana solo tiene sentido con sesión, y solo se pinta si hay algo:
