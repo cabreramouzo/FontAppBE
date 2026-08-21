@@ -175,7 +175,7 @@ cargado) no hace falta dedupe; junto a España conviene `--dedupe` para no dupli
    Exporta el resultado como `portugal-osm.json` (Export → data → raw OSM data / JSON).
 
    Los puntos sin `name` en OSM —**tres de cada cuatro**— se guardan con `name = NULL`.
-   No les pongas una palabra genérica del territorio: la app los rotula por su `source`
+   No les pongas una palabra genérica del territorio: la app muestra «fuente sin nombre»
    en el idioma de quien lee. Un topónimo real se conserva tal cual y nunca se traduce.
 
    Ejemplo real, el Pirineo francés (bbox intersectado con el área de Francia para no
@@ -280,8 +280,8 @@ DATABASE_URL='...' swift run App populate-regions fronteras-chile.geojson --fall
 la vía de OSM —la que trae países enteros— no tenía forma de filtrarse y por eso nadie
 había mirado nunca lo que entraba.
 
-Los 273 puntos sin topónimo se guardan con `name = NULL`. La interfaz los muestra por su
-tipo —por ejemplo, «Fuente urbana» o «Manantial»— en el idioma elegido por quien lee.
+Los 273 puntos sin topónimo se guardan con `name = NULL`. La interfaz muestra «fuente sin
+nombre» en el idioma elegido por quien lee.
 
 `fronteras-chile.geojson` (478 KB, Natural Earth admin-1 recortado a `admin: Chile`, solo
 las propiedades `admin` y `name`) trae las 16 regiones. Sin `--fallback-nearest 10`

@@ -70,8 +70,8 @@ Login con credenciales inválidas → **401**.
 ```
 
 En `Font`, `name` solo contiene un nombre propio o topónimo. En una fuente importada
-sin nombre es `null`; el cliente compone entonces un rótulo traducido a partir de
-`source`.
+sin nombre es `null`; el cliente muestra entonces «fuente sin nombre» en el idioma del
+lector.
 
 `waterStatus` (estado): `flowing` (sale agua), `trickle` (poca), `dry` (seca), `broken`
 (estropeada), `gone` (ya no está), `unknown`. Los dos últimos hablan de la fuente y no

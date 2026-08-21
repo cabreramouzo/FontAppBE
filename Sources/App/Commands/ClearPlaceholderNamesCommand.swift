@@ -12,8 +12,8 @@ import Vapor
 /// de quien lee: un dato no tiene idioma, una interfaz sí. Medido en producción, el 47 %
 /// del mapa mostraba una palabra que el lector podía no entender.
 ///
-/// Ahora `Font.name` admite nulos y el rótulo lo compone quien pinta, con `source` y su
-/// idioma. Esto limpia lo que ya está escrito.
+/// Ahora `Font.name` admite nulos y quien pinta muestra una ausencia explícita en el
+/// idioma del lector. Esto limpia lo que ya está escrito.
 ///
 /// ## Por qué un comando y no una migración
 ///

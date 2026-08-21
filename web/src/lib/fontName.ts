@@ -15,19 +15,15 @@ import type { WaterSource } from '../api/types.js'
  * las fuentes mostraba una palabra que el lector podía no entender: un español en
  * Estocolmo veía «Vattenpost» 1.310 veces, y un sueco en Cataluña ve «Font».
  *
- * Ahora el servidor manda `name: null` cuando no hay nombre, que es la verdad, y el rótulo
- * se compone aquí con **el tipo de fuente** y el idioma del lector.
+ * Ahora el servidor manda `name: null` cuando no hay nombre, que es la verdad, y el cliente
+ * muestra una ausencia explícita en el idioma del lector.
  *
- * ## Por qué el tipo y no un «sin nombre»
+ * ## Por qué no deducimos el rótulo del tipo
  *
- * Porque el tipo **dice algo útil**: «Fuente natural» y «Fuente urbana (red)» no prometen
- * lo mismo — una tiene caudal garantizado y agua tratada, la otra puede estar seca en
- * agosto. Es exactamente lo que quiere saber quien mira el mapa antes de desviarse. Un
- * «Fuente sin nombre» ocuparía el mismo hueco sin decir nada.
- *
- * (El correo semanal sí dice «Fuente sin nombre», y es a propósito: allí se cuenta lo que
- * ha pasado, no qué clase de fuente es, y el tipo sería ruido. Está anotado en
- * `WeeklyDigestEmail`.)
+ * `source=tap` describe la clasificación técnica del punto, pero no demuestra que esté
+ * en ciudad ni conectado a una red: también puede ser un caño en pleno bosque. Pintarlo
+ * como «Fuente urbana (red)» convertiría una clasificación incierta en una afirmación.
+ * Por eso todos los puntos sin topónimo se llaman simplemente «Fuente sin nombre».
  *
  * ## Los topónimos no se traducen, nunca
  *
@@ -40,9 +36,7 @@ export function nombreFuente(
   t: (k: string) => string,
 ): string {
   if (font.name) return font.name
-  // `source` también puede faltar. Sin tipo no se puede decir qué clase de fuente es, así
-  // que se dice lo único cierto: que no tiene nombre.
-  return t(font.source ? `source.${font.source}` : 'font.unnamed')
+  return t('font.unnamed')
 }
 
 /**
