@@ -213,22 +213,6 @@ export function Layout({ children }: { children: ReactNode }) {
               />
             </IconButton>
           </Tooltip>
-          {/* El corazón: apoyar el proyecto. Vive arriba y **solo en móvil**, en el sitio
-              que dejó libre la tab bar. No es una pestaña porque no es un lugar donde se
-              esté, es algo que se hace una vez; y no es un icono más en escritorio porque
-              allí el pie ya lo enseña con su nombre escrito, que se lee mejor. */}
-          <Tooltip title={t('support.title')}>
-            <IconButton
-              component={RouterLink}
-              to="/support"
-              color="inherit"
-              size="small"
-              aria-label={t('support.title')}
-              sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
-            >
-              <FavoriteBorderIcon />
-            </IconButton>
-          </Tooltip>
           {/* Zonas: mismo sitio y mismo criterio que Novedades — navega fuera del mapa.
               Se esconde en pantallas estrechas, donde la barra ya iba justa y esta es la
               menos urgente de las dos; se llega igual desde el pie.
@@ -245,6 +229,24 @@ export function Layout({ children }: { children: ReactNode }) {
               sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
             >
               <PublicOutlinedIcon />
+            </IconButton>
+          </Tooltip>
+          {/* El corazón: apoyar el proyecto. Va en **las dos** anchuras, y sí, en
+              escritorio eso lo deja repetido con el enlace del pie. Se acepta a
+              propósito: el pie está al final de una página que casi nadie termina —y en
+              el mapa, que es donde está la gente, ni siquiera se pinta—, así que la
+              duplicación no cuesta nada y la única entrada visible sí valía. No es una
+              pestaña de la tab bar porque no es un lugar donde se esté, es algo que se
+              hace una vez. */}
+          <Tooltip title={t('support.title')}>
+            <IconButton
+              component={RouterLink}
+              to="/support"
+              color="inherit"
+              size="small"
+              aria-label={t('support.title')}
+            >
+              <FavoriteBorderIcon />
             </IconButton>
           </Tooltip>
           {/* La campana solo tiene sentido con sesión, y solo se pinta si hay algo:
