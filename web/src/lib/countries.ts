@@ -26,7 +26,9 @@
  * el selector de novedades**. Es la misma regla que las traducciones —al importar un
  * país, se añade aquí— y por eso van juntas: una lista, un sitio, un despiste posible.
  */
-export const PAISES = ['Spain', 'France', 'Portugal', 'Sweden', 'Finland', 'Chile', 'Andorra']
+export const PAISES = [
+  'Spain', 'France', 'Portugal', 'Sweden', 'Finland', 'Chile', 'Andorra', 'Switzerland',
+]
 
 const TRADUCIDOS = new Set(PAISES)
 

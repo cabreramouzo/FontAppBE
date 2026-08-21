@@ -225,6 +225,60 @@ cargado) no hace falta dedupe; junto a España conviene `--dedupe` para no dupli
    `import-fonts` no borra nada salvo que pases `--replace`; inserta en lotes de 500.
 3. Comprueba el recuento tras importar (psql v18): `SELECT count(*) FROM fonts;`.
 
+#### Suiza: importación preparada, todavía no ejecutada
+
+Suiza usa el mismo flujo europeo, pero el recorte y la clasificación deben hacerse con
+un fichero que contenga **solo Switzerland**. La tabla `Admin1` cubre los 26 nombres
+exactos de Natural Earth (incluidos `Genève`, `Lucerne` y `Sankt Gallen`) y sus códigos
+ISO 3166-2 `CH-*`.
+
+```overpassql
+[out:json][timeout:540];
+area["ISO3166-1"="CH"][admin_level=2]->.ch;
+(
+  node["amenity"="drinking_water"]["access"!~"^(no|private)$"](area.ch);
+  node["man_made"="water_tap"]["access"!~"^(no|private)$"](area.ch);
+  node["natural"="spring"]["drinking_water"]["access"!~"^(no|private)$"](area.ch);
+  node["natural"="spring"]["name"]["access"!~"^(no|private)$"](area.ch);
+  node["natural"="spring"]["man_made"]["access"!~"^(no|private)$"](area.ch);
+);
+out body;
+```
+
+Antes de escribir en producción, conserva el JSON crudo y prepara los límites:
+
+```bash
+python3 scripts/fonts-import-tools.py filtra suiza-osm-crudo.json suiza-limpio.json
+python3 scripts/fronteras-subset.py \
+  ne_10m_admin_1_states_provinces.geojson fronteras-suiza.geojson Switzerland
+```
+
+Haz primero todo el ciclo en la base local. En producción, importa sin `--replace`,
+clasifica únicamente las nuevas fuentes que aún no tienen región y audita `admin1` antes
+de aplicarlo. No uses `--all` ni `--fallback-nearest` hasta medir cuántos puntos quedan
+fuera de los polígonos y a qué distancia; Suiza limita con cinco países y una tolerancia
+no medida puede clasificar mal puntos fronterizos.
+
+```bash
+DATABASE_URL='postgresql://...' swift run App import-fonts suiza-limpio.json
+DATABASE_URL='postgresql://...' swift run App populate-regions fronteras-suiza.geojson
+DATABASE_URL='postgresql://...' swift run App backfill-admin1
+DATABASE_URL='postgresql://...' swift run App backfill-admin1 --apply
+```
+
+Verificación mínima antes y después del `--apply`:
+
+```sql
+SELECT country, region, admin1, count(*)
+FROM fonts
+WHERE country = 'Switzerland'
+GROUP BY country, region, admin1
+ORDER BY region;
+```
+
+El dry-run de `backfill-admin1` debe informar de **cero demarcaciones desconocidas** y la
+consulta final debe mostrar exclusivamente códigos `CH-*`. Si no, no ejecutes `--apply`.
+
 #### Chile, y por qué un país nuevo no se importa con la receta de Europa
 
 Chile (agosto 2026) es el primer país fuera de Europa, y lo primero que enseñó es que

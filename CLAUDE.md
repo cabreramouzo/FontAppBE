@@ -1268,7 +1268,8 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   en la insignia de Catalunya—. Un código y no un nombre por lo mismo que el resto de la
   gamificación, y porque el nombre ya nos costó el diccionario de dos grafías de
   `catalanRegions`. Se deriva **de `region` con una tabla estática** (`Admin1`: las 159
-  combinaciones medidas en producción para siete países) y no por point-in-polygon: una
+  combinaciones medidas en producción para siete países, más los 26 cantones suizos
+  preparados antes de su importación) y no por point-in-polygon: una
   provincia está dentro de una comunidad por
   definición, no por dónde caiga un polígono, y usar geometría para una pregunta definitoria
   mete un error que no hace falta (el borde de Natural Earth falla 1,9 km de mediana).

@@ -83,5 +83,16 @@ enum Admin1 {
             "Värmland": "SE-S", "Västerbotten": "SE-AC", "Västernorrland": "SE-Y",
             "Västmanland": "SE-U", "Västra Götaland": "SE-O", "Östergötland": "SE-E",
         ],
+        "Switzerland": [
+            "Aargau": "CH-AG", "Appenzell Ausserrhoden": "CH-AR",
+            "Appenzell Innerrhoden": "CH-AI", "Basel-Landschaft": "CH-BL",
+            "Basel-Stadt": "CH-BS", "Bern": "CH-BE", "Fribourg": "CH-FR",
+            "Genève": "CH-GE", "Glarus": "CH-GL", "Graubünden": "CH-GR",
+            "Jura": "CH-JU", "Lucerne": "CH-LU", "Neuchâtel": "CH-NE",
+            "Nidwalden": "CH-NW", "Obwalden": "CH-OW", "Sankt Gallen": "CH-SG",
+            "Schaffhausen": "CH-SH", "Schwyz": "CH-SZ", "Solothurn": "CH-SO",
+            "Thurgau": "CH-TG", "Ticino": "CH-TI", "Uri": "CH-UR",
+            "Valais": "CH-VS", "Vaud": "CH-VD", "Zug": "CH-ZG", "Zürich": "CH-ZH",
+        ],
     ]
 }
