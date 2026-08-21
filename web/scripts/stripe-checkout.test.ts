@@ -33,6 +33,10 @@ test('creates a subscription Checkout Session with the allowlisted monthly price
     assert.equal(form.get('mode'), 'subscription')
     assert.equal(form.get('line_items[0][price]'), 'price_monthly')
     assert.equal(form.get('success_url'), 'https://fontapp.net/support?stripe=success')
+    // Sin esto, Stripe rechaza la sesión entera en cualquier cuenta cuyo producto no lleve
+    // un `tax_code` elegible, que es como nacen todas. Comprobado contra la API real: la
+    // misma llamada da 400 con Managed Payments y una URL de checkout sin él.
+    assert.equal(form.get('managed_payments[enabled]'), 'false')
   } finally {
     globalThis.fetch = originalFetch
   }

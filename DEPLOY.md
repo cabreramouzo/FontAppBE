@@ -503,6 +503,30 @@ Crea los dos precios en el mismo modo que la clave (test o live); los objetos de
 producción tienen identificadores distintos. En Stripe → Payment methods, deja activos los
 métodos dinámicos que quieras mostrar. Checkout ofrece tarjeta y los monederos compatibles
 con el dispositivo y el país; Apple Pay no aparece en todos los navegadores/dispositivos.
+**Managed Payments va apagado en cada sesión, y tiene que seguir así.** Stripe lo enciende
+por defecto en las cuentas nuevas, y con él la creación de la sesión falla entera si el
+producto no lleva un `tax_code` elegible: `Invalid line_items[0]: this product tax code is
+ineligible for Managed Payments`. Eso llega al usuario como «no podemos abrir el pago», sin
+más pistas. Se apaga en el código (`managed_payments[enabled]=false`) y **no** en el panel,
+aunque el panel también deje: un ajuste de panel es por cuenta e invisible desde el
+repositorio, así que bastaría con que producción y el sandbox no coincidieran para que esto
+funcionara en pruebas y fallara al cobrar de verdad. Y de fondo, Managed Payments es Stripe
+haciendo de *merchant of record* —impuestos, fraude y disputas globales, cobrando por ello—,
+que es un producto para vender y no para recibir una donación.
+
+**Para probarlo en local hace falta el runtime de Pages, no Vite.** `npm run dev` no ejecuta
+nada de `web/functions/`, así que `/stripe/checkout` da 404 y la pantalla dice exactamente lo
+mismo que diría si Stripe estuviera caído:
+
+```
+npm --prefix web run build && npx wrangler pages dev web/dist --port 8788
+```
+
+Las claves salen de `web/.dev.vars` (ignorado por git; hay un `.dev.vars.example`). Ojo con
+cruzarlas: `STRIPE_ONE_TIME_PRICE_ID` quiere un precio **one-off** y `STRIPE_MONTHLY_PRICE_ID`
+uno **recurrente**; poner el de pago único en el mensual da
+`You must provide at least one recurring price in subscription mode`.
+
 Esta integración no necesita webhook mientras FontApp no conceda nada ni mantenga un estado
 propio por la donación. Si más adelante se muestra el estado de mecenas dentro de FontApp,
 añade un webhook firmado para `checkout.session.completed` y los eventos de suscripción.

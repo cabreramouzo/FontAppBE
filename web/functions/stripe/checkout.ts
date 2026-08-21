@@ -56,6 +56,21 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
     success_url: `${origin}/support?stripe=success`,
     cancel_url: `${origin}/support?stripe=cancelled`,
     'metadata[source]': 'fontapp_support',
+    // Managed Payments viene **encendido por defecto** en las cuentas nuevas de Stripe, y
+    // con él la sesión se rechaza entera si el producto no lleva un `tax_code` elegible:
+    // `Invalid line_items[0]: this product tax code is ineligible for Managed Payments`.
+    // No es un caso raro que se pueda dejar para luego — es el 100 % de los intentos desde
+    // una cuenta recién creada, y el mensaje no llega al usuario: la función lo convierte
+    // en `checkout_creation_failed` y la pantalla dice «no podemos abrir el pago».
+    //
+    // Se apaga aquí y no en el panel de Stripe, aunque el panel también deja hacerlo, por
+    // dos razones. Una es que un ajuste de panel es invisible desde el repositorio y se
+    // configura por cuenta: bastaría con que producción y el sandbox no coincidan para que
+    // esto funcione en pruebas y falle al cobrar de verdad. La otra es que Managed Payments
+    // es Stripe actuando de **merchant of record** —se ocupa de impuestos, fraude y
+    // disputas globales, y cobra por ello—, que es un producto pensado para vender, no para
+    // recibir una donación de cinco euros a un proyecto sin ánimo de lucro.
+    'managed_payments[enabled]': 'false',
   })
 
   let stripeResponse: Response
