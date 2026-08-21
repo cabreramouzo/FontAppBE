@@ -152,8 +152,33 @@ export async function onRequestPost({ request, env }: PagesContext): Promise<Res
     return json({ error: 'stripe_unavailable' }, 502)
   }
 
-  const result = await stripeResponse.json() as { url?: unknown }
+  // El cuerpo se lee como texto y se parsea aparte **a propósito**. Con
+  // `await stripeResponse.json()` a pelo, cualquier respuesta que no sea JSON —una página
+  // de error de un intermediario, un 502 de Stripe, un cuerpo vacío— lanza una excepción
+  // que nadie captura, y entonces Pages devuelve su propia página de error en texto plano
+  // en vez de nuestro JSON. Pasó en producción el día que se puso la cuenta real: el
+  // cliente recibía `error code: 502` de Cloudflare, o sea el mismo mensaje genérico en
+  // pantalla pero sin ninguna pista ni en la respuesta ni en los registros.
+  const raw = await stripeResponse.text()
+  let result: { url?: unknown; error?: { type?: string; code?: string; message?: string } } = {}
+  try {
+    result = JSON.parse(raw)
+  } catch {
+    result = {}
+  }
+
   if (!stripeResponse.ok || typeof result.url !== 'string' || !result.url.startsWith('https://checkout.stripe.com/')) {
+    // Al registro del servidor, nunca a la respuesta. El texto de error de Stripe explica
+    // exactamente qué falta —un permiso de la clave restringida, un precio de otro modo,
+    // un tax code— y sin él cada diagnóstico cuesta una ronda de preguntas. No lleva
+    // secretos, pero tampoco es asunto de quien visita la página, así que se queda en
+    // «Logs» del panel de Pages.
+    console.error('stripe checkout failed', {
+      status: stripeResponse.status,
+      type: result.error?.type,
+      code: result.error?.code,
+      message: result.error?.message ?? raw.slice(0, 300),
+    })
     return json({ error: 'checkout_creation_failed' }, 502)
   }
 

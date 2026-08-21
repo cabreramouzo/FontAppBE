@@ -114,3 +114,40 @@ test('a bad kind is a client error, not a configuration one', async () => {
   const response = await onRequestPost({ request: request({ kind: 'nope' }), env: {} })
   assert.equal(response.status, 400)
 })
+
+test('a non-JSON reply from Stripe is an error response, not a crash', async () => {
+  // Sin esto la excepción sube y Pages contesta con su propia página en texto plano, así
+  // que el cliente no recibe ni nuestro JSON ni ninguna pista. Pasó en producción.
+  const originalFetch = globalThis.fetch
+  const originalError = console.error
+  globalThis.fetch = async () => new Response('<html>gateway error</html>', { status: 502 })
+  console.error = () => {}
+  try {
+    const response = await onRequestPost({ request: request({ kind: 'once' }), env })
+    assert.equal(response.status, 502)
+    assert.deepEqual(await response.json(), { error: 'checkout_creation_failed' })
+  } finally {
+    globalThis.fetch = originalFetch
+    console.error = originalError
+  }
+})
+
+test('the Stripe error is logged server-side, never returned to the caller', async () => {
+  const originalFetch = globalThis.fetch
+  const originalError = console.error
+  const logged: unknown[] = []
+  globalThis.fetch = async () => Response.json(
+    { error: { type: 'invalid_request_error', message: 'No such price: price_once' } },
+    { status: 400 },
+  )
+  console.error = (...args: unknown[]) => { logged.push(args) }
+  try {
+    const response = await onRequestPost({ request: request({ kind: 'once' }), env })
+    const body = await response.text()
+    assert.ok(!body.includes('No such price'), 'el motivo no puede viajar al cliente')
+    assert.equal(JSON.stringify(logged).includes('No such price'), true, 'pero sí al registro')
+  } finally {
+    globalThis.fetch = originalFetch
+    console.error = originalError
+  }
+})
