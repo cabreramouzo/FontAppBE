@@ -222,6 +222,55 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    func testReviewAuthorCannotConfirmThemself() async throws {
+        try await withApp { app in
+            let authorID = try await register(app, username: "self-confirm-author")
+            let authorToken = try await login(app, username: "self-confirm-author")
+            _ = try await register(app, username: "self-confirm-neighbour")
+            let neighbourToken = try await login(app, username: "self-confirm-neighbour")
+            let fontID = try await createFont(app, token: authorToken, name: "No autoaval", lat: 40.4, long: -3.7)
+            let comment = FontComment(fontID: fontID, userID: authorID, body: "raja", waterStatus: "flowing")
+            try await comment.save(on: app.db)
+            let commentID = try comment.requireID()
+
+            try await app.test(.POST, "fonts/\(fontID)/comments/\(commentID)/confirm",
+                               headers: bearer(authorToken)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+            let selfConfirmations = try await FontConfirmation.query(on: app.db).count()
+            XCTAssertEqual(selfConfirmations, 0)
+
+            try await app.test(.POST, "fonts/\(fontID)/comments/\(commentID)/confirm",
+                               headers: bearer(neighbourToken)) { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode(CommentResponse.self).confirmations, 1)
+            }
+        }
+    }
+
+    func testHistoricalSelfConfirmationDoesNotCountForConfidence() async throws {
+        try await withApp { app in
+            let authorID = try await register(app, username: "old-self-confirm")
+            let token = try await login(app, username: "old-self-confirm")
+            let fontID = try await createFont(app, token: token, name: "Històrica", lat: 40.4, long: -3.7)
+            let comment = FontComment(fontID: fontID, userID: authorID, body: "raja", waterStatus: "flowing")
+            try await comment.save(on: app.db)
+            try await FontConfirmation(commentID: try comment.requireID(), userID: authorID).save(on: app.db)
+
+            let response = try await FontCommentController.response(for: comment, viewer: authorID, on: app.db)
+            XCTAssertEqual(response.confirmations, 0)
+            XCTAssertFalse(response.confirmedByMe)
+            XCTAssertNil(response.lastConfirmedAt)
+
+            let found = try await Font.find(fontID, on: app.db)
+            let font = try XCTUnwrap(found)
+            let summaries = try await Font.summaries(for: [font], on: app.db)
+            let summary = try XCTUnwrap(summaries.first)
+            XCTAssertEqual(summary.latestConfirmations, 0)
+            XCTAssertEqual(summary.lastUpdate, comment.createdAt)
+        }
+    }
+
     func testReportRecordsAuthor() async throws {
         try await withApp { app in
             try await register(app, username: "reporter")

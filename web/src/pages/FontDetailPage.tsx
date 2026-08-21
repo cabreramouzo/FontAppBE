@@ -95,6 +95,7 @@ import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 import { ConfidenceChip } from '../components/ConfidenceChip'
 import { evidenceFromReports } from '../lib/confidence'
+import { ConfidenceHelpButton } from '../components/ConfidenceHelp'
 
 // Reseñas "Anteriores" que se muestran por tanda (el resto, tras "mostrar más").
 const REVIEWS_PAGE = 5
@@ -925,6 +926,7 @@ export function FontDetailPage() {
       <Stack direction="row" sx={{ mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
         <FreshnessChip lastCheck={latest?.lastConfirmedAt ?? latest?.createdAt ?? null} />
         <ConfidenceChip evidence={confidenceEvidence} />
+        <ConfidenceHelpButton />
       </Stack>
 
       {creatorName && (
@@ -1191,7 +1193,7 @@ export function FontDetailPage() {
                 <>
                   {!updating && (
                     <Stack direction="row" sx={{ my: 1.5, gap: 1, flexWrap: 'wrap' }}>
-                      {latest.waterStatus && (
+                      {latest.waterStatus && latest.userID !== user.id && (
                         <Button
                           variant={latest.confirmedByMe ? 'contained' : 'outlined'}
                           color="success"

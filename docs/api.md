@@ -219,12 +219,12 @@ opcionalmente, `rating` (1-5), `waterStatus` y `image`. El más reciente es el e
 | POST | `/fonts/:id/comments` | Bearer | `{body (1–2000), rating?(1-5), waterStatus?, image?}` | 201 `CommentResponse` | 400, 401, 404 |
 | PUT | `/fonts/:id/comments/:commentID` | Bearer | igual que POST | 200 `CommentResponse` | 400, 401, 403 (no es tuya), 404 |
 | DELETE | `/fonts/:id/comments/:commentID` | Bearer | — | 204 | 401, 403 (no es tuya), 404 |
-| POST | `/fonts/:id/comments/:commentID/confirm` | Bearer | — | 200 `CommentResponse` | 401, 404 |
+| POST | `/fonts/:id/comments/:commentID/confirm` | Bearer | — | 200 `CommentResponse` | 401, 403 (reseña propia), 404 |
 | DELETE | `/fonts/:id/comments/:commentID/confirm` | Bearer | — | 200 `CommentResponse` | 401, 404 |
 
 `CommentResponse` incluye `confirmations` (nº de 👍 "sigue igual"), `confirmedByMe`
 (si el usuario autenticado ya confirmó) y `lastConfirmedAt`. Confirmar es idempotente
-(un usuario, una vez por comentario) y **no crea un comentario**: solo suma al contador
+(un usuario, una vez por comentario, nunca el autor) y **no crea un comentario**: solo suma al contador
 y refresca la frescura del estado. El `GET /comments` acepta Bearer opcional para
 rellenar `confirmedByMe`.
 

@@ -1607,7 +1607,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   reciente**, **datos contradictorios**, **información antigua** o **sin comprobar**.
 - La ventana de actualidad es de 30 días. Una confirmación («sigue igual») refresca el
   último parte. Para quedar confirmada hace falta una confirmación independiente o dos
-  autores identificados distintos con partes recientes.
+  autores identificados distintos con partes recientes. El autor **no puede confirmar
+  su propia reseña**: la API devuelve 403, el cliente no ofrece el botón y cualquier
+  autoconfirmación histórica se ignora al contar apoyos y calcular frescura.
 - `flowing` y `trickle` forman la familia «hay agua»; `dry`, `broken` y `gone`, la familia
   incompatible «no disponible». Si ambas aparecen recientemente, prevalece
   **contradictoria**, incluso aunque el último parte tenga apoyos.

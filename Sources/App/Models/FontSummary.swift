@@ -74,6 +74,10 @@ extension Font {
         // Frescura: una confirmación ("sigue igual") también cuenta como actualización.
         // Tomamos la confirmación más reciente de cada comentario de estado (una query).
         let statusCommentIDs = latest.values.compactMap { $0.commentID }
+        let authorByComment: [UUID: UUID] = Dictionary(uniqueKeysWithValues: comments.compactMap { comment -> (UUID, UUID)? in
+            guard let id = comment.id, let userID = comment.$user.id else { return nil }
+            return (id, userID)
+        })
         var lastConfirm: [UUID: Date] = [:]
         var confirmationCounts: [UUID: Int] = [:]
         if !statusCommentIDs.isEmpty {
@@ -82,6 +86,9 @@ extension Font {
                 .all()
             for c in confs {
                 let cid = c.$comment.id
+                // Ignora también filas históricas creadas antes de prohibir que el autor
+                // se confirmase a sí mismo.
+                guard authorByComment[cid] != c.$user.id else { continue }
                 confirmationCounts[cid, default: 0] += 1
                 if let d = c.createdAt, lastConfirm[cid] == nil || d > lastConfirm[cid]! {
                     lastConfirm[cid] = d

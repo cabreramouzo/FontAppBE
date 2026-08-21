@@ -16,7 +16,7 @@ import { SOURCE_EMOJI, SOURCE_OPTIONS, DRINKABLE_EMOJI, DRINKABLE_OPTIONS } from
 import { useI18n } from '../i18n/I18nContext'
 
 /** Una fila de la leyenda: emoji, rótulo y qué significa. */
-type Fila = { clave: string; emoji: string; rotulo: string; explicacion: string }
+export type LegendRow = { clave: string; emoji: string; rotulo: string; explicacion: string }
 
 /**
  * Botón (?) con una leyenda. Los dos que hay —tipo de fuente y potabilidad— son la
@@ -24,7 +24,7 @@ type Fila = { clave: string; emoji: string; rotulo: string; explicacion: string 
  * diálogos separados se separan de verdad al primer arreglo, y el que se olvide solo
  * se nota en uno de los dos.
  */
-function BotonLeyenda({ titulo, filas, nota }: { titulo: string; filas: Fila[]; nota?: ReactNode }) {
+export function LegendHelpButton({ titulo, filas, nota }: { titulo: string; filas: LegendRow[]; nota?: ReactNode }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   return (
@@ -61,7 +61,7 @@ function BotonLeyenda({ titulo, filas, nota }: { titulo: string; filas: Fila[]; 
 export function WaterTypeHelpButton() {
   const { t } = useI18n()
   return (
-    <BotonLeyenda
+    <LegendHelpButton
       titulo={t('waterHelp.title')}
       filas={SOURCE_OPTIONS.map((k) => ({
         clave: k,
@@ -87,7 +87,7 @@ export function WaterTypeHelpButton() {
 export function DrinkableHelpButton() {
   const { t } = useI18n()
   return (
-    <BotonLeyenda
+    <LegendHelpButton
       titulo={t('drinkHelp.title')}
       filas={[
         ...DRINKABLE_OPTIONS.map((k) => ({

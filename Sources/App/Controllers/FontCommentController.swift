@@ -54,6 +54,9 @@ struct FontCommentController: RouteCollection {
         let comment = try await requireComment(req)
         let userID = try user.requireID()
         let commentID = try comment.requireID()
+        guard comment.$user.id != userID else {
+            throw AppError(.forbidden, "confirm.ownReview", "No puedes confirmar tu propia reseña")
+        }
         let already = try await FontConfirmation.query(on: req.db)
             .filter(\.$comment.$id == commentID)
             .filter(\.$user.$id == userID)
@@ -183,9 +186,16 @@ struct FontCommentController: RouteCollection {
         let ids = comments.compactMap { $0.id }
         guard !ids.isEmpty else { return [:] }
         let confs = try await FontConfirmation.query(on: db).filter(\.$comment.$id ~~ ids).all()
+        let authors: [UUID: UUID] = Dictionary(uniqueKeysWithValues: comments.compactMap { comment -> (UUID, UUID)? in
+            guard let id = comment.id, let userID = comment.$user.id else { return nil }
+            return (id, userID)
+        })
         var out: [UUID: ConfirmAgg] = [:]
         for c in confs {
             let cid = c.$comment.id
+            // Las autoconfirmaciones históricas quedan inertes sin una migración
+            // destructiva: no cuentan ni refrescan la fecha aunque la fila siga ahí.
+            if authors[cid] == c.$user.id { continue }
             var agg = out[cid] ?? ConfirmAgg(count: 0, lastAt: nil, byViewer: false)
             agg.count += 1
             if let d = c.createdAt, agg.lastAt == nil || d > agg.lastAt! { agg.lastAt = d }
