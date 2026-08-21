@@ -24,6 +24,7 @@ import { comparteTexto } from '../lib/share'
 import { PAISES, TODOS, nombrePais, paisRecordado, recuerdaPais } from '../lib/countries'
 import { DryFountain } from './DryFountain'
 import { useToast } from './ToastContext'
+import { rotulo } from '../lib/fontName'
 
 // Radio de las esquinas de las piezas. En px y no con la escala del tema (`4` serían
 // 48 px, cuatro veces `shape.borderRadius`): estas tarjetas son pequeñas y con tanto
@@ -215,7 +216,7 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
                 overflow: 'hidden',
               }}
             >
-              {item.fontName}
+              {rotulo(item.fontName, t)}
             </Typography>
             {conExtracto && (
               <Typography

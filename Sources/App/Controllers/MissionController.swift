@@ -35,7 +35,7 @@ struct MissionController: RouteCollection {
 
     struct Target: Content {
         let id: UUID
-        let name: String
+        let name: String?
         let latitude: Double
         let longitude: Double
         let distanceKm: Double

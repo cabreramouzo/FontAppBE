@@ -33,7 +33,7 @@ enum Guardianship {
 
     struct Guarded: Content, Sendable {
         let fontID: UUID
-        let name: String
+        let name: String?
         /// Cuándo la comprobaste por última vez.
         let lastCheck: Date
         /// Días transcurridos, para no obligar al cliente a recalcularlo.
@@ -49,7 +49,7 @@ enum Guardianship {
     /// 60.000 fuentes eso importa.
     static func of(_ userID: UUID, on db: any Database, now: Date = Date()) async throws -> [Guarded] {
         guard let sql = db as? any SQLDatabase else { return [] }
-        struct Fila: Decodable { let font_id: UUID; let name: String; let last_at: Date }
+        struct Fila: Decodable { let font_id: UUID; let name: String?; let last_at: Date }
         let filas = try await sql.raw("""
             SELECT ultima.font_id, f.name, ultima.last_at
             FROM (

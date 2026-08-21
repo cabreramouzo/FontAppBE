@@ -15,7 +15,9 @@ struct WeeklyDigest {
         enum Kind { case comment, report, edit }
         let kind: Kind
         let fontID: UUID
-        let fontName: String
+        /// `nil` si la fuente no tiene nombre propio; lo rotula la plantilla, que sabe
+        /// en qué idioma escribe. Ver `Font.name`.
+        let fontName: String?
         /// Estado del agua que dejó la reseña (para el distintivo de color), si lo indicó.
         let waterStatus: String?
         /// Texto de la reseña / incidencia. En una edición no hay texto.
@@ -27,7 +29,7 @@ struct WeeklyDigest {
     /// Fuente nueva de otra persona cerca de las tuyas.
     struct Nearby {
         let id: UUID
-        let name: String
+        let name: String?
         let source: WaterSource?
         let region: String?
         let author: String
@@ -89,7 +91,14 @@ struct WeeklyDigest {
 
         // Nombres de las fuentes implicadas, en una query (nada de N+1).
         let myFonts = try await Font.query(on: db).filter(\.$id ~~ myFontIDs).all()
-        let fontNames = Dictionary(uniqueKeysWithValues: myFonts.compactMap { f in f.id.map { ($0, f.name) } })
+        // Las que no tienen nombre propio se quedan fuera y por tanto se leen como `nil`.
+        // El `guard` de abajo ya NO puede usar este diccionario para filtrar: las fuentes
+        // en juego vienen todas de `myFontIDs`, así que el filtro ya está hecho — y si se
+        // usara, una fuente sin nombre desaparecería del resumen.
+        let fontNames = Dictionary(uniqueKeysWithValues: myFonts.compactMap { f -> (UUID, String)? in
+            guard let id = f.id, let n = f.name else { return nil }
+            return (id, n)
+        })
 
         // --- Actividad AJENA en tus fuentes: reseñas, incidencias y ediciones.
         let comments = try await FontComment.query(on: db)
@@ -119,18 +128,18 @@ struct WeeklyDigest {
 
         var items: [Activity] = []
         for c in comments {
-            guard let date = c.createdAt, let name = fontNames[c.$font.id] else { continue }
-            items.append(.init(kind: .comment, fontID: c.$font.id, fontName: name,
+            guard let date = c.createdAt else { continue }
+            items.append(.init(kind: .comment, fontID: c.$font.id, fontName: fontNames[c.$font.id],
                                waterStatus: c.waterStatus, body: c.body, author: author(c.$user.id), createdAt: date))
         }
         for r in reports {
-            guard let date = r.createdAt, let name = fontNames[r.$font.id] else { continue }
-            items.append(.init(kind: .report, fontID: r.$font.id, fontName: name,
+            guard let date = r.createdAt else { continue }
+            items.append(.init(kind: .report, fontID: r.$font.id, fontName: fontNames[r.$font.id],
                                waterStatus: nil, body: r.message, author: author(r.$user.id), createdAt: date))
         }
         for e in edits {
-            guard let date = e.createdAt, let name = fontNames[e.$font.id] else { continue }
-            items.append(.init(kind: .edit, fontID: e.$font.id, fontName: name,
+            guard let date = e.createdAt else { continue }
+            items.append(.init(kind: .edit, fontID: e.$font.id, fontName: fontNames[e.$font.id],
                                waterStatus: nil, body: nil, author: author(e.$editor.id), createdAt: date))
         }
         digest.activity = Array(items.sorted { $0.createdAt > $1.createdAt }.prefix(maxActivity))

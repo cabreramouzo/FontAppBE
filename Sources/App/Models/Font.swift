@@ -39,7 +39,36 @@ final class Font: Model, Content, @unchecked Sendable {
     static let schema = "fonts"
 
     @ID(key: .id) var id: UUID?
-    @Field(key: "name") var name: String
+    /// El nombre **propio** de la fuente, o `nil` si no tiene.
+    ///
+    /// Es opcional a propósito, y esto costó entenderlo. Al importar de OSM, tres de cada
+    /// cuatro puntos vienen sin `name`, y durante meses se les puso un relleno en el idioma
+    /// del territorio: «Font», «Fuente», «Fontaine», «Vattenpost». Parecía correcto —el dato
+    /// en el idioma de donde sale— y confunde **el idioma del territorio con el de quien
+    /// lee**, que son cosas distintas: un dato no tiene idioma, una interfaz sí. Resultado
+    /// medido: el 47 % del mapa mostraba una palabra que el lector podía no entender, y un
+    /// español en Estocolmo veía «Vattenpost» 1.310 veces.
+    ///
+    /// Ahora «no tiene nombre» es lo que se guarda —que es la verdad— y el rótulo lo compone
+    /// quien pinta, con `source` y el idioma del lector. Los topónimos de verdad
+    /// («Pilgrimskällan», «Font de la Teula») **no se tocan**: son nombres propios, y
+    /// traducirlos impediría preguntar por la fuente o reconocer su cartel.
+    @OptionalField(key: "name") var name: String?
+
+    /// Los rellenos que se usaron como nombre antes de que `name` fuera opcional.
+    ///
+    /// Vive aquí, y no dentro del comando que los limpia, porque hay **dos** sitios que la
+    /// necesitan: `clear-placeholder-names` para vaciarlos y `import-geojson` para decidir
+    /// si el topónimo del ICGC mejora lo que hay. Ese segundo tenía su propia copia, y ya se
+    /// habían separado: la suya llevaba «deu» y le faltaban los rellenos de Francia,
+    /// Portugal y los nórdicos.
+    static let placeholderNames: Set<String> = [
+        "Font", "Manantial",                       // por defecto del importador
+        "Fuente", "Fontaine", "Source",            // España, Francia
+        "Fonte", "Nascente",                       // Portugal
+        "Vattenpost", "Källa",                     // Suecia
+        "Vesiposti", "Lähde",                      // Finlandia
+    ]
     @Field(key: "latitude") var latitude: Double
     @Field(key: "longitude") var longitude: Double
     @OptionalField(key: "image") var image: String?
@@ -85,7 +114,7 @@ final class Font: Model, Content, @unchecked Sendable {
 
     init(
         id: UUID? = nil,
-        name: String,
+        name: String?,
         latitude: Double,
         longitude: Double,
         image: String? = nil,

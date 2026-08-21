@@ -136,7 +136,7 @@ enum ContributionScore {
         let userID: UUID
         let kind: Kind
         let fontID: UUID
-        let fontName: String
+        let fontName: String?
         let at: Date
         /// Identidad: tabla de origen, fila concreta y, cuando una misma fila genera
         /// varias aportaciones (una edición que completa tres campos), cuál de ellas.

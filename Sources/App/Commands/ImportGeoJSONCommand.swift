@@ -179,8 +179,18 @@ struct ImportGeoJSONCommand: AsyncCommand {
 
     /// Nombres genéricos que conviene sustituir por un topónimo más específico.
     /// Incluye los valores por defecto que pone el import de OSM a nodos sin nombre.
-    private static func isGeneric(_ name: String) -> Bool {
-        ["font", "manantial", "fuente", "deu", ""].contains(name.trimmingCharacters(in: .whitespaces).lowercased())
+    /// Sin nombre (`nil`) cuenta como genérico: es el caso más claro de «adopta el
+    /// topónimo del ICGC», no una excepción.
+    private static func isGeneric(_ name: String?) -> Bool {
+        guard let name else { return true }
+        let limpio = name.trimmingCharacters(in: .whitespaces)
+        if limpio.isEmpty { return true }
+        // La lista es la de `Font.placeholderNames` y no una copia: eran dos listas que ya
+        // se habían separado —ésta tenía «deu» y le faltaban los rellenos de Francia,
+        // Portugal y los nórdicos—, así que un topónimo del ICGC no llegaba a sustituir a
+        // un «Fontaine» aunque ese era exactamente el caso para el que se escribió.
+        return Font.placeholderNames.contains { $0.lowercased() == limpio.lowercased() }
+            || limpio.lowercased() == "deu"
     }
 }
 

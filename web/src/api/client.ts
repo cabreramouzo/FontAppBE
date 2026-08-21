@@ -92,7 +92,8 @@ export async function uploadImage(file: File, meta?: PhotoUploadMeta): Promise<s
 }
 
 export interface NewFont {
-  name: string
+  /** Obligatorio al crear; puede ser `null` al editar una importada sin topónimo. */
+  name: string | null
   latitude: number
   longitude: number
   image?: string
@@ -325,7 +326,7 @@ export async function forgotPassword(email: string, lang?: string): Promise<{ ok
 /** Una fuente que cuidas: tu reseña es la última que tiene. */
 export interface Guarded {
   fontID: string
-  name: string
+  name: string | null
   lastCheck: string
   days: number
   /** Ya ha pasado del corte de 90 días. */
@@ -348,7 +349,7 @@ export interface NotificationItem {
   kind: 'mention' | 'staleGuarded' | 'fontUpdate'
   actorName: string
   fontID: string | null
-  fontName: string
+  fontName: string | null
   excerpt: string
   read: boolean
   createdAt: string | null
@@ -380,7 +381,7 @@ export async function resetPassword(token: string, password: string): Promise<vo
 export interface ActivityItem {
   kind: 'fontAdded' | 'review' | 'report' | 'edit'
   fontID: string
-  fontName: string
+  fontName: string | null
   region: string | null
   author: string | null
   waterStatus: string | null

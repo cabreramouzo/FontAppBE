@@ -149,6 +149,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddLastSeenAtToUser())   // para no mandar correo a quien ya está dentro
     app.migrations.add(AddHiddenToFont())       // duplicadas y retiradas: se esconden, no se borran
     app.migrations.add(CreatePhotoExif())       // EXIF de cada foto: solo para moderar
+    app.migrations.add(MakeFontNameOptional()) // «sin nombre» es un dato, no un relleno
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
@@ -181,6 +182,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(ScoreContributionsCommand(), as: "score-contributions")
     app.asyncCommands.use(GamificationSyncCommand(), as: "gamification-sync")
     app.asyncCommands.use(AdoptCoverPhotosCommand(), as: "adopt-cover-photos")
+    app.asyncCommands.use(ClearPlaceholderNamesCommand(), as: "clear-placeholder-names")
 
     // Rutas.
     try routes(app)

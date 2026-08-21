@@ -11,3 +11,9 @@ func haversineKm(_ lat1: Double, _ lon1: Double, _ lat2: Double, _ lon2: Double)
     let c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return earthRadiusKm * c
 }
+
+extension String {
+    /// `nil` si la cadena está vacía. Para columnas donde «vacío» y «no hay» son lo mismo
+    /// y solo una de las dos formas es la verdadera — ver `Font.name`.
+    var nilIfEmpty: String? { isEmpty ? nil : self }
+}

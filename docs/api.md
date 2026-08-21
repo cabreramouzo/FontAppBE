@@ -42,7 +42,7 @@ Login con credenciales inválidas → **401**.
 
 ```jsonc
 // Font
-{ "id": "uuid", "name": "string", "latitude": 40.4, "longitude": -3.7,
+{ "id": "uuid", "name": "string|null", "latitude": 40.4, "longitude": -3.7,
   "image": "url|null", "description": "string|null",
   "country": "string|null", "region": "string|null",  // por zona; aún sin poblar
   "createdAt": "iso8601" }
@@ -68,6 +68,10 @@ Login con credenciales inválidas → **401**.
   "waterStatus": "flowing|trickle|dry|broken|gone|unknown|null",
   "image": "url|null", "createdAt": "iso8601" }
 ```
+
+En `Font`, `name` solo contiene un nombre propio o topónimo. En una fuente importada
+sin nombre es `null`; el cliente compone entonces un rótulo traducido a partir de
+`source`.
 
 `waterStatus` (estado): `flowing` (sale agua), `trickle` (poca), `dry` (seca), `broken`
 (estropeada), `gone` (ya no está), `unknown`. Los dos últimos hablan de la fuente y no
@@ -175,7 +179,7 @@ guarda en la BD y solo sirve para desactivar el resumen de ese usuario concreto.
 | GET | `/fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=` | — | bounding box (para el mapa) | 200 `[FontSummary]` | 400 |
 | GET | `/fonts/:id` | — | — | 200 `Font` | 404 |
 | POST | `/fonts` | Bearer | `{name, latitude[-90,90], longitude[-180,180], image?, description?}` | 201 `Font` | 400, 401 |
-| PUT | `/fonts/:id` | Bearer | igual que POST | 200 `Font` | 400, 401, 404 |
+| PUT | `/fonts/:id` | Bearer | campos de POST; `name` admite `null` o vacío para quitar el nombre | 200 `Font` | 400, 401, 404 |
 | DELETE | `/fonts/:id` | Bearer | — | 204 | 401, 404 |
 | PUT | `/fonts/:id/photo` | Bearer | `{image}` | 200 `Font` | 400, 401, 403 (ya tiene foto y no eres creador/admin), 404 |
 | POST | `/fonts/:id/photo/from-comment/:commentID` | Bearer | — | 200 `Font` | 400, 401, 403, 404 |

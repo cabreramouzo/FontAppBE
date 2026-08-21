@@ -30,6 +30,13 @@ enum WeeklyDigestEmail {
         let footer: String
         let unsubscribe: String       // texto del enlace de baja
         let statusLabels: [String: String]  // waterStatus -> etiqueta
+        /// Cómo se nombra una fuente **sin nombre propio**.
+        ///
+        /// El correo dice «Fuente sin nombre» y la app pinta el TIPO («Fuente natural»).
+        /// Es a propósito: en el mapa el tipo orienta —te dice si esperar un caño o un
+        /// rezume— y en una lista de correo sería ruido, porque lo que se está contando es
+        /// lo que ha pasado, no qué clase de fuente es. Las dos son ciertas.
+        let unnamed: String
         let reportLabel: String       // distintivo de una incidencia/aviso
         let editLabel: String         // distintivo de una edición
         let daysAgo: (Int) -> String
@@ -65,7 +72,7 @@ enum WeeklyDigestEmail {
                 return """
                 <tr><td style="padding:10px 0;\(last ? "" : "border-bottom:1px solid #f1f5f9;")">
                   <p style="margin:0;font-size:15px;line-height:21px;color:#0f172a;">
-                    <a href="\(base)/fonts/\(a.fontID)" style="color:#0f172a;text-decoration:none;font-weight:700;">\(esc(a.fontName))</a>\(chip)
+                    <a href="\(base)/fonts/\(a.fontID)" style="color:#0f172a;text-decoration:none;font-weight:700;">\(esc(a.fontName ?? c.unnamed))</a>\(chip)
                   </p>
                   <p style="margin:5px 0 0;font-size:14px;line-height:20px;color:#475569;">\(body)</p>
                 </td></tr>
@@ -117,7 +124,7 @@ enum WeeklyDigestEmail {
                 return """
                 <tr><td valign="top" style="padding:6px 8px 6px 0;font-size:16px;">\(emoji(for: n.source))</td>
                   <td style="padding:6px 0;font-size:14px;line-height:20px;color:#334155;">
-                    <a href="\(base)/fonts/\(n.id)" style="color:#0f172a;font-weight:600;text-decoration:none;">\(esc(n.name))</a>\(place) · <span style="color:#64748b;">\(esc(c.addedBy)) \(esc(n.author))</span>
+                    <a href="\(base)/fonts/\(n.id)" style="color:#0f172a;font-weight:600;text-decoration:none;">\(esc(n.name ?? c.unnamed))</a>\(place) · <span style="color:#64748b;">\(esc(c.addedBy)) \(esc(n.author))</span>
                   </td></tr>
                 """
             }.joined(separator: "\n")
@@ -203,7 +210,7 @@ enum WeeklyDigestEmail {
             out += "\n\(c.activityTitle)\n"
             for a in digest.activity {
                 let body = a.kind == .edit ? c.editedBody : "“\(trim(a.body ?? ""))”"
-                out += "- \(a.fontName): \(body) — \(a.author) · \(c.daysAgo(daysSince(a.createdAt)))\n  \(base)/fonts/\(a.fontID)\n"
+                out += "- \(a.fontName ?? c.unnamed): \(body) — \(a.author) · \(c.daysAgo(daysSince(a.createdAt)))\n  \(base)/fonts/\(a.fontID)\n"
             }
         }
         if let z = digest.zone, z.fonts > 0 {
@@ -214,7 +221,7 @@ enum WeeklyDigestEmail {
         if !digest.nearby.isEmpty {
             out += "\n\(c.nearbyTitle)\n"
             for n in digest.nearby {
-                out += "- \(n.name)\(n.region.map { " · \($0)" } ?? "") · \(c.addedBy) \(n.author)\n  \(base)/fonts/\(n.id)\n"
+                out += "- \(n.name ?? c.unnamed)\(n.region.map { " · \($0)" } ?? "") · \(c.addedBy) \(n.author)\n  \(base)/fonts/\(n.id)\n"
             }
         }
         out += "\n\(c.cta): \(base)\n\n\(c.nudge)\n\n\(c.footer) \(c.unsubscribe): \(unsubscribeURL)\n"
@@ -302,6 +309,7 @@ enum WeeklyDigestEmail {
                 footer: "Recibes este resumen porque tienes cuenta en FontApp. Puedes",
                 unsubscribe: "dejar de recibirlo",
                 statusLabels: ["flowing": "Sale agua", "trickle": "Poca agua", "dry": "Seca"],
+                unnamed: "Fuente sin nombre",
                 reportLabel: "Aviso", editLabel: "Editada",
                 daysAgo: { d in d <= 0 ? "hoy" : (d == 1 ? "ayer" : "hace \(d) días") }
             )
@@ -327,6 +335,7 @@ enum WeeklyDigestEmail {
                 footer: "Recibes este resumo porque tes conta en FontApp. Podes",
                 unsubscribe: "deixar de recibilo",
                 statusLabels: ["flowing": "Sae auga", "trickle": "Pouca auga", "dry": "Seca"],
+                unnamed: "Fonte sen nome",
                 reportLabel: "Aviso", editLabel: "Editada",
                 daysAgo: { d in d <= 0 ? "hoxe" : (d == 1 ? "onte" : "hai \(d) días") }
             )
@@ -352,6 +361,7 @@ enum WeeklyDigestEmail {
                 footer: "Laburpen hau jasotzen duzu FontApp-en kontua duzulako.",
                 unsubscribe: "utzi jasotzeari",
                 statusLabels: ["flowing": "Ura dario", "trickle": "Ur gutxi", "dry": "Lehorra"],
+                unnamed: "Izenik gabeko iturria",
                 reportLabel: "Oharra", editLabel: "Editatua",
                 daysAgo: { d in d <= 0 ? "gaur" : (d == 1 ? "atzo" : "duela \(d) egun") }
             )
@@ -377,6 +387,7 @@ enum WeeklyDigestEmail {
                 footer: "You're getting this round-up because you have a FontApp account. You can",
                 unsubscribe: "stop receiving it",
                 statusLabels: ["flowing": "Flowing", "trickle": "Trickle", "dry": "Dry"],
+                unnamed: "Unnamed fountain",
                 reportLabel: "Heads-up", editLabel: "Edited",
                 daysAgo: { d in d <= 0 ? "today" : (d == 1 ? "yesterday" : "\(d) days ago") }
             )
@@ -402,6 +413,7 @@ enum WeeklyDigestEmail {
                 footer: "Reps aquest resum perquè tens compte a FontApp. Pots",
                 unsubscribe: "deixar de rebre'l",
                 statusLabels: ["flowing": "Raja", "trickle": "Poca aigua", "dry": "Seca"],
+                unnamed: "Font sense nom",
                 reportLabel: "Avís", editLabel: "Editada",
                 daysAgo: { d in d <= 0 ? "avui" : (d == 1 ? "ahir" : "fa \(d) dies") }
             )

@@ -12,6 +12,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from './Skeleton'
 import { ListaConTope } from './ListaConTope'
 import { WorthChip } from './WorthChip'
+import { rotulo } from '../lib/fontName'
 
 
 /**
@@ -64,7 +65,7 @@ export function GuardedFonts() {
           <ListItem disablePadding divider>
             <ListItemButton component={RouterLink} to={`/fonts/${f.fontID}`}>
               <ListItemText
-                primary={f.name}
+                primary={rotulo(f.name, t)}
                 secondary={
                   <>
                     {t('guard.checkedAgo', { d: String(f.days) })}{' '}

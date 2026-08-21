@@ -76,7 +76,7 @@ enum MentionNotifier {
             .filter { bajos.contains($0.username.lowercased()) && $0.id != autorID }
 
         guard !destinatarios.isEmpty else { return }
-        let nombreFuente = try await Font.find(fontID, on: db)?.name ?? "una font"
+        let nombreFuente = try await Font.find(fontID, on: db)?.name
         let base = Environment.get("WEB_ORIGIN")?.split(separator: ",").first.map(String.init)
             ?? "http://localhost:5173"
         let origen = base.hasSuffix("/") ? String(base.dropLast()) : base

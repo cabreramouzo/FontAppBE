@@ -29,9 +29,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Sembrar: `swift run App seed [--force] [--demo]` (fuentes reales del Moianès; `--demo` añade usuarios+reseñas).
   Con la BD ya poblada (p. ej. tras `import-fonts`), `seed --demo` NO reinserta fuentes: solo añade
   reseñas de ejemplo sobre las fuentes existentes de la zona del Moianès (bbox), sin tocar el resto.
-- Importar/zonas: `import-fonts` (Overpass/OSM; `--unnamed`/`--unnamed-spring` fijan el
-  rótulo de los puntos sin nombre, que son **3 de cada 4** — `Fontaine`/`Source` en Francia,
-  `Fuente` en España. **No deduplica**: solo tiene `--replace`, que borra la base entera,
+- Importar/zonas: `import-fonts` (Overpass/OSM; los puntos sin topónimo se guardan con
+  `name = NULL` y el cliente los rotula por `source` en el idioma del lector; son **3 de
+  cada 4**. **No deduplica**: solo tiene `--replace`, que borra la base entera,
   así que hay que medir el solape antes) · `import-geojson` (ICGC/ACA; acepta Point y
   MultiPoint, con `--dry-run` y `--titlecase`) ·
   `populate-regions <fronteras.geojson>` (rellena país/región offline por point-in-polygon).
@@ -1020,6 +1020,12 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   en rojo. Es el mismo fallo que dio un binario sin recompilar durante el desarrollo.
 
 ## Datos de fuentes
+- **`fonts.name` es solo el topónimo y admite `NULL`.** «Pilgrimskällan» se conserva tal
+  cual en cualquier idioma; un punto sin `name` en OSM no recibe «Vattenpost», «Font» ni
+  ningún otro relleno. El cliente usa `nombreFuente()` y pinta `source.<tipo>` en el
+  idioma del lector. La migración solo abre la columna; `clear-placeholder-names
+  --dry-run` mide los rellenos históricos y el mismo comando sin el flag los vacía, solo
+  en importadas (`created_by IS NULL`) y por coincidencia exacta.
 - Al importar de OSM, un **`natural=spring` sin ningún otro tag no es una fuente**: se
   miraron diez al azar por satélite y son charcos o nacimientos de riachuelo (2.318 de
   5.357 en la caja de Occitània). Valen los que llevan nombre, captación o potabilidad.

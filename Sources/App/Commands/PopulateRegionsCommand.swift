@@ -140,7 +140,7 @@ struct PopulateRegionsCommand: AsyncCommand {
         if !stillNull.isEmpty {
             context.console.info("Sin región (primeras \(min(stillNull.count, 15)), lat,lon):")
             for f in stillNull.prefix(15) {
-                context.console.info("  \(f.name) @ \(f.latitude),\(f.longitude)")
+                context.console.info("  \(f.name ?? "(sin nombre)") @ \(f.latitude),\(f.longitude)")
             }
             if signature.fallbackNearestKm == nil {
                 context.console.info("Sugerencia: reejecuta con --fallback-nearest 25 para asignar las de costa a la provincia más cercana.")

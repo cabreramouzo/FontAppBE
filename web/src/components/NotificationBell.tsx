@@ -12,6 +12,7 @@ import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import { getNotifications, markNotificationsRead, type NotificationItem } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import { timeAgo } from '../lib/time'
+import { rotulo } from '../lib/fontName'
 
 /**
  * La campana: avisos dentro de la app.
@@ -133,14 +134,14 @@ export function NotificationBell() {
               {n.kind === 'staleGuarded'
                 ? t('notif.staleGuarded', { n: String(cifras(n.excerpt)[0]) })
                 : n.kind === 'fontUpdate'
-                  ? t('notif.fontUpdate', { font: n.fontName })
-                  : t('notif.mentionedYou', { user: n.actorName, font: n.fontName })}
+                  ? t('notif.fontUpdate', { font: rotulo(n.fontName, t) })
+                  : t('notif.mentionedYou', { user: n.actorName, font: rotulo(n.fontName, t) })}
             </Typography>
             {/* El texto que lo provocó. Sin él hay que abrir la ficha para saber si
                 corre prisa, y casi nunca corre. */}
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.35 }}>
               {n.kind === 'staleGuarded'
-                ? t('notif.staleGuardedBody', { font: n.fontName, d: String(cifras(n.excerpt)[2]) })
+                ? t('notif.staleGuardedBody', { font: rotulo(n.fontName, t), d: String(cifras(n.excerpt)[2]) })
                 : n.kind === 'fontUpdate'
                   ? queHaPasado(n.excerpt, n.actorName, t)
                   : n.excerpt}

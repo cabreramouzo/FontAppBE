@@ -16,6 +16,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import type { FontEdit, FontInfoSnapshot } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
 import { timeAgo } from '../lib/time'
+import { rotulo } from '../lib/fontName'
 
 /** Tabla del historial de ediciones de información de fuentes (moderación). */
 export function EditsTable({ edits, onRevert, onAccept }: {
@@ -59,7 +60,7 @@ export function EditsTable({ edits, onRevert, onAccept }: {
                 )}
                 {idx === 0 && (
                   <TableCell rowSpan={rows.length}>
-                    <Link component={RouterLink} to={`/fonts/${e.fontID}`}>{e.fontName ?? e.after.name}</Link>
+                    <Link component={RouterLink} to={`/fonts/${e.fontID}`}>{rotulo(e.fontName ?? e.after.name, t)}</Link>
                   </TableCell>
                 )}
                 {idx === 0 && (

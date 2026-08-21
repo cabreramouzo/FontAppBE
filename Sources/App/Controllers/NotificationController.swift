@@ -24,7 +24,9 @@ struct NotificationController: RouteCollection {
         /// A dónde lleva. Nulo si la fuente se borró: el aviso sobrevive y deja de ser
         /// un enlace, en vez de mandarte a un 404.
         let fontID: UUID?
-        let fontName: String
+        /// `nil` si la fuente no tiene nombre propio; lo rotula el cliente, igual que
+        /// hace con `excerpt`, que también viaja como código. Ver `Font.name`.
+        let fontName: String?
         let excerpt: String
         let read: Bool
         let createdAt: Date?

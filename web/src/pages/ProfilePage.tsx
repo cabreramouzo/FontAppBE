@@ -22,6 +22,7 @@ import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
 import { GuardedFonts } from '../components/GuardedFonts'
 import { ListaConTope } from '../components/ListaConTope'
+import { nombreFuente, rotulo } from '../lib/fontName'
 
 /**
  * Tu perfil: **lo tuyo**, y nada de lo que se toca.
@@ -132,7 +133,7 @@ export function ProfilePage() {
             fila={(f) => (
               <ListItem disablePadding divider>
                 <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
-                  <ListItemText primary={f.name} />
+                  <ListItemText primary={nombreFuente(f, t)} />
                 </ListItemButton>
               </ListItem>
             )}
@@ -152,7 +153,7 @@ export function ProfilePage() {
             fila={(f) => (
               <ListItem disablePadding divider>
                 <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
-                  <ListItemText primary={f.name} />
+                  <ListItemText primary={nombreFuente(f, t)} />
                 </ListItemButton>
               </ListItem>
             )}
@@ -173,7 +174,7 @@ export function ProfilePage() {
               return (
                 <ListItem divider alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Link component={RouterLink} to={`/fonts/${c.fontID}`} sx={{ fontWeight: 600 }}>{c.fontName ?? '—'}</Link>
+                  <Link component={RouterLink} to={`/fonts/${c.fontID}`} sx={{ fontWeight: 600 }}>{rotulo(c.fontName, t)}</Link>
                   {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`} />}
                   <Typography variant="caption" color="text.secondary">· {c.createdAt ? timeAgo(c.createdAt, t) : ''}</Typography>
                 </Box>

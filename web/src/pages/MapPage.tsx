@@ -53,6 +53,7 @@ import 'leaflet-rotate'
 
 import type { Drinkable, Font, FontSummary, Page, WaterSource } from '../api/types'
 import { apiFetch, createComment, createFont, describeError, uploadImage } from '../api/client'
+import { nombreFuente } from '../lib/fontName'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
@@ -420,7 +421,7 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
           onClick={() => { onSelect(f); compacto ? cerrar() : clear() }}
           sx={aPantallaCompleta ? { minHeight: 56 } : undefined}
         >
-          <ListItemText primary={f.name} secondary={donde(f) || undefined} />
+          <ListItemText primary={nombreFuente(f, t)} secondary={donde(f) || undefined} />
         </ListItemButton>
       ))}
       {places.length > 0 && <ListSubheader>📍 {t('search.places')}</ListSubheader>}
@@ -728,14 +729,14 @@ function NearbyPanel({
               key={f.id}
               disablePadding
               secondaryAction={
-                <IconButton edge="end" component={Link} to={`/fonts/${f.id}`} aria-label={t('nearby.goAria', { name: f.name })}>
+                <IconButton edge="end" component={Link} to={`/fonts/${f.id}`} aria-label={t('nearby.goAria', { name: nombreFuente(f, t) })}>
                   <ArrowForwardIcon />
                 </IconButton>
               }
             >
               <ListItemButton selected={f.id === selectedID} onClick={() => onFocus(f)} sx={enHoja ? { minHeight: 56 } : undefined}>
                 <ListItemText
-                  primary={f.name}
+                  primary={nombreFuente(f, t)}
                   secondary={
                     <>
                       {ws && <span title={t(`status.${ws.key}`)}>{ws.emoji}</span>} {formatDist(dist)}

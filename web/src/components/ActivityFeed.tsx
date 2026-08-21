@@ -12,6 +12,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from './Skeleton'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
+import { rotulo } from '../lib/fontName'
 
 const KIND_EMOJI: Record<ActivityItem['kind'], string> = {
   fontAdded: '➕',
@@ -69,7 +70,7 @@ export function ActivityFeed({ limit = 15, showFilter = false }: { limit?: numbe
             <Box sx={{ minWidth: 0, flexGrow: 1 }}>
               <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
                 <Link component={RouterLink} to={`/fonts/${item.fontID}`} sx={{ fontWeight: 700 }}>
-                  {item.fontName}
+                  {rotulo(item.fontName, t)}
                 </Link>
                 {ws && (
                   <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`}

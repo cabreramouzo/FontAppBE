@@ -20,6 +20,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from './Skeleton'
 import { askPosition, positionIfAllowed } from '../lib/quietPosition'
 import { WorthChip } from './WorthChip'
+import { nombreFuente } from '../lib/fontName'
 
 /**
  * Las rutas propuestas alrededor de ti. Fase 4 del plan (docs/gamificacion.md).
@@ -170,7 +171,7 @@ export function MissionsPanel({
                 >
                   <ListItemButton onClick={() => { onFocus(s); onClose() }}>
                     <ListItemText
-                      primary={`${i + 1}. ${s.name}`}
+                      primary={`${i + 1}. ${nombreFuente(s, t)}`}
                       secondary={
                         <>
                           {s.distanceKm.toFixed(2)} km <WorthChip lastCheck={s.lastCheck} />

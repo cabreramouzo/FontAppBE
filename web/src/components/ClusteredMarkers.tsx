@@ -11,6 +11,7 @@ import { statusIcon } from '../lib/statusMarker'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
+import { nombreFuente } from '../lib/fontName'
 
 function escapeHtml(s: string): string {
   const div = document.createElement('div')
@@ -68,7 +69,7 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
       // un enlace dentro de otro no es HTML válido.
       el.innerHTML = `
         <a href="/fonts/${f.id}" class="popup-card">
-          <strong>${escapeHtml(f.name)}</strong>
+          <strong>${escapeHtml(nombreFuente(f, t))}</strong>
           <div class="muted small">${srcText}${src && dr ? ' · ' : ''}${drText}</div>
           ${ws ? `<div class="badge">${ws.emoji} ${t(`status.${ws.key}`)}</div>` : ''}
           ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}

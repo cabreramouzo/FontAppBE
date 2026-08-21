@@ -66,7 +66,7 @@ struct ScoreContributionsCommand: AsyncCommand {
                 let nota = c.note.isEmpty ? "" : "  (\(c.note))"
                 console.print("\(fecha(c.at))  \((nombres[c.userID] ?? "?").padding(toLength: 14, withPad: " ", startingAt: 0))"
                     + "\(c.kind.label.padding(toLength: 18, withPad: " ", startingAt: 0))"
-                    + "\(String(c.gotes).leftPad(4)) gotas\(mult)  \(c.fontName)\(nota)")
+                    + "\(String(c.gotes).leftPad(4)) gotas\(mult)  \(c.fontName ?? "(sin nombre)")\(nota)")
             }
         }
 
@@ -108,7 +108,7 @@ struct ScoreContributionsCommand: AsyncCommand {
             let mult = c.multiplier == 1.0 ? "" : String(format: " ×%.2f", c.multiplier)
             let nota = c.note.isEmpty ? "" : "  (\(c.note))"
             console.print("  \(fecha(c.at))  \(String(c.gotes).leftPad(4)) gotas\(mult)  "
-                + "\(c.kind.label) · \(c.fontName)\(nota)")
+                + "\(c.kind.label) · \(c.fontName ?? "(sin nombre)")\(nota)")
         }
         imprimeAvisos(informe, console: console)
     }

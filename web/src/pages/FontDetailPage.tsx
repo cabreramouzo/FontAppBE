@@ -78,6 +78,7 @@ import { BADGE_ART } from '../lib/levelBadges'
 import { enqueue, isOffline } from '../lib/outbox'
 import { PhotoExifNote } from '../components/PhotoExifNote'
 import { ZoomableImage } from '../components/ZoomableImage'
+import { nombreFuente } from '../lib/fontName'
 import { prepararFoto } from '../lib/image'
 import { comparteTexto } from '../lib/share'
 import { RelocateFont } from '../components/RelocateFont'
@@ -316,7 +317,7 @@ function LocationActions({ font }: { font: Font }) {
     // Con nombre y motivo, no la dirección a secas: llega a un chat entre otras cosas y
     // tiene que decir qué es sin que nadie pulse. Ver `comparteTexto` para por qué el
     // enlace va dentro del texto.
-    const mensaje = `${t('detail.shareText', { name: font.name })} ${window.location.href}`
+    const mensaje = `${t('detail.shareText', { name: nombreFuente(font, t) })} ${window.location.href}`
     if (await comparteTexto(mensaje) === 'copiado') toast.show(t('toast.linkCopied'))
   }
 
@@ -374,7 +375,7 @@ function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
 
 function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canManage: boolean; onSaved: () => void; onCancel: () => void }) {
   const { t, lang } = useI18n()
-  const [name, setName] = useState(font.name)
+  const [name, setName] = useState(font.name ?? '')
   const [description, setDescription] = useState(font.description ?? '')
   const [source, setSource] = useState<WaterSource | ''>(font.source ?? '')
   const [drinkable, setDrinkable] = useState<Drinkable | ''>(font.drinkable ?? '')
@@ -407,7 +408,7 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
   // del pulgar, así que hay que preguntar antes de tirar lo escrito. Cuando no se ha
   // tocado nada no se pregunta: un diálogo para confirmar que no pasa nada es ruido.
   const sucio =
-    name !== font.name ||
+    name !== (font.name ?? '') ||
     description !== (font.description ?? '') ||
     source !== (font.source ?? '') ||
     drinkable !== (font.drinkable ?? '') ||
@@ -451,7 +452,7 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 360, my: 2, pb: { xs: 9, sm: 0 } }}
     >
       <Typography variant="caption" color="text.secondary">{t('detail.editInfoNote')}</Typography>
-      <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} required size="small" />
+      <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} size="small" />
       {/* Crece con lo que escribes y se para a las 6 líneas: la descripción es el único
           campo libre de esta ficha —de dónde nace el agua, cómo llegar, qué hay al lado—
           y en una sola línea no se relee lo escrito, así que nadie escribe más de cuatro
@@ -872,7 +873,7 @@ export function FontDetailPage() {
       <FontHiddenNotice font={font} />
 
       <Stack direction="row" sx={{ mt: 1, justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-        <Typography variant="h4" sx={{ fontWeight: 800 }}>{font.name}</Typography>
+        <Typography variant="h4" sx={{ fontWeight: 800 }}>{nombreFuente(font, t)}</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           {/* Guardar en favoritos: visible siempre; sin sesión lleva a login. */}
           <IconButton
@@ -1050,7 +1051,7 @@ export function FontDetailPage() {
             })()}
             {font.image ? (
               <Box>
-                <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={font.name} />
+                <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={nombreFuente(font, t)} />
                 <PhotoExifNote image={font.image} lat={font.latitude} long={font.longitude} />
                 {user && (user.isAdmin || font.creator?.id === user.id) && (
                   <Box>

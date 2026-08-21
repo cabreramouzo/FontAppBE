@@ -74,7 +74,7 @@ struct AdoptCoverPhotosCommand: AsyncCommand {
 
         if signature.dryRun {
             for (font, c) in elegidas.prefix(20) {
-                out.print("  · \(font.name) ← \(c.image ?? "?")")
+                out.print("  · \(font.name ?? "(sin nombre)") ← \(c.image ?? "?")")
             }
             if elegidas.count > 20 { out.print("  … y \(elegidas.count - 20) más") }
             out.print("Nada escrito (--dry-run).")
@@ -92,7 +92,7 @@ struct AdoptCoverPhotosCommand: AsyncCommand {
                 }
             } catch {
                 fallos += 1
-                out.warning("No se pudo con «\(font.name)»: \(error)")
+                out.warning("No se pudo con «\(font.name ?? "(sin nombre)")»: \(error)")
             }
         }
         out.print("Portadas puestas: \(hechas)\(fallos > 0 ? " · fallos: \(fallos)" : "")")

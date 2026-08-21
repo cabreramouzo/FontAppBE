@@ -271,7 +271,12 @@ struct UserController: RouteCollection {
             .all()
         let fontIDs = Array(Set(comments.map { $0.$font.id }))
         let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: req.db).filter(\.$id ~~ fontIDs).all()
-        let names = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f.name) } })
+        // Las sin nombre propio se quedan fuera del diccionario, y por tanto llegan como
+        // `nil` al DTO: es la misma ausencia, y así el valor no es un `String??`.
+        let names = Dictionary(uniqueKeysWithValues: fonts.compactMap { f -> (UUID, String)? in
+            guard let id = f.id, let n = f.name else { return nil }
+            return (id, n)
+        })
         return comments.map { MyCommentResponse($0, fontName: names[$0.$font.id]) }
     }
 

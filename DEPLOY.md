@@ -174,20 +174,9 @@ cargado) no hace falta dedupe; junto a España conviene `--dedupe` para no dupli
    ```
    Exporta el resultado como `portugal-osm.json` (Export → data → raw OSM data / JSON).
 
-   **Ponle el nombre genérico del territorio.** Los puntos sin `name` en OSM se guardan con
-   un rótulo por defecto, y son **tres de cada cuatro**. Ese rótulo acaba dentro de los
-   datos, así que conviene que esté en el idioma de donde se importa:
-
-   | Territorio | `--unnamed` | `--unnamed-spring` |
-   |---|---|---|
-   | Catalunya | `Font` (por defecto) | `Manantial` (por defecto) |
-   | España | `Fuente` | `Manantial` |
-   | Francia | `Fontaine` | `Source` |
-   | Portugal | `Fonte` | `Nascente` |
-
-   Ojo: un `natural=spring` **con caño o potable** se clasifica como fuente de montaña, así
-   que se lleva el `--unnamed`, no el `--unnamed-spring`. Es lo correcto — «Fontaine» y no
-   «Source» — pero conviene saberlo.
+   Los puntos sin `name` en OSM —**tres de cada cuatro**— se guardan con `name = NULL`.
+   No les pongas una palabra genérica del territorio: la app los rotula por su `source`
+   en el idioma de quien lee. Un topónimo real se conserva tal cual y nunca se traduce.
 
    Ejemplo real, el Pirineo francés (bbox intersectado con el área de Francia para no
    colarse en España):
@@ -215,23 +204,19 @@ cargado) no hace falta dedupe; junto a España conviene `--dedupe` para no dupli
    Y fuera siempre lo de `access=no|private`: son captaciones de abastecimiento urbano.
    Eran 108 más.
    ```bash
-   swift run App import-fonts pirineu-frances-osm.json --unnamed Fontaine --unnamed-spring Source
+   swift run App import-fonts pirineu-frances-osm.json
    ```
    Medido antes de importar: 2.168 nodos y **cero** a menos de 100 m de una fuente ya
    existente (la más cercana, a 218 m), así que no hacía falta dedupe. `import-fonts` **no
    deduplica** — compruébalo siempre antes, porque lo único que tiene es `--replace`, que
    borra la base entera.
 
-   Si ya importaste sin las opciones, el lote se aísla por fecha y por no tener creador
-   (**no** por `country`, que en la frontera miente):
-   ```sql
-   SELECT name, count(*) FROM fonts
-    WHERE created_by IS NULL AND created_at >= 'AAAA-MM-DD' GROUP BY 1 ORDER BY 2 DESC;
-   UPDATE fonts SET name = 'Fontaine'
-    WHERE created_by IS NULL AND created_at >= 'AAAA-MM-DD' AND name = 'Font';
-   UPDATE fonts SET name = 'Source'
-    WHERE created_by IS NULL AND created_at >= 'AAAA-MM-DD' AND name = 'Manantial';
+   Para limpiar importaciones antiguas, primero mide y luego ejecuta la pasada explícita:
+   ```bash
+   swift run App clear-placeholder-names --dry-run
+   swift run App clear-placeholder-names
    ```
+   Solo vacía coincidencias exactas conocidas y sin creador; no toca topónimos de personas.
 2. Importa contra la BD de PROD (cliente/servidor via `DATABASE_URL`, **no** `env.development`):
    ```bash
    DATABASE_URL='postgresql://USER:PASSWORD@HOST/neondb?sslmode=require' \
@@ -286,8 +271,7 @@ python3 scripts/fonts-import-tools.py filtra --es chile-osm-crudo.json chile-lim
 #    importación ya medida. Sin `--es`, Catalunya da exactamente lo mismo que antes
 #    (9.830 de 10.057), y hay que comprobarlo al tocar este fichero.
 # 3. Importa. Sin --dedupe: la caja de Chile (lat -53,9..-18,5) no toca nada de lo que hay.
-DATABASE_URL='...' swift run App import-fonts chile-limpio.json \
-  --unnamed "Bebedero" --unnamed-spring "Vertiente"
+DATABASE_URL='...' swift run App import-fonts chile-limpio.json
 # 4. Zona, o Chile no sale en /zones ni en el ranking ni en el correo semanal.
 DATABASE_URL='...' swift run App populate-regions fronteras-chile.geojson --fallback-nearest 10
 ```
@@ -296,11 +280,8 @@ DATABASE_URL='...' swift run App populate-regions fronteras-chile.geojson --fall
 la vía de OSM —la que trae países enteros— no tenía forma de filtrarse y por eso nadie
 había mirado nunca lo que entraba.
 
-**El rótulo de los que no tienen nombre es el de allí**: `Bebedero` (no «Fuente») y
-`Vertiente` (no «Manantial»), que son las palabras chilenas. Son 273 de 319, o sea que
-esa elección es la que más se ve. Ojo con lo de siempre: un manantial **potable o con
-caño** se lleva el `--unnamed`, así que los 8 `spring` con `drinking_water=yes` salen
-como «Bebedero» y no como «Vertiente». Es correcto, pero sorprende al contarlos.
+Los 273 puntos sin topónimo se guardan con `name = NULL`. La interfaz los muestra por su
+tipo —por ejemplo, «Fuente urbana» o «Manantial»— en el idioma elegido por quien lee.
 
 `fronteras-chile.geojson` (478 KB, Natural Earth admin-1 recortado a `admin: Chile`, solo
 las propiedades `admin` y `name`) trae las 16 regiones. Sin `--fallback-nearest 10`

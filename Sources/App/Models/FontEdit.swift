@@ -5,7 +5,9 @@ import Vapor
 /// cualquier usuario puede corregir estilo wiki). Se guarda antes y después de
 /// cada edición para poder mostrar el cambio y revertirlo.
 struct FontInfoSnapshot: Codable, Sendable, Equatable {
-    var name: String
+    /// Opcional como en `Font`: una fuente sin nombre propio se revierte a sin nombre,
+    /// no a un relleno.
+    var name: String?
     var description: String?
     var source: WaterSource?
     var drinkable: Drinkable?

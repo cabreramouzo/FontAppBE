@@ -374,7 +374,9 @@ struct ActivityItem: Content, Sendable {
 
     let kind: Kind
     let fontID: UUID
-    let fontName: String
+    /// `nil` si la fuente no tiene nombre propio; el rótulo lo compone el cliente. Ver
+    /// `Font.name`.
+    let fontName: String?
     let region: String?
     let author: String?
     let waterStatus: String?

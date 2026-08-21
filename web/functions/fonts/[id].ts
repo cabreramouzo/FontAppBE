@@ -33,7 +33,7 @@ import { apiOrigin, esc, recorta, siteOrigin, type Env } from '../_meta'
  */
 interface FontDTO {
   id: string
-  name: string
+  name: string | null
   description: string | null
   image: string | null
   region: string | null
@@ -67,14 +67,18 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const origin = siteOrigin(ctx.request)
   const canonica = `${origin}/fonts/${font.id}`
   const zona = [font.region, font.country].filter(Boolean).join(', ')
-  const titulo = `${font.name} · FontApp`
+  // Esta función no conoce el idioma del lector. Para una fuente sin topónimo usa una
+  // frase neutra en catalán (idioma por defecto del sitio), nunca `null` ni un relleno
+  // territorial guardado en la base.
+  const nombre = font.name?.trim() || "Font d'aigua"
+  const titulo = `${nombre} · FontApp`
 
   // Si hay descripción, manda: la ha escrito una persona, dice algo de verdad y ya está
   // en el idioma que toca. La de repuesto es casi solo nombres propios a propósito —
   // aquí no hay a quién preguntarle qué idioma lee, así que cuanto menos texto, mejor.
   const descripcion = font.description?.trim()
     ? recorta(font.description, 200)
-    : recorta([font.name, zona].filter(Boolean).join(' · ') + " · Font d'aigua a FontApp", 200)
+    : recorta([nombre, zona].filter(Boolean).join(' · ') + " · Font d'aigua a FontApp", 200)
 
   const propia = !!font.image
   const imagen = font.image
@@ -90,7 +94,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     .on('meta[property="og:description"]', { element: (e) => { e.setAttribute('content', descripcion) } })
     .on('meta[property="og:url"]', { element: (e) => { e.setAttribute('content', canonica) } })
     .on('meta[property="og:image"]', { element: (e) => { e.setAttribute('content', imagen) } })
-    .on('meta[property="og:image:alt"]', { element: (e) => { e.setAttribute('content', font.name) } })
+    .on('meta[property="og:image:alt"]', { element: (e) => { e.setAttribute('content', nombre) } })
     // El 1200×630 del HTML es el de la tarjeta genérica. La foto de una fuente la hizo
     // alguien con el móvil y es vertical la mitad de las veces: dejar las medidas puestas
     // le dice al scraper que recorte a un formato que no es el de la imagen.

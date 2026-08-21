@@ -5,7 +5,9 @@ import Vapor
 /// de modo que el popup pueda mostrar el estado sin abrir el detalle.
 struct FontSummary: Content {
     let id: UUID?
-    let name: String
+    /// `nil` si la fuente no tiene nombre propio. El rótulo lo compone el cliente con
+    /// `source` y su idioma; ver `Font.name`.
+    let name: String?
     let latitude: Double
     let longitude: Double
     let image: String?

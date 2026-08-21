@@ -179,7 +179,10 @@ struct FontController: RouteCollection {
         let user = try req.auth.require(User.self)
         try CreateFontDTO.validate(content: req)
         let dto = try req.content.decode(CreateFontDTO.self)
-        let font = Font(name: dto.name, latitude: dto.latitude, longitude: dto.longitude,
+        guard let creado = dto.name?.trimmingCharacters(in: .whitespacesAndNewlines), !creado.isEmpty else {
+            throw AppError(.badRequest, "font.nameRequired", "El nombre es obligatorio al crear una fuente.")
+        }
+        let font = Font(name: creado, latitude: dto.latitude, longitude: dto.longitude,
                         image: dto.image, description: dto.description, source: dto.source,
                         drinkable: dto.drinkable, creatorID: try user.requireID(),
                         queuedOffline: req.headers.first(name: "X-FontApp-Queued-Offline") == "1")
@@ -251,7 +254,9 @@ struct FontController: RouteCollection {
         // la información descriptiva de una fuente (muchas se llaman solo "Font" o tienen
         // un nombre popular / historia local que aportar).
         let before = FontInfoSnapshot(font)
-        font.name = dto.name
+        // Vacío ⇒ sin nombre. Es la vuelta atrás de un relleno mal puesto, y la única
+        // forma de que quien corrige una ficha no tenga que inventarse un nombre.
+        font.name = dto.name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         font.description = dto.description
         font.source = dto.source
         font.drinkable = dto.drinkable
@@ -318,7 +323,10 @@ struct FontController: RouteCollection {
         let editorNames = try await User.usernames(for: edits.compactMap { $0.$editor.id }, on: req.db)
         let fontIDs = Array(Set(edits.map { $0.$font.id }))
         let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: req.db).filter(\.$id ~~ fontIDs).all()
-        let fontNames = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f.name) } })
+        let fontNames = Dictionary(uniqueKeysWithValues: fonts.compactMap { f -> (UUID, String)? in
+            guard let id = f.id, let n = f.name else { return nil }
+            return (id, n)
+        })
         return edits.map { e in
             FontEditResponse(e, editorName: e.$editor.id.flatMap { editorNames[$0] }, currentFontName: fontNames[e.$font.id])
         }
@@ -630,7 +638,13 @@ struct FontController: RouteCollection {
 }
 
 struct CreateFontDTO: Content {
-    let name: String
+    /// Opcional porque **editar** tiene que poder dejarla sin nombre.
+    ///
+    /// Casi toda fuente importada no tiene nombre propio, y quien la edita para arreglar
+    /// otra cosa no debe verse obligado a inventarle uno — es exactamente así como
+    /// vuelven los «Fuente» a la base. Al **crear** sigue siendo obligatorio, porque ahí
+    /// hay una persona delante que sabe cómo se llama; lo impone `nameRequired`.
+    let name: String?
     let latitude: Double
     let longitude: Double
     let image: String?
@@ -641,7 +655,6 @@ struct CreateFontDTO: Content {
 
 extension CreateFontDTO: Validatable {
     static func validations(_ validations: inout Validations) {
-        validations.add("name", as: String.self, is: !.empty)
         validations.add("latitude", as: Double.self, is: .range(-90...90))
         validations.add("longitude", as: Double.self, is: .range(-180...180))
     }

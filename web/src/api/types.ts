@@ -5,7 +5,8 @@ export type Drinkable = 'yes' | 'no' | 'conditional' | 'untreated'
 
 export interface Font {
   id: string
-  name: string
+  /** `null` si no tiene nombre propio. El rótulo lo compone `nombreFuente`. */
+  name: string | null
   latitude: number
   longitude: number
   image: string | null
@@ -78,7 +79,7 @@ export interface Flag {
 }
 
 export interface FontInfoSnapshot {
-  name: string
+  name: string | null
   description: string | null
   source: WaterSource | null
   drinkable: Drinkable | null
@@ -262,7 +263,7 @@ export interface BadgeSlot {
 /** Una parada de una ruta propuesta (`GET /missions`). */
 export interface MissionTarget {
   id: string
-  name: string
+  name: string | null
   latitude: number
   longitude: number
   distanceKm: number

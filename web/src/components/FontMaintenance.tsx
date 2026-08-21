@@ -30,6 +30,7 @@ import { capabilities } from '../lib/capabilities'
 import { useI18n } from '../i18n/I18nContext'
 import { timeAgo } from '../lib/time'
 import { haversineKm } from '../lib/geo'
+import { nombreFuente } from '../lib/fontName'
 
 /**
  * El aviso de que esta ficha ya no sale en el mapa.
@@ -198,7 +199,7 @@ export function FontMaintenance({ font, onChanged }: { font: Font; onChanged: ()
           )}
           <List dense sx={{ maxHeight: 320, overflowY: 'auto' }}>
             {(cercanas ?? [])
-              .filter((f) => !filtro || f.name.toLowerCase().includes(filtro.toLowerCase()))
+              .filter((f) => !filtro || nombreFuente(f, t).toLowerCase().includes(filtro.toLowerCase()))
               .map((f) => {
                 const m = haversineKm(font.latitude, font.longitude, f.latitude, f.longitude) * 1000
                 return (
@@ -208,7 +209,7 @@ export function FontMaintenance({ font, onChanged }: { font: Font; onChanged: ()
                     onClick={() => { setDupOpen(false); corre(() => markDuplicate(font.id, f.id)) }}
                   >
                     <ListItemText
-                      primary={f.name}
+                      primary={nombreFuente(f, t)}
                       // Los metros son el dato que decide: a 8 m es casi seguro la misma
                       // agua, a 800 m casi seguro que no.
                       secondary={m < 1000 ? t('maint.metresAway', { n: String(Math.round(m)) })

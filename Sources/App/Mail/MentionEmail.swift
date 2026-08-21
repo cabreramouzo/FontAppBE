@@ -24,7 +24,7 @@ enum MentionEmail {
     ///   - fontName: la fuente donde ocurrió.
     ///   - excerpt: el mensaje, ya recortado por quien llama.
     ///   - unsubscribeURL: baja firmada, para poder apagarlo sin iniciar sesión.
-    static func build(lang: String?, by: String, fontName: String, excerpt: String,
+    static func build(lang: String?, by: String, fontName: String?, excerpt: String,
                       fontURL: String, unsubscribeURL: String) -> (subject: String, html: String, text: String) {
         let c = copy(for: lang, by: by, fontName: fontName)
         return (c.subject, html(c, excerpt: excerpt, fontURL: fontURL, unsubscribeURL: unsubscribeURL),
@@ -90,45 +90,50 @@ enum MentionEmail {
 
     // MARK: - Textos
 
-    private static func copy(for lang: String?, by: String, fontName: String) -> Copy {
+    private static func copy(for lang: String?, by: String, fontName: String?) -> Copy {
         switch (lang ?? "ca").prefix(2) {
         case "es":
+            let fuente = fontName ?? "una fuente sin nombre"
             return Copy(
                 subject: "@\(by) te ha mencionado en FontApp",
                 title: "Te han mencionado",
-                intro: "@\(by) te ha nombrado en «\(fontName)».",
+                intro: "@\(by) te ha nombrado en «\(fuente)».",
                 cta: "Ver la fuente",
                 unsubscribe: "Dejar de recibir estos avisos",
                 footer: "Recibes esto porque alguien te ha mencionado en FontApp.")
         case "gl":
+            let fonte = fontName ?? "unha fonte sen nome"
             return Copy(
                 subject: "@\(by) mencionoute en FontApp",
                 title: "Mencionáronte",
-                intro: "@\(by) nomeoute en «\(fontName)».",
+                intro: "@\(by) nomeoute en «\(fonte)».",
                 cta: "Ver a fonte",
                 unsubscribe: "Deixar de recibir estes avisos",
                 footer: "Recibes isto porque alguén te mencionou en FontApp.")
         case "eu":
+            let iturria = fontName ?? "izenik gabeko iturria"
             return Copy(
                 subject: "@\(by)(e)k aipatu zaitu FontApp-en",
                 title: "Aipatu zaituzte",
-                intro: "@\(by)(e)k «\(fontName)» iturrian aipatu zaitu.",
+                intro: "@\(by)(e)k «\(iturria)» iturrian aipatu zaitu.",
                 cta: "Ikusi iturria",
                 unsubscribe: "Utzi abisu hauek jasotzeari",
                 footer: "Hau jasotzen duzu norbaitek FontApp-en aipatu zaituelako.")
         case "en":
+            let fountain = fontName ?? "an unnamed fountain"
             return Copy(
                 subject: "@\(by) mentioned you on FontApp",
                 title: "You were mentioned",
-                intro: "@\(by) named you on “\(fontName)”.",
+                intro: "@\(by) named you on “\(fountain)”.",
                 cta: "Open the fountain",
                 unsubscribe: "Stop receiving these",
                 footer: "You are getting this because someone mentioned you on FontApp.")
         default:
+            let font = fontName ?? "una font sense nom"
             return Copy(
                 subject: "@\(by) t'ha mencionat a FontApp",
                 title: "T'han mencionat",
-                intro: "@\(by) t'ha anomenat a «\(fontName)».",
+                intro: "@\(by) t'ha anomenat a «\(font)».",
                 cta: "Veure la font",
                 unsubscribe: "Deixar de rebre aquests avisos",
                 footer: "Reps això perquè algú t'ha mencionat a FontApp.")

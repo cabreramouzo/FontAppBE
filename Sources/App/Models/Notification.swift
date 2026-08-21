@@ -43,7 +43,10 @@ final class Notification: Model, @unchecked Sendable {
     @Field(key: "actor_name") var actorName: String
     /// A dónde lleva el aviso.
     @OptionalParent(key: "font_id") var font: Font?
-    @Field(key: "font_name") var fontName: String
+    /// Copia del nombre en el momento del aviso, o `nil` si la fuente no tenía nombre
+    /// propio. Ver `Font.name`: el rótulo lo compone quien lee, que es quien sabe en qué
+    /// idioma lo hace.
+    @OptionalField(key: "font_name") var fontName: String?
     /// Extracto del mensaje.
     @Field(key: "excerpt") var excerpt: String
     /// Cuándo se leyó. Nulo = sin leer, que es lo que cuenta la campana.
@@ -54,7 +57,7 @@ final class Notification: Model, @unchecked Sendable {
     init() {}
 
     init(userID: UUID, kind: Kind, actorID: UUID?, actorName: String,
-         fontID: UUID?, fontName: String, excerpt: String) {
+         fontID: UUID?, fontName: String?, excerpt: String) {
         self.$user.id = userID
         self.kind = kind
         self.$actor.id = actorID

@@ -10,10 +10,6 @@ struct ImportCommand: AsyncCommand {
         var file: String
         @Flag(name: "replace", help: "Borra las fuentes existentes antes de importar")
         var replace: Bool
-        @Option(name: "unnamed", help: "Nombre para los puntos SIN nombre en OSM (por defecto «Font»)")
-        var unnamed: String?
-        @Option(name: "unnamed-spring", help: "Igual, para los manantiales (por defecto «Manantial»)")
-        var unnamedSpring: String?
     }
 
     /// Rótulo por defecto de un punto sin nombre.
@@ -27,8 +23,6 @@ struct ImportCommand: AsyncCommand {
     /// insignias y los avisos—, pero eso son 41.679 filas y diez pantallas. Mientras tanto,
     /// que **cada importación elija la palabra de su territorio** es mejor que llamar
     /// «Font» a una fuente del Béarn.
-    static let defaultUnnamed = "Font"
-    static let defaultUnnamedSpring = "Manantial"
 
     var help: String { "Importa fuentes desde un JSON de Overpass (OpenStreetMap, ODbL)" }
 
@@ -43,10 +37,15 @@ struct ImportCommand: AsyncCommand {
             guard let lat = node.lat, let lon = node.lon else { return nil }
             let tags = node.tags ?? [:]
             let source = Self.source(from: tags)
-            let sinNombre = source == .spring
-                ? (signature.unnamedSpring ?? Self.defaultUnnamedSpring)
-                : (signature.unnamed ?? Self.defaultUnnamed)
-            let name = tags["name"].flatMap { $0.isEmpty ? nil : $0 } ?? sinNombre
+            // Sin `name` en OSM, la fuente se queda **sin nombre**, y eso es lo correcto.
+            //
+            // Aquí hubo durante meses un `--unnamed`/`--unnamed-spring` que metía un
+            // relleno en el idioma del territorio («Font», «Fontaine», «Vattenpost»). Las
+            // opciones se han quitado, no marcado como obsoletas: mientras existieran, el
+            // runbook seguiría diciendo que se pasen y el problema volvería a entrar por
+            // la misma puerta. Ahora una llamada antigua falla, que es justo lo que hace
+            // falta para que alguien lea por qué.
+            let name = tags["name"].flatMap { $0.isEmpty ? nil : $0 }
             let description = source == .spring ? "Manantial (OpenStreetMap)" : nil
             return Font(
                 name: name,

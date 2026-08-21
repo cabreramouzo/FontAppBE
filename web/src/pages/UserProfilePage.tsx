@@ -23,6 +23,7 @@ import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 import { BADGE_ART } from '../lib/levelBadges'
 import { TIER_COLOR } from '../lib/tierColors'
 import { useTheme } from '@mui/material/styles'
+import { nombreFuente, rotulo } from '../lib/fontName'
 
 export function UserProfilePage() {
   const { id } = useParams<{ id: string }>()
@@ -151,7 +152,7 @@ export function UserProfilePage() {
           {fonts?.map((f) => (
             <ListItem key={f.id} disablePadding divider>
               <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
-                <ListItemText primary={f.name} />
+                <ListItemText primary={nombreFuente(f, t)} />
               </ListItemButton>
             </ListItem>
           ))}
@@ -168,7 +169,7 @@ export function UserProfilePage() {
             return (
               <ListItem key={c.id} divider alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Link component={RouterLink} to={`/fonts/${c.fontID}`} sx={{ fontWeight: 600 }}>{c.fontName ?? '—'}</Link>
+                  <Link component={RouterLink} to={`/fonts/${c.fontID}`} sx={{ fontWeight: 600 }}>{rotulo(c.fontName, t)}</Link>
                   {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`} />}
                   <Typography variant="caption" color="text.secondary">· {c.createdAt ? timeAgo(c.createdAt, t) : ''}</Typography>
                 </Box>
