@@ -253,15 +253,17 @@ python3 scripts/fronteras-subset.py \
   ne_10m_admin_1_states_provinces.geojson fronteras-suiza.geojson Switzerland
 ```
 
-Haz primero todo el ciclo en la base local. En producción, importa sin `--replace`,
+Haz primero todo el ciclo en la base local. La medición con los 15.244 puntos filtrados
+de agosto de 2026 deja 136 fuera del borde simplificado: 127 se recuperan a ≤1 km, 8 más
+a ≤2 km y el último a ≤5 km. El corte suizo queda por tanto en **5 km**; no hace falta
+copiar los 10 km de países con archipiélagos. En producción, importa sin `--replace`,
 clasifica únicamente las nuevas fuentes que aún no tienen región y audita `admin1` antes
-de aplicarlo. No uses `--all` ni `--fallback-nearest` hasta medir cuántos puntos quedan
-fuera de los polígonos y a qué distancia; Suiza limita con cinco países y una tolerancia
-no medida puede clasificar mal puntos fronterizos.
+de aplicarlo. No uses `--all`.
 
 ```bash
 DATABASE_URL='postgresql://...' swift run App import-fonts suiza-limpio.json
 DATABASE_URL='postgresql://...' swift run App populate-regions fronteras-suiza.geojson
+DATABASE_URL='postgresql://...' swift run App populate-regions fronteras-suiza.geojson --fallback-nearest 5
 DATABASE_URL='postgresql://...' swift run App backfill-admin1
 DATABASE_URL='postgresql://...' swift run App backfill-admin1 --apply
 ```

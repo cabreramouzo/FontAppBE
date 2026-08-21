@@ -3,8 +3,10 @@ import XCTVapor
 
 final class AppTests: XCTestCase {
     func testAdmin1TableCoversProductionTerritoriesAndSwitzerland() {
-        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 185)
+        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 187)
         XCTAssertEqual(Admin1.code(country: "Spain", region: "Barcelona"), "ES-CT")
+        XCTAssertEqual(Admin1.code(country: "Spain", region: "Gerona"), "ES-CT")
+        XCTAssertEqual(Admin1.code(country: "Spain", region: "Lérida"), "ES-CT")
         XCTAssertEqual(Admin1.code(country: "France", region: "Hérault"), "FR-OCC")
         XCTAssertEqual(Admin1.code(country: "Portugal", region: "Lisboa"), "PT-11")
         XCTAssertEqual(Admin1.code(country: "Finland", region: "Åland"), "FI-01")
