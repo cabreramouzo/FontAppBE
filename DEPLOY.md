@@ -330,6 +330,49 @@ semántica consistente en todo el mundo.
    la granularidad de un vistazo. Es idempotente: puedes reimportar fuentes y volver a correrlo.
 3. Sanity check: `SELECT region, count(*) FROM fonts GROUP BY region ORDER BY 2 DESC;`.
 
+**Recorta el fichero a los países que estás importando** (`scripts/fronteras-subset.py`).
+No es por el tamaño —que también: 40 MB y 4.596 regiones para clasificar dos países— sino
+porque acota el daño: con solo esos polígonos, el comando **no puede escribir en fuentes de
+otro país** aunque te equivoques de opción, y `--fallback-nearest` deja de ser un riesgo.
+
+```bash
+python3 scripts/fronteras-subset.py ne_10m_admin_1_states_provinces.geojson nordicos.geojson Sweden Finland
+```
+
+**Cuidado con los territorios que Natural Earth trata como país aparte.** Åland no figura
+como región de Finlandia: tiene `admin: "Aland"` y viene partido en sus **11 municipios**.
+Usarlo tal cual daría `country = "Aland"` (un país que no existe en `lib/countries.ts` y
+que saldría como columna nueva en `/zones`) y `region = "Mariehamn"`, que es un municipio
+—una cuarta profundidad en una columna que ya mezcla tres—. El script los fusiona en la
+región FI-01 y los reetiqueta como Finlandia; sin eso, las 8 fuentes de las islas se
+quedan sin región, y son justo las de la Finlandia sueco-parlante. La lista de arreglos
+está en `ARREGLOS`, dentro del script.
+
+**Dos pasadas, y la segunda con `--fallback-nearest` medido.** En Suecia y Finlandia el
+12 % de los puntos cae fuera de todo polígono: son archipiélagos, y el borde de Natural
+Earth no llega. El umbral **no se copia del de Chile**, se mide corriendo el comando con
+valores crecientes y leyendo cuántas rescata cada tramo:
+
+| ≤ | rescata |
+|---|---|
+| 1 km | 157 |
+| 2 km | 37 |
+| 5 km | 35 |
+| **10 km** | **64** |
+| 25 km | 5 |
+
+El salto de 5 a 10 km son islas de verdad (los archipiélagos de Estocolmo y Turku), así
+que el corte va en 10: 2.622 de 2.630 clasificadas y 8 sin región, que es honesto. A 25 km
+solo entran 5 más y ya es adivinar. Ojo con subirlo mucho: con el fichero recortado el
+peligro está acotado, pero un umbral enorme acabaría asignando regiones nórdicas a fuentes
+de cualquier sitio.
+
+**Al terminar, añade el país a `web/src/lib/countries.ts`** (`PAISES`) y sus **seis
+traducciones** `country.<Nombre>` en `dictionaries.ts`. Sin lo primero el país sale en
+`/zones` pero **no** en el selector de novedades; sin lo segundo se pinta el nombre inglés
+de Natural Earth. Ninguna de las dos cosas rompe nada visible, que es exactamente por qué
+se olvidan.
+
 ### Imágenes subidas
 
 El almacenamiento es **pluggable** (`ImageStorage`): si defines las variables `R2_*`,
