@@ -38,6 +38,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined'
 import TuneIcon from '@mui/icons-material/Tune'
 import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined'
+import VerifiedIcon from '@mui/icons-material/Verified'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
@@ -72,6 +73,8 @@ import { prepararFoto } from '../lib/image'
 import { readGpsFromImage, type GpsCoords } from '../lib/exif'
 import { DRINKABLE_OPTIONS, SOURCE_OPTIONS, DRINKABLE_EMOJI, SOURCE_EMOJI, isNotPotable } from '../lib/waterType'
 import { timeAgo } from '../lib/time'
+import { isReliable } from '../lib/confidence'
+import { ConfidenceChip } from '../components/ConfidenceChip'
 
 // Centro por defecto: demarcación del Moianès.
 const MOIANES: [number, number] = [41.81, 2.09]
@@ -109,8 +112,8 @@ function saveView(v: SavedView) {
 // es de este paseo. Volver mañana y no encontrar las fuentes donde estaban, sin recordar
 // que un día marcaste una casilla, es un fallo peor que el que se arregla.
 const FILTERS_KEY = 'fontapp_map_filters'
-type SavedFilters = { onlyWithWater: boolean; showNonPotable: boolean; source: WaterSource | 'all' }
-const SIN_FILTROS: SavedFilters = { onlyWithWater: false, showNonPotable: false, source: 'all' }
+type SavedFilters = { onlyWithWater: boolean; onlyReliable: boolean; showNonPotable: boolean; source: WaterSource | 'all' }
+const SIN_FILTROS: SavedFilters = { onlyWithWater: false, onlyReliable: false, showNonPotable: false, source: 'all' }
 const SOURCES: readonly string[] = ['all', 'tap', 'mountain', 'spring', 'well', 'fountain', 'other']
 
 function loadFilters(): SavedFilters {
@@ -123,6 +126,7 @@ function loadFilters(): SavedFilters {
     // que no se puede ni leer ni quitar.
     return {
       onlyWithWater: v.onlyWithWater === true,
+      onlyReliable: v.onlyReliable === true,
       showNonPotable: v.showNonPotable === true,
       source: SOURCES.includes(v.source as string) ? (v.source as WaterSource | 'all') : 'all',
     }
@@ -211,19 +215,22 @@ const hasWater = (f: FontSummary) => f.lastWaterStatus === 'flowing' || f.lastWa
 // con el dato viejo hasta el siguiente cambio de verdad.
 function firmaDeFuentes(l: FontSummary[]): string {
   return l
-    .map((f) => [f.id, f.latitude, f.longitude, f.name, f.source, f.drinkable, f.lastWaterStatus, f.lastUpdate].join('|'))
+    .map((f) => [f.id, f.latitude, f.longitude, f.name, f.source, f.drinkable, f.lastWaterStatus, f.lastUpdate,
+      f.latestConfirmations, f.recentStatusReporters, f.recentStatusConflict].join('|'))
     .join('~')
 }
 
 function FontMarkers({
   nonce,
   onlyWithWater,
+  onlyReliable,
   showNonPotable,
   sourceFilter,
   selectedID,
 }: {
   nonce: number
   onlyWithWater: boolean
+  onlyReliable: boolean
   showNonPotable: boolean
   sourceFilter: WaterSource | 'all'
   selectedID: string | null
@@ -270,9 +277,10 @@ function FontMarkers({
   const shown = useMemo(() => {
     let l = showNonPotable ? fonts : fonts.filter((f) => !isNotPotable(f.drinkable))
     if (onlyWithWater) l = l.filter(hasWater)
+    if (onlyReliable) l = l.filter(isReliable)
     if (sourceFilter !== 'all') l = l.filter((f) => f.source === sourceFilter)
     return l
-  }, [fonts, showNonPotable, onlyWithWater, sourceFilter])
+  }, [fonts, showNonPotable, onlyWithWater, onlyReliable, sourceFilter])
   return <ClusteredMarkers fonts={shown} selectedID={selectedID} />
 }
 
@@ -741,6 +749,7 @@ function NearbyPanel({
                     <>
                       {ws && <span title={t(`status.${ws.key}`)}>{ws.emoji}</span>} {formatDist(dist)}
                       {f.lastUpdate && ` · ${timeAgo(f.lastUpdate, t)}`}
+                      {' '}<ConfidenceChip evidence={f} />
                       {/* Lo que paga comprobarla, aquí y no en la ficha: el incentivo
                           solo sirve si se ve ANTES de decidir a cuál se va. */}
                       {' '}<WorthChip lastCheck={f.lastUpdate} />
@@ -856,6 +865,7 @@ export function MapPage() {
   const movil = useMediaQuery((tema: Theme) => tema.breakpoints.down('sm'))
   const [filtrosGuardados] = useState(loadFilters)
   const [onlyWithWater, setOnlyWithWater] = useState(filtrosGuardados.onlyWithWater)
+  const [onlyReliable, setOnlyReliable] = useState(filtrosGuardados.onlyReliable)
   const [showNonPotable, setShowNonPotable] = useState(filtrosGuardados.showNonPotable)
   const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>(filtrosGuardados.source)
   const [controlsOpen, setControlsOpen] = useState(false)
@@ -865,13 +875,13 @@ export function MapPage() {
   const [bearing, setBearing] = useState(0)
   const { heading, enable: enableCompass } = useHeading()
   // Nº de filtros activos (para el aviso cuando las herramientas están plegadas).
-  const activeFilters = (onlyWithWater ? 1 : 0) + (showNonPotable ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
+  const activeFilters = (onlyWithWater ? 1 : 0) + (onlyReliable ? 1 : 0) + (showNonPotable ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
 
   // Al cambiar cualquiera, se recuerda. Es lo que hace que volver del detalle no
   // repueble el mapa con lo que acababas de esconder.
   useEffect(() => {
-    saveFilters({ onlyWithWater, showNonPotable, source: sourceFilter })
-  }, [onlyWithWater, showNonPotable, sourceFilter])
+    saveFilters({ onlyWithWater, onlyReliable, showNonPotable, source: sourceFilter })
+  }, [onlyWithWater, onlyReliable, showNonPotable, sourceFilter])
   const [showNearby, setShowNearby] = useState(false)
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [missionsOpen, setMissionsOpen] = useState(false)
@@ -1068,6 +1078,15 @@ export function MapPage() {
               onClick={() => { locate(true); if (enHoja) setControlsOpen(false) }} sx={sxChip(false)} />
         <Chip
           clickable
+          variant={onlyReliable ? 'filled' : 'outlined'}
+          color={enHoja && onlyReliable ? 'primary' : undefined}
+          icon={<VerifiedIcon />}
+          label={noEmoji(t('map.onlyReliable'))}
+          onClick={() => setOnlyReliable((v) => !v)}
+          sx={sxChip(onlyReliable)}
+        />
+        <Chip
+          clickable
           variant={onlyWithWater ? 'filled' : 'outlined'}
           color={enHoja && onlyWithWater ? 'primary' : undefined}
           icon={<WaterDropIcon />}
@@ -1155,7 +1174,7 @@ export function MapPage() {
         fadeAnimation={false}
       >
         <BaseLayerTile layer={layer} />
-        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
+        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} onlyReliable={onlyReliable} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
         <PersistView />
         <FocusOn target={goto} />
         <DetectaGestoDelUsuario onGesto={() => setSiguiendo(false)} />

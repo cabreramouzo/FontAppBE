@@ -1599,6 +1599,21 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Renombrar la clave hace que quien ya la tuviera vea **una celebración más** (la vitrina
   compara por `familia:grado` en `localStorage`). Asumido: es cierta y son nueve personas.
 
+## Confianza del estado de una fuente
+
+- Es una categoría explicable, no una puntuación opaca: **confirmada**, **informe
+  reciente**, **datos contradictorios**, **información antigua** o **sin comprobar**.
+- La ventana de actualidad es de 30 días. Una confirmación («sigue igual») refresca el
+  último parte. Para quedar confirmada hace falta una confirmación independiente o dos
+  autores identificados distintos con partes recientes.
+- `flowing` y `trickle` forman la familia «hay agua»; `dry`, `broken` y `gone`, la familia
+  incompatible «no disponible». Si ambas aparecen recientemente, prevalece
+  **contradictoria**, incluso aunque el último parte tenga apoyos.
+- El backend resume la evidencia en `FontSummary`; la ficha reconstruye la misma regla
+  con sus reseñas. Toda lógica vive en `web/src/lib/confidence.ts`.
+- El mapa ofrece **Solo confirmadas**. El filtro excluye las recientes sin respaldo, las
+  contradictorias, las antiguas y las nunca comprobadas.
+
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).
 - No poner el proyecto en iCloud Drive (rompe builds y satura la sincronización).

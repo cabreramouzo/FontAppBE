@@ -199,6 +199,29 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    func testSummaryExplainsConfidenceEvidence() async throws {
+        try await withApp { app in
+            let ownerID = try await register(app, username: "confidence-owner")
+            let token = try await login(app, username: "confidence-owner")
+            let verifierID = try await register(app, username: "confidence-verifier")
+            let fontID = try await createFont(app, token: token, name: "Confiança", lat: 40.4, long: -3.7)
+
+            let dry = FontComment(fontID: fontID, userID: ownerID, body: "seca", waterStatus: "dry")
+            try await dry.save(on: app.db)
+            let flowing = FontComment(fontID: fontID, userID: ownerID, body: "raja", waterStatus: "flowing")
+            try await flowing.save(on: app.db)
+            try await FontConfirmation(commentID: try flowing.requireID(), userID: verifierID).save(on: app.db)
+
+            let found = try await Font.find(fontID, on: app.db)
+            let font = try XCTUnwrap(found)
+            let summaries = try await Font.summaries(for: [font], on: app.db)
+            let summary = try XCTUnwrap(summaries.first)
+            XCTAssertEqual(summary.latestConfirmations, 1)
+            XCTAssertEqual(summary.recentStatusReporters, 1)
+            XCTAssertTrue(summary.recentStatusConflict)
+        }
+    }
+
     func testReportRecordsAuthor() async throws {
         try await withApp { app in
             try await register(app, username: "reporter")

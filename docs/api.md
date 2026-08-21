@@ -50,7 +50,10 @@ Login con credenciales inválidas → **401**.
 // FontSummary  (Font + último estado; lo devuelven los listados del mapa)
 { ...campos de Font,
   "lastWaterStatus": "flowing|trickle|dry|broken|gone|unknown|null",
-  "lastUpdate": "iso8601|null" }
+  "lastUpdate": "iso8601|null",
+  "latestConfirmations": 0,
+  "recentStatusReporters": 0,
+  "recentStatusConflict": false }
 
 // UserResponse  (nunca incluye passwordHash; `email` solo en respuestas propias
 //                — login/me/registro/edición —, nunca en `GET /users/:id`.
@@ -68,6 +71,12 @@ Login con credenciales inválidas → **401**.
   "waterStatus": "flowing|trickle|dry|broken|gone|unknown|null",
   "image": "url|null", "createdAt": "iso8601" }
 ```
+
+Los tres últimos campos de `FontSummary` permiten explicar la confianza del estado sin
+descargar todas las reseñas. La ventana reciente es de 30 días.
+`recentStatusReporters` cuenta autores identificados distintos y
+`recentStatusConflict` indica que hay partes incompatibles (con agua frente a seca,
+rota o retirada).
 
 En `Font`, `name` solo contiene un nombre propio o topónimo. En una fuente importada
 sin nombre es `null`; el cliente muestra entonces «fuente sin nombre» en el idioma del

@@ -17,8 +17,14 @@ struct FontSummary: Content {
     let createdAt: Date?
     let lastWaterStatus: String?
     let lastUpdate: Date?
+    /// Apoyos independientes al último parte y partes de los últimos 30 días. Permiten
+    /// explicar confianza sin mandar todas las reseñas al mapa.
+    let latestConfirmations: Int
+    let recentStatusReporters: Int
+    let recentStatusConflict: Bool
 
-    init(_ font: Font, lastWaterStatus: String?, lastUpdate: Date?) {
+    init(_ font: Font, lastWaterStatus: String?, lastUpdate: Date?, latestConfirmations: Int = 0,
+         recentStatusReporters: Int = 0, recentStatusConflict: Bool = false) {
         self.id = font.id
         self.name = font.name
         self.latitude = font.latitude
@@ -30,6 +36,9 @@ struct FontSummary: Content {
         self.createdAt = font.createdAt
         self.lastWaterStatus = lastWaterStatus
         self.lastUpdate = lastUpdate
+        self.latestConfirmations = latestConfirmations
+        self.recentStatusReporters = recentStatusReporters
+        self.recentStatusConflict = recentStatusConflict
     }
 }
 
@@ -60,26 +69,51 @@ extension Font {
         // Tomamos la confirmación más reciente de cada comentario de estado (una query).
         let statusCommentIDs = latest.values.compactMap { $0.commentID }
         var lastConfirm: [UUID: Date] = [:]
+        var confirmationCounts: [UUID: Int] = [:]
         if !statusCommentIDs.isEmpty {
             let confs = try await FontConfirmation.query(on: db)
                 .filter(\.$comment.$id ~~ statusCommentIDs)
                 .all()
             for c in confs {
                 let cid = c.$comment.id
+                confirmationCounts[cid, default: 0] += 1
                 if let d = c.createdAt, lastConfirm[cid] == nil || d > lastConfirm[cid]! {
                     lastConfirm[cid] = d
                 }
             }
         }
 
+        let cutoff = Date().addingTimeInterval(-30 * 86_400)
+        var recentByFont: [UUID: [FontComment]] = [:]
+        for comment in comments where (comment.createdAt ?? .distantPast) >= cutoff
+            && comment.waterStatus != nil && comment.waterStatus != "unknown" {
+            recentByFont[comment.$font.id, default: []].append(comment)
+        }
+
         return fonts.map { font in
-            guard let l = font.id.flatMap({ latest[$0] }) else {
+            guard let fid = font.id, let l = latest[fid] else {
                 return FontSummary(font, lastWaterStatus: nil, lastUpdate: nil)
             }
             // La frescura es la fecha más reciente entre el comentario y su última confirmación.
             let confDate = l.commentID.flatMap { lastConfirm[$0] }
             let freshest = [l.date, confDate].compactMap { $0 }.max()
-            return FontSummary(font, lastWaterStatus: l.status, lastUpdate: freshest)
+            let recent = recentByFont[fid] ?? []
+            // Fluye/poca agua cuentan como la misma afirmación. Seca, rota o retirada
+            // contradicen esa afirmación; cambios antiguos no convierten el presente en
+            // disputa porque solo miramos treinta días.
+            func family(_ status: String?) -> String? {
+                switch status {
+                case "flowing", "trickle": return "water"
+                case "dry", "broken", "gone": return "unavailable"
+                default: return nil
+                }
+            }
+            let families = Set(recent.compactMap { family($0.waterStatus) })
+            let reporters = Set(recent.compactMap { $0.$user.id })
+            return FontSummary(font, lastWaterStatus: l.status, lastUpdate: freshest,
+                               latestConfirmations: l.commentID.flatMap { confirmationCounts[$0] } ?? 0,
+                               recentStatusReporters: reporters.count,
+                               recentStatusConflict: families.count > 1)
         }
     }
 }

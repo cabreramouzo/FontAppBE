@@ -93,6 +93,8 @@ import { TextoRico } from '../components/RichText'
 import { FontHiddenNotice, FontMaintenance } from '../components/FontMaintenance'
 import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
+import { ConfidenceChip } from '../components/ConfidenceChip'
+import { evidenceFromReports } from '../lib/confidence'
 
 // Reseñas "Anteriores" que se muestran por tanda (el resto, tras "mostrar más").
 const REVIEWS_PAGE = 5
@@ -820,6 +822,7 @@ export function FontDetailPage() {
   const rated = comments.filter((c) => c.rating != null)
   const avg = rated.length ? rated.reduce((a, c) => a + (c.rating ?? 0), 0) / rated.length : null
   const latest = comments[0] ?? null
+  const confidenceEvidence = evidenceFromReports(comments)
   const rest = comments.slice(1)
   const canManageFont = !!user && (!!user.isAdmin || font.creator?.id === user.id)
   // Ascender la foto de una reseña: si la fuente aún no tiene foto, cualquiera puede.
@@ -919,9 +922,10 @@ export function FontDetailPage() {
           que hacía falta y la que antes se quedaba en blanco. Va aquí y no junto al
           estado del agua porque responde a otra pregunta —cuándo, no qué— y porque es lo
           primero que quieres saber antes de fiarte del resto de la ficha. */}
-      <Box sx={{ mb: 1.5 }}>
+      <Stack direction="row" sx={{ mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
         <FreshnessChip lastCheck={latest?.lastConfirmedAt ?? latest?.createdAt ?? null} />
-      </Box>
+        <ConfidenceChip evidence={confidenceEvidence} />
+      </Stack>
 
       {creatorName && (
         <Typography

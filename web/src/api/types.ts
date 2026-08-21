@@ -164,6 +164,9 @@ export interface Page<T> {
 export interface FontSummary extends Font {
   lastWaterStatus: string | null
   lastUpdate: string | null
+  latestConfirmations: number
+  recentStatusReporters: number
+  recentStatusConflict: boolean
 }
 
 /** Estado de favoritos de una fuente (guardada por el usuario + recuento total). */

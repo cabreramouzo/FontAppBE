@@ -12,6 +12,7 @@ import { waterStatusInfo } from '../lib/waterStatus'
 import { drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 import { nombreFuente } from '../lib/fontName'
+import { CONFIDENCE_EMOJI, confidenceDetailKey, confidenceLabelKey, confidenceOf } from '../lib/confidence'
 
 function escapeHtml(s: string): string {
   const div = document.createElement('div')
@@ -56,6 +57,7 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
       const src = sourceInfo(f.source)
       const dr = drinkableInfo(f.drinkable)
       const stale = f.lastUpdate ? isStale(f.lastUpdate) : false
+      const confidence = confidenceOf(f)
       const srcText = src ? `${src.emoji} ${t(src.labelKey)}` : ''
       const drText = dr ? `${dr.emoji} ${t(dr.labelKey)}` : ''
       const el = document.createElement('div')
@@ -72,6 +74,7 @@ export function ClusteredMarkers({ fonts, selectedID }: { fonts: FontSummary[]; 
           <strong>${escapeHtml(nombreFuente(f, t))}</strong>
           <div class="muted small">${srcText}${src && dr ? ' · ' : ''}${drText}</div>
           ${ws ? `<div class="badge">${ws.emoji} ${t(`status.${ws.key}`)}</div>` : ''}
+          <div class="muted small" title="${escapeHtml(t(confidenceDetailKey(confidence)))}">${CONFIDENCE_EMOJI[confidence]} ${escapeHtml(t(confidenceLabelKey(confidence)))}</div>
           ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
           <span class="popup-link">${t('popup.detail')}</span>
         </a>`
