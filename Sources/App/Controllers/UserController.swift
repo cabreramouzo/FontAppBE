@@ -429,6 +429,8 @@ struct AdminUser: Content {
     let signupCountry: String?
     let signupRegion: String?
     let signupCity: String?
+    let lang: String?
+    let signupSource: String?
     let anonymized: Bool
     let createdAt: Date?
 
@@ -441,6 +443,8 @@ struct AdminUser: Content {
         self.signupCountry = u.signupCountry
         self.signupRegion = u.signupRegion
         self.signupCity = u.signupCity
+        self.lang = u.lang
+        self.signupSource = u.signupSource
         self.anonymized = u.anonymizedAt != nil
         self.createdAt = u.createdAt
     }

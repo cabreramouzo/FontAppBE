@@ -1046,8 +1046,15 @@ final class IntegrationTests: XCTestCase {
             let ownerID = try await register(app, username: "owner")
             try await setRole(app, userID: ownerID, role: .owner)
             let ownerTok = try await login(app, username: "owner")
-            try await register(app, username: "alice")
+            let aliceID = try await register(app, username: "alice")
             try await register(app, username: "bob")
+            let foundAlice = try await User.find(aliceID, on: app.db)
+            let alice = try XCTUnwrap(foundAlice)
+            alice.lang = "es"
+            alice.signupCity = "Estocolmo"
+            alice.signupRegion = "Stockholm"
+            alice.signupSource = "cartel-centro"
+            try await alice.save(on: app.db)
 
             try await app.test(.GET, "users/admin", headers: bearer(ownerTok), afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)
@@ -1057,6 +1064,10 @@ final class IntegrationTests: XCTestCase {
             try await app.test(.GET, "users/admin?search=alic", headers: bearer(ownerTok), afterResponse: { res in
                 let page = try res.content.decode(Page<AdminUser>.self)
                 XCTAssertEqual(page.items.map { $0.username }, ["alice"])
+                XCTAssertEqual(page.items.first?.lang, "es")
+                XCTAssertEqual(page.items.first?.signupCity, "Estocolmo")
+                XCTAssertEqual(page.items.first?.signupRegion, "Stockholm")
+                XCTAssertEqual(page.items.first?.signupSource, "cartel-centro")
             })
             // Un usuario normal (no owner): 403.
             let aliceTok = try await login(app, username: "alice")

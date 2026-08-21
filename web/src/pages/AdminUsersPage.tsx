@@ -77,10 +77,8 @@ export function AdminUsersPage() {
   if (!isOwner(user)) return null
 
   const pages = Math.max(1, Math.ceil(total / USERS_ADMIN_PER))
-  const place = (u: AdminUser) => [u.signupCity, u.signupRegion, u.signupCountry].filter(Boolean).join(', ')
-
   return (
-    <Box className="pad" sx={{ maxWidth: 1000, mx: 'auto' }}>
+    <Box className="pad" sx={{ maxWidth: 1400, mx: 'auto' }}>
       <Link component={RouterLink} to="/admin">{t('admin.backPanel')}</Link>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, my: 1 }}>
         <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1 }}>👥 {t('admin.users')}</Typography>
@@ -101,13 +99,21 @@ export function AdminUsersPage() {
       {rows === null && <Skeleton lines={6} />}
       {rows?.length === 0 && <Typography color="text.secondary">{t('admin.usersNone')}</Typography>}
       {rows && rows.length > 0 && (
-        <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
-          <Table size="small" sx={{ minWidth: 760 }}>
+        <>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
+            {t('admin.usersTotal', { n: total })}
+          </Typography>
+          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 1250 }}>
             <TableHead>
               <TableRow>
+                <TableCell>{t('admin.colName')}</TableCell>
                 <TableCell>{t('admin.colUser')}</TableCell>
                 <TableCell>{t('admin.colEmail')}</TableCell>
-                <TableCell>{t('admin.colPlace')}</TableCell>
+                <TableCell>{t('admin.colLang')}</TableCell>
+                <TableCell>{t('admin.colCity')}</TableCell>
+                <TableCell>{t('admin.colRegion')}</TableCell>
+                <TableCell>{t('admin.colSource')}</TableCell>
                 <TableCell>{t('admin.colJoined')}</TableCell>
                 <TableCell>{t('admin.colRole')}</TableCell>
               </TableRow>
@@ -116,13 +122,16 @@ export function AdminUsersPage() {
               {rows.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>
+                    {u.name}{u.anonymized && <Chip size="small" label={t('admin.usersAnon')} sx={{ ml: 0.5, height: 18 }} />}
+                  </TableCell>
+                  <TableCell>
                     <Link component={RouterLink} to={`/users/${encodeURIComponent(u.username)}`} sx={{ fontWeight: 600 }}>@{u.username}</Link>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                      {u.name}{u.anonymized && <Chip size="small" label={t('admin.usersAnon')} sx={{ ml: 0.5, height: 18 }} />}
-                    </Typography>
                   </TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>{u.email ?? '—'}</TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>{place(u) || '—'}</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>{u.lang ?? '—'}</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>{u.signupCity ?? '—'}</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>{u.signupRegion ?? '—'}</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>{u.signupSource ?? '—'}</TableCell>
                   <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{u.createdAt ? timeAgo(u.createdAt, t) : '—'}</TableCell>
                   <TableCell>
                     {u.id === user?.id ? (
@@ -140,8 +149,9 @@ export function AdminUsersPage() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
-        </TableContainer>
+            </Table>
+          </TableContainer>
+        </>
       )}
 
       {pages > 1 && (
@@ -151,7 +161,6 @@ export function AdminUsersPage() {
           <Button size="small" disabled={page >= pages} onClick={() => load(page + 1, search)}>{t('admin.next')}</Button>
         </Stack>
       )}
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{t('admin.usersTotal', { n: total })}</Typography>
     </Box>
   )
 }

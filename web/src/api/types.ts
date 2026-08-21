@@ -62,6 +62,8 @@ export interface AdminUser {
   signupCountry: string | null
   signupRegion: string | null
   signupCity: string | null
+  lang: string | null
+  signupSource: string | null
   anonymized: boolean
   createdAt: string | null
 }
