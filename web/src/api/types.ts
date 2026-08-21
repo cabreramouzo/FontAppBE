@@ -102,6 +102,8 @@ export interface FontEdit {
 export interface RegionStat {
   country: string | null
   region: string | null
+  /** División administrativa superior, como código ISO 3166-2. */
+  admin1: string | null
   count: number
 }
 
@@ -289,6 +291,7 @@ export interface Missions {
 export interface ZoneCoverage {
   country: string | null
   region: string
+  admin1: string | null
   fonts: number
   withPhoto: number
   checkedRecently: number

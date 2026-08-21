@@ -224,6 +224,7 @@ struct FontController: RouteCollection {
             guard let font = try await Font.find(fontID, on: db) else { return }
             font.country = nearest.country
             font.region = nearest.region
+            font.admin1 = nearest.admin1
             try await font.save(on: db)
         } catch {
             logger.warning("No s'ha pogut deduir la zona de la font \(fontID): \(error)")

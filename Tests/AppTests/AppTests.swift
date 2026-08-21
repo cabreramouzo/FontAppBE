@@ -2,6 +2,16 @@ import XCTVapor
 @testable import App
 
 final class AppTests: XCTestCase {
+    func testAdmin1TableCoversProductionTerritories() {
+        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 159)
+        XCTAssertEqual(Admin1.code(country: "Spain", region: "Barcelona"), "ES-CT")
+        XCTAssertEqual(Admin1.code(country: "France", region: "Hérault"), "FR-OCC")
+        XCTAssertEqual(Admin1.code(country: "Portugal", region: "Lisboa"), "PT-11")
+        XCTAssertEqual(Admin1.code(country: "Finland", region: "Åland"), "FI-01")
+        XCTAssertEqual(Admin1.code(country: "Sweden", region: "Orebro"), "SE-T")
+        XCTAssertNil(Admin1.code(country: "Spain", region: "Territorio inventado"))
+    }
+
     // Smoke test sin base de datos: sólo registra rutas y comprueba /health.
     func testHealth() async throws {
         let app = try await Application.make(.testing)

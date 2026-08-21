@@ -1262,16 +1262,17 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   regiones en España (**provincias**, las 50 + Ceuta y Melilla), 20 en Portugal
   (**distritos**), 4 en Francia (**départements**, no régions) y 7 en Andorra
   (**parròquies**). Tres profundidades mezcladas en una columna.
-  **Pendiente, decidido pero sin hacer:** una columna `admin1` con el **código ISO 3166-2**
+  La columna `admin1` guarda el **código ISO 3166-2**
   (`ES-CT`, `PT-11`, `FR-OCC`), *sin tocar* `region` —que es carga estructural: sale en el
   JSON público de `Font`, en `/zones`, en `/zones/ranking?region=`, en el correo semanal y
   en la insignia de Catalunya—. Un código y no un nombre por lo mismo que el resto de la
   gamificación, y porque el nombre ya nos costó el diccionario de dos grafías de
-  `catalanRegions`. Se deriva **de `region` con una tabla estática** (~180 filas para los
-  cuatro países) y no por point-in-polygon: una provincia está dentro de una comunidad por
+  `catalanRegions`. Se deriva **de `region` con una tabla estática** (`Admin1`: las 159
+  combinaciones medidas en producción para siete países) y no por point-in-polygon: una
+  provincia está dentro de una comunidad por
   definición, no por dónde caiga un polígono, y usar geometría para una pregunta definitoria
   mete un error que no hace falta (el borde de Natural Earth falla 1,9 km de mediana).
-  Sirve para **agrupar** `/zones` (hoy 83 filas planas), para moderadores por región y para
+  Sirve para **agrupar** `/zones`, para moderadores por región y para
   simplificar la insignia; **no** para las barras ni el ranking, que se quedan en provincia
   porque Catalunya son 15.675 fuentes y esa barra se mueve aún menos que la de Barcelona.
   Al **crear** una fuente se heredan de la fuente clasificada más cercana (≤55 km, en
@@ -1280,8 +1281,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   La autoridad sigue siendo `populate-regions`, que corrige los casos de frontera.
   Se pueblan **offline** con `populate-regions <fronteras.geojson>` (point-in-polygon contra Natural
   Earth admin-1 o GADM nivel 1; sin terceros). Distinto del `GeoLocator`, que es país por IP del
-  registro, no por coordenadas del punto. **Pendiente:** poblarlas en producción y, más adelante,
-  el modelo de permisos de "admins por región".
+  registro, no por coordenadas del punto. `backfill-admin1` audita por defecto y **se
+  niega a escribir si aparece una sola demarcación desconocida**; `--apply` escribe todo
+  en una transacción. Pendiente: el modelo de permisos de moderadores por región.
 
 ## Texto escrito por la gente (`lib/richText.ts` + `TextoRico`)
 

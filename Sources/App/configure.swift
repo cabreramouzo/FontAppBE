@@ -150,6 +150,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddHiddenToFont())       // duplicadas y retiradas: se esconden, no se borran
     app.migrations.add(CreatePhotoExif())       // EXIF de cada foto: solo para moderar
     app.migrations.add(MakeFontNameOptional()) // «sin nombre» es un dato, no un relleno
+    app.migrations.add(AddAdmin1ToFont())      // ISO 3166-2 superior; aditiva y nullable
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
@@ -177,6 +178,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(ImportCommand(), as: "import-fonts")
     app.asyncCommands.use(ImportGeoJSONCommand(), as: "import-geojson")
     app.asyncCommands.use(PopulateRegionsCommand(), as: "populate-regions")
+    app.asyncCommands.use(BackfillAdmin1Command(), as: "backfill-admin1")
     app.asyncCommands.use(SetRoleCommand(), as: "set-role")
     app.asyncCommands.use(WeeklyDigestCommand(), as: "send-weekly-digest")
     app.asyncCommands.use(ScoreContributionsCommand(), as: "score-contributions")

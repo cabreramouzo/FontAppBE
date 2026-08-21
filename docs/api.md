@@ -44,7 +44,8 @@ Login con credenciales inválidas → **401**.
 // Font
 { "id": "uuid", "name": "string|null", "latitude": 40.4, "longitude": -3.7,
   "image": "url|null", "description": "string|null",
-  "country": "string|null", "region": "string|null",  // por zona; aún sin poblar
+  "country": "string|null", "region": "string|null",
+  "admin1": "ISO 3166-2|null",
   "createdAt": "iso8601" }
 
 // FontSummary  (Font + último estado; lo devuelven los listados del mapa)
@@ -329,7 +330,7 @@ IP y caché en memoria de 5 minutos (son agregaciones sobre las tablas grandes).
 ```json
 {
   "zones": [
-    { "country": "España", "region": "Girona", "fonts": 1444, "withPhoto": 12,
+    { "country": "España", "region": "Girona", "admin1": "ES-CT", "fonts": 1444, "withPhoto": 12,
       "checkedRecently": 30, "photoPct": 1, "freshPct": 2 }
   ],
   "freshDays": 180

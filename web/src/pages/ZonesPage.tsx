@@ -18,6 +18,7 @@ import { CoverageBar } from '../components/CoverageBar'
 import { TODOS, nombrePais, paisRecordado, paisesDe, recuerdaPais } from '../lib/countries'
 import { LocalGoalCard } from '../components/LocalGoalCard'
 import { Skeleton } from '../components/Skeleton'
+import { admin1Name } from '../lib/admin1'
 
 /**
  * Las zonas. Fase 5 del plan (docs/gamificacion.md).
@@ -71,6 +72,15 @@ export function ZonesPage() {
   // ve todo. Es preferible a no enseñar ninguna zona y parecer que la página está rota.
   const filtra = pais !== null && pais !== TODOS && paises.includes(pais)
   const visibles = filtra ? (zonas ?? []).filter((z) => z.country === pais) : (zonas ?? [])
+  const admin1Counts = new Map<string, number>()
+  for (const z of visibles) if (z.admin1) admin1Counts.set(z.admin1, (admin1Counts.get(z.admin1) ?? 0) + 1)
+  const agrupa = [...admin1Counts.values()].some((n) => n > 1)
+  const grupos = agrupa
+    ? [...new Set(visibles.map((z) => z.admin1 ?? ''))].map((code) => ({
+        code,
+        zones: visibles.filter((z) => (z.admin1 ?? '') === code),
+      }))
+    : []
 
   return (
     // 1200 y no 900: esta página son tarjetas, no prosa, y el ancho de una página lo
@@ -150,7 +160,7 @@ export function ZonesPage() {
           una sola demarcación estiraría esa tarjeta a los 1200 px de ancho.
           `alignItems: start` es lo que evita que desplegar la tabla de una tarjeta estire
           a sus vecinas de la misma fila hasta su alto. */}
-      {estado === 'ok' && (
+      {estado === 'ok' && !agrupa && (
         <Box
           sx={{
             display: 'grid',
@@ -162,6 +172,16 @@ export function ZonesPage() {
           {visibles.map((z) => <ZonaCard key={`${z.country}/${z.region}`} zona={z} lang={lang} />)}
         </Box>
       )}
+      {estado === 'ok' && agrupa && grupos.map((grupo) => (
+        <Box key={grupo.code || 'unknown'} sx={{ mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            {grupo.code ? admin1Name(grupo.code) : t('admin.regionUnknown')}
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 1.5, alignItems: 'start' }}>
+            {grupo.zones.map((z) => <ZonaCard key={`${z.country}/${z.region}`} zona={z} lang={lang} />)}
+          </Box>
+        </Box>
+      ))}
     </Box>
   )
 }

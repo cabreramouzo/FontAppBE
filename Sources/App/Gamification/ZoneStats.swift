@@ -39,6 +39,7 @@ enum ZoneStats {
     struct Coverage: Content, Sendable {
         let country: String?
         let region: String
+        let admin1: String?
         let fonts: Int
         let withPhoto: Int
         /// Fuentes con alguna reseña en los últimos `freshDays` días.
@@ -50,9 +51,10 @@ enum ZoneStats {
         let photoPct: Int
         let freshPct: Int
 
-        init(country: String?, region: String, fonts: Int, withPhoto: Int, checkedRecently: Int) {
+        init(country: String?, region: String, admin1: String? = nil, fonts: Int, withPhoto: Int, checkedRecently: Int) {
             self.country = country
             self.region = region
+            self.admin1 = admin1
             self.fonts = fonts
             self.withPhoto = withPhoto
             self.checkedRecently = checkedRecently
@@ -77,6 +79,7 @@ enum ZoneStats {
         let filas = try await sql.raw("""
             SELECT f.country AS country,
                    f.region  AS region,
+                   f.admin1  AS admin1,
                    COUNT(*)                                              AS fonts,
                    COUNT(f.image)                                        AS with_photo,
                    COUNT(*) FILTER (WHERE c.last_at >= \(bind: corte))   AS checked
@@ -91,12 +94,12 @@ enum ZoneStats {
               -- cubierta por tener duplicados, y una fuente retirada ya no hay que ir a
               -- comprobarla.
               AND \(unsafeRaw: Font.visibleSQL)
-            GROUP BY f.country, f.region
+            GROUP BY f.country, f.region, f.admin1
             ORDER BY fonts DESC
             """).all(decoding: CoverageRow.self)
 
         return filas.map {
-            Coverage(country: $0.country, region: $0.region,
+            Coverage(country: $0.country, region: $0.region, admin1: $0.admin1,
                      fonts: $0.fonts, withPhoto: $0.with_photo, checkedRecently: $0.checked)
         }
     }
@@ -105,6 +108,7 @@ enum ZoneStats {
     private struct CoverageRow: Decodable {
         let country: String?
         let region: String
+        let admin1: String?
         let fonts: Int
         let with_photo: Int
         let checked: Int

@@ -14,6 +14,9 @@ struct FontSummary: Content {
     let description: String?
     let source: WaterSource?
     let drinkable: Drinkable?
+    let country: String?
+    let region: String?
+    let admin1: String?
     let createdAt: Date?
     let lastWaterStatus: String?
     let lastUpdate: Date?
@@ -33,6 +36,9 @@ struct FontSummary: Content {
         self.description = font.description
         self.source = font.source
         self.drinkable = font.drinkable
+        self.country = font.country
+        self.region = font.region
+        self.admin1 = font.admin1
         self.createdAt = font.createdAt
         self.lastWaterStatus = lastWaterStatus
         self.lastUpdate = lastUpdate

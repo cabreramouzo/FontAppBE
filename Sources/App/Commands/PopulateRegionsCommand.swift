@@ -118,7 +118,8 @@ struct PopulateRegionsCommand: AsyncCommand {
         if let sql = db as? SQLDatabase {
             for (key, ids) in groups {
                 try await sql.raw("""
-                    UPDATE fonts SET country = \(bind: key.country), region = \(bind: key.region)
+                    UPDATE fonts SET country = \(bind: key.country), region = \(bind: key.region),
+                                     admin1 = \(bind: Admin1.code(country: key.country, region: key.region))
                     WHERE id = ANY(\(bind: ids))
                     """).run()
             }
@@ -128,6 +129,7 @@ struct PopulateRegionsCommand: AsyncCommand {
                 if let key = groups.first(where: { $0.value.contains(id) })?.key {
                     font.country = key.country
                     font.region = key.region
+                    font.admin1 = Admin1.code(country: key.country, region: key.region)
                     try await font.save(on: db)
                 }
             }

@@ -701,6 +701,26 @@ donde todavía no hay ninguna fuente con región.
 fly ssh console -a fontapp -C "/app/App populate-regions /app/fronteres.geojson"
 ```
 
+### Activar o actualizar `admin1`
+
+`admin1` es aditivo: no sustituye `region` ni cambia rankings, correos o insignias. Tras
+un despliegue que añada la columna, audita primero. El primer comando no escribe nada y
+falla si encuentra una demarcación que no esté en la tabla cerrada:
+
+```bash
+fly ssh console -a fontapp -C "/app/App backfill-admin1"
+fly ssh console -a fontapp -C "/app/App backfill-admin1 --apply"
+```
+
+Antes de `--apply`, crea un backup con `scripts/backup-db.sh`. Después comprueba que no
+queden huecos ni códigos inesperados:
+
+```sql
+SELECT count(*) FILTER (WHERE region IS NOT NULL AND admin1 IS NULL) AS pendientes,
+       count(DISTINCT admin1) AS admin1_distintos
+FROM fonts;
+```
+
 ## Gamificación: el cron de liquidación
 
 La fase 2 necesita que algo pase el barrido con regularidad. No es un temporizador dentro del

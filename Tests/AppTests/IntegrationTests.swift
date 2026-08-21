@@ -1672,6 +1672,7 @@ final class IntegrationTests: XCTestCase {
             guard let neighbour = try await Font.find(neighbourID, on: app.db) else { return XCTFail("no trobada") }
             neighbour.country = "Spain"
             neighbour.region = "Barcelona"
+            neighbour.admin1 = "ES-CT"
             try await neighbour.save(on: app.db)
 
             let newID = try await createFont(app, token: token, name: "Nova a prop", lat: 41.809, long: 2.100)
@@ -1682,6 +1683,7 @@ final class IntegrationTests: XCTestCase {
             }
             XCTAssertEqual(created?.region, "Barcelona")
             XCTAssertEqual(created?.country, "Spain")
+            XCTAssertEqual(created?.admin1, "ES-CT")
 
             // Lejos de todo: sin vecina clasificada, se queda sin zona (no se inventa).
             let farID = try await createFont(app, token: token, name: "Lluny", lat: -33.9, long: 151.2)
@@ -2242,6 +2244,7 @@ final class IntegrationTests: XCTestCase {
                 let f = try await Font.find(id, on: app.db)!
                 f.region = "Osona"
                 f.country = "España"
+                f.admin1 = "ES-CT"
                 if id == conFoto { f.image = "/uploads/x.jpg" }
                 try await f.save(on: app.db)
             }
@@ -2258,6 +2261,7 @@ final class IntegrationTests: XCTestCase {
                 let osona = out.zones.first { $0.region == "Osona" }
                 XCTAssertEqual(osona?.fonts, 2, "Cuatro reseñas sobre una fuente no son cuatro fuentes.")
                 XCTAssertEqual(osona?.withPhoto, 1)
+                XCTAssertEqual(osona?.admin1, "ES-CT")
                 XCTAssertEqual(osona?.photoPct, 50)
                 // Solo la reseñada cuenta como comprobada, aunque lo esté cuatro veces.
                 XCTAssertEqual(osona?.checkedRecently, 1)

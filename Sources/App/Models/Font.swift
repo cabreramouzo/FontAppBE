@@ -79,6 +79,9 @@ final class Font: Model, Content, @unchecked Sendable {
     // filtros). Nullable: aún sin poblar; se derivará de lat/lon más adelante.
     @OptionalField(key: "country") var country: String?
     @OptionalField(key: "region") var region: String?
+    /// División superior estable (ISO 3166-2): comunidad autónoma, région, etc.
+    /// `region` conserva la demarcación fina usada por rankings y barras.
+    @OptionalField(key: "admin1") var admin1: String?
     // Quién la creó (null para las importadas de OSM). setNull al borrar el usuario.
     @OptionalParent(key: "created_by") var creator: User?
 
@@ -123,6 +126,7 @@ final class Font: Model, Content, @unchecked Sendable {
         drinkable: Drinkable? = nil,
         country: String? = nil,
         region: String? = nil,
+        admin1: String? = nil,
         creatorID: UUID? = nil,
         queuedOffline: Bool = false
     ) {
@@ -136,6 +140,7 @@ final class Font: Model, Content, @unchecked Sendable {
         self.drinkable = drinkable
         self.country = country
         self.region = region
+        self.admin1 = admin1
         self.$creator.id = creatorID
         self.queuedOffline = queuedOffline
     }
@@ -159,7 +164,7 @@ final class Font: Model, Content, @unchecked Sendable {
     /// Al añadir una columna nueva hay que decidir aquí si es pública. Ese es el punto.
     private enum PublicKey: String, CodingKey {
         case id, name, latitude, longitude, image, description
-        case source, drinkable, country, region, creator, createdAt
+        case source, drinkable, country, region, admin1, creator, createdAt
         // Por qué esta ficha ya no sale en el mapa. Salen **siempre**, con `null` cuando
         // está en pie: la ficha se llega a ver por un enlace viejo y tiene que poder
         // explicar por qué el punto no aparece, en vez de dar un 404 o, peor, parecer
@@ -194,6 +199,7 @@ final class Font: Model, Content, @unchecked Sendable {
         try c.encode(drinkable, forKey: .drinkable)
         try c.encode(country, forKey: .country)
         try c.encode(region, forKey: .region)
+        try c.encode(admin1, forKey: .admin1)
         try c.encode(CreatorRef(id: $creator.id), forKey: .creator)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode($duplicateOf.id, forKey: .duplicateOf)
