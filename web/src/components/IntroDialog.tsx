@@ -9,6 +9,7 @@ import Link from '@mui/material/Link'
 import { useTurno } from '../lib/asks'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 const SEEN_KEY = 'fontapp_intro_seen'
 
@@ -34,7 +35,13 @@ export function IntroDialog() {
   }
 
   return (
-    <Dialog open={open} onClose={close} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { overflow: 'hidden' } } }}>
+    <Dialog
+      open={open}
+      onClose={(_event, reason) => { if (reason !== 'backdropClick') close() }}
+      maxWidth="xs"
+      fullWidth
+      slotProps={{ paper: { sx: { overflow: 'hidden' } } }}
+    >
       <Box
         component="img"
         src="/welcome.jpg"
@@ -48,6 +55,13 @@ export function IntroDialog() {
       {/* Solapamos el contenido sobre la cola desvanecida de la imagen: el degradado
           continúa por detrás del título en vez de cortarse justo encima. */}
       <DialogContent sx={{ textAlign: 'center', pt: 0, mt: -6 }}>
+        {/* El selector global queda detrás del modal. Intentar usarlo contaba como clic
+            en el backdrop, cerraba la presentación y la marcaba para siempre como vista.
+            Aquí el idioma cambia en vivo sin abandonar el onboarding. */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
+          <Typography variant="body2" color="text.secondary">{t('lang.label')}:</Typography>
+          <LanguageSwitcher />
+        </Box>
         <Typography variant="h5" sx={{ fontWeight: 800 }}>{t('intro.title')}</Typography>
         <Typography color="text.secondary" sx={{ mt: 1 }}>{t('intro.lead')}</Typography>
 
