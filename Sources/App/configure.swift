@@ -154,6 +154,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddAdmin1ToFont())      // ISO 3166-2 superior; aditiva y nullable
     app.migrations.add(CreateAuthIdentity())   // Google/Apple: proveedor + subject estable
     app.migrations.add(CreatePasskeys())       // credenciales WebAuthn + challenges efímeros
+    app.migrations.add(CreateInteractionAnalytics()) // clics agregables, sin usuario/IP
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

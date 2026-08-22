@@ -393,6 +393,15 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   `GOOGLE_CLIENT_ID` (login Google).
 - Web: build con `VITE_API_URL=<origen del backend>`. Guía completa: [DEPLOY.md](DEPLOY.md).
 
+## Analítica interna de apoyo
+- `POST /analytics` acepta únicamente la lista cerrada de eventos de apoyo de
+  `InteractionAnalyticsController`; el cliente genera un UUID por pestaña en `sessionStorage`.
+  La tabla guarda evento, día, UUID aleatorio y número de clics: nunca usuario, IP, URL,
+  user-agent ni dispositivo. Las filas de más de 180 días se eliminan al registrar actividad.
+- `GET /admin/analytics` es solo admin y resume los últimos 30 días como clics totales y
+  sesiones anónimas aproximadas. Añadir un evento exige incorporarlo a la lista cerrada,
+  traducir su rótulo en los seis idiomas y mantener actualizada la página legal.
+
 ## Novedades (público) y panel
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias
   y ediciones mezcladas por fecha, con filtro por zona. Las fuentes nuevas salen **solo si

@@ -19,7 +19,7 @@ import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
-import { getFlags, getNewUsers } from '../api/client'
+import { getFlags, getNewUsers, trackInteraction } from '../api/client'
 import { lastSeenAt } from '../lib/newUsers'
 import { marcarNovedadesVistas, programarZumbidos } from '../lib/newsNudge'
 import { Footer } from './Footer'
@@ -245,6 +245,7 @@ export function Layout({ children }: { children: ReactNode }) {
               color="inherit"
               size="small"
               aria-label={t('support.title')}
+              onClick={() => trackInteraction('support_heart')}
             >
               <FavoriteBorderIcon />
             </IconButton>

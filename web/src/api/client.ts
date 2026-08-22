@@ -90,6 +90,25 @@ export async function googleLoginRequest(credential: string): Promise<LoginRespo
 }
 
 export interface PasskeySummary { id: string; label: string; createdAt?: string; lastUsedAt?: string }
+export interface InteractionSummary { event: string; clicks: number; sessions: number }
+
+const ANALYTICS_SESSION = 'fontapp_analytics_session'
+function analyticsSession(): string {
+  try {
+    let value = sessionStorage.getItem(ANALYTICS_SESSION)
+    if (!value) { value = crypto.randomUUID(); sessionStorage.setItem(ANALYTICS_SESSION, value) }
+    return value
+  } catch { return crypto.randomUUID() }
+}
+
+/** Best-effort: la analítica nunca debe bloquear ni mostrar un error al visitante. */
+export function trackInteraction(event: string) {
+  void apiFetch<void>('/analytics', {
+    method: 'POST', body: JSON.stringify({ event, session: analyticsSession() }),
+  }).catch(() => {})
+}
+
+export const getInteractionStats = () => apiFetch<InteractionSummary[]>('/admin/analytics')
 
 export async function loginWithPasskeyRequest(): Promise<LoginResponse> {
   if (!window.PublicKeyCredential) throw new Error('Passkeys are not supported')

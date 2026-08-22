@@ -15,6 +15,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { FeedbackButton } from '../components/FeedbackButton'
 import { comparteTexto } from '../lib/share'
+import { trackInteraction } from '../api/client'
 
 // Ko-fi se retiró el 19/08/2026, cuando entró el mecenatge d'Aixeta. Dos botones que
 // decían «invita'm a un cafè» competían por ser lo mismo, y el texto de arriba pide algo
@@ -88,6 +89,7 @@ export function SupportPage() {
   // contestaba «no podemos abrir el pago» — que es la peor forma posible de pedir dinero.
   // Falla cerrado: si la consulta no llega, no hay botón.
   useEffect(() => {
+    trackInteraction('support_view')
     let viu = true
     fetch('/stripe/checkout')
       .then((r) => (r.ok ? r.json() as Promise<{ once?: boolean }> : { once: false }))
@@ -97,6 +99,7 @@ export function SupportPage() {
   }, [])
 
   async function pagarAmbStripe(kind: 'once' | 'monthly') {
+    if (kind === 'once') trackInteraction('support_stripe_once')
     setPagant(kind)
     try {
       const response = await fetch('/stripe/checkout', {
@@ -114,12 +117,14 @@ export function SupportPage() {
   }
 
   async function compartir() {
+    trackInteraction('support_share')
     if (await comparteTexto(`${t('support.shareText')} ${ENLACE}`) === 'copiado') {
       toast.show(t('toast.linkCopied'))
     }
   }
 
   async function copiarBTC() {
+    trackInteraction('support_btc_copy')
     try {
       await navigator.clipboard.writeText(BTC_ADDRESS)
       setCopiado(true)
@@ -154,6 +159,7 @@ export function SupportPage() {
           component="a"
           href={`https://wa.me/?text=${encodeURIComponent(`${t('support.shareText')} ${ENLACE}`)}`}
           target="_blank" rel="noreferrer"
+          onClick={() => trackInteraction('support_whatsapp')}
           sx={{ textTransform: 'none' }}
         >
           {t('support.whatsapp')}
@@ -166,7 +172,7 @@ export function SupportPage() {
       <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, mb: 3 }}>
         <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('support.feedbackTitle')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('support.feedbackBody')}</Typography>
-        <FeedbackButton destacado />
+        <Box onClickCapture={() => trackInteraction('support_feedback')}><FeedbackButton destacado /></Box>
       </Paper>
 
       {/* Y solo después, el dinero. */}
@@ -182,6 +188,7 @@ export function SupportPage() {
       <Button
         fullWidth variant="contained" disableElevation startIcon={<LocalCafeIcon />}
         component="a" href={AIXETA_URL} target="_blank" rel="noreferrer"
+        onClick={() => trackInteraction('support_aixeta')}
         sx={{ textTransform: 'none' }}
       >
         {t('donate.aixeta')}

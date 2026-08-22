@@ -14,7 +14,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInterestStats, getNewUsers, getRegionStats, getSourceStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole } from '../api/client'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInteractionStats, getInterestStats, getNewUsers, getRegionStats, getSourceStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole, type InteractionSummary } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -41,6 +41,7 @@ export function AdminPage() {
   const [staff, setStaff] = useState<StaffMember[] | null>(null)
   const [newUsers, setNewUsers] = useState<{ count: number; since: string } | null>(null)
   const [sources, setSources] = useState<{ source: string | null; count: number }[] | null>(null)
+  const [interactions, setInteractions] = useState<InteractionSummary[] | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export function AdminPage() {
         .then((r) => { setNewUsers(r); markUsersSeen() })
         .catch(() => setNewUsers(null))
       getSourceStats().then(setSources).catch(() => setSources([]))
+      getInteractionStats().then(setInteractions).catch(() => setInteractions([]))
     }
     // Gestión de roles (solo owner).
     if (isOwner(user)) getStaff().then(setStaff).catch(() => setStaff([]))
@@ -247,6 +249,23 @@ export function AdminPage() {
               <ListItemText
                 primary={r.region ?? t('admin.regionUnknown')}
                 secondary={r.country ?? undefined}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+
+      <Box component="section" sx={{ mt: 3 }}>
+        <Typography variant="h6" gutterBottom>📈 {t('analytics.title')}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('analytics.hint')}</Typography>
+        {interactions === null && <Skeleton lines={2} />}
+        {interactions?.length === 0 && <Typography color="text.secondary">{t('analytics.empty')}</Typography>}
+        <List disablePadding>
+          {interactions?.map((item) => (
+            <ListItem key={item.event} divider disableGutters>
+              <ListItemText
+                primary={t(`analytics.${item.event}`)}
+                secondary={`${item.sessions} ${t('analytics.sessions')} · ${item.clicks} ${t('analytics.clicks')}`}
               />
             </ListItem>
           ))}

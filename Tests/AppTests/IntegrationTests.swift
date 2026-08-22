@@ -272,6 +272,36 @@ final class IntegrationTests: XCTestCase {
 
     // MARK: - Tests
 
+    func testSupportAnalyticsCountsClicksAndAnonymousSessions() async throws {
+        try await withApp { app in
+            let firstSession = UUID().uuidString
+            let secondSession = UUID().uuidString
+            for session in [firstSession, firstSession, secondSession] {
+                try await app.test(.POST, "analytics", beforeRequest: { req in
+                    try req.content.encode(InteractionDTO(event: "support_heart", session: session))
+                }) { res in
+                    XCTAssertEqual(res.status, .noContent)
+                }
+            }
+            try await app.test(.POST, "analytics", beforeRequest: { req in
+                try req.content.encode(InteractionDTO(event: "invented_event", session: firstSession))
+            }) { res in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+
+            let adminID = try await register(app, username: "analyticsadmin")
+            try await makeAdmin(app, userID: adminID)
+            let token = try await login(app, username: "analyticsadmin")
+            try await app.test(.GET, "admin/analytics", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let stats = try res.content.decode([InteractionSummary].self)
+                let heart = try XCTUnwrap(stats.first { $0.event == "support_heart" })
+                XCTAssertEqual(heart.clicks, 3)
+                XCTAssertEqual(heart.sessions, 2)
+            }
+        }
+    }
+
     func testRegisterLoginMe() async throws {
         try await withApp { app in
             try await register(app, username: "ada")
