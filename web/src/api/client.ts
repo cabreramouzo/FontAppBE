@@ -91,6 +91,7 @@ export async function googleLoginRequest(credential: string): Promise<LoginRespo
 
 export interface PasskeySummary { id: string; label: string; createdAt?: string; lastUsedAt?: string }
 export interface InteractionSummary { event: string; clicks: number; sessions: number }
+export interface OnlineUser { id: string; username: string; lastSeenAt: string }
 
 const ANALYTICS_SESSION = 'fontapp_analytics_session'
 function analyticsSession(): string {
@@ -110,6 +111,9 @@ export function trackInteraction(event: string) {
 
 export const getInteractionStats = (days: 30 | 180 | 'all' = 30) =>
   apiFetch<InteractionSummary[]>(`/admin/analytics${days === 'all' ? '' : `?days=${days}`}`)
+
+export const touchPresence = () => apiFetch<void>('/users/presence', { method: 'POST' })
+export const getOnlineUsers = () => apiFetch<OnlineUser[]>('/users/stats/online')
 
 export async function loginWithPasskeyRequest(): Promise<LoginResponse> {
   if (!window.PublicKeyCredential) throw new Error('Passkeys are not supported')

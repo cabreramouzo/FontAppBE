@@ -99,7 +99,7 @@ function LegalCA() {
         que mesura visites de forma <strong>agregada, sense cookies i sense identificar-te</strong>; per això no et demanem
         consentiment. També comptem algunes visites i interaccions amb els botons mitjançant un identificador aleatori de
         pestanya: només desem el tipus d'acció, el dia i el recompte, mai l'usuari, la IP, l'URL ni el dispositiu, i ho
-        eliminem al cap de 180 dies; després només en queda el total diari anònim. Si tens la sessió iniciada, desem també al teu compte quan obres «Suport» o Aixeta, quantes vegades i l'última data, per mesurar l'interès a sostenir el servei. Aquest detall s'elimina al cap de 180 dies o en eliminar el compte. No fem servir Google Analytics ni cap xarxa publicitària, i no venem ni cedim dades a ningú.
+        eliminem al cap de 180 dies; després només en queda el total diari anònim. Si tens la sessió iniciada, desem també al teu compte quan obres «Suport» o Aixeta, quantes vegades i l'última data, per mesurar l'interès a sostenir el servei. Aquest detall s'elimina al cap de 180 dies o en eliminar el compte. També actualitzem l'hora de la teva última activitat mentre fas servir la web; només els administradors poden veure si un compte ha estat actiu durant els últims 10 minuts, sense IP, pàgina ni dispositiu. No fem servir Google Analytics ni cap xarxa publicitària, i no venem ni cedim dades a ningú.
       </p>
       <p><strong>Qui tracta dades per encàrrec nostre:</strong></p>
       <ul>
@@ -182,7 +182,7 @@ function LegalES() {
         que mide visitas de forma <strong>agregada, sin cookies y sin identificarte</strong>; por eso no te pedimos
         consentimiento. También contamos algunas visitas e interacciones con los botones mediante un identificador aleatorio de
         pestaña: solo guardamos el tipo de acción, el día y el recuento, nunca el usuario, la IP, la URL ni el dispositivo, y lo
-        eliminamos a los 180 días; después solo queda el total diario anónimo. Si has iniciado sesión, también guardamos en tu cuenta cuándo abres «Apoyar» o Aixeta, cuántas veces y la última fecha, para medir el interés en sostener el servicio. Este detalle se elimina a los 180 días o al eliminar la cuenta. No usamos Google Analytics ni ninguna red publicitaria, y no vendemos ni cedemos datos a nadie.
+        eliminamos a los 180 días; después solo queda el total diario anónimo. Si has iniciado sesión, también guardamos en tu cuenta cuándo abres «Apoyar» o Aixeta, cuántas veces y la última fecha, para medir el interés en sostener el servicio. Este detalle se elimina a los 180 días o al eliminar la cuenta. También actualizamos la hora de tu última actividad mientras utilizas la web; solo los administradores pueden ver si una cuenta estuvo activa durante los últimos 10 minutos, sin IP, página ni dispositivo. No usamos Google Analytics ni ninguna red publicitaria, y no vendemos ni cedemos datos a nadie.
       </p>
       <p><strong>Quién trata datos por encargo nuestro:</strong></p>
       <ul>
@@ -265,7 +265,7 @@ function LegalEN() {
         which measures visits in <strong>aggregate, without cookies and without identifying you</strong> — which is why we
         ask for no consent. We also count selected page visits and button interactions using a random per-tab identifier: we
         store only the action type, day and count, never the user, IP, URL or device. After 180 days we remove the random identifier and retain only anonymous daily totals. We use no
-        Google Analytics and no ad network, and we neither sell nor share your data. When you are signed in, we also associate opening Support or Aixeta with your account, including the count and latest date, to measure interest in sustaining the service. We remove this detail after 180 days or when the account is deleted.
+        Google Analytics and no ad network, and we neither sell nor share your data. When you are signed in, we also associate opening Support or Aixeta with your account, including the count and latest date, to measure interest in sustaining the service. We remove this detail after 180 days or when the account is deleted. We also update your latest activity time while you use the site; only administrators can see whether an account was active within the last 10 minutes, without an IP, page or device.
       </p>
       <p><strong>Processors acting on our behalf:</strong></p>
       <ul>
@@ -336,7 +336,7 @@ function LegalFR() {
       </p>
       <p>
         <strong>Mesure d’audience :</strong> nous utilisons <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
-        qui mesure les visites de façon <strong>agrégée, sans cookies et sans vous identifier</strong>. Nous comptons aussi certaines interactions grâce à un identifiant aléatoire propre à l’onglet : seuls le type d’action, le jour et le nombre sont conservés, jamais l’utilisateur, l’IP, l’URL ou l’appareil. Après 180 jours, l’identifiant est supprimé et seul le total quotidien anonyme subsiste. Si vous êtes connecté, nous associons aussi à votre compte l’ouverture de Soutenir ou d’Aixeta, le nombre et la dernière date, afin de mesurer l’intérêt à soutenir le service. Ce détail est supprimé après 180 jours ou avec le compte. Nous n’utilisons ni Google Analytics ni réseau publicitaire et ne vendons ni ne partageons vos données.
+        qui mesure les visites de façon <strong>agrégée, sans cookies et sans vous identifier</strong>. Nous comptons aussi certaines interactions grâce à un identifiant aléatoire propre à l’onglet : seuls le type d’action, le jour et le nombre sont conservés, jamais l’utilisateur, l’IP, l’URL ou l’appareil. Après 180 jours, l’identifiant est supprimé et seul le total quotidien anonyme subsiste. Si vous êtes connecté, nous associons aussi à votre compte l’ouverture de Soutenir ou d’Aixeta, le nombre et la dernière date, afin de mesurer l’intérêt à soutenir le service. Ce détail est supprimé après 180 jours ou avec le compte. Nous actualisons aussi l’heure de votre dernière activité pendant l’utilisation du site ; seuls les administrateurs peuvent voir si un compte a été actif au cours des 10 dernières minutes, sans IP, page ni appareil. Nous n’utilisons ni Google Analytics ni réseau publicitaire et ne vendons ni ne partageons vos données.
       </p>
       <p><strong>Sous-traitants :</strong></p>
       <ul>
@@ -416,7 +416,7 @@ function LegalGL() {
         que mide visitas de forma <strong>agregada, sen cookies e sen identificarte</strong>; por iso non che pedimos
         consentimento. Tamén contamos algunhas visitas e interaccións cos botóns cun identificador aleatorio por pestana: só
         gardamos o tipo de acción, o día e o reconto, nunca o usuario, a IP, o URL nin o dispositivo. Aos 180 días eliminamos o identificador e só queda o total diario anónimo.
-        Se iniciaches sesión, tamén asociamos á túa conta cando abres «Apoiar» ou Aixeta, cantas veces e a última data, para medir o interese en soster o servizo. Este detalle elimínase aos 180 días ou ao eliminar a conta. Non usamos Google Analytics nin ningunha rede publicitaria, e non vendemos nin cedemos datos a ninguén.
+        Se iniciaches sesión, tamén asociamos á túa conta cando abres «Apoiar» ou Aixeta, cantas veces e a última data, para medir o interese en soster o servizo. Este detalle elimínase aos 180 días ou ao eliminar a conta. Tamén actualizamos a hora da túa última actividade mentres usas a web; só os administradores poden ver se unha conta estivo activa nos últimos 10 minutos, sen IP, páxina nin dispositivo. Non usamos Google Analytics nin ningunha rede publicitaria, e non vendemos nin cedemos datos a ninguén.
       </p>
       <p><strong>Quen trata datos por encarga nosa:</strong></p>
       <ul>
@@ -499,7 +499,7 @@ function LegalEU() {
         bisitak modu <strong>agregatuan, cookierik gabe eta zu identifikatu gabe</strong> neurtzen dituena; horregatik ez dizugu
         baimenik eskatzen. Bisita eta botoi-interakzio batzuk ere zenbatzen ditugu fitxa bakoitzeko ausazko identifikatzaile batekin:
         ekintza mota, eguna eta kopurua bakarrik gordetzen ditugu, inoiz ez erabiltzailea, IPa, URLa edo gailua, eta 180 egunera
-        identifikatzailea ezabatzen dugu; ondoren, eguneko guztizko anonimoa bakarrik geratzen da. Saioa hasita baduzu, Laguntza edo Aixeta noiz irekitzen duzun, zenbat aldiz eta azken data zure kontuarekin lotzen ditugu, zerbitzua sostengatzeko interesa neurtzeko. Xehetasun hori 180 egunera edo kontua ezabatzean kentzen da. Ez dugu Google Analytics-ik ez publizitate-sarerik erabiltzen, eta ez dugu daturik saltzen ez lagatzen.
+        identifikatzailea ezabatzen dugu; ondoren, eguneko guztizko anonimoa bakarrik geratzen da. Saioa hasita baduzu, Laguntza edo Aixeta noiz irekitzen duzun, zenbat aldiz eta azken data zure kontuarekin lotzen ditugu, zerbitzua sostengatzeko interesa neurtzeko. Xehetasun hori 180 egunera edo kontua ezabatzean kentzen da. Weba erabiltzen duzun bitartean azken jardueraren ordua ere eguneratzen dugu; administratzaileek bakarrik ikus dezakete kontu bat azken 10 minutuetan aktibo egon den, IP, orri edo gailurik gabe. Ez dugu Google Analytics-ik ez publizitate-sarerik erabiltzen, eta ez dugu daturik saltzen ez lagatzen.
       </p>
       <p><strong>Gure izenean datuak tratatzen dituztenak:</strong></p>
       <ul>

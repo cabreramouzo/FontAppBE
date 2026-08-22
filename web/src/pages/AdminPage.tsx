@@ -15,7 +15,7 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import LinearProgress from '@mui/material/LinearProgress'
 import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInteractionStats, getInterestStats, getNewUsers, getRegionStats, getSourceStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole, type InteractionSummary } from '../api/client'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInteractionStats, getInterestStats, getNewUsers, getOnlineUsers, getRegionStats, getSourceStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole, type InteractionSummary, type OnlineUser } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -50,6 +50,7 @@ export function AdminPage() {
   const [feedback, setFeedback] = useState<Feedback[] | null>(null)
   const [staff, setStaff] = useState<StaffMember[] | null>(null)
   const [newUsers, setNewUsers] = useState<{ count: number; since: string } | null>(null)
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[] | null>(null)
   const [sources, setSources] = useState<{ source: string | null; count: number }[] | null>(null)
   const [interactions, setInteractions] = useState<InteractionSummary[] | null>(null)
   const [analyticsPeriod, setAnalyticsPeriod] = useState<30 | 180 | 'all'>(30)
@@ -75,6 +76,7 @@ export function AdminPage() {
         .then((r) => { setNewUsers(r); markUsersSeen() })
         .catch(() => setNewUsers(null))
       getSourceStats().then(setSources).catch(() => setSources([]))
+      getOnlineUsers().then(setOnlineUsers).catch(() => setOnlineUsers([]))
     }
     // Gestión de roles (solo owner).
     if (isOwner(user)) getStaff().then(setStaff).catch(() => setStaff([]))
@@ -223,6 +225,20 @@ export function AdminPage() {
       {isOwner(user) && <WeeklyDigestPanel />}
 
       {isAdminRole(user) && (<>
+      <Box component="section" sx={{ mt: 3 }}>
+        <Typography variant="h6" gutterBottom>🟢 {t('admin.onlineUsers')}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('admin.onlineUsersHint')}</Typography>
+        {onlineUsers === null && <Skeleton lines={1} />}
+        {onlineUsers?.length === 0 && <Typography color="text.secondary">{t('admin.onlineUsersNone')}</Typography>}
+        <List disablePadding>
+          {onlineUsers?.map((online) => (
+            <ListItem key={online.id} divider disableGutters secondaryAction={<Chip size="small" color="success" label={timeAgo(online.lastSeenAt, t)} />}>
+              <ListItemText primary={<Link component={RouterLink} to={`/users/${encodeURIComponent(online.username)}`}>@{online.username}</Link>} slotProps={{ primary: { component: 'div' } }} />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+
       <Box component="section" sx={{ mt: 3 }}>
         <Typography variant="h6" gutterBottom>🙋 {t('admin.newUsers')}</Typography>
         {newUsers === null ? <Skeleton lines={1} /> : (

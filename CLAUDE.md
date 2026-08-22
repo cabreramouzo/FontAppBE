@@ -413,6 +413,11 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   es un evento independiente dentro de la misma sesión anónima; las barras comparan
   sesiones del período, no personas ni una conversión causal perfecta. Nunca se guarda
   el texto buscado, coordenadas, filtros concretos, URL, dispositivo ni detalle del error.
+- **Presencia de usuarios:** `POST /users/presence` actualiza `last_seen_at` para la propia
+  sesión como máximo cada 2 minutos; el cliente lo llama al entrar, volver a primer plano
+  y cada 5 minutos mientras está visible. `GET /users/stats/online` es solo admin y devuelve
+  nombre + última actividad de los últimos 10 minutos. Es presencia aproximada, no WebSocket:
+  una pestaña cerrada desaparece al vencer la ventana. Nunca guarda IP, página o dispositivo.
 
 ## Novedades (público) y panel
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias

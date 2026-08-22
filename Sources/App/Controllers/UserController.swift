@@ -23,6 +23,8 @@ struct UserController: RouteCollection {
         protected.get("stats", "regions", use: regionStats)  // admin
         protected.get("stats", "new", use: newUsers)         // admin: altas recientes
         protected.get("stats", "sources", use: sourceStats)  // admin: altas por cartel
+        protected.get("stats", "online", use: onlineUsers)   // admin: presencia reciente
+        protected.post("presence", use: touchPresence)       // heartbeat de la propia sesión
         protected.get("staff", use: staff)                   // owner: moderadores/admins
         protected.get("admin", use: adminList)               // owner: listado completo paginado
         protected.group(":userID") { user in
@@ -30,6 +32,35 @@ struct UserController: RouteCollection {
             user.delete(use: destroy)
             user.put("role", use: setRole)                   // owner: cambiar rol
         }
+    }
+
+    /// POST /users/presence — heartbeat sin contenido. Como mucho escribe una vez cada
+    /// dos minutos aunque varias pestañas lo llamen a la vez.
+    @Sendable func touchPresence(req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        let now = Date()
+        if user.lastSeenAt == nil || now.timeIntervalSince(user.lastSeenAt!) >= 120 {
+            user.lastSeenAt = now
+            try await user.save(on: req.db)
+        }
+        return .noContent
+    }
+
+    /// GET /users/stats/online — presencia aproximada, nunca una conexión persistente.
+    /// Solo admin; no expone IP, pantalla, dispositivo ni token.
+    @Sendable func onlineUsers(req: Request) async throws -> [OnlineUser] {
+        let me = try req.auth.require(User.self)
+        guard me.isAdmin else { throw Abort(.forbidden) }
+        let cutoff = Date().addingTimeInterval(-10 * 60)
+        return try await User.query(on: req.db)
+            .filter(\.$anonymizedAt == nil)
+            .filter(\.$lastSeenAt >= cutoff)
+            .sort(\.$lastSeenAt, .descending)
+            .all()
+            .compactMap { user in
+                guard let id = user.id, let lastSeenAt = user.lastSeenAt else { return nil }
+                return OnlineUser(id: id, username: user.username, lastSeenAt: lastSeenAt)
+            }
     }
 
     /// GET /users/staff — usuarios con rol por encima de `user` (solo owner).
@@ -432,6 +463,12 @@ struct StaffMember: Content {
     let id: UUID?
     let username: String
     let role: String
+}
+
+struct OnlineUser: Content {
+    let id: UUID
+    let username: String
+    let lastSeenAt: Date
 }
 
 /// Fila del listado completo de usuarios (solo owner). Todas las columnas útiles,

@@ -360,6 +360,25 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    func testOnlineUsersIsApproximateAndAdminOnly() async throws {
+        try await withApp { app in
+            let userID = try await register(app, username: "onlineadmin")
+            let token = try await login(app, username: "onlineadmin")
+            try await app.test(.POST, "users/presence", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .noContent)
+            }
+            try await app.test(.GET, "users/stats/online", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+            try await makeAdmin(app, userID: userID)
+            try await app.test(.GET, "users/stats/online", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let online = try res.content.decode([OnlineUser].self)
+                XCTAssertEqual(online.first { $0.id == userID }?.username, "onlineadmin")
+            }
+        }
+    }
+
     func testRegisterLoginMe() async throws {
         try await withApp { app in
             try await register(app, username: "ada")
