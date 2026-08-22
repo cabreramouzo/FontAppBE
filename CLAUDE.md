@@ -575,6 +575,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   cantidad exacta por celda. No se debe volver a un `LIMIT` que deje zonas del mapa vacías.
 - Los agregados del servidor se pintan fuera de `markercluster`: al tocarlos acercan el
   mapa y una petición posterior los sustituye por grupos más pequeños o fuentes reales.
+  Hasta zoom 6 se representan como un mapa de calor Canvas (sin etiquetas que tapen el
+  territorio); desde zoom 7 reaparecen como clusters compactos verde/amarillo/naranja y,
+  cuando caben las fuentes reales, entra el `markercluster` de siempre.
   Las respuestas llevan un número de secuencia en el cliente para que una petición vieja
   no reemplace una vista nueva. `/fonts/in-bounds` queda solo como compatibilidad durante
   despliegues o rollback; la web recurre a él si un backend anterior aún no tiene `/map`.

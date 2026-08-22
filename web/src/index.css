@@ -892,16 +892,39 @@ select:not([class*="Mui"]) {
 .leaflet-container .server-map-cluster {
   display: grid;
   place-items: center;
-  border: 3px solid color-mix(in srgb, var(--accent) 70%, white);
+  border: 3px solid;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 82%, transparent);
   color: rgba(0, 0, 0, 0.87);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  font-size: 0.78rem;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
+  font-size: 0.72rem;
   font-weight: 800;
   cursor: pointer;
 }
 
+.leaflet-container .server-map-cluster--small {
+  border-color: rgba(110, 204, 57, 0.78);
+  background: rgba(181, 226, 140, 0.82);
+}
+
+.leaflet-container .server-map-cluster--medium {
+  border-color: rgba(240, 194, 12, 0.8);
+  background: rgba(241, 211, 87, 0.84);
+}
+
+.leaflet-container .server-map-cluster--large {
+  border-color: rgba(241, 128, 23, 0.82);
+  background: rgba(253, 156, 115, 0.86);
+}
+
 .leaflet-container .server-map-cluster:hover {
   filter: brightness(0.92);
+}
+
+/* Vista de densidad para zoom lejano. Está bajo marcadores y controles, no captura
+   gestos y se repinta con el mapa; evita cubrir países enteros con números. */
+.leaflet-container .server-map-heatmap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
 }

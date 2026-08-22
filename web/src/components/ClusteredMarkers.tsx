@@ -14,6 +14,8 @@ import { isStale, timeAgo } from '../lib/time'
 import { nombreFuente } from '../lib/fontName'
 import { CONFIDENCE_EMOJI, confidenceDetailKey, confidenceLabelKey, confidenceOf } from '../lib/confidence'
 
+const HEATMAP_MAX_ZOOM = 6
+
 function escapeHtml(s: string): string {
   const div = document.createElement('div')
   div.textContent = s
@@ -112,11 +114,11 @@ export function ClusteredMarkers({
     map.addLayer(group)
 
     for (const cluster of clusters) {
-      const digits = String(cluster.count).length
-      const size = Math.min(64, 38 + Math.max(0, digits - 2) * 6)
+      const density = cluster.count < 100 ? 'small' : cluster.count < 1_000 ? 'medium' : 'large'
+      const size = density === 'small' ? 34 : density === 'medium' ? 40 : 48
       const marker = L.marker([cluster.latitude, cluster.longitude], {
         icon: L.divIcon({
-          className: 'server-map-cluster',
+          className: `server-map-cluster server-map-cluster--${density}`,
           html: `<span>${cluster.count.toLocaleString()}</span>`,
           iconSize: [size, size],
           iconAnchor: [size / 2, size / 2],
@@ -128,7 +130,80 @@ export function ClusteredMarkers({
       })
       serverClusters.addLayer(marker)
     }
-    map.addLayer(serverClusters)
+
+    // En una vista de país/continente, decenas de etiquetas numéricas esconden justo
+    // lo que se quiere explorar. El mismo agregado exacto se dibuja entonces como una
+    // capa de densidad Canvas; al acercarse reaparecen clusters tocables y después pins.
+    const heatCanvas = document.createElement('canvas')
+    heatCanvas.className = 'server-map-heatmap'
+    heatCanvas.setAttribute('aria-hidden', 'true')
+    map.getPanes().overlayPane.appendChild(heatCanvas)
+    let drawFrame: number | null = null
+
+    const heatIsVisible = () => clusters.length > 0 && map.getZoom() <= HEATMAP_MAX_ZOOM
+    const drawHeatmap = () => {
+      drawFrame = null
+      if (!heatIsVisible()) {
+        heatCanvas.hidden = true
+        return
+      }
+      heatCanvas.hidden = false
+      const size = map.getSize()
+      const ratio = Math.min(2, window.devicePixelRatio || 1)
+      heatCanvas.width = Math.round(size.x * ratio)
+      heatCanvas.height = Math.round(size.y * ratio)
+      heatCanvas.style.width = `${size.x}px`
+      heatCanvas.style.height = `${size.y}px`
+      L.DomUtil.setPosition(heatCanvas, map.containerPointToLayerPoint([0, 0]))
+      const ctx = heatCanvas.getContext('2d')
+      if (!ctx) return
+      ctx.scale(ratio, ratio)
+      ctx.clearRect(0, 0, size.x, size.y)
+      const maxLog = Math.max(...clusters.map((c) => Math.log1p(c.count)), 1)
+
+      // Los focos ligeros se pintan primero y los densos encima: así una gran ciudad
+      // conserva un núcleo reconocible sin convertir todo el territorio en una mancha.
+      for (const cluster of [...clusters].sort((a, b) => a.count - b.count)) {
+        const point = map.latLngToContainerPoint([cluster.latitude, cluster.longitude])
+        const weight = Math.log1p(cluster.count) / maxLog
+        const radius = 22 + 28 * weight
+        if (point.x < -radius || point.y < -radius || point.x > size.x + radius || point.y > size.y + radius) continue
+        const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius)
+        gradient.addColorStop(0, `rgba(239, 83, 80, ${0.32 + 0.28 * weight})`)
+        gradient.addColorStop(0.32, `rgba(251, 192, 45, ${0.24 + 0.20 * weight})`)
+        gradient.addColorStop(0.68, `rgba(102, 187, 106, ${0.12 + 0.14 * weight})`)
+        gradient.addColorStop(1, 'rgba(102, 187, 106, 0)')
+        ctx.fillStyle = gradient
+        ctx.fillRect(point.x - radius, point.y - radius, radius * 2, radius * 2)
+      }
+    }
+    const scheduleHeatmap = () => {
+      if (drawFrame === null) drawFrame = window.requestAnimationFrame(drawHeatmap)
+    }
+    const syncDensityMode = () => {
+      if (heatIsVisible()) {
+        if (map.hasLayer(serverClusters)) map.removeLayer(serverClusters)
+      } else if (clusters.length > 0 && !map.hasLayer(serverClusters)) {
+        map.addLayer(serverClusters)
+      }
+      scheduleHeatmap()
+    }
+    const zoomIntoHeat = (event: L.LeafletMouseEvent) => {
+      if (!heatIsVisible()) return
+      const click = map.latLngToContainerPoint(event.latlng)
+      const closest = clusters.reduce<{ cluster: MapCluster; distance: number } | null>((best, cluster) => {
+        const point = map.latLngToContainerPoint([cluster.latitude, cluster.longitude])
+        const distance = point.distanceTo(click)
+        return !best || distance < best.distance ? { cluster, distance } : best
+      }, null)
+      if (closest && closest.distance <= 50) {
+        map.setView([closest.cluster.latitude, closest.cluster.longitude], map.getZoom() + 2)
+      }
+    }
+    map.on('move zoom resize', scheduleHeatmap)
+    map.on('zoomend', syncDensityMode)
+    map.on('click', zoomIntoHeat)
+    syncDensityMode()
 
     // Repone el popup que estuviera abierto. Manda el seleccionado —salvo que el usuario
     // ya lo hubiera descartado— y si no, el que abrió tocando un pin. Nunca movemos el
@@ -148,9 +223,14 @@ export function ClusteredMarkers({
 
     return () => {
       map.off('click', cerrarAMano)
+      map.off('click', zoomIntoHeat)
+      map.off('move zoom resize', scheduleHeatmap)
+      map.off('zoomend', syncDensityMode)
       group.off('animationend', reponer)
       map.removeLayer(group)
-      map.removeLayer(serverClusters)
+      if (map.hasLayer(serverClusters)) map.removeLayer(serverClusters)
+      if (drawFrame !== null) window.cancelAnimationFrame(drawFrame)
+      heatCanvas.remove()
       if (selectedMarker) map.removeLayer(selectedMarker)
     }
   }, [fonts, clusters, map, navigate, t, selectedID])
