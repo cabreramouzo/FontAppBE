@@ -18,13 +18,17 @@ final class IntegrationTests: XCTestCase {
 
     func testPasskeyOptionsUseOneTimeServerChallenges() async throws {
         try await withApp { app in
-            _ = try await register(app, username: "passkeyuser")
+            let userID = try await register(app, username: "passkeyuser")
+            let existing = PasskeyCredential(credentialID: "existing-base64url-id", publicKey: Data([1, 2, 3]),
+                                             signCount: 0, label: "MacBook", userID: userID)
+            try await existing.save(on: app.db)
             let token = try await login(app, username: "passkeyuser")
             try await app.test(.POST, "auth/passkeys/registration/options", headers: bearer(token), afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)
                 let response = try res.content.decode(RegistrationOptionsResponse.self)
                 XCTAssertEqual(response.publicKey.relyingParty.id, "localhost")
                 XCTAssertGreaterThanOrEqual(response.publicKey.challenge.count, 16)
+                XCTAssertEqual(response.existingCredentialIDs, ["existing-base64url-id"])
             })
             try await app.test(.POST, "auth/passkeys/authentication/options", afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)

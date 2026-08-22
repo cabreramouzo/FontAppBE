@@ -28,13 +28,16 @@ struct PasskeyController: RouteCollection {
         try await pruneExpired(on: req.db)
         let user = try req.auth.require(User.self)
         let userID = try user.requireID()
+        let existingIDs = try await PasskeyCredential.query(on: req.db)
+            .filter(\.$user.$id == userID).all().map(\.credentialID)
         let options = try manager(req).beginRegistration(
             user: .init(id: Array(userID.uuidString.utf8), name: user.username, displayName: user.name),
             authenticatorSelection: .init(residentKey: .required, userVerification: .required)
         )
         let pending = PasskeyChallenge(challenge: options.challenge, purpose: "registration", userID: userID)
         try await pending.save(on: req.db)
-        return RegistrationOptionsResponse(requestID: try pending.requireID(), publicKey: options)
+        return RegistrationOptionsResponse(requestID: try pending.requireID(), publicKey: options,
+                                           existingCredentialIDs: existingIDs)
     }
 
     @Sendable func register(req: Request) async throws -> PasskeySummary {
@@ -117,7 +120,13 @@ struct PasskeyController: RouteCollection {
     }
 }
 
-struct RegistrationOptionsResponse: Content { let requestID: UUID; let publicKey: PublicKeyCredentialCreationOptions }
+struct RegistrationOptionsResponse: Content {
+    let requestID: UUID
+    let publicKey: PublicKeyCredentialCreationOptions
+    /// El navegador usa esta lista como `excludeCredentials`: permite varias passkeys,
+    /// pero no registrar por accidente exactamente la misma credencial otra vez.
+    let existingCredentialIDs: [String]
+}
 struct AuthenticationOptionsResponse: Content { let requestID: UUID; let publicKey: PublicKeyCredentialRequestOptions }
 struct FinishRegistrationDTO: Content { let requestID: UUID; let label: String; let credential: RegistrationCredential }
 struct FinishAuthenticationDTO: Content { let requestID: UUID; let credential: AuthenticationCredential }

@@ -101,8 +101,10 @@ export async function loginWithPasskeyRequest(): Promise<LoginResponse> {
 }
 
 export async function registerPasskey(label: string): Promise<PasskeySummary> {
-  const start = await apiFetch<{ requestID: string; publicKey: Record<string, unknown> }>('/auth/passkeys/registration/options', { method: 'POST' })
-  const credential = await navigator.credentials.create({ publicKey: creationOptions(start.publicKey) }) as PublicKeyCredential | null
+  const start = await apiFetch<{ requestID: string; publicKey: Record<string, unknown>; existingCredentialIDs: string[] }>('/auth/passkeys/registration/options', { method: 'POST' })
+  const options = { ...start.publicKey,
+    excludeCredentials: start.existingCredentialIDs.map((id) => ({ type: 'public-key', id })) }
+  const credential = await navigator.credentials.create({ publicKey: creationOptions(options) }) as PublicKeyCredential | null
   if (!credential) throw new Error('Passkey cancelled')
   return apiFetch<PasskeySummary>('/auth/passkeys/registration/verify', {
     method: 'POST', body: JSON.stringify({ requestID: start.requestID, label, credential: credentialJSON(credential) }),

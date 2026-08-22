@@ -111,9 +111,11 @@ export function SettingsPage() {
   }
 
   async function addPasskey() {
+    const label = prompt(t('passkey.namePrompt'), t('passkey.defaultLabel'))?.trim()
+    if (!label) return
     setError(''); setPasskeyBusy(true)
     try {
-      const key = await registerPasskey(t('passkey.defaultLabel'))
+      const key = await registerPasskey(label)
       setPasskeys((current) => [key, ...current])
     } catch (e) {
       if (!(e instanceof DOMException && e.name === 'NotAllowedError')) setError(describeError(e, t))
@@ -191,7 +193,7 @@ export function SettingsPage() {
           {passkeys.map((key) => (
             <Box key={key.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1 }}>
               <Typography variant="body2">{key.label}</Typography>
-              <Button color="error" size="small" onClick={() => removePasskey(key.id)}>{t('form.delete')}</Button>
+              <Button color="error" size="small" onClick={() => removePasskey(key.id)}>{t('detail.delete')}</Button>
             </Box>
           ))}
           <Button variant="outlined" size="small" onClick={addPasskey} disabled={passkeyBusy}>{t('passkey.add')}</Button>
