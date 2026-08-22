@@ -38,7 +38,7 @@ El contenedor arranca con `serve --env production` (ver `CMD` del `Dockerfile`).
 
 1. En Google Cloud Console crea un cliente OAuth 2.0 de tipo **Aplicación web**.
 2. Añade como orígenes JavaScript autorizados `https://fontapp.net` y
-   `https://www.fontapp.net` (para desarrollo, también `http://localhost:5174`). No hace
+   `https://www.fontapp.net` (para desarrollo, también `http://localhost:5173`). No hace
    falta URI de redirección: Google Identity Services devuelve un ID token al navegador.
 3. Backend/Fly: `fly secrets set GOOGLE_CLIENT_ID="…apps.googleusercontent.com" -a fontapp`.
 4. Cloudflare Pages, tanto en Preview como Production: define
