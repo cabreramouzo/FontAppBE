@@ -4,9 +4,63 @@ import SQLKit
 import XCTVapor
 @testable import App
 
+private struct StubGoogleVerifier: GoogleTokenVerifying {
+    let profile: GoogleProfile
+    func verify(_ credential: String, clientID: String, on client: any Client) async throws -> GoogleProfile {
+        profile
+    }
+}
+
 // Tests de integración contra una BD real (fontapp_test). Cada test migra y revierte.
 // Requiere Postgres corriendo y la base `fontapp_test` (owner `vapor`).
 final class IntegrationTests: XCTestCase {
+
+    func testGoogleLoginCreatesAndReusesStableIdentity() async throws {
+        setenv("GOOGLE_CLIENT_ID", "test-client", 1)
+        defer { unsetenv("GOOGLE_CLIENT_ID") }
+        try await withApp { app in
+            app.googleTokenVerifier = StubGoogleVerifier(profile: GoogleProfile(
+                subject: "google-subject-1", email: "new.person@gmail.com", name: "New Person",
+                authoritativeEmail: true
+            ))
+
+            var firstUserID: UUID?
+            for _ in 0..<2 {
+                try await app.test(.POST, "auth/google", beforeRequest: { req in
+                    try req.content.encode(GoogleLoginDTO(credential: "signed-id-token", lang: "ca"))
+                }, afterResponse: { res in
+                    XCTAssertEqual(res.status, .ok)
+                    let login = try res.content.decode(LoginResponse.self)
+                    XCTAssertFalse(login.token.isEmpty)
+                    if let firstUserID { XCTAssertEqual(login.user.id, firstUserID) }
+                    else { firstUserID = login.user.id }
+                })
+            }
+            let userCount = try await User.query(on: app.db).count()
+            let identityCount = try await AuthIdentity.query(on: app.db).count()
+            XCTAssertEqual(userCount, 1)
+            XCTAssertEqual(identityCount, 1)
+        }
+    }
+
+    func testGoogleDoesNotSilentlyLinkThirdPartyEmail() async throws {
+        setenv("GOOGLE_CLIENT_ID", "test-client", 1)
+        defer { unsetenv("GOOGLE_CLIENT_ID") }
+        try await withApp { app in
+            _ = try await register(app, username: "existing")
+            app.googleTokenVerifier = StubGoogleVerifier(profile: GoogleProfile(
+                subject: "google-subject-2", email: "existing@example.com", name: "Existing",
+                authoritativeEmail: false
+            ))
+            try await app.test(.POST, "auth/google", beforeRequest: { req in
+                try req.content.encode(GoogleLoginDTO(credential: "signed-id-token", lang: "es"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .conflict)
+            })
+            let identityCount = try await AuthIdentity.query(on: app.db).count()
+            XCTAssertEqual(identityCount, 0)
+        }
+    }
 
     func testMapEndpointReturnsEverythingOrExactServerClusters() async throws {
         try await withApp { app in

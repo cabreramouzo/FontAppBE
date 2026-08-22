@@ -350,6 +350,7 @@ struct UserController: RouteCollection {
         // Revoca sesiones y peticiones de reseteo pendientes.
         try await UserToken.query(on: req.db).filter(\.$user.$id == userID).delete()
         try await PasswordReset.query(on: req.db).filter(\.$user.$id == userID).delete()
+        try await AuthIdentity.query(on: req.db).filter(\.$user.$id == userID).delete()
 
         return .noContent
     }

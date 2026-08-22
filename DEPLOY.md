@@ -28,10 +28,25 @@ docker build -t fontappbe .
 | `MAIL_REPLY_TO` | opcional | Dirección de respuesta (p. ej. `admin@fontapp.net`), para enviar desde un no-reply pero recibir las respuestas en un buzón real. |
 | `APP_SECRET` | recomendada | Clave con la que se firman los enlaces de baja del resumen semanal. Si falta, se usa una aleatoria por proceso y **los enlaces dejan de valer en cada reinicio** (la app lo avisa en el log al arrancar en producción). Genérala con `openssl rand -hex 32`. |
 | `GEOIP_ENABLED` | opcional | `true` → deduce país/región de la IP al registrarse (solo estadística; nunca se guarda la IP). Noop si no se define. |
+| `GOOGLE_CLIENT_ID` | para login Google | ID del cliente OAuth 2.0 de tipo **Aplicación web**. Es público, pero se configura por entorno y debe coincidir con `VITE_GOOGLE_CLIENT_ID`. No se usa client secret. |
 
 \* Usa **o** `DATABASE_URL` **o** las variables sueltas. En `--env production` las credenciales son obligatorias (la app falla al arrancar si faltan).
 
 El contenedor arranca con `serve --env production` (ver `CMD` del `Dockerfile`).
+
+### Acceso con Google
+
+1. En Google Cloud Console crea un cliente OAuth 2.0 de tipo **Aplicación web**.
+2. Añade como orígenes JavaScript autorizados `https://fontapp.net` y
+   `https://www.fontapp.net` (para desarrollo, también `http://localhost:5174`). No hace
+   falta URI de redirección: Google Identity Services devuelve un ID token al navegador.
+3. Backend/Fly: `fly secrets set GOOGLE_CLIENT_ID="…apps.googleusercontent.com" -a fontapp`.
+4. Cloudflare Pages, tanto en Preview como Production: define
+   `VITE_GOOGLE_CLIENT_ID=…apps.googleusercontent.com` y vuelve a desplegar el frontend.
+
+El ID del cliente no es un secreto. El backend verifica firma, emisor, caducidad, audiencia
+y correo verificado antes de crear una sesión. La migración `CreateAuthIdentity` guarda el
+`sub` estable de Google; con `AUTO_MIGRATE=true` se aplica al desplegar el backend.
 
 ### Migraciones
 

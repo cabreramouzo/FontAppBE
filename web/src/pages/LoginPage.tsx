@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Link from '@mui/material/Link'
 import Alert from '@mui/material/Alert'
+import Divider from '@mui/material/Divider'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ApiError, describeError } from '../api/client'
@@ -22,12 +23,55 @@ import { ApiError, describeError } from '../api/client'
 // - `autocomplete`: username + current-password, y la etiqueta NO menciona "correo"
 //   (Safari la lee y clasificaría el campo como email de Contactos).
 export function LoginPage() {
-  const { login } = useAuth()
+  const { login, loginWithGoogle } = useAuth()
   const { t } = useI18n()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const googleButton = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    if (!clientId) return
+    let cancelled = false
+    const render = () => {
+      if (cancelled || !googleButton.current || !window.google) return
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async ({ credential }) => {
+          setError('')
+          setBusy(true)
+          try {
+            await loginWithGoogle(credential)
+            window.location.assign('/')
+          } catch (err) {
+            setError(describeError(err, t))
+            setBusy(false)
+          }
+        },
+      })
+      googleButton.current.replaceChildren()
+      window.google.accounts.id.renderButton(googleButton.current, {
+        type: 'standard', theme: 'outline', size: 'large', width: 320,
+        text: 'continue_with', shape: 'rectangular',
+      })
+    }
+    const existing = document.querySelector<HTMLScriptElement>('script[data-fontapp-google]')
+    if (existing) {
+      if (window.google) render()
+      else existing.addEventListener('load', render, { once: true })
+    } else {
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.dataset.fontappGoogle = '1'
+      script.addEventListener('load', render, { once: true })
+      script.addEventListener('error', () => { if (!cancelled) setError(t('login.googleUnavailable')) }, { once: true })
+      document.head.appendChild(script)
+    }
+    return () => { cancelled = true }
+  }, [loginWithGoogle, t])
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -51,6 +95,13 @@ export function LoginPage() {
   return (
     <Box className="pad auth" sx={{ maxWidth: 360, mx: 'auto' }}>
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>{t('login.enter')}</Typography>
+
+      {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+        <>
+          <Box ref={googleButton} sx={{ minHeight: 44, display: 'flex', justifyContent: 'center', mt: 1 }} />
+          <Divider sx={{ my: 2 }}>{t('login.or')}</Divider>
+        </>
+      )}
 
       <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box>

@@ -80,6 +80,13 @@ export async function loginRequest(username: string, password: string): Promise<
   return (await parse(res)) as LoginResponse
 }
 
+export async function googleLoginRequest(credential: string): Promise<LoginResponse> {
+  return apiFetch<LoginResponse>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential, lang: document.documentElement.lang || undefined }),
+  })
+}
+
 /** Sube una imagen (multipart) y devuelve su URL relativa. */
 export async function uploadImage(file: File, meta?: PhotoUploadMeta): Promise<string> {
   const form = new FormData()

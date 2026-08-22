@@ -373,11 +373,18 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   añadir una columna hay que decidir allí si sale. Lo fija `testFontJSONHidesInternalColumns`,
   que además comprueba que `creator` sigue saliendo como `{"id": null}` y no como `{}`.
 - Auth: token Bearer respaldado en BD (`UserToken`); escrituras protegidas, edición/borrado self-only.
+  Google Identity Services entra por `POST /auth/google`: JWTKit valida el ID token con las
+  claves públicas de Google (caché de 1 h) y `auth_identities` conserva `(provider, subject)`,
+  nunca el email como identidad estable. Solo Gmail/Workspace se enlaza automáticamente por
+  correo a una cuenta previa; los dominios de terceros exigen entrar con contraseña para
+  evitar apropiaciones. Config: `GOOGLE_CLIENT_ID` en backend y el mismo valor público como
+  `VITE_GOOGLE_CLIENT_ID` durante el build web. No necesita client secret.
 - Cercanía: bounding box + haversine. A escala → PostGIS + índice GiST.
 
 ## Despliegue
 - `Dockerfile` multi-stage (probado) + `.dockerignore`; CI en `.github/workflows/ci.yml`.
-- Config por env: `DATABASE_URL` (o `DATABASE_*`), `WEB_ORIGIN` (CORS en prod), `AUTO_MIGRATE=true`.
+- Config por env: `DATABASE_URL` (o `DATABASE_*`), `WEB_ORIGIN` (CORS en prod), `AUTO_MIGRATE=true`,
+  `GOOGLE_CLIENT_ID` (login Google).
 - Web: build con `VITE_API_URL=<origen del backend>`. Guía completa: [DEPLOY.md](DEPLOY.md).
 
 ## Novedades (público) y panel

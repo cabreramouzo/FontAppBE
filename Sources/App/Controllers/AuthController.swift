@@ -14,6 +14,8 @@ struct AuthController: RouteCollection {
         // Login con Basic auth, con rate-limit ANTES de autenticar. El identificador
         // puede ser el nombre de usuario O el email (ver UserCredentialsAuthenticator).
         auth.grouped(loginThrottle).grouped(UserCredentialsAuthenticator()).post("login", use: login)
+        auth.grouped(RateLimitMiddleware(scope: "google-login", max: 10, window: 5 * 60))
+            .post("google", use: google)
 
         // Recuperación de contraseña (público, con rate-limit para evitar spam/enumeración).
         auth.grouped(resetThrottle).post("forgot-password", use: forgotPassword)
@@ -34,6 +36,78 @@ struct AuthController: RouteCollection {
         let token = try UserToken.generate(for: user)
         try await token.save(on: req.db)
         return LoginResponse(token: token.value, expiresAt: token.expiresAt, user: UserResponse(user, includeEmail: true))
+    }
+
+    /// POST /auth/google — verifica el ID token y emite la sesión normal de FontApp.
+    @Sendable func google(req: Request) async throws -> LoginResponse {
+        guard let clientID = Environment.get("GOOGLE_CLIENT_ID"), !clientID.isEmpty else {
+            throw Abort(.serviceUnavailable, reason: "El acceso con Google no está configurado")
+        }
+        let dto = try req.content.decode(GoogleLoginDTO.self)
+        let profile: GoogleProfile
+        do {
+            profile = try await req.application.googleTokenVerifier.verify(dto.credential, clientID: clientID, on: req.client)
+        } catch let error as AbortError {
+            throw error
+        } catch {
+            req.logger.warning("Google ID token rechazado: \(error)")
+            throw AppError(.unauthorized, "auth.googleInvalid", "La identificación de Google no es válida")
+        }
+
+        let user: User
+        if let identity = try await AuthIdentity.query(on: req.db)
+            .filter(\.$provider == "google").filter(\.$subject == profile.subject)
+            .with(\.$user).first() {
+            guard identity.user.anonymizedAt == nil else { throw Abort(.unauthorized) }
+            user = identity.user
+        } else if let existing = try await User.query(on: req.db).filter(\.$email == profile.email).first() {
+            // Google solo es autoridad actual sobre Gmail y Workspace. Para una cuenta
+            // Google creada con correo de un tercero, el email no basta para apropiarse
+            // de una cuenta FontApp ya existente.
+            guard profile.authoritativeEmail else {
+                throw AppError(.conflict, "auth.googleLinkRequired",
+                               "Este correo ya tiene cuenta. Entra con tu contraseña para vincular Google")
+            }
+            guard existing.anonymizedAt == nil else { throw Abort(.unauthorized) }
+            try await AuthIdentity(provider: "google", subject: profile.subject,
+                                   userID: existing.requireID()).save(on: req.db)
+            user = existing
+        } else {
+            let username = try await availableGoogleUsername(email: profile.email, on: req.db)
+            let created = User(name: profile.name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+                                ?? username,
+                               username: username, email: profile.email,
+                               passwordHash: try req.password.hash([UInt8].random(count: 32).base64),
+                               lang: dto.lang)
+            try await req.db.transaction { db in
+                try await created.save(on: db)
+                try await AuthIdentity(provider: "google", subject: profile.subject,
+                                       userID: created.requireID()).save(on: db)
+            }
+            user = created
+        }
+
+        let token = try UserToken.generate(for: user)
+        try await token.save(on: req.db)
+        return LoginResponse(token: token.value, expiresAt: token.expiresAt,
+                             user: UserResponse(user, includeEmail: true))
+    }
+
+    private func availableGoogleUsername(email: String, on db: Database) async throws -> String {
+        let local = email.split(separator: "@", maxSplits: 1).first.map(String.init) ?? "google"
+        let allowed = local.lowercased().unicodeScalars.map { scalar -> Character in
+            CharacterSet.alphanumerics.contains(scalar) || "._-".unicodeScalars.contains(scalar)
+                ? Character(String(scalar)) : "-"
+        }
+        var base = String(allowed).trimmingCharacters(in: CharacterSet(charactersIn: "._-"))
+        if base.count < 3 { base = "google-\(base)" }
+        base = String(base.prefix(24))
+        if Mentions.isMentionable(base), try await User.findByUsername(base, on: db) == nil { return base }
+        for _ in 0..<20 {
+            let candidate = "\(base.prefix(23))-\(String(UUID().uuidString.prefix(6)).lowercased())"
+            if try await User.findByUsername(candidate, on: db) == nil { return candidate }
+        }
+        throw Abort(.serviceUnavailable, reason: "No se ha podido elegir un nombre de usuario")
     }
 
     /// GET /auth/me — devuelve el usuario autenticado (con su email).
@@ -169,6 +243,11 @@ struct LoginResponse: Content {
     let token: String
     let expiresAt: Date?
     let user: UserResponse
+}
+
+struct GoogleLoginDTO: Content {
+    let credential: String
+    var lang: String? = nil
 }
 
 struct ForgotDTO: Content {
