@@ -108,7 +108,8 @@ export function trackInteraction(event: string) {
   }).catch(() => {})
 }
 
-export const getInteractionStats = () => apiFetch<InteractionSummary[]>('/admin/analytics')
+export const getInteractionStats = (days: 30 | 180 | 'all' = 30) =>
+  apiFetch<InteractionSummary[]>(`/admin/analytics${days === 'all' ? '' : `?days=${days}`}`)
 
 export async function loginWithPasskeyRequest(): Promise<LoginResponse> {
   if (!window.PublicKeyCredential) throw new Error('Passkeys are not supported')

@@ -58,6 +58,7 @@ import {
   setFavorite,
   setFontPhoto,
   setFontPhotoFromComment,
+  trackInteraction,
   updateComment,
   updateFont,
   uploadImage,
@@ -329,9 +330,9 @@ function LocationActions({ font }: { font: Font }) {
       <Button variant="contained" disableElevation startIcon={<PlaceIcon />} onClick={() => navigate(`/?lat=${font.latitude}&lng=${font.longitude}&sel=${font.id}`)}>
         {t('detail.viewOnMap')}
       </Button>
-      <Button variant="outlined" startIcon={<DirectionsIcon />} href={mapsUrl} target="_blank" rel="noreferrer">{t('detail.directions')}</Button>
+      <Button variant="outlined" startIcon={<DirectionsIcon />} href={mapsUrl} target="_blank" rel="noreferrer" onClick={() => trackInteraction('font_directions')}>{t('detail.directions')}</Button>
       <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={copy}>{copied ? t('detail.copied') : coords}</Button>
-      <Button variant="outlined" startIcon={<ShareIcon />} onClick={share}>{t('detail.share')}</Button>
+      <Button variant="outlined" startIcon={<ShareIcon />} onClick={() => { trackInteraction('font_share'); void share() }}>{t('detail.share')}</Button>
       {/* «Otras fotos» va en esta fila y no debajo de la portada. Allí se perdía: en una
           fuente sin foto quedaba en una zona donde nadie mira, y es la puerta a los
           documentos —el informe del agua—, que es lo que menos se espera encontrar y por
@@ -883,7 +884,7 @@ export function FontDetailPage() {
           <IconButton
             size="small"
             color={favorite?.favorited ? 'primary' : 'default'}
-            onClick={toggleFavorite}
+            onClick={() => { trackInteraction('font_favorite'); void toggleFavorite() }}
             disabled={savingFavorite}
             // Favorita **es** seguirla: desde que la campana avisa de los cambios, el
             // marcador dejó de ser solo un apunte. El rótulo lo dice, porque si no, nadie
@@ -1207,7 +1208,7 @@ export function FontDetailPage() {
                           {latest.confirmedByMe ? t('confirm.confirmed') : t('confirm.keepSame')}
                         </Button>
                       )}
-                      <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setUpdating(true)}>
+                      <Button variant="outlined" startIcon={<EditIcon />} onClick={() => { trackInteraction('font_update'); setUpdating(true) }}>
                         {t('detail.changed')}
                       </Button>
                     </Stack>
@@ -1229,7 +1230,7 @@ export function FontDetailPage() {
               <Typography color="text.secondary">{t('detail.beFirst')}</Typography>
               {user ? (
                 !updating ? (
-                  <Button variant="contained" disableElevation startIcon={<EditIcon />} onClick={() => setUpdating(true)} sx={{ mt: 1 }}>
+                  <Button variant="contained" disableElevation startIcon={<EditIcon />} onClick={() => { trackInteraction('font_update'); setUpdating(true) }} sx={{ mt: 1 }}>
                     {t('detail.reportStatus')}
                   </Button>
                 ) : (

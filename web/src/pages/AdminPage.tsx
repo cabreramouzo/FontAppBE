@@ -42,6 +42,7 @@ export function AdminPage() {
   const [newUsers, setNewUsers] = useState<{ count: number; since: string } | null>(null)
   const [sources, setSources] = useState<{ source: string | null; count: number }[] | null>(null)
   const [interactions, setInteractions] = useState<InteractionSummary[] | null>(null)
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<30 | 180 | 'all'>(30)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -64,11 +65,16 @@ export function AdminPage() {
         .then((r) => { setNewUsers(r); markUsersSeen() })
         .catch(() => setNewUsers(null))
       getSourceStats().then(setSources).catch(() => setSources([]))
-      getInteractionStats().then(setInteractions).catch(() => setInteractions([]))
     }
     // Gestión de roles (solo owner).
     if (isOwner(user)) getStaff().then(setStaff).catch(() => setStaff([]))
   }, [user, loading, navigate])
+
+  useEffect(() => {
+    if (!isAdminRole(user)) return
+    setInteractions(null)
+    getInteractionStats(analyticsPeriod).then(setInteractions).catch(() => setInteractions([]))
+  }, [user, analyticsPeriod])
 
   async function changeRole(id: string, role: UserRole) {
     try {
@@ -256,7 +262,14 @@ export function AdminPage() {
       </Box>
 
       <Box component="section" sx={{ mt: 3 }}>
-        <Typography variant="h6" gutterBottom>📈 {t('analytics.title')}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
+          <Typography variant="h6">📈 {t('analytics.title')}</Typography>
+          <Select size="small" value={analyticsPeriod} onChange={(e) => setAnalyticsPeriod(e.target.value as 30 | 180 | 'all')}>
+            <MenuItem value={30}>{t('analytics.period30')}</MenuItem>
+            <MenuItem value={180}>{t('analytics.period180')}</MenuItem>
+            <MenuItem value="all">{t('analytics.periodAll')}</MenuItem>
+          </Select>
+        </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('analytics.hint')}</Typography>
         {interactions === null && <Skeleton lines={2} />}
         {interactions?.length === 0 && <Typography color="text.secondary">{t('analytics.empty')}</Typography>}

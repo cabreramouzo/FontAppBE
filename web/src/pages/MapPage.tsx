@@ -53,7 +53,7 @@ import { useHeading } from '../lib/useHeading'
 import 'leaflet-rotate'
 
 import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, WaterSource } from '../api/types'
-import { apiFetch, createComment, createFont, describeError, uploadImage } from '../api/client'
+import { apiFetch, createComment, createFont, describeError, trackInteraction, uploadImage } from '../api/client'
 import { nombreFuente } from '../lib/fontName'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -1220,7 +1220,7 @@ export function MapPage() {
         <Badge color="primary" variant="dot" invisible={controlsOpen || activeFilters === 0} overlap="circular">
           <Fab
             size="medium"
-            onClick={() => setControlsOpen((v) => !v)}
+            onClick={() => { trackInteraction('map_filters'); setControlsOpen((v) => !v) }}
             aria-label={t(controlsOpen ? 'map.hideTools' : 'map.showTools')}
             title={t(controlsOpen ? 'map.hideTools' : 'map.showTools')}
             sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
@@ -1235,7 +1235,7 @@ export function MapPage() {
             lo que hace es SOBRE el mapa: te lleva de parada en parada. */}
         <Fab
           size="medium"
-          onClick={() => setMissionsOpen(true)}
+          onClick={() => { trackInteraction('map_missions'); setMissionsOpen(true) }}
           aria-label={t('mission.title')}
           title={t('mission.title')}
           sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
@@ -1274,11 +1274,11 @@ export function MapPage() {
               void enableCompass()
             }}
           />
-          <Fab size="medium" onClick={() => locate(false)} title={t('map.recenter')} aria-label={t('map.recenter')} sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}>
+          <Fab size="medium" onClick={() => { trackInteraction('map_locate'); locate(false) }} title={t('map.recenter')} aria-label={t('map.recenter')} sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}>
             <NearMeIcon />
           </Fab>
           {user && (
-            <Fab variant="extended" color="primary" onClick={startPlacing}>
+            <Fab variant="extended" color="primary" onClick={() => { trackInteraction('map_add_font'); startPlacing() }}>
               <AddIcon sx={{ mr: 1 }} /> {noEmoji(t('map.addFont'))}
             </Fab>
           )}

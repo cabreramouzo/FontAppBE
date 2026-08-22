@@ -58,6 +58,21 @@ export function Layout({ children }: { children: ReactNode }) {
   }, [pathname])
 
   useEffect(() => {
+    const event = pathname === '/' ? 'page_map'
+      : pathname.startsWith('/fonts/') ? 'page_fountain'
+      : pathname.startsWith('/activity') ? 'page_activity'
+      : pathname.startsWith('/zones') ? 'page_zones'
+      : pathname.startsWith('/gamification') || pathname.startsWith('/me/badges') ? 'page_gamification'
+      : pathname.startsWith('/me') ? 'page_profile'
+      : pathname.startsWith('/support') ? 'page_support'
+      : pathname.startsWith('/install') ? 'page_install'
+      : pathname.startsWith('/login') ? 'page_login'
+      : pathname.startsWith('/register') ? 'page_register'
+      : null
+    if (event) trackInteraction(event)
+  }, [pathname])
+
+  useEffect(() => {
     // Solo desde el mapa: es la pantalla donde la gente se queda, y el gesto pretende
     // sacarla de ahí. En cualquier otra página ya está navegando por su cuenta.
     if (!enElMapa) return
@@ -174,6 +189,7 @@ export function Layout({ children }: { children: ReactNode }) {
               color="inherit"
               size="small"
               aria-label={t('nav.map')}
+              onClick={() => trackInteraction('nav_map')}
               sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
             >
               <MapOutlinedIcon />
@@ -193,6 +209,7 @@ export function Layout({ children }: { children: ReactNode }) {
               color="inherit"
               size="small"
               aria-label={t('news.title')}
+              onClick={() => trackInteraction('nav_activity')}
               sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
             >
               <NewspaperIcon
@@ -226,6 +243,7 @@ export function Layout({ children }: { children: ReactNode }) {
               color="inherit"
               size="small"
               aria-label={t('zones.title')}
+              onClick={() => trackInteraction('nav_zones')}
               sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
             >
               <PublicOutlinedIcon />
@@ -268,6 +286,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 size="small"
                 sx={{ textTransform: 'none', display: { xs: 'none', sm: 'inline-flex' } }}
                 title={t('nav.profile')}
+                onClick={() => trackInteraction('nav_profile')}
               >
                 {t('nav.hello', { user: user.username })}
               </Button>
@@ -283,7 +302,7 @@ export function Layout({ children }: { children: ReactNode }) {
           ) : (
             // Enlace normal (no client-side): carga el documento para que el formulario
             // de acceso exista cuando el navegador lo analiza (autorrelleno fiable).
-            <Button component="a" href="/login" variant="contained" size="small" disableElevation>{t('nav.enter')}</Button>
+            <Button component="a" href="/login" variant="contained" size="small" disableElevation onClick={() => trackInteraction('nav_login')}>{t('nav.enter')}</Button>
           )}
           {/* El último de la fila, que es donde se busca un menú de desbordamiento. */}
           <Box sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>

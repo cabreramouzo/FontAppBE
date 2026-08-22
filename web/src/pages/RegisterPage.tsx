@@ -8,7 +8,7 @@ import Alert from '@mui/material/Alert'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { esNombreValido } from '../lib/username'
-import { describeError } from '../api/client'
+import { describeError, trackInteraction } from '../api/client'
 
 // Formulario de ALTA, en su propia URL (ver la nota de LoginPage: un propósito por
 // página para que los gestores de contraseñas clasifiquen bien el formulario).
@@ -54,7 +54,7 @@ export function RegisterPage() {
     <Box className="pad auth" sx={{ maxWidth: 360, mx: 'auto' }}>
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>{t('login.createAccount')}</Typography>
 
-      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box component="form" onSubmit={(e) => { trackInteraction('auth_register'); void submit(e) }} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <TextField
           label={t('login.name')}
           name="name"

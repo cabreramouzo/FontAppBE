@@ -9,7 +9,7 @@ import Divider from '@mui/material/Divider'
 import FingerprintIcon from '@mui/icons-material/Fingerprint'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
-import { ApiError, describeError } from '../api/client'
+import { ApiError, describeError, trackInteraction } from '../api/client'
 
 // Formulario de INICIO DE SESIÓN, en su propia URL y sin mezclarse con el registro.
 //
@@ -41,6 +41,7 @@ export function LoginPage() {
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: async ({ credential }) => {
+          trackInteraction('auth_google')
           setError('')
           setBusy(true)
           try {
@@ -94,6 +95,7 @@ export function LoginPage() {
   }
 
   async function passkeyLogin() {
+    trackInteraction('auth_passkey')
     setError(''); setBusy(true)
     try { await loginWithPasskey(); window.location.assign('/') }
     catch (err) {
@@ -123,7 +125,7 @@ export function LoginPage() {
         </>
       )}
 
-      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box component="form" onSubmit={(e) => { trackInteraction('auth_password'); void submit(e) }} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box>
           <TextField
             label={t('login.userLabel')}

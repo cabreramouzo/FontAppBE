@@ -89,7 +89,6 @@ export function SupportPage() {
   // contestaba «no podemos abrir el pago» — que es la peor forma posible de pedir dinero.
   // Falla cerrado: si la consulta no llega, no hay botón.
   useEffect(() => {
-    trackInteraction('support_view')
     let viu = true
     fetch('/stripe/checkout')
       .then((r) => (r.ok ? r.json() as Promise<{ once?: boolean }> : { once: false }))

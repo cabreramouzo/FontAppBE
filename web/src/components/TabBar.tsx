@@ -8,6 +8,7 @@ import PublicIcon from '@mui/icons-material/Public'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
+import { trackInteraction } from '../api/client'
 
 /**
  * Navegación principal en móvil, abajo, como espera cualquiera que use un teléfono.
@@ -26,10 +27,10 @@ import { useAuth } from '../auth/AuthContext'
  * ajustes tampoco — las pestañas son los sitios donde se está, no las cosas que se hacen.
  */
 const PESTAÑAS = [
-  { ruta: '/', icono: <MapIcon />, clave: 'nav.map' },
-  { ruta: '/activity', icono: <NewspaperIcon />, clave: 'news.title' },
-  { ruta: '/zones', icono: <PublicIcon />, clave: 'zones.title' },
-  { ruta: '/me', icono: <AccountCircleIcon />, clave: 'nav.profile' },
+  { ruta: '/', icono: <MapIcon />, clave: 'nav.map', event: 'nav_map' },
+  { ruta: '/activity', icono: <NewspaperIcon />, clave: 'news.title', event: 'nav_activity' },
+  { ruta: '/zones', icono: <PublicIcon />, clave: 'zones.title', event: 'nav_zones' },
+  { ruta: '/me', icono: <AccountCircleIcon />, clave: 'nav.profile', event: 'nav_profile' },
 ] as const
 
 /** Alto de la barra, en píxeles. Lo usan el mapa y sus overlays para dejarle sitio. */
@@ -60,7 +61,7 @@ export function TabBar() {
       <BottomNavigation
         showLabels
         value={activa === -1 ? false : activa}
-        onChange={(_, i) => navigate(PESTAÑAS[i].ruta)}
+        onChange={(_, i) => { trackInteraction(PESTAÑAS[i].event); navigate(PESTAÑAS[i].ruta) }}
         sx={{ height: ALTO_TAB_BAR, bgcolor: 'transparent' }}
       >
         {PESTAÑAS.map((p) => (

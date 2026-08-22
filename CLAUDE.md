@@ -394,12 +394,13 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - Web: build con `VITE_API_URL=<origen del backend>`. Guía completa: [DEPLOY.md](DEPLOY.md).
 
 ## Analítica interna de apoyo
-- `POST /analytics` acepta únicamente la lista cerrada de eventos de apoyo de
+- `POST /analytics` acepta únicamente la lista cerrada de eventos de uso de
   `InteractionAnalyticsController`; el cliente genera un UUID por pestaña en `sessionStorage`.
   La tabla guarda evento, día, UUID aleatorio y número de clics: nunca usuario, IP, URL,
-  user-agent ni dispositivo. Las filas de más de 180 días se eliminan al registrar actividad.
-- `GET /admin/analytics` es solo admin y resume los últimos 30 días como clics totales y
-  sesiones anónimas aproximadas. Añadir un evento exige incorporarlo a la lista cerrada,
+  user-agent ni dispositivo. A los 180 días las filas por sesión se compactan de forma
+  atómica en totales diarios sin UUID; esos totales históricos no caducan.
+- `GET /admin/analytics?days=30|180` (sin parámetro = todo el histórico) es solo admin y
+  resume clics totales y sesiones anónimas aproximadas. Añadir un evento exige incorporarlo a la lista cerrada,
   traducir su rótulo en los seis idiomas y mantener actualizada la página legal.
 
 ## Novedades (público) y panel

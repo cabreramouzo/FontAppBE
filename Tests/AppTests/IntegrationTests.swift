@@ -274,8 +274,13 @@ final class IntegrationTests: XCTestCase {
 
     func testSupportAnalyticsCountsClicksAndAnonymousSessions() async throws {
         try await withApp { app in
+            guard let sql = app.db as? SQLDatabase else { return XCTFail("Postgres requerido") }
             let firstSession = UUID().uuidString
             let secondSession = UUID().uuidString
+            try await sql.raw("""
+                INSERT INTO interaction_analytics (id, event, day, session_id, hits)
+                VALUES (\(bind: UUID()), 'support_heart', CURRENT_DATE - 181, \(bind: UUID()), 5)
+                """).run()
             for session in [firstSession, firstSession, secondSession] {
                 try await app.test(.POST, "analytics", beforeRequest: { req in
                     try req.content.encode(InteractionDTO(event: "support_heart", session: session))
@@ -292,13 +297,22 @@ final class IntegrationTests: XCTestCase {
             let adminID = try await register(app, username: "analyticsadmin")
             try await makeAdmin(app, userID: adminID)
             let token = try await login(app, username: "analyticsadmin")
-            try await app.test(.GET, "admin/analytics", headers: bearer(token)) { res in
+            try await app.test(.GET, "admin/analytics?days=30", headers: bearer(token)) { res in
                 XCTAssertEqual(res.status, .ok)
                 let stats = try res.content.decode([InteractionSummary].self)
                 let heart = try XCTUnwrap(stats.first { $0.event == "support_heart" })
                 XCTAssertEqual(heart.clicks, 3)
                 XCTAssertEqual(heart.sessions, 2)
             }
+            try await app.test(.GET, "admin/analytics", headers: bearer(token)) { res in
+                let heart = try XCTUnwrap(res.content.decode([InteractionSummary].self).first { $0.event == "support_heart" })
+                XCTAssertEqual(heart.clicks, 8)
+                XCTAssertEqual(heart.sessions, 3)
+            }
+            let archived = try await sql.raw("SELECT id FROM interaction_analytics_daily").all().count
+            let oldSessions = try await sql.raw("SELECT id FROM interaction_analytics WHERE day < CURRENT_DATE - 180").all().count
+            XCTAssertEqual(archived, 1)
+            XCTAssertEqual(oldSessions, 0)
         }
     }
 

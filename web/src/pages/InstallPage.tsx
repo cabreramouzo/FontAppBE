@@ -13,6 +13,7 @@ import StorefrontIcon from '@mui/icons-material/Storefront'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
 import { useI18n } from '../i18n/I18nContext'
 import { estaInstalada, instalacionDeUnToque, instalaAhora, plataforma, type Plataforma } from '../lib/install'
+import { trackInteraction } from '../api/client'
 
 /**
  * Cómo instalar FontApp, en un sitio **permanente**.
@@ -124,7 +125,7 @@ export function InstallPage() {
             {unToque ? (
               <Button
                 fullWidth variant="contained" disableElevation size="large" startIcon={<GetAppIcon />}
-                onClick={async () => { await instalaAhora(); setUnToque(!!instalacionDeUnToque()) }}
+                onClick={async () => { trackInteraction('install_start'); await instalaAhora(); setUnToque(!!instalacionDeUnToque()) }}
                 sx={{ textTransform: 'none' }}
               >
                 {t('installPage.oneTap')}
