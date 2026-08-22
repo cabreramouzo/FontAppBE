@@ -104,7 +104,7 @@ export function AdminUsersPage() {
             {t('admin.usersTotal', { n: total })}
           </Typography>
           <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
-            <Table size="small" sx={{ minWidth: 1250 }}>
+            <Table size="small" sx={{ minWidth: 1450 }}>
             <TableHead>
               <TableRow>
                 <TableCell>{t('admin.colName')}</TableCell>
@@ -115,6 +115,8 @@ export function AdminUsersPage() {
                 <TableCell>{t('admin.colRegion')}</TableCell>
                 <TableCell>{t('admin.colSource')}</TableCell>
                 <TableCell>{t('admin.colJoined')}</TableCell>
+                <TableCell>{t('admin.colSupport')}</TableCell>
+                <TableCell>{t('admin.colAixeta')}</TableCell>
                 <TableCell>{t('admin.colRole')}</TableCell>
               </TableRow>
             </TableHead>
@@ -133,6 +135,16 @@ export function AdminUsersPage() {
                   <TableCell sx={{ color: 'text.secondary' }}>{u.signupRegion ?? '—'}</TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>{u.signupSource ?? '—'}</TableCell>
                   <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{u.createdAt ? timeAgo(u.createdAt, t) : '—'}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {u.supportClickedAt
+                      ? <Chip size="small" color="success" label={timeAgo(u.supportClickedAt, t)} />
+                      : <Typography variant="body2" color="text.secondary">{t('admin.supportUnknown')}</Typography>}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {u.aixetaClickedAt
+                      ? <Chip size="small" color="success" label={timeAgo(u.aixetaClickedAt, t)} />
+                      : <Typography variant="body2" color="text.secondary">{t('admin.supportUnknown')}</Typography>}
+                  </TableCell>
                   <TableCell>
                     {u.id === user?.id ? (
                       <Chip size="small" label={t('role.owner')} color="primary" />

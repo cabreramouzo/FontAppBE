@@ -402,6 +402,12 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
 - `GET /admin/analytics?days=30|180` (sin parámetro = todo el histórico) es solo admin y
   resume clics totales y sesiones anónimas aproximadas. Añadir un evento exige incorporarlo a la lista cerrada,
   traducir su rótulo en los seis idiomas y mantener actualizada la página legal.
+- `support_heart` y `support_aixeta` tienen además un rastro separado por usuario cuando
+  la petición lleva una sesión válida: primera/última fecha y contador, con retención de
+  180 días y borrado explícito al anonimizar la cuenta (el FK también lleva cascade para
+  un borrado físico). `/users/admin` lo expone solo al owner como
+  «fecha o no consta». No se convierte «no consta» en una negativa: puede no haber visitado
+  la pantalla o haber estado desconectado. El resto de la analítica continúa anónima.
 
 ## Novedades (público) y panel
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias

@@ -156,6 +156,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreatePasskeys())       // credenciales WebAuthn + challenges efímeros
     app.migrations.add(CreateInteractionAnalytics()) // clics agregables, sin usuario/IP
     app.migrations.add(CreateInteractionAnalyticsDaily()) // histórico diario sin UUID de sesión
+    app.migrations.add(CreateUserSupportInteraction()) // apoyo identificado, solo con sesión y 180 días
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

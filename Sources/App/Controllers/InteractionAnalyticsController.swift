@@ -3,7 +3,9 @@ import SQLKit
 import Vapor
 
 /// Analítica propia de interacciones, deliberadamente pequeña: evento cerrado + día +
-/// sesión aleatoria de pestaña. No guarda usuario, IP, URL, user-agent ni parámetros.
+/// sesión aleatoria de pestaña. La analítica general no guarda usuario, IP, URL,
+/// user-agent ni parámetros. Solo los gestos de apoyo se guardan además, en una tabla
+/// separada, cuando la petición ya pertenece a una cuenta autenticada.
 struct InteractionAnalyticsController: RouteCollection {
     static let allowed: Set<String> = [
         "support_heart", "support_view", "support_share", "support_whatsapp",
@@ -15,9 +17,11 @@ struct InteractionAnalyticsController: RouteCollection {
         "font_favorite", "font_directions", "font_share", "font_update",
         "auth_google", "auth_passkey", "auth_password", "auth_register", "install_start",
     ]
+    static let identifiedSupportEvents: Set<String> = ["support_heart", "support_aixeta"]
 
     func boot(routes: RoutesBuilder) throws {
-        routes.grouped(RateLimitMiddleware(scope: "interaction-analytics", max: 120, window: 5 * 60))
+        routes.grouped(UserToken.authenticator())
+            .grouped(RateLimitMiddleware(scope: "interaction-analytics", max: 120, window: 5 * 60))
             .post("analytics", use: record)
         routes.grouped("admin", "analytics")
             .grouped(UserToken.authenticator(), User.guardMiddleware())
@@ -34,6 +38,20 @@ struct InteractionAnalyticsController: RouteCollection {
             ON CONFLICT (event, day, session_id)
             DO UPDATE SET hits = interaction_analytics.hits + 1
             """).run()
+        if Self.identifiedSupportEvents.contains(dto.event),
+           let user = req.auth.get(User.self), let userID = try? user.requireID() {
+            try await sql.raw("""
+                INSERT INTO user_support_interactions
+                    (id, user_id, event, first_clicked_at, last_clicked_at, hits)
+                VALUES (
+                    \(bind: UUID()), \(bind: userID), \(bind: dto.event),
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1
+                )
+                ON CONFLICT (user_id, event) DO UPDATE SET
+                    last_clicked_at = CURRENT_TIMESTAMP,
+                    hits = user_support_interactions.hits + 1
+                """).run()
+        }
         // A los 180 días se conserva el total diario, pero desaparece el UUID de sesión.
         // DELETE ... RETURNING + INSERT es una sola sentencia atómica: nunca duplica
         // históricos aunque el proceso se corte entre compactar y borrar.
@@ -51,6 +69,8 @@ struct InteractionAnalyticsController: RouteCollection {
                 clicks = interaction_analytics_daily.clicks + EXCLUDED.clicks,
                 sessions = interaction_analytics_daily.sessions + EXCLUDED.sessions
             """).run()
+        // El detalle asociado a una persona no se conserva indefinidamente.
+        try await sql.raw("DELETE FROM user_support_interactions WHERE last_clicked_at < CURRENT_TIMESTAMP - INTERVAL '180 days'").run()
         return .noContent
     }
 

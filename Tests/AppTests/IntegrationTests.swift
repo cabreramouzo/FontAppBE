@@ -316,6 +316,50 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    func testSupportAnalyticsIdentifiesOnlySignedInUsers() async throws {
+        try await withApp { app in
+            guard let sql = app.db as? SQLDatabase else { return XCTFail("Postgres requerido") }
+            let userID = try await register(app, username: "supportowner")
+            try await setRole(app, userID: userID, role: .owner)
+            let token = try await login(app, username: "supportowner")
+
+            // Sin token sigue contando en el agregado, pero no se atribuye a nadie.
+            try await app.test(.POST, "analytics", beforeRequest: { req in
+                try req.content.encode(InteractionDTO(event: "support_heart", session: UUID().uuidString))
+            }) { res in
+                XCTAssertEqual(res.status, .noContent)
+            }
+            for _ in 0..<2 {
+                try await app.test(.POST, "analytics", headers: bearer(token), beforeRequest: { req in
+                    try req.content.encode(InteractionDTO(event: "support_aixeta", session: UUID().uuidString))
+                }) { res in
+                    XCTAssertEqual(res.status, .noContent)
+                }
+            }
+
+            struct IdentifiedCount: Decodable { let rows: Int; let hits: Int }
+            let identified = try await sql.raw("""
+                SELECT COUNT(*)::int AS rows, COALESCE(SUM(hits), 0)::int AS hits
+                FROM user_support_interactions WHERE user_id = \(bind: userID)
+                """).first(decoding: IdentifiedCount.self)
+            XCTAssertEqual(identified?.rows, 1)
+            XCTAssertEqual(identified?.hits, 2)
+
+            try await app.test(.GET, "users/admin", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let page = try res.content.decode(Page<AdminUser>.self)
+                let row = try XCTUnwrap(page.items.first { $0.id == userID })
+                XCTAssertNil(row.supportClickedAt)
+                XCTAssertNotNil(row.aixetaClickedAt)
+            }
+            try await app.test(.DELETE, "users/\(userID)", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .noContent)
+            }
+            let afterDeletion = try await sql.raw("SELECT id FROM user_support_interactions WHERE user_id = \(bind: userID)").all()
+            XCTAssertTrue(afterDeletion.isEmpty)
+        }
+    }
+
     func testRegisterLoginMe() async throws {
         try await withApp { app in
             try await register(app, username: "ada")

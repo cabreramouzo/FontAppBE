@@ -66,6 +66,8 @@ export interface AdminUser {
   signupSource: string | null
   anonymized: boolean
   createdAt: string | null
+  supportClickedAt: string | null
+  aixetaClickedAt: string | null
 }
 
 export interface Flag {

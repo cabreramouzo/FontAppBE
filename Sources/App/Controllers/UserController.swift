@@ -59,7 +59,21 @@ struct UserController: RouteCollection {
             }
         }
         let page = try await query.paginate(SafePage.from(req))
-        return Page(items: page.items.map(AdminUser.init), metadata: page.metadata)
+        let ids = page.items.compactMap(\.id)
+        var supportByUser: [UUID: [String: Date]] = [:]
+        if !ids.isEmpty, let sql = req.db as? SQLDatabase {
+            struct SupportRow: Decodable { let userID: UUID; let event: String; let lastClickedAt: Date }
+            let rows = try await sql.raw("""
+                SELECT user_id AS "userID", event, last_clicked_at AS "lastClickedAt"
+                FROM user_support_interactions
+                WHERE user_id IN (\(binds: ids))
+                  AND last_clicked_at >= CURRENT_TIMESTAMP - INTERVAL '180 days'
+                """).all(decoding: SupportRow.self)
+            for row in rows { supportByUser[row.userID, default: [:]][row.event] = row.lastClickedAt }
+        }
+        return Page(items: page.items.map {
+            AdminUser($0, support: $0.id.flatMap { supportByUser[$0] } ?? [:])
+        }, metadata: page.metadata)
     }
 
     /// PUT /users/:userID/role — cambia el rol de un usuario (solo owner).
@@ -347,6 +361,11 @@ struct UserController: RouteCollection {
         try await AuthIdentity.query(on: req.db).filter(\.$user.$id == userID).delete()
         try await PasskeyCredential.query(on: req.db).filter(\.$user.$id == userID).delete()
         try await PasskeyChallenge.query(on: req.db).filter(\.$user.$id == userID).delete()
+        // La cuenta se anonimiza en vez de borrar físicamente la fila, así que el FK
+        // no puede hacer cascade: el rastro personal de apoyo se elimina expresamente.
+        if let sql = req.db as? SQLDatabase {
+            try await sql.raw("DELETE FROM user_support_interactions WHERE user_id = \(bind: userID)").run()
+        }
 
         return .noContent
     }
@@ -430,8 +449,10 @@ struct AdminUser: Content {
     let signupSource: String?
     let anonymized: Bool
     let createdAt: Date?
+    let supportClickedAt: Date?
+    let aixetaClickedAt: Date?
 
-    init(_ u: User) {
+    init(_ u: User, support: [String: Date] = [:]) {
         self.id = u.id
         self.username = u.username
         self.name = u.name
@@ -444,6 +465,8 @@ struct AdminUser: Content {
         self.signupSource = u.signupSource
         self.anonymized = u.anonymizedAt != nil
         self.createdAt = u.createdAt
+        self.supportClickedAt = support["support_heart"]
+        self.aixetaClickedAt = support["support_aixeta"]
     }
 }
 
