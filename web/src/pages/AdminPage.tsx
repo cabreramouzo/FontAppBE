@@ -15,7 +15,7 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import LinearProgress from '@mui/material/LinearProgress'
 import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInteractionStats, getInterestStats, getNewUsers, getOnlineUsers, getRegionStats, getSourceStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole, type InteractionSummary, type OnlineUser } from '../api/client'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInteractionStats, getInterestStats, getNewUsers, getOnlineUsers, getRegionStats, getSourceStats, getStaff, getUserActivityRanking, reviewFontEdit, revertFontEdit, setUserRole, type InteractionSummary, type OnlineUser, type UserActivityRanking } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -53,6 +53,7 @@ export function AdminPage() {
   const [staff, setStaff] = useState<StaffMember[] | null>(null)
   const [newUsers, setNewUsers] = useState<{ count: number; since: string } | null>(null)
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[] | null>(null)
+  const [activityRanking, setActivityRanking] = useState<UserActivityRanking | null>(null)
   const [sources, setSources] = useState<{ source: string | null; count: number }[] | null>(null)
   const [interactions, setInteractions] = useState<InteractionSummary[] | null>(null)
   const [analyticsPeriod, setAnalyticsPeriod] = useState<30 | 180 | 'all'>(30)
@@ -79,6 +80,7 @@ export function AdminPage() {
         .catch(() => setNewUsers(null))
       getSourceStats().then(setSources).catch(() => setSources([]))
       getOnlineUsers().then(setOnlineUsers).catch(() => setOnlineUsers([]))
+      getUserActivityRanking().then(setActivityRanking).catch(() => setActivityRanking({ mostRecent: [], leastRecent: [], untrackedCount: 0 }))
     }
     // Gestión de roles (solo owner).
     if (isOwner(user)) getStaff().then(setStaff).catch(() => setStaff([]))
@@ -239,6 +241,40 @@ export function AdminPage() {
             </ListItem>
           ))}
         </List>
+      </Box>
+
+      <Box component="section" sx={{ mt: 3 }}>
+        <Typography variant="h6" gutterBottom>↕️ {t('admin.activityRanking')}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('admin.activityRankingHint')}</Typography>
+        {activityRanking === null ? <Skeleton lines={4} /> : (
+          <>
+            <Chip size="small" variant="outlined" label={t('admin.activityUntrackedCount', { count: activityRanking.untrackedCount })} sx={{ mb: 1.5 }} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+              {([
+                ['activityMostRecent', activityRanking.mostRecent],
+                ['activityLeastRecent', activityRanking.leastRecent],
+              ] as const).map(([title, rows]) => (
+                <Box key={title}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{t(`admin.${title}`)}</Typography>
+                  {rows.length === 0 && <Typography variant="body2" color="text.secondary">{t('admin.activityEmpty')}</Typography>}
+                  <List disablePadding>
+                    {rows.map((row, index) => (
+                      <ListItem key={row.id} divider disableGutters>
+                        <ListItemText
+                          primary={<Link component={RouterLink} to={`/users/${encodeURIComponent(row.username)}`}>{index + 1}. @{row.username}</Link>}
+                          secondary={row.lastSeenAt
+                            ? t('admin.activityLastSeen', { date: timeAgo(row.lastSeenAt, t) })
+                            : t('admin.activityNotSeen', { date: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '—' })}
+                          slotProps={{ primary: { component: 'div' } }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              ))}
+            </Box>
+          </>
+        )}
       </Box>
 
       <Box component="section" sx={{ mt: 3 }}>

@@ -24,6 +24,7 @@ struct UserController: RouteCollection {
         protected.get("stats", "new", use: newUsers)         // admin: altas recientes
         protected.get("stats", "sources", use: sourceStats)  // admin: altas por cartel
         protected.get("stats", "online", use: onlineUsers)   // admin: presencia reciente
+        protected.get("stats", "activity-ranking", use: activityRanking) // admin: retorno e inactividad
         protected.post("presence", use: touchPresence)       // heartbeat de la propia sesión
         protected.get("staff", use: staff)                   // owner: moderadores/admins
         protected.get("admin", use: adminList)               // owner: listado completo paginado
@@ -61,6 +62,37 @@ struct UserController: RouteCollection {
                 guard let id = user.id, let lastSeenAt = user.lastSeenAt else { return nil }
                 return OnlineUser(id: id, username: user.username, lastSeenAt: lastSeenAt)
             }
+    }
+
+    /// GET /users/stats/activity-ranking — recencia de sesiones autenticadas.
+    /// `last_seen_at = NULL` significa que no se ha observado actividad desde que existe
+    /// esta medición; no permite afirmar que la cuenta nunca iniciara sesión antes.
+    @Sendable func activityRanking(req: Request) async throws -> UserActivityRanking {
+        let me = try req.auth.require(User.self)
+        guard me.isAdmin else { throw Abort(.forbidden) }
+        guard let sql = req.db as? SQLDatabase else { throw Abort(.internalServerError) }
+
+        let recent = try await sql.raw("""
+            SELECT id, username, created_at AS "createdAt", last_seen_at AS "lastSeenAt"
+            FROM users
+            WHERE anonymized_at IS NULL AND last_seen_at IS NOT NULL
+            ORDER BY last_seen_at DESC
+            LIMIT 10
+            """).all(decoding: UserActivityRankRow.self)
+        let inactive = try await sql.raw("""
+            SELECT id, username, created_at AS "createdAt", last_seen_at AS "lastSeenAt"
+            FROM users
+            WHERE anonymized_at IS NULL
+            ORDER BY (last_seen_at IS NOT NULL) ASC, last_seen_at ASC, created_at ASC
+            LIMIT 10
+            """).all(decoding: UserActivityRankRow.self)
+        struct CountRow: Decodable { let count: Int }
+        let untracked = try await sql.raw("""
+            SELECT COUNT(*)::int AS count
+            FROM users
+            WHERE anonymized_at IS NULL AND last_seen_at IS NULL
+            """).first(decoding: CountRow.self)?.count ?? 0
+        return UserActivityRanking(mostRecent: recent, leastRecent: inactive, untrackedCount: untracked)
     }
 
     /// GET /users/staff — usuarios con rol por encima de `user` (solo owner).
@@ -469,6 +501,19 @@ struct OnlineUser: Content {
     let id: UUID
     let username: String
     let lastSeenAt: Date
+}
+
+struct UserActivityRankRow: Content {
+    let id: UUID
+    let username: String
+    let createdAt: Date?
+    let lastSeenAt: Date?
+}
+
+struct UserActivityRanking: Content {
+    let mostRecent: [UserActivityRankRow]
+    let leastRecent: [UserActivityRankRow]
+    let untrackedCount: Int
 }
 
 /// Fila del listado completo de usuarios (solo owner). Todas las columnas útiles,

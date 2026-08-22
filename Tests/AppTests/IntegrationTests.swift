@@ -379,6 +379,32 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    func testActivityRankingOrdersRecentAndIncludesUnseenAccounts() async throws {
+        try await withApp { app in
+            let adminID = try await register(app, username: "rankingadmin")
+            let adminToken = try await login(app, username: "rankingadmin")
+            let oldID = try await register(app, username: "rankingold")
+            let recentID = try await register(app, username: "rankingrecent")
+            _ = try await register(app, username: "rankingunseen")
+
+            try await app.test(.GET, "users/stats/activity-ranking", headers: bearer(adminToken)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+            try await makeAdmin(app, userID: adminID)
+            let sql = try XCTUnwrap(app.db as? SQLDatabase)
+            try await sql.raw("UPDATE users SET last_seen_at = CURRENT_TIMESTAMP - INTERVAL '30 days' WHERE id = \(bind: oldID)").run()
+            try await sql.raw("UPDATE users SET last_seen_at = CURRENT_TIMESTAMP - INTERVAL '1 day' WHERE id = \(bind: recentID)").run()
+
+            try await app.test(.GET, "users/stats/activity-ranking", headers: bearer(adminToken)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let ranking = try res.content.decode(UserActivityRanking.self)
+                XCTAssertEqual(ranking.mostRecent.first?.username, "rankingrecent")
+                XCTAssertTrue(ranking.leastRecent.contains { $0.username == "rankingunseen" && $0.lastSeenAt == nil })
+                XCTAssertGreaterThanOrEqual(ranking.untrackedCount, 2) // admin + unseen
+            }
+        }
+    }
+
     func testRegisterLoginMe() async throws {
         try await withApp { app in
             try await register(app, username: "ada")
