@@ -2,6 +2,24 @@ import XCTVapor
 @testable import App
 
 final class AppTests: XCTestCase {
+    func testRateLimitRejectsWithoutExtendingTheBlock() async {
+        let limiter = RateLimiter()
+        let start = Date(timeIntervalSince1970: 1_000)
+        let first = await limiter.allow(key: "photo:user", max: 1, window: 60, now: start)
+        XCTAssertTrue(first.allowed)
+
+        let rejected = await limiter.allow(key: "photo:user", max: 1, window: 60,
+                                           now: start.addingTimeInterval(10))
+        XCTAssertFalse(rejected.allowed)
+        XCTAssertEqual(rejected.retryAfter, 50)
+
+        // Si el rechazo anterior se hubiera contabilizado, seguiría bloqueado hasta
+        // t=70. Al no hacerlo, recupera la cuota al caducar el único intento permitido.
+        let recovered = await limiter.allow(key: "photo:user", max: 1, window: 60,
+                                            now: start.addingTimeInterval(61))
+        XCTAssertTrue(recovered.allowed)
+    }
+
     func testAdmin1TableCoversProductionTerritoriesAndSwitzerland() {
         XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 187)
         XCTAssertEqual(Admin1.code(country: "Spain", region: "Barcelona"), "ES-CT")

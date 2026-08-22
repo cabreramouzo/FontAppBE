@@ -31,7 +31,9 @@ async function parse(res: Response) {
   const text = await res.text()
   const data = text ? JSON.parse(text) : null
   if (!res.ok) {
-    throw new ApiError(res.status, data?.reason ?? res.statusText, data?.code)
+    const retryAfter = Number(res.headers.get('Retry-After'))
+    throw new ApiError(res.status, data?.reason ?? res.statusText, data?.code,
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined)
   }
   return data
 }

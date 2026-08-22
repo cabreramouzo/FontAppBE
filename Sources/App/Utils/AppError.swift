@@ -54,7 +54,10 @@ struct CodedErrorMiddleware: AsyncMiddleware {
             let status: HTTPResponseStatus
             let reason: String
             let code: String?
+            var retryAfter: Int? = nil
             switch error {
+            case let e as RateLimitExceeded:
+                (status, reason, code, retryAfter) = (e.status, e.reason, e.code, e.retryAfter)
             case let e as AppError:
                 (status, reason, code) = (e.status, e.reason, e.code)
             case let e as any AbortError:
@@ -67,6 +70,7 @@ struct CodedErrorMiddleware: AsyncMiddleware {
             request.logger.report(error: error)
 
             let res = Response(status: status, headers: ["content-type": "application/json; charset=utf-8"])
+            if let retryAfter { res.headers.replaceOrAdd(name: "Retry-After", value: String(retryAfter)) }
             do {
                 res.body = try .init(data: JSONEncoder().encode(Body(error: true, reason: reason, code: code)),
                                      byteBufferAllocator: request.byteBufferAllocator)

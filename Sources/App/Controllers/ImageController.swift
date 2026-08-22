@@ -10,10 +10,10 @@ struct ImageController: RouteCollection {
 
     func boot(routes: RoutesBuilder) throws {
         let protected = routes.grouped(UserToken.authenticator(), User.guardMiddleware())
-            // 10/hora: una foto por fuente o reseña, y quien va de ruta no visita diez
-            // fuentes en una hora. Por encima de eso no es uso normal, y cada subida
-            // ocupa espacio y ancho de banda en R2, que se pagan.
-            .grouped(RateLimitMiddleware(scope: "image", max: 10, window: 60 * 60))
+            // Coherente con las 30 fuentes/hora: quien documenta una ruta puede poner
+            // una foto a cada una. Por usuario, no por IP compartida de una casa/refugio.
+            .grouped(RateLimitMiddleware(scope: "image", max: 30, window: 60 * 60,
+                                         identity: .authenticatedUser, errorCode: "image.rateLimit"))
         // Body grande: subir hasta 8 MB.
         protected.on(.POST, "images", body: .collect(maxSize: "8mb"), use: upload)
         // Lo que el móvil escribió dentro de la foto. **Solo admins**: la fecha y sobre

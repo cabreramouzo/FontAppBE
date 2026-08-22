@@ -1265,6 +1265,9 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   asigna roles (`/users/staff`, `PUT /users/:id/role`). El `owner` solo se fija por CLI
   (`swift run App set-role <username> owner`), no desde la web. La columna `is_admin` queda como legacy.
 - Rate-limit en `/auth/*` (en memoria, por IP) y limpieza periódica de tokens caducados (cada 6 h).
+  Las fotos tienen una cuota aparte de **30/h por usuario autenticado**, coherente con las
+  30 fuentes/h: un rechazo no prolonga la ventana y responde `Retry-After` con el tiempo
+  real restante. Los demás límites siguen siendo por IP salvo que indiquen lo contrario.
   A escala multi-instancia el rate-limit debería ir a Redis.
 - Ubicación de registro (`GeoLocator`): al crear cuenta se deduce país/región/ciudad de la IP
   (solo estadística; nunca se guarda la IP). Noop en dev; en prod `IPAPIGeoLocator` (ip-api.com,

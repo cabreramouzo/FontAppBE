@@ -16,19 +16,24 @@ export class ApiError extends Error {
    * frase del servidor, que va en castellano. Ver `AppError` en el backend.
    */
   code?: string
-  constructor(status: number, message: string, code?: string) {
+  retryAfterSeconds?: number
+  constructor(status: number, message: string, code?: string, retryAfterSeconds?: number) {
     super(message)
     this.status = status
     this.code = code
+    this.retryAfterSeconds = retryAfterSeconds
   }
 }
 
 /** Traduce un error de red/API a un mensaje legible en el idioma actual. */
-export function describeError(e: unknown, t: (key: string) => string): string {
+export function describeError(e: unknown, t: (key: string, params?: Record<string, string | number>) => string): string {
   if (e instanceof ApiError) {
     if (e.status === 0) return t('error.network')
     // El código manda sobre todo lo demás **menos** sobre el fallo de red: un 401 con
     // código propio («el enlace ha caducado») dice bastante más que «no autorizado».
+    if (e.code === 'image.rateLimit' && e.retryAfterSeconds != null) {
+      return t('err.image.rateLimit', { minutes: Math.max(1, Math.ceil(e.retryAfterSeconds / 60)) })
+    }
     const traducido = e.code ? traduceCodigo(e.code, t) : null
     if (traducido) return traducido
     if (e.status === 401) return t('error.unauthorized')
@@ -46,7 +51,7 @@ export function describeError(e: unknown, t: (key: string) => string): string {
  * Alert. Devolviendo `null` se cae en la frase del servidor, que está en castellano pero
  * al menos es una frase. Misma regla que los nombres de país en `lib/countries.ts`.
  */
-function traduceCodigo(code: string, t: (key: string) => string): string | null {
+function traduceCodigo(code: string, t: (key: string, params?: Record<string, string | number>) => string): string | null {
   const clave = `err.${code}`
   const texto = t(clave)
   return texto === clave ? null : texto

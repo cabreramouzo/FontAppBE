@@ -5,11 +5,16 @@ import { ApiError, describeError } from '../src/lib/apiError.ts'
 /** `t` de mentira con el comportamiento REAL del de la app: clave cruda si falta. */
 const DICC: Record<string, string> = {
   'err.user.emailTaken': 'Ese correo ya está registrado.',
+  'err.image.rateLimit': 'Vuelve dentro de {minutes} min.',
   'error.network': 'Sin conexión',
   'error.unauthorized': 'No autorizado',
   'error.generic': 'Algo ha fallado',
 }
-const t = (k: string) => DICC[k] ?? k
+const t = (k: string, params?: Record<string, string | number>) => {
+  let text = DICC[k] ?? k
+  for (const name in params) text = text.replaceAll(`{${name}}`, String(params[name]))
+  return text
+}
 
 test('con código conocido, la traducción gana a la frase del servidor', () => {
   const e = new ApiError(409, 'El correo ya está registrado', 'user.emailTaken')
@@ -38,4 +43,9 @@ test('un 401 con código propio dice el motivo, no «no autorizado»', () => {
 
 test('un 401 sin código sigue siendo «no autorizado»', () => {
   assert.equal(describeError(new ApiError(401, 'Unauthorized'), t), 'No autorizado')
+})
+
+test('el límite de fotos dice los minutos reales de Retry-After', () => {
+  const e = new ApiError(429, 'Límite', 'image.rateLimit', 1_061)
+  assert.equal(describeError(e, t), 'Vuelve dentro de 18 min.')
 })
