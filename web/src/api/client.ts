@@ -109,6 +109,25 @@ export function trackInteraction(event: string) {
   }).catch(() => {})
 }
 
+/** Clasificación anónima y deliberadamente gruesa, una sola vez por sesión de pestaña. */
+export function trackPlatformOnce() {
+  const key = 'fontapp_platform_tracked'
+  try {
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+  } catch { /* si no hay storage, un posible recuento extra es preferible a identificar */ }
+  const ua = navigator.userAgent
+  const ios = /iPad|iPhone|iPod/i.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const android = /Android/i.test(ua)
+  const otherMobile = !ios && !android && /Mobi|Mobile/i.test(ua)
+  const platform = ios ? 'platform_ios' : android ? 'platform_android'
+    : otherMobile ? 'platform_mobile_other' : 'platform_desktop'
+  const standalone = window.matchMedia?.('(display-mode: standalone)').matches
+    || (navigator as Navigator & { standalone?: boolean }).standalone === true
+  void Promise.all([trackInteraction(platform), trackInteraction(standalone ? 'platform_mode_pwa' : 'platform_mode_browser')])
+}
+
 export const getInteractionStats = (days: 30 | 180 | 'all' = 30) =>
   apiFetch<InteractionSummary[]>(`/admin/analytics${days === 'all' ? '' : `?days=${days}`}`)
 

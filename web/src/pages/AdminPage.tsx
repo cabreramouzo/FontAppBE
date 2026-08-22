@@ -31,6 +31,8 @@ import { lastSeenAt, markUsersSeen } from '../lib/newUsers'
 const EDITS_INBOX = 15
 
 const ANALYTICS_GROUPS = [
+  { key: 'device', prefixes: ['platform_ios', 'platform_android', 'platform_mobile_other', 'platform_desktop'] },
+  { key: 'mode', prefixes: ['platform_mode_'] },
   { key: 'contribute', prefixes: ['font_create_', 'review_'] },
   { key: 'discover', prefixes: ['search_', 'map_', 'font_'] },
   { key: 'access', prefixes: ['auth_', 'install_'] },
@@ -299,12 +301,27 @@ export function AdminPage() {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('analytics.hint')}</Typography>
         {interactions === null && <Skeleton lines={2} />}
         {interactions?.length === 0 && <Typography color="text.secondary">{t('analytics.empty')}</Typography>}
+        {interactions && (() => {
+          const devices = interactions.filter((i) => ['platform_ios', 'platform_android', 'platform_mobile_other', 'platform_desktop'].includes(i.event))
+          const modes = interactions.filter((i) => i.event.startsWith('platform_mode_'))
+          const deviceTotal = devices.reduce((sum, i) => sum + i.sessions, 0)
+          const desktop = devices.find((i) => i.event === 'platform_desktop')?.sessions ?? 0
+          const modeTotal = modes.reduce((sum, i) => sum + i.sessions, 0)
+          const pwa = modes.find((i) => i.event === 'platform_mode_pwa')?.sessions ?? 0
+          if (!deviceTotal) return null
+          return <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+            <Chip color="primary" label={`${t('analytics.mobile')}: ${Math.round((deviceTotal - desktop) / deviceTotal * 100)}%`} />
+            <Chip variant="outlined" label={`${t('analytics.platform_desktop')}: ${Math.round(desktop / deviceTotal * 100)}%`} />
+            {modeTotal > 0 && <Chip variant="outlined" label={`${t('analytics.platform_mode_pwa')}: ${Math.round(pwa / modeTotal * 100)}%`} />}
+          </Box>
+        })()}
         {interactions && ANALYTICS_GROUPS.map((group) => {
           const items = interactions.filter((item) =>
             group.prefixes.some((prefix) => item.event.startsWith(prefix))
             && !(group.key === 'discover' && item.event.startsWith('font_create_')))
           if (items.length === 0) return null
           const max = Math.max(...items.map((item) => item.sessions), 1)
+          const total = items.reduce((sum, item) => sum + item.sessions, 0)
           return (
             <Box key={group.key} sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{t(`analytics.group_${group.key}`)}</Typography>
@@ -314,8 +331,10 @@ export function AdminPage() {
                     <ListItemText
                       primary={t(`analytics.${item.event}`)}
                       secondary={<Box sx={{ mt: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">{item.sessions} {t('analytics.sessions')} · {item.clicks} {t('analytics.clicks')}</Typography>
-                        <LinearProgress variant="determinate" value={item.sessions / max * 100} sx={{ mt: 0.5, height: 5, borderRadius: 3 }} />
+                        <Typography variant="caption" color="text.secondary">
+                          {item.sessions} {t('analytics.sessions')} · {group.key === 'device' || group.key === 'mode' ? `${Math.round(item.sessions / Math.max(total, 1) * 100)}%` : `${item.clicks} ${t('analytics.clicks')}`}
+                        </Typography>
+                        <LinearProgress variant="determinate" value={(group.key === 'device' || group.key === 'mode' ? item.sessions / Math.max(total, 1) : item.sessions / max) * 100} sx={{ mt: 0.5, height: 5, borderRadius: 3 }} />
                       </Box>}
                     />
                   </ListItem>

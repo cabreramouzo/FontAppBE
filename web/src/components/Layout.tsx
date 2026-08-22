@@ -19,7 +19,7 @@ import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
-import { getFlags, getNewUsers, touchPresence, trackInteraction } from '../api/client'
+import { getFlags, getNewUsers, touchPresence, trackInteraction, trackPlatformOnce } from '../api/client'
 import { lastSeenAt } from '../lib/newUsers'
 import { marcarNovedadesVistas, programarZumbidos } from '../lib/newsNudge'
 import { Footer } from './Footer'
@@ -51,6 +51,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const [zumbidos, setZumbidos] = useState(0)
   const { pathname } = useLocation()
   const enElMapa = pathname === '/'
+
+  useEffect(() => { trackPlatformOnce() }, [])
 
   useEffect(() => {
     if (!user) return

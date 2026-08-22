@@ -23,6 +23,8 @@ struct InteractionAnalyticsController: RouteCollection {
         "outbox_queued", "outbox_synced", "outbox_failed", "install_available", "install_success",
         "auth_google_success", "auth_google_error", "auth_passkey_success", "auth_passkey_error",
         "auth_password_success", "auth_password_error",
+        "platform_ios", "platform_android", "platform_mobile_other", "platform_desktop",
+        "platform_mode_pwa", "platform_mode_browser",
     ]
     static let identifiedSupportEvents: Set<String> = ["support_heart", "support_aixeta"]
 

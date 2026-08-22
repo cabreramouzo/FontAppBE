@@ -418,6 +418,10 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   y cada 5 minutos mientras está visible. `GET /users/stats/online` es solo admin y devuelve
   nombre + última actividad de los últimos 10 minutos. Es presencia aproximada, no WebSocket:
   una pestaña cerrada desaparece al vencer la ventana. Nunca guarda IP, página o dispositivo.
+- **Plataforma anónima:** una vez por sesión de pestaña, el cliente clasifica localmente
+  iOS/iPadOS, Android, otro móvil o escritorio y, por separado, PWA instalada o navegador.
+  Solo manda esos dos eventos cerrados; nunca el user-agent, modelo, versión, resolución o
+  usuario. El panel calcula porcentajes sobre sesiones dentro de cada una de las dos familias.
 
 ## Novedades (público) y panel
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias
