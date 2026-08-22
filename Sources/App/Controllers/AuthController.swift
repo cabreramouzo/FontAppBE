@@ -78,13 +78,20 @@ struct AuthController: RouteCollection {
                                 ?? username,
                                username: username, email: profile.email,
                                passwordHash: try req.password.hash([UInt8].random(count: 32).base64),
-                               lang: dto.lang)
+                               lang: dto.lang, signupSource: UserController.cleanSource(dto.source))
             try await req.db.transaction { db in
                 try await created.save(on: db)
                 try await AuthIdentity(provider: "google", subject: profile.subject,
                                        userID: created.requireID()).save(on: db)
             }
             user = created
+
+            // Igual que el registro con contraseña: la cuenta responde enseguida y la
+            // GeoIP se completa en segundo plano. Nunca se persiste el IP.
+            let app = req.application
+            let ip = req.clientIP
+            let userID = try created.requireID()
+            Task.detached { await enrichSignupLocation(userID: userID, ip: ip, app: app) }
         }
 
         let token = try UserToken.generate(for: user)
@@ -248,6 +255,7 @@ struct LoginResponse: Content {
 struct GoogleLoginDTO: Content {
     let credential: String
     var lang: String? = nil
+    var source: String? = nil
 }
 
 struct ForgotDTO: Content {

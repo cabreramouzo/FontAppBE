@@ -1,5 +1,6 @@
 import type { PhotoUploadMeta } from '../lib/image'
 import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
+import { storedSource } from '../lib/campaign'
 import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
@@ -84,7 +85,7 @@ export async function loginRequest(username: string, password: string): Promise<
 export async function googleLoginRequest(credential: string): Promise<LoginResponse> {
   return apiFetch<LoginResponse>('/auth/google', {
     method: 'POST',
-    body: JSON.stringify({ credential, lang: document.documentElement.lang || undefined }),
+    body: JSON.stringify({ credential, lang: document.documentElement.lang || undefined, source: storedSource() }),
   })
 }
 

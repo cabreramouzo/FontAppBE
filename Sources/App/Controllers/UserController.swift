@@ -206,13 +206,7 @@ struct UserController: RouteCollection {
         let lang = dto.lang
         Task.detached {
             // Ubicación aproximada del registro (nunca se guarda la IP).
-            if let geo = await app.geoLocator.locate(ip: ip, on: app.client),
-               let saved = try? await User.find(userID, on: app.db) {
-                saved.signupCountry = geo.country
-                saved.signupRegion = geo.region
-                saved.signupCity = geo.city
-                try? await saved.save(on: app.db)
-            }
+            await enrichSignupLocation(userID: userID, ip: ip, app: app)
             let base = Environment.get("WEB_ORIGIN")?.split(separator: ",").first.map(String.init)
                 ?? "http://localhost:5174"
             let mail = WelcomeEmail.build(lang: lang, name: name, webOrigin: base)

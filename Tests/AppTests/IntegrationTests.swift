@@ -45,6 +45,7 @@ final class IntegrationTests: XCTestCase {
         setenv("GOOGLE_CLIENT_ID", "test-client", 1)
         defer { unsetenv("GOOGLE_CLIENT_ID") }
         try await withApp { app in
+            app.geoLocator = StubGeoLocator(location: GeoLocation(country: "Spain", region: "Galicia", city: "A Coruña"))
             app.googleTokenVerifier = StubGoogleVerifier(profile: GoogleProfile(
                 subject: "google-subject-1", email: "new.person@gmail.com", name: "New Person",
                 authoritativeEmail: true
@@ -53,7 +54,7 @@ final class IntegrationTests: XCTestCase {
             var firstUserID: UUID?
             for _ in 0..<2 {
                 try await app.test(.POST, "auth/google", beforeRequest: { req in
-                    try req.content.encode(GoogleLoginDTO(credential: "signed-id-token", lang: "ca"))
+                    try req.content.encode(GoogleLoginDTO(credential: "signed-id-token", lang: "ca", source: " Cartell-Galicia! "))
                 }, afterResponse: { res in
                     XCTAssertEqual(res.status, .ok)
                     let login = try res.content.decode(LoginResponse.self)
@@ -66,6 +67,16 @@ final class IntegrationTests: XCTestCase {
             let identityCount = try await AuthIdentity.query(on: app.db).count()
             XCTAssertEqual(userCount, 1)
             XCTAssertEqual(identityCount, 1)
+            let createdID = try XCTUnwrap(firstUserID)
+            var saved = try await User.find(createdID, on: app.db)
+            for _ in 0..<50 where saved?.signupRegion == nil {
+                try await Task.sleep(for: .milliseconds(20))
+                saved = try await User.find(createdID, on: app.db)
+            }
+            XCTAssertEqual(saved?.signupCountry, "Spain")
+            XCTAssertEqual(saved?.signupRegion, "Galicia")
+            XCTAssertEqual(saved?.signupCity, "A Coruña")
+            XCTAssertEqual(saved?.signupSource, "cartell-galicia")
         }
     }
 

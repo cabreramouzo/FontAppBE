@@ -56,3 +56,16 @@ extension Request {
     /// La lógica es la misma que usa el rate-limit: ver `ClientIP`.
     var clientIP: String? { ClientIP.of(self) }
 }
+
+/// Completa la ubicación aproximada de un alta sin conservar el IP. Es común al
+/// registro con contraseña y al de Google para que las estadísticas no dependan del
+/// método de autenticación elegido.
+func enrichSignupLocation(userID: UUID, ip: String?, app: Application) async {
+    if let geo = await app.geoLocator.locate(ip: ip, on: app.client),
+       let saved = try? await User.find(userID, on: app.db) {
+        saved.signupCountry = geo.country
+        saved.signupRegion = geo.region
+        saved.signupCity = geo.city
+        try? await saved.save(on: app.db)
+    }
+}
