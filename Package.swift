@@ -14,6 +14,8 @@ let package = Package(
         .package(url: "https://github.com/soto-project/soto.git", from: "7.0.0"),
         // Verificación local de los ID tokens OIDC (Google ahora; Apple reutilizará esto).
         .package(url: "https://github.com/vapor/jwt-kit.git", from: "5.6.0"),
+        // Ceremonias WebAuthn completas para passkeys; evita implementar CBOR/COSE y firmas a mano.
+        .package(url: "https://github.com/swift-server/webauthn-swift.git", revision: "2b6b4d4cfe9a3d65955ba94dbc09425637952dae"),
     ],
     targets: [
         .executableTarget(
@@ -24,6 +26,7 @@ let package = Package(
                 .product(name: "Vapor", package: "vapor"),
                 .product(name: "SotoS3", package: "soto"),
                 .product(name: "JWTKit", package: "jwt-kit"),
+                .product(name: "WebAuthn", package: "webauthn-swift"),
             ]
         ),
         .testTarget(

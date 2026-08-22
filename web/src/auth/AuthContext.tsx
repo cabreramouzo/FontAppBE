@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { UserResponse } from '../api/types'
-import { ApiError, apiFetch, getToken, googleLoginRequest, loginRequest, setToken } from '../api/client'
+import { ApiError, apiFetch, getToken, googleLoginRequest, loginRequest, loginWithPasskeyRequest, setToken } from '../api/client'
 import { saveSessionForSync } from '../lib/outbox'
 import { storedSource } from '../lib/campaign'
 import { forgetCapabilities } from '../lib/capabilities'
@@ -10,6 +10,7 @@ interface AuthState {
   loading: boolean
   login: (username: string, password: string) => Promise<void>
   loginWithGoogle: (credential: string) => Promise<void>
+  loginWithPasskey: () => Promise<void>
   register: (name: string, username: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   refresh: () => Promise<void>
@@ -115,6 +116,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void saveSessionForSync(res.token)
   }
 
+  async function loginWithPasskey() {
+    const res = await loginWithPasskeyRequest()
+    setToken(res.token)
+    setUser(res.user)
+    forgetCapabilities()
+    void saveSessionForSync(res.token)
+  }
+
   async function register(name: string, username: string, email: string, password: string) {
     await apiFetch<UserResponse>('/users', {
       method: 'POST',
@@ -158,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, loading, login, loginWithGoogle, register, logout, refresh,
+      user, loading, login, loginWithGoogle, loginWithPasskey, register, logout, refresh,
       justRegistered,
       dismissWelcome: () => { setJustRegistered(false); setPromptLocation(true) },
       promptLocation,

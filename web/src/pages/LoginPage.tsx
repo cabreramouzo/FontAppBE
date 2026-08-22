@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography'
 import Link from '@mui/material/Link'
 import Alert from '@mui/material/Alert'
 import Divider from '@mui/material/Divider'
+import FingerprintIcon from '@mui/icons-material/Fingerprint'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ApiError, describeError } from '../api/client'
@@ -23,7 +24,7 @@ import { ApiError, describeError } from '../api/client'
 // - `autocomplete`: username + current-password, y la etiqueta NO menciona "correo"
 //   (Safari la lee y clasificaría el campo como email de Contactos).
 export function LoginPage() {
-  const { login, loginWithGoogle } = useAuth()
+  const { login, loginWithGoogle, loginWithPasskey } = useAuth()
   const { t } = useI18n()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -92,6 +93,16 @@ export function LoginPage() {
     }
   }
 
+  async function passkeyLogin() {
+    setError(''); setBusy(true)
+    try { await loginWithPasskey(); window.location.assign('/') }
+    catch (err) {
+      if (err instanceof DOMException && err.name === 'NotAllowedError') setError(t('passkey.cancelled'))
+      else setError(describeError(err, t))
+      setBusy(false)
+    }
+  }
+
   return (
     <Box className="pad auth" sx={{ maxWidth: 360, mx: 'auto' }}>
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>{t('login.enter')}</Typography>
@@ -99,6 +110,15 @@ export function LoginPage() {
       {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
         <>
           <Box ref={googleButton} sx={{ minHeight: 44, display: 'flex', justifyContent: 'center', mt: 1 }} />
+          <Divider sx={{ my: 2 }}>{t('login.or')}</Divider>
+        </>
+      )}
+
+      {window.PublicKeyCredential && (
+        <>
+          <Button fullWidth variant="outlined" startIcon={<FingerprintIcon />} onClick={passkeyLogin} disabled={busy}>
+            {t('passkey.login')}
+          </Button>
           <Divider sx={{ my: 2 }}>{t('login.or')}</Divider>
         </>
       )}

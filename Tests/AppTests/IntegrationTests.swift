@@ -2,6 +2,7 @@ import Fluent
 import Foundation
 import SQLKit
 import XCTVapor
+import WebAuthn
 @testable import App
 
 private struct StubGoogleVerifier: GoogleTokenVerifying {
@@ -14,6 +15,27 @@ private struct StubGoogleVerifier: GoogleTokenVerifying {
 // Tests de integración contra una BD real (fontapp_test). Cada test migra y revierte.
 // Requiere Postgres corriendo y la base `fontapp_test` (owner `vapor`).
 final class IntegrationTests: XCTestCase {
+
+    func testPasskeyOptionsUseOneTimeServerChallenges() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "passkeyuser")
+            let token = try await login(app, username: "passkeyuser")
+            try await app.test(.POST, "auth/passkeys/registration/options", headers: bearer(token), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let response = try res.content.decode(RegistrationOptionsResponse.self)
+                XCTAssertEqual(response.publicKey.relyingParty.id, "localhost")
+                XCTAssertGreaterThanOrEqual(response.publicKey.challenge.count, 16)
+            })
+            try await app.test(.POST, "auth/passkeys/authentication/options", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let response = try res.content.decode(AuthenticationOptionsResponse.self)
+                XCTAssertEqual(response.publicKey.relyingPartyID, "localhost")
+                XCTAssertGreaterThanOrEqual(response.publicKey.challenge.count, 16)
+            })
+            let count = try await PasskeyChallenge.query(on: app.db).count()
+            XCTAssertEqual(count, 2)
+        }
+    }
 
     func testGoogleLoginCreatesAndReusesStableIdentity() async throws {
         setenv("GOOGLE_CLIENT_ID", "test-client", 1)

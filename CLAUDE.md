@@ -379,6 +379,12 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   correo a una cuenta previa; los dominios de terceros exigen entrar con contraseña para
   evitar apropiaciones. Config: `GOOGLE_CLIENT_ID` en backend y el mismo valor público como
   `VITE_GOOGLE_CLIENT_ID` durante el build web. No necesita client secret.
+  Las passkeys se registran desde Ajustes y entran por `/auth/passkeys/*`. Los challenges
+  aleatorios duran 5 minutos, viven en PostgreSQL y se consumen una sola vez; la credencial
+  guarda clave pública y contador, nunca material privado. Swift WebAuthn valida challenge,
+  RP ID, origen, presencia/verificación del usuario y firma. Defaults: `fontapp.net` +
+  `https://fontapp.net` en producción, `localhost` + `http://localhost:5173` en desarrollo;
+  se pueden fijar con `PASSKEY_RP_ID` y `PASSKEY_ORIGIN`.
 - Cercanía: bounding box + haversine. A escala → PostGIS + índice GiST.
 
 ## Despliegue

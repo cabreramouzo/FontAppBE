@@ -351,6 +351,8 @@ struct UserController: RouteCollection {
         try await UserToken.query(on: req.db).filter(\.$user.$id == userID).delete()
         try await PasswordReset.query(on: req.db).filter(\.$user.$id == userID).delete()
         try await AuthIdentity.query(on: req.db).filter(\.$user.$id == userID).delete()
+        try await PasskeyCredential.query(on: req.db).filter(\.$user.$id == userID).delete()
+        try await PasskeyChallenge.query(on: req.db).filter(\.$user.$id == userID).delete()
 
         return .noContent
     }

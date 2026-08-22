@@ -13,7 +13,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
-import { deleteAccount, describeError, updateProfile } from '../api/client'
+import { deleteAccount, deletePasskey, describeError, listPasskeys, registerPasskey, updateProfile, type PasskeySummary } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { esNombreValido, pareceCorreo } from '../lib/username'
@@ -45,6 +45,8 @@ export function SettingsPage() {
   // Si los niveles no conceden nada (el sistema nace apagado), no se avisa de que
   // apagarlos te quita permisos: sería amenazar con algo que no existe.
   const [capsOn, setCapsOn] = useState(false)
+  const [passkeys, setPasskeys] = useState<PasskeySummary[]>([])
+  const [passkeyBusy, setPasskeyBusy] = useState(false)
 
   useEffect(() => {
     if (loading) return // esperamos a que se restaure la sesión antes de decidir
@@ -55,6 +57,7 @@ export function SettingsPage() {
     setNombre(user.name)
     setUsuario(user.username)
     capabilitiesEnabled().then(setCapsOn)
+    if (window.PublicKeyCredential) listPasskeys().then(setPasskeys).catch(() => {})
   }, [user, loading])
 
   /**
@@ -105,6 +108,22 @@ export function SettingsPage() {
     } catch (e) {
       setError(describeError(e, t))
     }
+  }
+
+  async function addPasskey() {
+    setError(''); setPasskeyBusy(true)
+    try {
+      const key = await registerPasskey(t('passkey.defaultLabel'))
+      setPasskeys((current) => [key, ...current])
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === 'NotAllowedError')) setError(describeError(e, t))
+    } finally { setPasskeyBusy(false) }
+  }
+
+  async function removePasskey(id: string) {
+    if (!confirm(t('passkey.confirmDelete'))) return
+    try { await deletePasskey(id); setPasskeys((current) => current.filter((key) => key.id !== id)) }
+    catch (e) { setError(describeError(e, t)) }
   }
 
   if (loading) return null
@@ -164,6 +183,20 @@ export function SettingsPage() {
           </Button>
         </Box>
       </Box>
+
+      {window.PublicKeyCredential && (
+        <Box component="section" sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom>{t('passkey.title')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{t('passkey.intro')}</Typography>
+          {passkeys.map((key) => (
+            <Box key={key.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1 }}>
+              <Typography variant="body2">{key.label}</Typography>
+              <Button color="error" size="small" onClick={() => removePasskey(key.id)}>{t('form.delete')}</Button>
+            </Box>
+          ))}
+          <Button variant="outlined" size="small" onClick={addPasskey} disabled={passkeyBusy}>{t('passkey.add')}</Button>
+        </Box>
+      )}
 
       <Box component="section" sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{t('privacy.title')}</Typography>

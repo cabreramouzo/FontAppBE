@@ -1,4 +1,5 @@
 import type { PhotoUploadMeta } from '../lib/image'
+import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
 import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
@@ -86,6 +87,30 @@ export async function googleLoginRequest(credential: string): Promise<LoginRespo
     body: JSON.stringify({ credential, lang: document.documentElement.lang || undefined }),
   })
 }
+
+export interface PasskeySummary { id: string; label: string; createdAt?: string; lastUsedAt?: string }
+
+export async function loginWithPasskeyRequest(): Promise<LoginResponse> {
+  if (!window.PublicKeyCredential) throw new Error('Passkeys are not supported')
+  const start = await apiFetch<{ requestID: string; publicKey: Record<string, unknown> }>('/auth/passkeys/authentication/options', { method: 'POST' })
+  const credential = await navigator.credentials.get({ publicKey: requestOptions(start.publicKey) }) as PublicKeyCredential | null
+  if (!credential) throw new Error('Passkey cancelled')
+  return apiFetch<LoginResponse>('/auth/passkeys/authentication/verify', {
+    method: 'POST', body: JSON.stringify({ requestID: start.requestID, credential: credentialJSON(credential) }),
+  })
+}
+
+export async function registerPasskey(label: string): Promise<PasskeySummary> {
+  const start = await apiFetch<{ requestID: string; publicKey: Record<string, unknown> }>('/auth/passkeys/registration/options', { method: 'POST' })
+  const credential = await navigator.credentials.create({ publicKey: creationOptions(start.publicKey) }) as PublicKeyCredential | null
+  if (!credential) throw new Error('Passkey cancelled')
+  return apiFetch<PasskeySummary>('/auth/passkeys/registration/verify', {
+    method: 'POST', body: JSON.stringify({ requestID: start.requestID, label, credential: credentialJSON(credential) }),
+  })
+}
+
+export const listPasskeys = () => apiFetch<PasskeySummary[]>('/auth/passkeys')
+export const deletePasskey = (id: string) => apiFetch<void>(`/auth/passkeys/${id}`, { method: 'DELETE' })
 
 /** Sube una imagen (multipart) y devuelve su URL relativa. */
 export async function uploadImage(file: File, meta?: PhotoUploadMeta): Promise<string> {

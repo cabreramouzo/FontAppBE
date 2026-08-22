@@ -29,10 +29,20 @@ docker build -t fontappbe .
 | `APP_SECRET` | recomendada | Clave con la que se firman los enlaces de baja del resumen semanal. Si falta, se usa una aleatoria por proceso y **los enlaces dejan de valer en cada reinicio** (la app lo avisa en el log al arrancar en producción). Genérala con `openssl rand -hex 32`. |
 | `GEOIP_ENABLED` | opcional | `true` → deduce país/región de la IP al registrarse (solo estadística; nunca se guarda la IP). Noop si no se define. |
 | `GOOGLE_CLIENT_ID` | para login Google | ID del cliente OAuth 2.0 de tipo **Aplicación web**. Es público, pero se configura por entorno y debe coincidir con `VITE_GOOGLE_CLIENT_ID`. No se usa client secret. |
+| `PASSKEY_RP_ID` | opcional | Dominio al que quedan ligadas las passkeys. En producción usa `fontapp.net` por defecto; no incluye protocolo ni puerto. Cambiarlo invalida las passkeys existentes. |
+| `PASSKEY_ORIGIN` | opcional | Origen web exacto permitido al verificar WebAuthn. Por defecto `https://fontapp.net` en producción y `http://localhost:5173` en desarrollo. |
 
 \* Usa **o** `DATABASE_URL` **o** las variables sueltas. En `--env production` las credenciales son obligatorias (la app falla al arrancar si faltan).
 
 El contenedor arranca con `serve --env production` (ver `CMD` del `Dockerfile`).
+
+### Passkeys
+
+No requieren cuentas ni secretos de terceros. La web crea la credencial mediante WebAuthn
+y el backend guarda únicamente su clave pública. En producción los valores por defecto son
+`PASSKEY_RP_ID=fontapp.net` y `PASSKEY_ORIGIN=https://fontapp.net`; pueden fijarse
+explícitamente en Fly. El origen es una comprobación exacta: si la interfaz pasa a servirse
+desde `www.fontapp.net`, habrá que decidir un único origen canónico antes de cambiarlo.
 
 ### Acceso con Google
 
