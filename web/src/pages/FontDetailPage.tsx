@@ -246,6 +246,8 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; 
 
   async function submit(e: FormEvent) {
     e.preventDefault()
+    trackInteraction('review_start')
+    if (file) trackInteraction('review_photo')
     setError('')
     setSaving(true)
     // Comprimimos antes: la foto queda lista para subirla o para guardarla en la cola.
@@ -256,6 +258,7 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; 
     try {
       const image = photo ? await uploadImage(photo, preparada?.meta) : undefined
       const creada = await createComment(fontID, { ...data, image })
+      trackInteraction('review_success')
       clear()
       // Si además se ha estrenado la portada, se dice. Un cambio silencioso en la ficha
       // de una fuente que no es tuya es justo lo que no queremos: la foto la ha puesto
@@ -266,10 +269,12 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; 
       // Sin cobertura: se guarda en el móvil y se envía en cuanto haya red.
       if (isOffline(e)) {
         await enqueue({ kind: 'comment', fontID, data, photo, photoName: photo?.name, photoMeta: preparada?.meta })
+        trackInteraction('review_queued')
         clear()
         toast.show(t('offline.savedUpdate'))
         onPosted()
       } else {
+        trackInteraction('review_error')
         setError(describeError(e, t))
       }
     } finally {

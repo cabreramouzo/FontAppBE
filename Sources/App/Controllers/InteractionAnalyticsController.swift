@@ -14,8 +14,15 @@ struct InteractionAnalyticsController: RouteCollection {
         "page_profile", "page_support", "page_install", "page_login", "page_register",
         "nav_map", "nav_activity", "nav_zones", "nav_profile", "nav_login",
         "map_filters", "map_missions", "map_locate", "map_add_font",
+        "map_cluster_click", "map_heatmap_click",
         "font_favorite", "font_directions", "font_share", "font_update",
         "auth_google", "auth_passkey", "auth_password", "auth_register", "install_start",
+        "font_create_start", "font_create_photo", "font_create_success", "font_create_queued", "font_create_error",
+        "review_start", "review_photo", "review_success", "review_queued", "review_error",
+        "search_run", "search_no_results", "search_font_select", "search_place_select",
+        "outbox_queued", "outbox_synced", "outbox_failed", "install_available", "install_success",
+        "auth_google_success", "auth_google_error", "auth_passkey_success", "auth_passkey_error",
+        "auth_password_success", "auth_password_error",
     ]
     static let identifiedSupportEvents: Set<String> = ["support_heart", "support_aixeta"]
 

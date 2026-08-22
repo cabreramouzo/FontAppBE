@@ -103,7 +103,7 @@ function analyticsSession(): string {
 
 /** Best-effort: la analítica nunca debe bloquear ni mostrar un error al visitante. */
 export function trackInteraction(event: string) {
-  void apiFetch<void>('/analytics', {
+  return apiFetch<void>('/analytics', {
     method: 'POST', body: JSON.stringify({ event, session: analyticsSession() }),
   }).catch(() => {})
 }

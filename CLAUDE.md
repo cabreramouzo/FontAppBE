@@ -408,6 +408,11 @@ El contrato real de la API está en [docs/api.md](docs/api.md); el brief origina
   un borrado físico). `/users/admin` lo expone solo al owner como
   «fecha o no consta». No se convierte «no consta» en una negativa: puede no haber visitado
   la pantalla o haber estado desconectado. El resto de la analítica continúa anónima.
+- Los embudos del panel agrupan creación de fuente, reseña, búsqueda/selección, clusters
+  y densidad del mapa, métodos de acceso, instalación PWA y bandeja offline. Cada etapa
+  es un evento independiente dentro de la misma sesión anónima; las barras comparan
+  sesiones del período, no personas ni una conversión causal perfecta. Nunca se guarda
+  el texto buscado, coordenadas, filtros concretos, URL, dispositivo ni detalle del error.
 
 ## Novedades (público) y panel
 - Actividad reciente (`ActivityController` → `/activity`): fuentes, reseñas, incidencias

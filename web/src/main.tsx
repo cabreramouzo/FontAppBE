@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { startOutboxAutoFlush } from './lib/outbox'
 import { captureSource } from './lib/campaign'
+import { trackInteraction } from './api/client'
 
 // PWA (Android/Chromium): captura `beforeinstallprompt` LO ANTES posible. Chrome
 // puede dispararlo antes de que React monte; si en ese instante no hay listener, el
@@ -15,6 +16,7 @@ declare global {
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault()
   window.__bipEvent = e
+  trackInteraction('install_available')
 })
 
 // Cuando el usuario instala la app, lo recordamos para no volver a ofrecer el banner
@@ -23,6 +25,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 window.addEventListener('appinstalled', () => {
   try { localStorage.setItem('fontapp_installed', '1') } catch { /* modo privado: da igual */ }
   window.__bipEvent = undefined
+  trackInteraction('install_success')
 })
 
 // El zoom de la página está PERMITIDO: hay quien lo necesita para leer, y bloquearlo

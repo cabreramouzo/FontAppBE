@@ -401,10 +401,14 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
     }
     const ctrl = new AbortController()
     const timer = setTimeout(() => {
-      apiFetch<Page<Font>>(`/fonts?search=${encodeURIComponent(term)}&per=6`)
-        .then((p) => setMatches(p.items))
-        .catch(() => setMatches([]))
-      searchPlaces(term, lang, ctrl.signal).then(setPlaces)
+      trackInteraction('search_run')
+      Promise.all([
+        apiFetch<Page<Font>>(`/fonts?search=${encodeURIComponent(term)}&per=6`).then((p) => p.items).catch(() => [] as Font[]),
+        searchPlaces(term, lang, ctrl.signal),
+      ]).then(([fonts, foundPlaces]) => {
+        setMatches(fonts); setPlaces(foundPlaces)
+        if (fonts.length === 0 && foundPlaces.length === 0) trackInteraction('search_no_results')
+      })
     }, 350)
     return () => {
       clearTimeout(timer)
@@ -452,7 +456,7 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
       {matches.map((f) => (
         <ListItemButton
           key={f.id}
-          onClick={() => { onSelect(f); compacto ? cerrar() : clear() }}
+          onClick={() => { trackInteraction('search_font_select'); onSelect(f); compacto ? cerrar() : clear() }}
           sx={aPantallaCompleta ? { minHeight: 56 } : undefined}
         >
           <ListItemText primary={nombreFuente(f, t)} secondary={donde(f) || undefined} />
@@ -462,7 +466,7 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
       {places.map((p, i) => (
         <ListItemButton
           key={`p${i}`}
-          onClick={() => { onSelectPlace(p); compacto ? cerrar() : clear() }}
+          onClick={() => { trackInteraction('search_place_select'); onSelectPlace(p); compacto ? cerrar() : clear() }}
           sx={aPantallaCompleta ? { minHeight: 56 } : undefined}
         >
           <ListItemText primary={p.name} sx={aPantallaCompleta ? undefined : { '& .MuiListItemText-primary': { fontSize: 13 } }} />
@@ -618,6 +622,8 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
 
   async function submit(e: FormEvent) {
     e.preventDefault()
+    trackInteraction('font_create_start')
+    if (file) trackInteraction('font_create_photo')
     setError('')
     setSaving(true)
     // Comprimimos antes de nada: así la foto ya está lista tanto para subirla ahora
@@ -635,6 +641,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
     try {
       const image = photo ? await uploadImage(photo, preparada?.meta) : undefined
       const font = await createFont({ ...data, image })
+      trackInteraction('font_create_success')
       // El estado va como primera actualización de la fuente. Best-effort: si fallara,
       // la fuente ya está creada y no tiene sentido abortar (se puede añadir luego).
       if (waterStatus) {
@@ -650,9 +657,11 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
       // Sin cobertura: no perdemos la fuente. Se guarda en el móvil y se envía sola.
       if (isOffline(e)) {
         await enqueue({ kind: 'font', data, waterStatus: waterStatus || undefined, photo, photoName: photo?.name, photoMeta: preparada?.meta })
+        trackInteraction('font_create_queued')
         toast.show(t('offline.savedFont'))
         onCreated()
       } else {
+        trackInteraction('font_create_error')
         setError(describeError(e, t))
       }
     } finally {

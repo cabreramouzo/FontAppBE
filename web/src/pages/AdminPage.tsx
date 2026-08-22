@@ -13,6 +13,7 @@ import IconButton from '@mui/material/IconButton'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import LinearProgress from '@mui/material/LinearProgress'
 import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
 import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInteractionStats, getInterestStats, getNewUsers, getRegionStats, getSourceStats, getStaff, reviewFontEdit, revertFontEdit, setUserRole, type InteractionSummary } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -28,6 +29,15 @@ import { lastSeenAt, markUsersSeen } from '../lib/newUsers'
 
 // Cuántas ediciones pendientes se muestran en el panel (la cola). El resto, en /admin/edits.
 const EDITS_INBOX = 15
+
+const ANALYTICS_GROUPS = [
+  { key: 'contribute', prefixes: ['font_create_', 'review_'] },
+  { key: 'discover', prefixes: ['search_', 'map_', 'font_'] },
+  { key: 'access', prefixes: ['auth_', 'install_'] },
+  { key: 'offline', prefixes: ['outbox_'] },
+  { key: 'support', prefixes: ['support_'] },
+  { key: 'navigation', prefixes: ['page_', 'nav_'] },
+] as const
 
 export function AdminPage() {
   const { user, loading } = useAuth()
@@ -273,16 +283,31 @@ export function AdminPage() {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('analytics.hint')}</Typography>
         {interactions === null && <Skeleton lines={2} />}
         {interactions?.length === 0 && <Typography color="text.secondary">{t('analytics.empty')}</Typography>}
-        <List disablePadding>
-          {interactions?.map((item) => (
-            <ListItem key={item.event} divider disableGutters>
-              <ListItemText
-                primary={t(`analytics.${item.event}`)}
-                secondary={`${item.sessions} ${t('analytics.sessions')} · ${item.clicks} ${t('analytics.clicks')}`}
-              />
-            </ListItem>
-          ))}
-        </List>
+        {interactions && ANALYTICS_GROUPS.map((group) => {
+          const items = interactions.filter((item) =>
+            group.prefixes.some((prefix) => item.event.startsWith(prefix))
+            && !(group.key === 'discover' && item.event.startsWith('font_create_')))
+          if (items.length === 0) return null
+          const max = Math.max(...items.map((item) => item.sessions), 1)
+          return (
+            <Box key={group.key} sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{t(`analytics.group_${group.key}`)}</Typography>
+              <List disablePadding>
+                {items.map((item) => (
+                  <ListItem key={item.event} divider disableGutters>
+                    <ListItemText
+                      primary={t(`analytics.${item.event}`)}
+                      secondary={<Box sx={{ mt: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary">{item.sessions} {t('analytics.sessions')} · {item.clicks} {t('analytics.clicks')}</Typography>
+                        <LinearProgress variant="determinate" value={item.sessions / max * 100} sx={{ mt: 0.5, height: 5, borderRadius: 3 }} />
+                      </Box>}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )
+        })}
       </Box>
 
       <Box component="section" sx={{ mt: 3 }}>

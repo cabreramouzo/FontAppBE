@@ -1,5 +1,5 @@
 import type { PhotoUploadMeta } from './image'
-import { ApiError, createComment, createFont, setFontPhoto, uploadImage, type NewComment, type NewFont } from '../api/client'
+import { ApiError, createComment, createFont, setFontPhoto, trackInteraction, uploadImage, type NewComment, type NewFont } from '../api/client'
 
 // Bandeja de salida para trabajar SIN COBERTURA (el escenario real de la app: monte).
 //
@@ -120,6 +120,7 @@ export async function enqueue(item: OutboxItem): Promise<void> {
   notifyChanged()
   // En Android esto permite enviarlo aunque el usuario cierre la app.
   void requestBackgroundSync()
+  trackInteraction('outbox_queued')
 }
 
 export async function pendingCount(): Promise<number> {
@@ -197,6 +198,7 @@ export async function flushOutbox(): Promise<number> {
         }
         await tx('readwrite', (s) => s.delete(item.id))
         sent++
+        trackInteraction('outbox_synced')
       } catch (e) {
         // Todo lo TRANSITORIO se reintenta indefinidamente: la aportación del usuario
         // no se descarta nunca por algo que no dependa de ella. Liberamos la marca para
@@ -222,6 +224,7 @@ export async function flushOutbox(): Promise<number> {
         const attempts = item.attempts + 1
         if (attempts >= MAX_ATTEMPTS) await tx('readwrite', (s) => s.delete(item.id))
         else await tx('readwrite', (s) => s.put({ ...item, attempts, claimedAt: 0 }))
+        trackInteraction('outbox_failed')
       }
     }
   } finally {

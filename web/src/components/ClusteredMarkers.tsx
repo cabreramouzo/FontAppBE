@@ -13,6 +13,7 @@ import { drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 import { nombreFuente } from '../lib/fontName'
 import { CONFIDENCE_EMOJI, confidenceDetailKey, confidenceLabelKey, confidenceOf } from '../lib/confidence'
+import { trackInteraction } from '../api/client'
 
 const HEATMAP_MAX_ZOOM = 6
 
@@ -126,6 +127,7 @@ export function ClusteredMarkers({
         title: t('map.clusterCount', { n: cluster.count }),
       })
       marker.on('click', () => {
+        trackInteraction('map_cluster_click')
         map.setView([cluster.latitude, cluster.longitude], Math.min(18, map.getZoom() + 2))
       })
       serverClusters.addLayer(marker)
@@ -197,6 +199,7 @@ export function ClusteredMarkers({
         return !best || distance < best.distance ? { cluster, distance } : best
       }, null)
       if (closest && closest.distance <= 50) {
+        trackInteraction('map_heatmap_click')
         map.setView([closest.cluster.latitude, closest.cluster.longitude], map.getZoom() + 2)
       }
     }

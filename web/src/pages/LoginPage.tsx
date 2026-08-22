@@ -46,8 +46,10 @@ export function LoginPage() {
           setBusy(true)
           try {
             await loginWithGoogle(credential)
+            await trackInteraction('auth_google_success')
             window.location.assign('/')
           } catch (err) {
+            trackInteraction('auth_google_error')
             setError(describeError(err, t))
             setBusy(false)
           }
@@ -81,10 +83,12 @@ export function LoginPage() {
     setBusy(true)
     try {
       await login(username, password)
+      await trackInteraction('auth_password_success')
       // Navegación REAL (no client-side): así el navegador ve una transición de página
       // tras enviar el formulario, que es lo que dispara el "¿guardar contraseña?".
       window.location.assign('/')
     } catch (err) {
+      trackInteraction('auth_password_error')
       // Aquí un 401 no es "se te ha caducado la sesión" (el mensaje genérico), sino
       // que las credenciales no son correctas. El backend no distingue si falla el
       // usuario o la contraseña, a propósito: así no se puede sondear qué usuarios existen.
@@ -97,8 +101,9 @@ export function LoginPage() {
   async function passkeyLogin() {
     trackInteraction('auth_passkey')
     setError(''); setBusy(true)
-    try { await loginWithPasskey(); window.location.assign('/') }
+    try { await loginWithPasskey(); await trackInteraction('auth_passkey_success'); window.location.assign('/') }
     catch (err) {
+      trackInteraction('auth_passkey_error')
       if (err instanceof DOMException && err.name === 'NotAllowedError') setError(t('passkey.cancelled'))
       else setError(describeError(err, t))
       setBusy(false)
