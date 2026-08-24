@@ -105,13 +105,27 @@ async function requestBackgroundSync(): Promise<void> {
 
 // Avisamos a la UI (el aviso de "pendientes") de cualquier cambio en la cola.
 const CHANGED = 'fontapp:outbox-changed'
+const SYNC_STATE_CHANGED = 'fontapp:outbox-sync-state-changed'
+export type OutboxSyncEvent = { syncing: boolean; sent: number }
+
 function notifyChanged() {
   window.dispatchEvent(new CustomEvent(CHANGED))
+}
+
+function notifySyncState(detail: OutboxSyncEvent) {
+  window.dispatchEvent(new CustomEvent<OutboxSyncEvent>(SYNC_STATE_CHANGED, { detail }))
 }
 
 export function onOutboxChanged(listener: () => void): () => void {
   window.addEventListener(CHANGED, listener)
   return () => window.removeEventListener(CHANGED, listener)
+}
+
+/** Permite que la interfaz refleje también los vaciados automáticos de la cola. */
+export function onOutboxSyncState(listener: (event: OutboxSyncEvent) => void): () => void {
+  const handler = (event: Event) => listener((event as CustomEvent<OutboxSyncEvent>).detail)
+  window.addEventListener(SYNC_STATE_CHANGED, handler)
+  return () => window.removeEventListener(SYNC_STATE_CHANGED, handler)
 }
 
 /** Guarda una aportación para enviarla cuando haya red. */
@@ -157,6 +171,11 @@ function toFile(blob: Blob, name?: string): File {
 
 let flushing = false
 
+/** Estado síncrono para no perder el evento si el vaciado arrancó antes de montar React. */
+export function isOutboxSyncing(): boolean {
+  return flushing
+}
+
 /**
  * Intenta enviar todo lo pendiente. Devuelve cuántos se enviaron.
  * Se detiene en cuanto vuelve a fallar la red (para no gastar batería a lo tonto).
@@ -164,6 +183,7 @@ let flushing = false
 export async function flushOutbox(): Promise<number> {
   if (flushing || !navigator.onLine) return 0
   flushing = true
+  notifySyncState({ syncing: true, sent: 0 })
   let sent = 0
   try {
     const now = Date.now()
@@ -229,7 +249,10 @@ export async function flushOutbox(): Promise<number> {
     }
   } finally {
     flushing = false
-    if (sent > 0) notifyChanged()
+    // Se avisa siempre: incluso un reintento sin éxito cambia el estado visible de
+    // «sincronizando» a «se reintentará». Así la UI nunca queda bloqueada.
+    notifyChanged()
+    notifySyncState({ syncing: false, sent })
   }
   return sent
 }

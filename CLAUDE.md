@@ -12,6 +12,9 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   PWA con service worker propio (`web/public/sw.js`): lecturas offline y **bandeja de salida**
   (`web/src/lib/outbox.ts`, IndexedDB) para crear fuentes/reseñas sin cobertura; se vacía sola al
   volver la red y, en Android, también con la app cerrada vía Background Sync (Safari/iOS no lo tiene).
+  `PendingUploads` unifica el estado visible de conexión y cola: distingue sin conexión, guardado
+  local, sincronización en curso, sesión caducada y confirmación temporal al terminar. El evento
+  `fontapp:outbox-sync-state-changed` refleja tanto los reintentos manuales como los automáticos.
   i18n propio sin dependencias en `web/src/i18n/` (CA por defecto + ES, selector en la barra, detecta navegador y persiste en `localStorage`).
 
 ## Comandos

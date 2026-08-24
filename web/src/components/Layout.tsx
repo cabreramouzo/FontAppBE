@@ -25,7 +25,6 @@ import { marcarNovedadesVistas, programarZumbidos } from '../lib/newsNudge'
 import { Footer } from './Footer'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
-import { OfflineBanner } from './OfflineBanner'
 import { AppInterestBanner } from './AppInterestBanner'
 import { InstallPrompt } from './InstallPrompt'
 import { FranjaDeAvisos } from './Avisos'
@@ -322,7 +321,6 @@ export function Layout({ children }: { children: ReactNode }) {
           </Box>
         </Toolbar>
       </AppBar>
-      <OfflineBanner />
       {/* Flotan bajo la barra en vez de ir en flujo: en flujo empujaban el mapa fuera
           de la pantalla. Van juntos porque pueden coincidir y deben apilarse, no
           pisarse; el porqué del orden está en `Avisos.tsx`. */}

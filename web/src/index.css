@@ -666,35 +666,6 @@ select:not([class*="Mui"]) {
 }
 .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
 
-/* Indicador "sin conexión": píldora pequeña flotante (bajo la barra superior). */
-.offline-pill {
-  position: fixed;
-  bottom: max(76px, calc(env(safe-area-inset-bottom) + 68px));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1500;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: #b45309;
-  color: #fff;
-  padding: 5px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  pointer-events: none;
-  animation: toast-in 0.2s ease-out;
-}
-.offline-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #fde68a;
-  animation: pulse 1.4s ease-in-out infinite;
-}
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-
 /* Zumbido del icono de Novedades (ver `lib/newsNudge.ts` y `Layout.tsx`).
    Va aquí y NO dentro de un `sx`: Emotion reescribe el nombre de los @keyframes que se
    declaran ahí dentro, así que `animation: 'fontapp-news-nudge …'` apuntaba a un nombre
