@@ -32,6 +32,7 @@ export function LegalPage() {
       {lang === 'ca' ? <LegalCA />
         : lang === 'en' ? <LegalEN />
         : lang === 'fr' ? <LegalFR />
+        : lang === 'pt' ? <LegalPT />
         : lang === 'gl' ? <LegalGL />
         : lang === 'eu' ? <LegalEU />
         : <LegalES />}
@@ -200,6 +201,94 @@ function LegalES() {
         <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
         {' '}Parte de las fuentes provienen del <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> y
         la ACA, bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
+      </p>
+    </>
+  )
+}
+
+function LegalPT() {
+  return (
+    <>
+      <h1>Aviso legal e privacidade</h1>
+
+      <h2>⚠️ Aviso sobre a água e responsabilidade</h2>
+      <p className="stale-warn">
+        O FontApp é um serviço de informação <strong>colaborativa</strong>: as fontes, o estado da água e a potabilidade
+        são indicados pelos utilizadores e por fontes de dados abertos, e podem estar <strong>desatualizados, incompletos ou incorretos</strong>.
+        A informação é <strong>meramente indicativa</strong> e não substitui uma análise oficial da água. O FontApp <strong>não garante</strong> a
+        potabilidade nem a salubridade da água de qualquer fonte. Beber água das fontes apresentadas fica
+        <strong> ao critério e por conta e risco exclusivo do utilizador</strong>. Em caso de dúvida, não bebas a água ou trata-a (ferve-a ou purifica-a).
+        Nem o FontApp nem o seu responsável respondem por danos resultantes da utilização desta informação.
+      </p>
+
+      <h2>Aviso legal</h2>
+      <p>
+        Responsável por este site: <strong>Miguel Cabrera</strong>. Contacto:{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>. A utilização do serviço implica a aceitação destas condições.
+        O conteúdo publicado pelos utilizadores (fontes, avaliações, fotografias e ocorrências) é da responsabilidade de quem o publica.
+      </p>
+
+      <h2>Privacidade (RGPD)</h2>
+      <p><strong>Responsável pelo tratamento:</strong> Miguel Cabrera, <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.</p>
+      <p><strong>Dados que tratamos:</strong></p>
+      <ul>
+        <li>O teu <strong>nome de utilizador e nome</strong>, o teu <strong>endereço de email</strong> e a tua <strong>palavra-passe</strong> (armazenada com hash bcrypt, nunca em texto simples).</li>
+        <li>O <strong>conteúdo que publicas</strong>: fontes, avaliações, classificações, fotografias e ocorrências.</li>
+        <li>A tua <strong>localização exata</strong> no navegador só é utilizada, com a tua autorização, para mostrar fontes próximas; <strong>não é armazenada</strong> no servidor.</li>
+        <li>Das <strong>fotografias que carregas</strong> guardamos, quando existirem, a <strong>data e as coordenadas registadas pelo telemóvel</strong> (EXIF). Servem apenas para <strong>moderação</strong> — confirmar o local e o momento da fotografia — e <strong>só os administradores lhes têm acesso</strong>. A imagem publicada não contém estes dados.</li>
+        <li>Ao <strong>registares-te</strong>, guardamos a tua <strong>região aproximada</strong> (país/região deduzidos a partir do IP, <strong>não o próprio IP</strong>) e o <strong>idioma</strong> da interface, para estatísticas de utilização e para comunicarmos contigo no teu idioma.</li>
+        <li>Se chegares através de um <strong>cartaz ou campanha</strong> com um código (<code>fontapp.net/?p=castellcir</code>), associamos esse código ao registo para saber que cartaz funciona. Não identifica qualquer pessoa.</li>
+      </ul>
+      <p><strong>Para que utilizamos o teu email:</strong></p>
+      <ul>
+        <li>Mensagens necessárias ao serviço: boas-vindas e recuperação da palavra-passe.</li>
+        <li>Um <strong>resumo semanal</strong> das novidades nas fontes que adicionaste ou em que participaste. Podes desativá-lo a qualquer momento no teu perfil ou através da ligação de cancelamento presente em cada email, sem iniciares sessão.</li>
+      </ul>
+      <p>
+        <strong>Finalidade e fundamento jurídico:</strong> prestar o serviço que solicitas (execução) e o consentimento dado no registo.
+        <strong> Conservação:</strong> enquanto mantiveres a conta.
+      </p>
+      <p>
+        <strong>Os teus direitos:</strong> acesso, retificação, apagamento, portabilidade, limitação e oposição.
+        Podes <strong>eliminar a tua conta</strong> na própria aplicação (elimina os teus dados) ou escrever para{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.
+        Também podes apresentar uma reclamação à autoridade de proteção de dados competente.
+      </p>
+      <p>
+        <strong>Armazenamento no navegador:</strong> <strong>não utilizamos cookies</strong>. Guardamos no teu dispositivo:
+        o <em>token de sessão</em> (para manter a sessão iniciada), as tuas preferências (idioma, tema claro/escuro e avisos já lidos),
+        o código do cartaz através do qual chegaste e, se adicionares algo <strong>sem rede</strong>, a tua contribuição e a fotografia
+        numa fila local até a ligação regressar. Tudo permanece no teu dispositivo e pode ser apagado eliminando os dados do site no navegador.
+      </p>
+      <p>
+        <strong>Analítica:</strong> utilizamos <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
+        que mede visitas de forma <strong>agregada, sem cookies e sem te identificar</strong>; por isso não solicitamos consentimento.
+        Também contamos algumas visitas e interações com botões através de um identificador aleatório por separador: guardamos apenas
+        o tipo de ação, o dia e a contagem, nunca o utilizador, IP, URL ou dispositivo. Ao fim de 180 dias eliminamos o identificador
+        e mantemos apenas os totais diários anónimos. Classificamos localmente cada sessão apenas como iOS/iPadOS, Android, outro
+        dispositivo móvel ou computador e como PWA instalada ou navegador; não guardamos user-agent, modelo, versão ou resolução.
+        Se tiveres sessão iniciada, associamos à tua conta a abertura de «Apoiar» ou Aixeta, o número de vezes e a data mais recente,
+        para medir o interesse em sustentar o serviço. Este detalhe é eliminado após 180 dias ou quando a conta é eliminada.
+        Atualizamos ainda a hora da tua última atividade enquanto utilizas a web; apenas os administradores podem ver se uma conta
+        esteve ativa nos últimos 10 minutos, sem IP, página ou dispositivo. Não utilizamos Google Analytics nem redes publicitárias
+        e não vendemos nem cedemos dados a terceiros.
+      </p>
+      <p><strong>Subcontratantes que tratam dados por nossa conta:</strong></p>
+      <ul>
+        <li><strong>Fly.io</strong> (servidor) e <strong>Neon</strong> (base de dados PostgreSQL).</li>
+        <li><strong>Cloudflare</strong>: web e CDN, analítica agregada e armazenamento das fotografias (R2).</li>
+        <li><strong>Resend</strong>: envio de emails (recebe o teu endereço e o conteúdo da mensagem).</li>
+        <li><strong>ip-api.com</strong>: apenas no momento do registo, para deduzir o país e a região. <strong>Recebe o teu IP</strong>, que não guardamos.</li>
+      </ul>
+
+      <h2>Dados cartográficos</h2>
+      <p>
+        O mapa base e os dados das fontes provêm do{' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>,
+        © colaboradores do OpenStreetMap, sob a licença{' '}
+        <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
+        {' '}Algumas fontes provêm do <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> e da
+        ACA, sob a licença <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
       </p>
     </>
   )

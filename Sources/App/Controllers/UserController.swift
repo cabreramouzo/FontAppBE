@@ -500,7 +500,7 @@ struct CreateUserDTO: Content {
     let username: String
     let email: String
     let password: String
-    /// Idioma de la interfaz para localizar el correo de bienvenida (ca/es/gl/eu/en).
+    /// Idioma de la interfaz para localizar el correo de bienvenida (ca/es/gl/eu/en/pt).
     /// Opcional: sin él se envía en catalán, el idioma por defecto de la app.
     var lang: String? = nil
     /// Codi del cartell pel qual va arribar (`?p=castellcir`). Opcional.

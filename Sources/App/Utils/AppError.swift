@@ -5,7 +5,7 @@ import Vapor
 /// ## El problema
 ///
 /// Todos los errores de esta API viajaban como una frase en castellano dentro de
-/// `reason`, y el cliente la enseñaba tal cual. La app se lee en seis idiomas, así que a
+/// `reason`, y el cliente la enseñaba tal cual. La app se lee en siete idiomas, así que a
 /// un portugués intentando registrarse con un correo repetido le llegaba «El correo ya
 /// está registrado». No es un detalle de cortesía: es un mensaje que hay que **entender
 /// para poder arreglar** lo que has hecho mal.

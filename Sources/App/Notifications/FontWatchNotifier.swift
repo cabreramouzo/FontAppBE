@@ -19,7 +19,7 @@ import Vapor
 ///
 /// El aviso guarda un **código** (`review:dry`, `report`, `retired`) y no una frase. Es la
 /// misma regla que `StaleGuardedNotifier`: el servidor no sabe en qué idioma lees, así que
-/// manda el hecho y el navegador pone las palabras. Con seis idiomas, escribir la frase
+/// manda el hecho y el navegador pone las palabras. Con siete idiomas, escribir la frase
 /// aquí sería congelar uno.
 ///
 /// ## Y por qué no manda correos todavía

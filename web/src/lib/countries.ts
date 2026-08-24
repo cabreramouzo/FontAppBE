@@ -3,7 +3,7 @@
  *
  * `fonts.country` guarda **lo que dice Natural Earth**, o sea el nombre en inglés:
  * «Spain», «France», «Chile». Eso vale como clave y no vale como rótulo — la app está en
- * seis idiomas y ninguno de ellos es «el inglés de un fichero de fronteras».
+ * siete idiomas y ninguno de ellos es «el inglés de un fichero de fronteras».
  *
  * Se traduce por lista explícita y **no** con `t()` a pelo, porque `t()` devuelve la
  * clave cruda cuando no la encuentra: el día que se importe Alemania, un `t('country.
@@ -11,7 +11,7 @@
  * esto, un país que no esté en la lista sale con su nombre tal cual, que es feo pero
  * cierto y no rompe nada.
  *
- * Al importar un país nuevo: añadirlo aquí y añadir sus seis traducciones. Si se olvida,
+ * Al importar un país nuevo: añadirlo aquí y añadir sus siete traducciones. Si se olvida,
  * se nota poco y no se rompe nada — de ahí el aviso.
  */
 /**

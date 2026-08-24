@@ -263,7 +263,7 @@ struct GoogleLoginDTO: Content {
 
 struct ForgotDTO: Content {
     let email: String
-    /// Idioma de la interfaz para localizar el correo (ca/es/gl/eu/en). Opcional.
+    /// Idioma de la interfaz para localizar el correo (ca/es/gl/eu/en/pt). Opcional.
     let lang: String?
 }
 
@@ -320,6 +320,17 @@ enum ResetEmail {
                 <p>If you didn't request this, ignore this email.</p>
                 """,
                 "You requested to reset your FontApp password.\nYour username is: \(username)\nOpen this link (expires in 1 hour): \(link)\nIf you didn't request this, ignore this email."
+            )
+        case "pt":
+            return (
+                "Repor a palavra-passe · FontApp",
+                """
+                <p>Pediste para repor a palavra-passe do FontApp.</p>
+                <p>O teu nome de utilizador é: <strong>\(userHTML)</strong></p>
+                <p><a href="\(link)">Repor a palavra-passe</a> (a ligação expira dentro de 1 hora).</p>
+                <p>Se não fizeste este pedido, ignora este email.</p>
+                """,
+                "Pediste para repor a palavra-passe do FontApp.\nO teu nome de utilizador é: \(username)\nAbre esta ligação (expira dentro de 1 hora): \(link)\nSe não fizeste este pedido, ignora este email."
             )
         default: // ca (idioma por defecto de la app)
             return (

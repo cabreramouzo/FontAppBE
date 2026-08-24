@@ -211,6 +211,28 @@ enum WelcomeEmail {
                 outro: "Thanks for joining. Every status you confirm can save someone a several-kilometre detour to a dry fountain.",
                 footer: "You're getting this email because you signed up for FontApp. If it wasn't you, just ignore it."
             )
+        case "pt":
+            return Copy(
+                subject: "Bem-vindo/a ao FontApp! 💧",
+                greeting: "Bem-vindo/a, \(name)! 👋",
+                intro: "O FontApp é uma rede colaborativa de fontes de água: juntos mantemos atualizado se uma fonte tem água, se a água é potável e quando foi verificada pela última vez.",
+                bullets: [
+                    ("🗺️", "Explora o mapa e procura fontes por nome ou local."),
+                    ("💧", "Consulta o estado: se tem água, a potabilidade e a última confirmação."),
+                    ("➕", "Adiciona novas fontes e partilha fotografias."),
+                    ("⭐", "Deixa avaliações e confirma o estado para que todos saibam."),
+                    ("💧", "Ganha gotas: cada contribuição conta para subir de nível e conquistar emblemas."),
+                ],
+                offlineTitle: "🛰️ Funciona sem rede",
+                offlineBody: "Na serra raramente há rede. Podes consultar offline o mapa que já visitaste e, se adicionares uma fonte ou avaliação sem ligação, fica guardada no telemóvel e é enviada automaticamente quando a rede regressa (no Android, mesmo com a aplicação fechada). Nada se perde.",
+                installTitle: "📲 Instala-a no telemóvel",
+                installBody: "O FontApp instala-se como uma aplicação diretamente a partir do navegador, sem loja de aplicações: abre em ecrã inteiro, ocupa muito pouco espaço e mantém a localização e a câmara à mão para adicionares uma fonte no momento.",
+                installIOS: ("iPhone e iPad (Safari):", "abre fontapp.net, toca no botão Partilhar (o quadrado com a seta para cima, em baixo ao centro), desce até «Adicionar ao ecrã principal» e confirma em «Adicionar»."),
+                installAndroid: ("Android (Chrome):", "abre fontapp.net e toca no aviso de instalação em baixo; se não aparecer, abre o menu ⋮ (em cima à direita) e escolhe «Instalar aplicação» ou «Adicionar ao ecrã principal»."),
+                cta: "Começar a explorar",
+                outro: "Obrigado por te juntares. Cada estado que confirmas pode poupar a alguém um desvio de vários quilómetros até uma fonte seca.",
+                footer: "Recebes este email porque te registaste no FontApp. Se não foste tu, ignora-o."
+            )
         default: // ca (idioma por defecto de la app)
             return Copy(
                 subject: "Benvingut/da a FontApp! 💧",

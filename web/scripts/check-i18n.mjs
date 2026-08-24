@@ -8,7 +8,7 @@
 // exactamente el tipo de fallo que no se ve en desarrollo y sí en producción.
 //
 // Script de Node y no un test de verdad porque `web/` no tiene runner, y meter uno entero
-// (con su dependencia, su configuración y su paso de CI) para comprobar cinco conjuntos de
+// (con su dependencia, su configuración y su paso de CI) para comprobar siete conjuntos de
 // cadenas sería el remedio peor que la enfermedad. `npm run check:i18n`, y en CI.
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -27,7 +27,9 @@ if (bloques.length === 0) {
 
 const claves = new Map()
 for (const [, idioma, cuerpo] of bloques) {
-  const encontradas = [...cuerpo.matchAll(/^ {2}'([^']+)':/gm)].map((m) => m[1])
+  // Hay claves con comillas simples y dobles. Ignorar las segundas hizo que durante un
+  // tiempo el informe dijera 1.028 aunque en ejecución hubiera 1.046.
+  const encontradas = [...cuerpo.matchAll(/^ {2}(['"])([^'"]+)\1:/gm)].map((m) => m[2])
   const repetidas = encontradas.filter((k, i) => encontradas.indexOf(k) !== i)
   if (repetidas.length) {
     // Una clave dos veces en el mismo diccionario gana la última y la primera se pierde

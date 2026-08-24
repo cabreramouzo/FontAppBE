@@ -32,7 +32,7 @@ export function RegisterPage() {
     setError('')
     // Se comprueba **aquí y no solo en el servidor**, que ya lo rechaza. Dos razones: el
     // servidor contesta en castellano —como todos los `reason` de esta API— y esta
-    // pantalla se lee en seis idiomas; y un error que llega **después** de enviar el
+    // pantalla se lee en siete idiomas; y un error que llega **después** de enviar el
     // formulario obliga a rellenarlo otra vez para arreglar una letra.
     //
     // La regla es la misma que la del servidor a propósito (ver `lib/username.ts`): un

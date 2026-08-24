@@ -15,7 +15,10 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   `PendingUploads` unifica el estado visible de conexión y cola: distingue sin conexión, guardado
   local, sincronización en curso, sesión caducada y confirmación temporal al terminar. El evento
   `fontapp:outbox-sync-state-changed` refleja tanto los reintentos manuales como los automáticos.
-  i18n propio sin dependencias en `web/src/i18n/` (CA por defecto + ES, selector en la barra, detecta navegador y persiste en `localStorage`).
+  i18n propio sin dependencias en `web/src/i18n/` (CA por defecto + ES, GL, EU, EN, FR y
+  **PT-PT**; selector en la barra, detecta navegador y persiste en `localStorage`). El
+  portugués es europeo a propósito: Portugal ya forma parte de los datos. También están
+  localizados en `pt` la página legal y los correos transaccionales/semanales.
 
 ## Comandos
 - Build / tests backend: `swift build` · `swift test` (los tests de integración usan la DB `fontapp_test`).
@@ -105,7 +108,7 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
     Los nombres se traducen **por lista explícita** (`TRADUCIDOS`) y no con `t()` a pelo:
     `t()` devuelve la clave cruda si falta, así que el día que entre Alemania saldría
     «country.Germany» escrito en un chip; sin entrada, sale el nombre en bruto. Al importar
-    un país nuevo hay que añadirlo ahí con sus seis traducciones.
+    un país nuevo hay que añadirlo ahí con sus siete traducciones.
     Ojo, `fonts.country` guarda **el nombre en inglés de Natural Earth** («Spain»,
     «France»): es clave, no rótulo.
   - **El mismo filtro en `/activity`**, y ahí sí hubo que tocar el servidor: esa ruta
@@ -406,7 +409,7 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   atómica en totales diarios sin UUID; esos totales históricos no caducan.
 - `GET /admin/analytics?days=30|180` (sin parámetro = todo el histórico) es solo admin y
   resume clics totales y sesiones anónimas aproximadas. Añadir un evento exige incorporarlo a la lista cerrada,
-  traducir su rótulo en los seis idiomas y mantener actualizada la página legal.
+  traducir su rótulo en los siete idiomas y mantener actualizada la página legal.
 - `support_heart` y `support_aixeta` tienen además un rastro separado por usuario cuando
   la petición lleva una sesión válida: primera/última fecha y contador, con retención de
   180 días y borrado explícito al anonimizar la cuenta (el FK también lleva cascade para
@@ -1157,7 +1160,7 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   Plantillas en `Sources/App/Mail/`: bienvenida al registrarse (`WelcomeEmail`), reset de
   contraseña (`ResetEmail`, en AuthController), resumen semanal (`WeeklyDigest` calcula los
   datos, `WeeklyDigestEmail` los pinta) y **aviso de mención** (`MentionEmail` +
-  `MentionNotifier`). Todas localizadas en los 5 idiomas; los correos sin
+  `MentionNotifier`). Todas localizadas en los idiomas con correo; los correos sin
   petición del usuario usan `users.lang`. La baja va firmada con `APP_SECRET`
   (`UnsubscribeToken`) para que funcione desde el buzón, sin sesión; `?k=mentions`
   distingue de qué te das de baja y **sin ese parámetro es el resumen**, porque los
@@ -1212,7 +1215,7 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 ## Errores del servidor, en el idioma de quien lee (`AppError` + `err.*`)
 
 - Todos los errores viajaban como una frase **en castellano** dentro de `reason`, y el
-  cliente la enseñaba tal cual. La app se lee en seis idiomas: a un portugués con el
+  cliente la enseñaba tal cual. La app se lee en siete idiomas: a un portugués con el
   correo repetido le llegaba «El correo ya está registrado» — y es un mensaje que hay que
   **entender para poder arreglar** lo que has hecho mal.
 - `AppError(status, code, reason)` lleva **las dos cosas**: el código (`user.emailTaken`),
@@ -1247,15 +1250,15 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 
 - La regla del nombre se comprueba **también en el cliente**, en el registro y en `/me`
   (`lib/username.ts`, con tests). No es defensa —el servidor ya lo rechaza— sino idioma y
-  momento: **todos los `reason` de esta API están en castellano** y la app se lee en seis
+  momento: **todos los `reason` de esta API están en castellano** y la app se lee en siete
   idiomas, así que un francés registrándose como «José» recibía la regla en un idioma que
   no es el suyo. Y llegaba **después** de enviar el formulario, o sea con todo que
   rellenar otra vez por una letra. Ahora la regla se ve siempre bajo el campo, traducida,
   y en rojo solo cuando de verdad está mal. El error del servidor queda de red de
   seguridad para quien llame a la API directamente.
-  Reutiliza la clave `profile.usernameRules`, que ya existía en los seis idiomas; el
+  Reutiliza la clave `profile.usernameRules`, que ya existía en los siete idiomas; el
   nombre de la clave se queda aunque ahora también la use el registro, porque renombrarla
-  en seis diccionarios no arregla nada.
+  en siete diccionarios no arregla nada.
   Pendiente y **más ancho que esto**: el resto de errores del servidor (correo repetido,
   usuario en uso) siguen llegando en castellano a todo el mundo. Se arregla devolviendo un
   código traducible, no frase a frase.
@@ -1484,7 +1487,7 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - **Lo afirma el cliente y no se puede verificar** — cualquier editor reescribe el EXIF.
   Misma categoría que `queued_offline` y misma regla: orienta a una persona, **nunca anula
   puntos por sí solo**. No hay ningún automatismo leyendo esta tabla y no debe haberlo.
-- La página legal lo dice en los cinco idiomas. Decía «tu ubicación precisa **no se
+- La página legal lo dice en los siete idiomas. Decía «tu ubicación precisa **no se
   almacena**», y esto lo habría vuelto falso.
 
 ## «En camino»: el confeti y la vitrina contaban cosas distintas
@@ -1528,7 +1531,7 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - **Estrella amarilla, no marcapáginas, y «favoritas», no «guardar».** «Guardar» describía
   el gesto y no lo que significa; una estrella la entiende cualquiera sin leer el rótulo.
   Además ahora la marca pasa sola al reportar, y «se ha añadido a tus favoritas» se
-  explica mejor que «se ha guardado». Son cinco cadenas en seis idiomas y un icono; la
+  explica mejor que «se ha guardado». Son cinco cadenas en siete idiomas y un icono; la
   relación y el endpoint (`FontFavorite`, `/fonts/:id/favorite`) **no cambian de nombre**,
   que sería churn sin ganancia.
 

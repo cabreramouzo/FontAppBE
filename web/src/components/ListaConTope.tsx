@@ -17,8 +17,8 @@ export const TOPE = 6
  * Y se saca aquí en vez de escribirlo una cuarta vez: `GuardedFonts` ya tenía este mismo
  * corte con su propio `slice` y su propio interruptor, así que lo que había era una copia
  * a punto de multiplicarse. Las claves `guard.showAll` / `guard.showLess` se reutilizan
- * tal cual —ya están en los seis idiomas y el texto es genérico—; el nombre se queda
- * aunque ahora lo use más gente, porque renombrar en seis diccionarios no arregla nada.
+ * tal cual —ya están en los siete idiomas y el texto es genérico—; el nombre se queda
+ * aunque ahora lo use más gente, porque renombrar en siete diccionarios no arregla nada.
  *
  * `fila` devuelve el `<ListItem>` entero y **no** lleva `key`: la pone esta lista con
  * `clave`, que es lo único que sabe cómo identificar cada elemento.

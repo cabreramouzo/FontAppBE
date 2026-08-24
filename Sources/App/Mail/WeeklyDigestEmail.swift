@@ -2,7 +2,7 @@ import Foundation
 
 /// Plantilla del resumen semanal (ver `WeeklyDigest` para los datos). Mismas reglas
 /// que `WelcomeEmail`: tablas, anchos fijos y estilos en línea, porque los clientes de
-/// correo ignoran `<style>`, flexbox y grid. Localizada en los 5 idiomas de la app.
+/// correo ignoran `<style>`, flexbox y grid. Localizada en los 6 idiomas admitidos por correo.
 enum WeeklyDigestEmail {
     private struct Copy {
         let subject: String
@@ -390,6 +390,32 @@ enum WeeklyDigestEmail {
                 unnamed: "Unnamed fountain",
                 reportLabel: "Heads-up", editLabel: "Edited",
                 daysAgo: { d in d <= 0 ? "today" : (d == 1 ? "yesterday" : "\(d) days ago") }
+            )
+        case "pt":
+            return Copy(
+                subject: "O teu resumo semanal do FontApp 💧",
+                header: "O teu resumo semanal",
+                greeting: "Olá, \(name) 👋",
+                intro: "Esta semana houve atividade nas fontes que adicionaste ou em que participaste.",
+                statFonts: "fontes adicionadas", statStatuses: "estados confirmados", statNews: "novidades para ti",
+                activityTitle: "Passaram pelas tuas fontes",
+                activitySubtitle: "Fontes que adicionaste ou onde deixaste uma avaliação.",
+                nearbyTitle: "Novas fontes perto das tuas",
+                nearbySubtitle: "Adicionadas esta semana na zona onde costumas andar.",
+                zoneTitle: { "Como está \($0)" },
+                zoneSubtitle: "As fotografias são o que mais falta. Cada uma é adicionada por alguém que passou por lá.",
+                zoneLine: { "\($0) de \($1) fontes já têm fotografia (\($2) %)." },
+                zoneMissing: { "Faltam fotografar \($0) →" },
+                addedBy: "adicionada por",
+                editedBody: "Alguém editou a informação da fonte.",
+                cta: "Ver o mapa",
+                nudge: "Vais sair este fim de semana? Confirmar o estado de uma fonte demora 10 segundos e pode poupar a alguém um desvio até uma fonte seca. Funciona sem rede: envia-se automaticamente quando a ligação regressa.",
+                footer: "Recebes este resumo porque tens uma conta no FontApp. Podes",
+                unsubscribe: "deixar de o receber",
+                statusLabels: ["flowing": "Tem água", "trickle": "Pouca água", "dry": "Seca"],
+                unnamed: "Fonte sem nome",
+                reportLabel: "Aviso", editLabel: "Editada",
+                daysAgo: { d in d <= 0 ? "hoje" : (d == 1 ? "ontem" : "há \(d) dias") }
             )
         default: // ca
             return Copy(
