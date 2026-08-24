@@ -1,6 +1,7 @@
 import Fluent
 import Foundation
 import Vapor
+import SQLKit
 
 /// Fase 6: los niveles abren capacidades reales de mantenimiento del mapa.
 ///
@@ -179,6 +180,11 @@ enum Capabilities {
         // Un admin ya lo puede todo por su rol; el nivel no le añade ni le quita nada.
         if user.isAdmin { return Grant.of(Capability.allCases, blockedBy: []) }
 
+        // Una restricción de aportaciones prevalece sobre cualquier nivel. Además de la
+        // fecha activa, el historial de moderación bloquea durante 90 días desde la
+        // decisión (no desde la fecha, quizá antigua, de la fuente sancionada).
+        if user.postingIsRestricted { return Grant.of([], blockedBy: ["restricted"]) }
+
         guard enabled else { return Grant.of([], blockedBy: ["disabled"]) }
         // Con puntos provisionales solo se cierran las que lo exigen; las demás siguen.
         let definitivos = ContributionLedger.epoch.map { now >= $0 } ?? false
@@ -202,8 +208,24 @@ enum Capabilities {
         let dias = Set(liquidados.map { cal.startOfDay(for: $0.occurredAt) }).count
 
         let corte = now.addingTimeInterval(-cleanWindowDays * 86_400)
-        let manchas = eventos.contains {
+        var manchas = eventos.contains {
             $0.status == .void && isMisconduct($0.voidReason) && $0.occurredAt >= corte
+        }
+        if !manchas, let sql = db as? SQLDatabase {
+            struct Row: Decodable { let found: Bool }
+            manchas = try await sql.raw("""
+                SELECT EXISTS(
+                  SELECT 1 FROM moderation_actions
+                  WHERE subject_user_id = \(bind: userID)
+                    AND action = 'hide' AND created_at >= \(bind: corte)
+                    AND NOT EXISTS (
+                      SELECT 1 FROM moderation_actions restored
+                      WHERE restored.font_id = moderation_actions.font_id
+                        AND restored.action = 'restore'
+                        AND restored.created_at >= moderation_actions.created_at
+                    )
+                ) AS found
+                """).first(decoding: Row.self)?.found ?? false
         }
 
         // `provisional` NO se añade aquí aunque los puntos lo sean: cerraría también las

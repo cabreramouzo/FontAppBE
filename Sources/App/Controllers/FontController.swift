@@ -122,6 +122,7 @@ struct FontController: RouteCollection {
     @Sendable func setPhoto(req: Request) async throws -> Font {
         let font = try await find(req)
         let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
         struct PhotoDTO: Content { let image: String }
         let dto = try req.content.decode(PhotoDTO.self)
         guard !dto.image.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -153,6 +154,7 @@ struct FontController: RouteCollection {
     @Sendable func setPhotoFromComment(req: Request) async throws -> Font {
         let font = try await find(req)
         let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
         if font.image != nil, !canManage(user: user, font: font) {
             throw AppError(.forbidden, "font.photoExists", "Esta fuente ya tiene foto: solo el creador o un administrador puede cambiarla")
         }
@@ -182,9 +184,7 @@ struct FontController: RouteCollection {
 
     @Sendable func create(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
-        guard !user.postingIsRestricted else {
-            throw AppError(.forbidden, "user.postingRestricted", "Esta cuenta tiene temporalmente restringidas las aportaciones")
-        }
+        try user.requireCanContribute()
         try CreateFontDTO.validate(content: req)
         let dto = try req.content.decode(CreateFontDTO.self)
         let creado = dto.name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
@@ -261,6 +261,20 @@ struct FontController: RouteCollection {
                 }
                 try await creator.save(on: db)
             }
+            // La ficha falsa no puede conservar ni generar gotas. Se anulan también las
+            // ya liquidadas; `settledAt` se conserva para poder restaurarlas si la
+            // decisión de moderación se revoca.
+            if let fontID = font.id {
+                let events = try await ContributionEvent.query(on: db)
+                    .filter(\.$font.$id == fontID)
+                    .filter(\.$status != .void)
+                    .all()
+                for event in events {
+                    event.status = .void
+                    event.voidReason = "moderación confirmada: \(dto.reason)"
+                    try await event.save(on: db)
+                }
+            }
             try await Self.audit(db, fontID: font.id, subjectID: creatorID, actorID: actor.id,
                                  action: "hide", reason: dto.reason)
         }
@@ -285,6 +299,18 @@ struct FontController: RouteCollection {
                 creator.moderationStrikes = max(0, creator.moderationStrikes - 1)
                 if creator.moderationStrikes < 2 { creator.postingRestrictedUntil = nil }
                 try await creator.save(on: db)
+            }
+            if confirmed, let fontID = font.id {
+                let events = try await ContributionEvent.query(on: db)
+                    .filter(\.$font.$id == fontID)
+                    .filter(\.$status == .void)
+                    .all()
+                    .filter { $0.voidReason?.hasPrefix("moderación confirmada:") == true }
+                for event in events {
+                    event.status = event.settledAt == nil ? .pending : .settled
+                    event.voidReason = nil
+                    try await event.save(on: db)
+                }
             }
             try await Self.audit(db, fontID: font.id, subjectID: creatorID, actorID: actor.id,
                                  action: "restore", reason: previousReason)
@@ -352,6 +378,7 @@ struct FontController: RouteCollection {
         try CreateFontDTO.validate(content: req)
         let font = try await find(req)
         let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
         let dto = try req.content.decode(CreateFontDTO.self)
         // Edición abierta (estilo wiki): cualquier usuario autenticado puede corregir
         // la información descriptiva de una fuente (muchas se llaman solo "Font" o tienen
@@ -543,8 +570,9 @@ struct FontController: RouteCollection {
     /// No borra: la esconde del mapa y la deja apuntando a la buena. Las reseñas y fotos
     /// se quedan donde están, porque son ciertas — alguien fue y vio agua.
     @Sendable func markDuplicate(req: Request) async throws -> Font {
-        _ = try await requireAdminOr(.markDuplicate, req,
-                                     reason: "Todavía no puedes marcar duplicados")
+        let user = try await requireAdminOr(.markDuplicate, req,
+                                            reason: "Todavía no puedes marcar duplicados")
+        try user.requireCanContribute()
         let font = try await find(req)
         let dto = try req.content.decode(DuplicateDTO.self)
         let id = try font.requireID()
@@ -584,6 +612,7 @@ struct FontController: RouteCollection {
     @Sendable func retire(req: Request) async throws -> Font {
         let user = try await requireAdminOr(.retireFont, req,
                                             reason: "Todavía no puedes retirar fuentes del mapa")
+        try user.requireCanContribute()
         let font = try await find(req)
         let fontID = try font.requireID()
         let testigos = try await FontComment.query(on: req.db)

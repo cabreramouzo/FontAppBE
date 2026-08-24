@@ -778,6 +778,12 @@ intermitente**. «Los puntos ya no se mueven» es la precondición de «los punt
 Pasarse del **techo diario** no cuenta como mancha: es haber aportado mucho un día, no haber
 hecho nada malo, y castigarlo con la pérdida de permisos sería absurdo.
 
+Una ocultación confirmada por abuso sí cuenta: anula las gotas asociadas a la fuente y
+bloquea todas las capacidades durante 90 días desde la decisión de moderación, aunque la
+restricción de publicar (7 o 365 días) ya haya terminado. Si la fuente se restaura, se
+reponen los eventos anulados por esa decisión y esa ocultación deja de contar como mancha.
+Mientras `posting_restricted_until` esté activa tampoco se concede ninguna capacidad.
+
 Un solo requisito que falle deja todo cerrado —son puertas, no una media— y el motivo viaja
 en `grant.blockedBy`, porque «te faltan 300 gotas» es un mensaje útil y «no puedes» no lo es.
 

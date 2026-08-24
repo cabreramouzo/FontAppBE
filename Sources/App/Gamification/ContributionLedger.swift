@@ -264,12 +264,14 @@ enum ContributionLedger {
                                 among pendientes: [ContributionEvent]) async throws -> [ContributionEvent] {
         guard !pendientes.isEmpty else { return [] }
         let flags = try await ContentFlag.query(on: db).all()
-        guard !flags.isEmpty else { return [] }
         let comentarios = Set(flags.filter { $0.targetType == "comment" }.map { $0.targetID })
         let fuentes = Set(flags.filter { $0.targetType == "font" }.map { $0.targetID })
+        let hidden = Set(try await Font.query(on: db)
+            .filter(\.$moderationState != "visible")
+            .all().compactMap(\.id))
         return pendientes.filter { e in
             (e.source == ContributionScore.Source.comment.rawValue && comentarios.contains(e.subjectID))
-                || (e.$font.id.map { fuentes.contains($0) } ?? false)
+                || (e.$font.id.map { fuentes.contains($0) || hidden.contains($0) } ?? false)
         }
     }
 

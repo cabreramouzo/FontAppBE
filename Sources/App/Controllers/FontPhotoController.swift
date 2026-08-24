@@ -99,6 +99,7 @@ struct FontPhotoController: RouteCollection {
     /// POST /fonts/:fontID/photos
     @Sendable func create(req: Request) async throws -> PhotoResponse {
         let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
         guard let fontID = req.parameters.get("fontID", as: UUID.self) else {
             throw AppError(.badRequest, "font.badID", "Identificador de fuente no válido")
         }

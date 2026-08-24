@@ -246,7 +246,7 @@ export interface GamificationProfile {
   /** Fase 6: qué abre tu nivel y, si no abre nada, por qué. */
   grant?: {
     capabilities: string[]
-    /** `disabled` · `provisional` · `optedOut` · `activeDays` · `recentlyVoided` · `gotes` */
+    /** `disabled` · `provisional` · `optedOut` · `restricted` · `activeDays` · `recentlyVoided` · `gotes` */
     blockedBy: string[]
     /** Lo que aún no tienes, con el nivel que lo abre. */
     upcoming?: { key: string; level: string; gotes: number }[]

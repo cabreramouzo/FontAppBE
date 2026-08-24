@@ -41,7 +41,8 @@ struct FontReportController: RouteCollection {
     /// quien tenga la capacidad por nivel. **No se borra**: que la fuente estuvo rota y
     /// volvió a manar es parte de su historia y es lo que mira quien duda si acercarse.
     @Sendable func resolve(req: Request) async throws -> ReportResponse {
-        try await cambiaEstado(req, resolviendo: true)
+        try req.auth.require(User.self).requireCanContribute()
+        return try await cambiaEstado(req, resolviendo: true)
     }
 
     /// DELETE /fonts/:fontID/report/:reportID/resolve — volver a abrirla.
@@ -109,6 +110,7 @@ struct FontReportController: RouteCollection {
     /// POST /fonts/:fontID/report — reporta un problema en la fuente.
     @Sendable func create(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
         let fontID = try await requireFontID(req)
         try CreateReportDTO.validate(content: req)
         let dto = try req.content.decode(CreateReportDTO.self)

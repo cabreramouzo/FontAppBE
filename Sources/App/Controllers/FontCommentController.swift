@@ -51,6 +51,7 @@ struct FontCommentController: RouteCollection {
     /// Idempotente: si ya confirmaste, no duplica (constraint único). Refresca la frescura.
     @Sendable func confirm(req: Request) async throws -> CommentResponse {
         let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
         let comment = try await requireComment(req)
         let userID = try user.requireID()
         let commentID = try comment.requireID()
@@ -82,6 +83,7 @@ struct FontCommentController: RouteCollection {
     /// POST /fonts/:fontID/comments — añade una actualización/reseña.
     @Sendable func create(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
         let font = try await requireFont(req)
         let fontID = try font.requireID()
         try CreateCommentDTO.validate(content: req)
@@ -217,6 +219,7 @@ struct FontCommentController: RouteCollection {
     /// PUT /fonts/:fontID/comments/:commentID — edita una reseña propia.
     @Sendable func update(req: Request) async throws -> CommentResponse {
         let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
         let comment = try await requireOwnComment(req, user: user)
         try CreateCommentDTO.validate(content: req)
         let dto = try req.content.decode(CreateCommentDTO.self)

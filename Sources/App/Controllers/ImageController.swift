@@ -24,6 +24,7 @@ struct ImageController: RouteCollection {
 
     /// POST /images (multipart form-data, campo `file`) — guarda la imagen y devuelve su URL.
     @Sendable func upload(req: Request) async throws -> ImageUploadResponse {
+        try req.auth.require(User.self).requireCanContribute()
         let payload = try req.content.decode(ImageUpload.self)
 
         let ext = (payload.file.extension ?? "").lowercased()

@@ -19,6 +19,7 @@ struct FlagController: RouteCollection {
     /// POST /flags — denuncia una reseña o fuente. Idempotente-ish: no bloqueamos duplicados.
     @Sendable func create(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
         let userID = try user.requireID()
         try CreateFlagDTO.validate(content: req)
         let dto = try req.content.decode(CreateFlagDTO.self)

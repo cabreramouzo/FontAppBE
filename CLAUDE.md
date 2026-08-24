@@ -1338,6 +1338,12 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   cada ocultación confirmada suma un aviso (2 → 7 días sin publicar, 3+ → 365 días). Owner puede
   levantar o fijar restricciones desde `/admin/users`. Todo cambio queda en
   `moderation_actions`; nunca se borra la ficha ni se mezclan abuso, duplicado y retirada física.
+  Una restricción activa bloquea **todas** las aportaciones (alta/edición de fuente, fotos,
+  reseñas, confirmaciones, incidencias, denuncias y capacidades por nivel), pero no borrar
+  contenido propio ni deshacer acciones. Ocultar por abuso anula las `contribution_events`
+  ligadas a la fuente, incluso si estaban liquidadas; restaurar repone su estado anterior
+  usando `settled_at`. Una infracción confirmada sin restaurar bloquea además todas las
+  capacidades por nivel durante 90 días desde la decisión de moderación.
 - Ubicación de registro (`GeoLocator`): al crear cuenta se deduce país/región/ciudad de la IP
   (solo estadística; nunca se guarda la IP). Noop en dev; en prod `IPAPIGeoLocator` (ip-api.com,
   **tercero**, uso no comercial) con `GEOIP_ENABLED=true`. Alternativa futura: BD local MaxMind

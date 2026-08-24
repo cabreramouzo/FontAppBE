@@ -2078,6 +2078,13 @@ final class IntegrationTests: XCTestCase {
             let authorToken = try await login(app, username: "repeat-offender")
             let first = try await createFont(app, token: authorToken, name: "Falsa 1", lat: 40.1, long: 1.1)
             let second = try await createFont(app, token: authorToken, name: "Falsa 2", lat: 40.2, long: 1.2)
+            let scored = ContributionEvent(userID: authorID, fontID: second, source: "font",
+                                           subjectID: second, detail: "created", kind: "fontCreated",
+                                           base: 100, multiplier: 1, gotes: 100,
+                                           occurredAt: Date().addingTimeInterval(-86_400),
+                                           settlesAt: Date().addingTimeInterval(-1), status: .settled)
+            scored.settledAt = Date().addingTimeInterval(-1)
+            try await scored.save(on: app.db)
             let moderatorID = try await register(app, username: "abuse-moderator")
             let moderator = try await User.find(moderatorID, on: app.db)!
             moderator.role = .moderator
@@ -2090,15 +2097,37 @@ final class IntegrationTests: XCTestCase {
                 }, afterResponse: { res in XCTAssertEqual(res.status, .ok) })
             }
             var author = try await User.find(authorID, on: app.db)
+            var scoredAfter = try await ContributionEvent.find(scored.id, on: app.db)
             XCTAssertEqual(author?.moderationStrikes, 2)
             XCTAssertTrue(author?.postingIsRestricted == true)
+            XCTAssertEqual(scoredAfter?.status, .void)
+
+            // La restricción prevalece sobre acciones normales y sobre las capacidades
+            // ganadas por nivel; borrar/deshacer queda fuera de esta prueba a propósito.
+            try await app.test(.POST, "fonts/\(first)/comments", headers: bearer(authorToken), beforeRequest: { req in
+                try req.content.encode(["body": "spam"])
+            }, afterResponse: { res in XCTAssertEqual(res.status, .forbidden) })
+            try await app.test(.POST, "flags", headers: bearer(authorToken), beforeRequest: { req in
+                try req.content.encode(CreateFlagDTO(targetType: "font", targetID: first, fontID: first, reason: "fake"))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .forbidden) })
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+            let grant = try await Capabilities.of(try XCTUnwrap(author), on: app.db)
+            XCTAssertTrue(grant.capabilities.isEmpty)
+            XCTAssertTrue(grant.blockedBy.contains("restricted"))
 
             try await app.test(.DELETE, "fonts/\(second)/moderation/hide", headers: bearer(moderatorToken), afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)
             })
             author = try await User.find(authorID, on: app.db)
+            scoredAfter = try await ContributionEvent.find(scored.id, on: app.db)
             XCTAssertEqual(author?.moderationStrikes, 1)
             XCTAssertFalse(author?.postingIsRestricted == true)
+            XCTAssertEqual(scoredAfter?.status, .settled)
+            let afterRestoreGrant = try await Capabilities.of(try XCTUnwrap(author), on: app.db)
+            XCTAssertTrue(afterRestoreGrant.capabilities.isEmpty)
+            XCTAssertTrue(afterRestoreGrant.blockedBy.contains("recentlyVoided"))
         }
     }
 

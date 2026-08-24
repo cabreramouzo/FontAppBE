@@ -78,6 +78,15 @@ final class User: Model, @unchecked Sendable {
         guard let until = postingRestrictedUntil else { return false }
         return until > Date()
     }
+
+    /// Puerta única para las aportaciones comunitarias. Borrar o deshacer contenido
+    /// propio sigue permitido: una sanción no puede impedir corregir ni retirar datos.
+    func requireCanContribute() throws {
+        guard !postingIsRestricted else {
+            throw AppError(.forbidden, "user.postingRestricted",
+                           "Esta cuenta tiene temporalmente restringidas las aportaciones")
+        }
+    }
 }
 
 // Permite login por usuario/contraseña (Basic auth) para emitir tokens.
