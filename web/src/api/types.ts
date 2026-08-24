@@ -77,13 +77,36 @@ export interface AdminUser {
 export interface Flag {
   id: string
   flaggerName: string | null
-  targetType: 'comment' | 'font'
+  targetType: 'comment' | 'font' | 'photo'
   targetID: string
   fontID: string | null
   reason: string | null
   createdAt: string
   targetText: string | null
   targetImage: string | null
+  targetAuthorID: string | null
+  targetAuthorName: string | null
+  targetAuthorCreatedAt: string | null
+  targetAuthorStrikes: number
+  targetAuthorRestrictedUntil: string | null
+  fontName: string | null
+  fontLatitude: number | null
+  fontLongitude: number | null
+  fontModerationState: string | null
+}
+
+export interface ModerationSource {
+  id: string
+  name: string | null
+  latitude: number
+  longitude: number
+  image: string | null
+  createdAt: string | null
+  authorID: string | null
+  authorName: string
+  authorCreatedAt: string | null
+  moderationStrikes: number
+  postingRestrictedUntil: string | null
 }
 
 export interface FontInfoSnapshot {

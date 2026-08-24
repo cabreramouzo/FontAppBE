@@ -148,7 +148,13 @@ export function AdminPage() {
       )}
 
       <Box component="section" sx={{ mt: 3 }}>
-        <Typography variant="h6" gutterBottom>🛡️ {t('admin.flags')}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="h6">🛡️ {t('admin.flags')}</Typography>
+          {flags && <Chip size="small" color={flags.length ? 'warning' : 'default'} label={flags.length} />}
+          <Button component={RouterLink} to="/admin/moderation" size="small" variant="outlined">
+            {t('moderation.openQueue')}
+          </Button>
+        </Box>
         {flags === null && <Skeleton lines={2} />}
         {flags?.length === 0 && <Typography color="text.secondary">{t('admin.noFlags')}</Typography>}
         <List disablePadding>

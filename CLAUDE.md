@@ -1344,6 +1344,20 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   ligadas a la fuente, incluso si estaban liquidadas; restaurar repone su estado anterior
   usando `settled_at`. Una infracción confirmada sin restaurar bloquea además todas las
   capacidades por nivel durante 90 días desde la decisión de moderación.
+- **La cola de moderación vive en `/admin/moderation`.** No pinta una fila por denuncia:
+  agrupa `content_flags` por objetivo y enseña número de denunciantes, contenido, foto,
+  fuente relacionada, coordenadas y el contexto mínimo del autor (antigüedad, avisos y
+  restricción). Desde ahí se puede aprobar, ocultar una fuente de forma reversible, borrar
+  una reseña/foto denunciada o —solo owner— restringir aportaciones siete días. Las rutas
+  de escritura son las mismas de la ficha y `/admin/users`; la página no abre una segunda
+  puerta con reglas distintas.
+- La pestaña **«Cuentas nuevas» es vigilancia, no una acusación**: `GET
+  /fonts/moderation/queue` devuelve como máximo 50 fuentes de los últimos siete días que
+  se añadieron durante la primera semana de la cuenta. Solo visibles y nunca importadas.
+  Aprobarlas no cambia el dato ni al usuario: registra `action=review` en la tabla
+  `moderation_actions` que ya existía y deja de mostrarlas a todos los moderadores. Por
+  eso esta mejora no lleva migración. El carril de denuncias permanece separado y es el
+  único que puede poner automáticamente una fuente en cuarentena.
 - Ubicación de registro (`GeoLocator`): al crear cuenta se deduce país/región/ciudad de la IP
   (solo estadística; nunca se guarda la IP). Noop en dev; en prod `IPAPIGeoLocator` (ip-api.com,
   **tercero**, uso no comercial) con `GEOIP_ENABLED=true`. Alternativa futura: BD local MaxMind

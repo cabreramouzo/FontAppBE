@@ -1,7 +1,7 @@
 import type { PhotoUploadMeta } from '../lib/image'
 import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
 import { storedSource } from '../lib/campaign'
-import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
+import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -648,6 +648,18 @@ export async function hideFontAbuse(id: string, reason: 'spam' | 'fake' | 'abuse
 
 export async function restoreFontAbuse(id: string): Promise<Font> {
   return apiFetch<Font>(`/fonts/${id}/moderation/hide`, { method: 'DELETE' })
+}
+
+export async function getModerationSources(): Promise<ModerationSource[]> {
+  return apiFetch<ModerationSource[]>('/fonts/moderation/queue')
+}
+
+export async function reviewModerationSource(id: string): Promise<void> {
+  await apiFetch(`/fonts/${id}/moderation/review`, { method: 'POST' })
+}
+
+export async function deleteSecondaryPhoto(fontID: string, photoID: string): Promise<void> {
+  await apiFetch(`/fonts/${fontID}/photos/${photoID}`, { method: 'DELETE' })
 }
 
 // Historial de ediciones de información de fuentes (admin): listar, revertir, revisar.

@@ -2069,6 +2069,50 @@ final class IntegrationTests: XCTestCase {
             let visibleCount = try await Font.visible(on: app.db).filter(\.$id == fontID).count()
             XCTAssertEqual(author?.moderationStrikes, 0)
             XCTAssertEqual(visibleCount, 0)
+
+            let moderatorID = try await register(app, username: "flag-context-moderator")
+            try await setRole(app, userID: moderatorID, role: .moderator)
+            let moderatorToken = try await login(app, username: "flag-context-moderator")
+            try await app.test(.GET, "flags", headers: bearer(moderatorToken), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let flags = try res.content.decode([FlagResponse].self)
+                XCTAssertEqual(flags.count, 3)
+                XCTAssertTrue(flags.allSatisfy { $0.targetAuthorID == authorID })
+                XCTAssertTrue(flags.allSatisfy { $0.targetAuthorName == "flag-author" })
+                XCTAssertTrue(flags.allSatisfy { $0.fontModerationState == "pending" })
+                XCTAssertTrue(flags.allSatisfy { $0.fontLatitude == 41.2 && $0.fontLongitude == 2.2 })
+            })
+        }
+    }
+
+    func testModerationQueueTracksAndDismissesNewAccountSources() async throws {
+        try await withApp { app in
+            let authorID = try await register(app, username: "new-source-author")
+            let authorToken = try await login(app, username: "new-source-author")
+            let fontID = try await createFont(app, token: authorToken, name: "Per revisar", lat: 40.4, long: -3.7)
+
+            let moderatorID = try await register(app, username: "queue-moderator")
+            try await setRole(app, userID: moderatorID, role: .moderator)
+            let moderatorToken = try await login(app, username: "queue-moderator")
+
+            try await app.test(.GET, "fonts/moderation/queue", headers: bearer(authorToken), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+            try await app.test(.GET, "fonts/moderation/queue", headers: bearer(moderatorToken), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let queue = try res.content.decode([ModerationSourceResponse].self)
+                XCTAssertEqual(queue.map(\.id), [fontID])
+                XCTAssertEqual(queue.first?.authorID, authorID)
+                XCTAssertEqual(queue.first?.authorName, "new-source-author")
+            })
+
+            try await app.test(.POST, "fonts/\(fontID)/moderation/review", headers: bearer(moderatorToken), afterResponse: { res in
+                XCTAssertEqual(res.status, .noContent)
+            })
+            try await app.test(.GET, "fonts/moderation/queue", headers: bearer(moderatorToken), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertTrue(try res.content.decode([ModerationSourceResponse].self).isEmpty)
+            })
         }
     }
 

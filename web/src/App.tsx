@@ -34,6 +34,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ defa
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })))
 const AdminEditsPage = lazy(() => import('./pages/AdminEditsPage').then((m) => ({ default: m.AdminEditsPage })))
+const AdminModerationPage = lazy(() => import('./pages/AdminModerationPage').then((m) => ({ default: m.AdminModerationPage })))
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })))
 const NewsPage = lazy(() => import('./pages/NewsPage').then((m) => ({ default: m.NewsPage })))
 const ZonesPage = lazy(() => import('./pages/ZonesPage').then((m) => ({ default: m.ZonesPage })))
@@ -71,6 +72,7 @@ export default function App() {
                   <Route path="/admin" element={<AdminPage />} />
                   <Route path="/admin/users" element={<AdminUsersPage />} />
                   <Route path="/admin/edits" element={<AdminEditsPage />} />
+                  <Route path="/admin/moderation" element={<AdminModerationPage />} />
                   <Route path="/admin/activity" element={<AdminActivityPage />} />
                   <Route path="/users/:id" element={<UserProfilePage />} />
                   <Route path="/unsubscribe" element={<UnsubscribePage />} />

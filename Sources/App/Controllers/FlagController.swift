@@ -71,6 +71,29 @@ struct FlagController: RouteCollection {
         let commentByID = Dictionary(uniqueKeysWithValues: comments.compactMap { c in c.id.map { ($0, c) } })
         let fontByID = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f) } })
 
+        // Autor del contenido y fuente relacionada, también por lotes. La cola necesita
+        // contexto para decidir; obligar al cliente a abrir tres páginas por denuncia es
+        // justo lo que hacía que no fuera una cola de trabajo.
+        let targetAuthors: [UUID: UUID] = Dictionary(uniqueKeysWithValues:
+            comments.compactMap { c in c.id.flatMap { id in c.$user.id.map { (id, $0) } } }
+            + fonts.compactMap { f in f.id.flatMap { id in f.$creator.id.map { (id, $0) } } }
+            + photos.compactMap { p in p.id.flatMap { id in p.$uploader.id.map { (id, $0) } } }
+        )
+        let authorIDs = Array(Set(targetAuthors.values))
+        let authors = authorIDs.isEmpty ? [] : try await User.query(on: req.db).filter(\.$id ~~ authorIDs).all()
+        let authorByID = Dictionary(uniqueKeysWithValues: authors.compactMap { u in u.id.map { ($0, u) } })
+
+        let relatedFontIDs = Set(flags.compactMap { flag -> UUID? in
+            if flag.targetType == "font" { return flag.targetID }
+            if let id = flag.fontID { return id }
+            if let c = commentByID[flag.targetID] { return c.$font.id }
+            if let p = photoByID[flag.targetID] { return p.$font.id }
+            return nil
+        })
+        let missingFonts = relatedFontIDs.filter { fontByID[$0] == nil }
+        let relatedFonts = missingFonts.isEmpty ? [] : try await Font.query(on: req.db).filter(\.$id ~~ Array(missingFonts)).all()
+        let allFonts = fontByID.merging(Dictionary(uniqueKeysWithValues: relatedFonts.compactMap { f in f.id.map { ($0, f) } })) { first, _ in first }
+
         return flags.map { flag in
             let text: String?
             let image: String?
@@ -83,7 +106,12 @@ struct FlagController: RouteCollection {
             } else {
                 text = nil; image = nil // contenido ya borrado
             }
-            return FlagResponse(flag, flaggerName: flag.$flagger.id.flatMap { names[$0] }, targetText: text, targetImage: image)
+            let author = targetAuthors[flag.targetID].flatMap { authorByID[$0] }
+            let relatedID = flag.targetType == "font" ? flag.targetID : (flag.fontID
+                ?? commentByID[flag.targetID]?.$font.id ?? photoByID[flag.targetID]?.$font.id)
+            return FlagResponse(flag, flaggerName: flag.$flagger.id.flatMap { names[$0] },
+                                targetText: text, targetImage: image, author: author,
+                                font: relatedID.flatMap { allFonts[$0] })
         }
     }
 
@@ -128,8 +156,18 @@ struct FlagResponse: Content {
     /// Texto (cuerpo de la reseña o nombre de la fuente) y foto del contenido denunciado.
     let targetText: String?
     let targetImage: String?
+    let targetAuthorID: UUID?
+    let targetAuthorName: String?
+    let targetAuthorCreatedAt: Date?
+    let targetAuthorStrikes: Int
+    let targetAuthorRestrictedUntil: Date?
+    let fontName: String?
+    let fontLatitude: Double?
+    let fontLongitude: Double?
+    let fontModerationState: String?
 
-    init(_ flag: ContentFlag, flaggerName: String?, targetText: String? = nil, targetImage: String? = nil) {
+    init(_ flag: ContentFlag, flaggerName: String?, targetText: String? = nil,
+         targetImage: String? = nil, author: User? = nil, font: Font? = nil) {
         self.id = flag.id
         self.flaggerName = flaggerName
         self.targetType = flag.targetType
@@ -139,5 +177,14 @@ struct FlagResponse: Content {
         self.createdAt = flag.createdAt
         self.targetText = targetText
         self.targetImage = targetImage
+        self.targetAuthorID = author?.id
+        self.targetAuthorName = author?.username
+        self.targetAuthorCreatedAt = author?.createdAt
+        self.targetAuthorStrikes = author?.moderationStrikes ?? 0
+        self.targetAuthorRestrictedUntil = author?.postingRestrictedUntil
+        self.fontName = font?.name
+        self.fontLatitude = font?.latitude
+        self.fontLongitude = font?.longitude
+        self.fontModerationState = font?.moderationState
     }
 }

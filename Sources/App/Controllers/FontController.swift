@@ -30,6 +30,7 @@ struct FontController: RouteCollection {
         // Historial de ediciones (moderación): solo admins. Antes de `:fontID`
         // para que "edits" no se interprete como un id de fuente.
         protected.get("edits", use: edits)
+        protected.get("moderation", "queue", use: moderationQueue)
         protected.post("edits", ":editID", "revert", use: revertEdit)
         protected.post("edits", ":editID", "review", use: reviewEdit)
         protected.group(":fontID") { font in
@@ -53,6 +54,7 @@ struct FontController: RouteCollection {
             // Moderación de abuso: cuarentena reversible, solo moderadores.
             font.post("moderation", "hide", use: hideAbuse)
             font.delete("moderation", "hide", use: restoreAbuse)
+            font.post("moderation", "review", use: reviewModeration)
         }
     }
 
@@ -316,6 +318,56 @@ struct FontController: RouteCollection {
                                  action: "restore", reason: previousReason)
         }
         return font
+    }
+
+    /// GET /fonts/moderation/queue — altas recientes hechas por cuentas que aún no
+    /// habían cumplido una semana. No afirma que sean malas: es una bandeja de vigilancia
+    /// separada de las denuncias. Las ya revisadas no vuelven a aparecer.
+    @Sendable func moderationQueue(req: Request) async throws -> [ModerationSourceResponse] {
+        let actor = try req.auth.require(User.self)
+        guard actor.canModerate else { throw Abort(.forbidden) }
+        guard let sql = req.db as? SQLDatabase else { throw Abort(.internalServerError) }
+        let cutoff = Date().addingTimeInterval(-7 * 86_400)
+        struct Row: Decodable { let id: UUID }
+        // El filtro se hace ANTES del LIMIT. Traer primero las últimas 250 y filtrar en
+        // memoria ocultaría una alta sospechosa si esa semana hubiera mucha actividad de
+        // cuentas antiguas: la cola fallaría precisamente cuando más trabajo tuviera.
+        let ids = try await sql.raw("""
+            SELECT f.id
+            FROM fonts f
+            JOIN users u ON u.id = f.created_by
+            WHERE f.created_at >= \(bind: cutoff)
+              AND f.moderation_state = 'visible'
+              AND f.created_at < u.created_at + INTERVAL '7 days'
+              AND NOT EXISTS (
+                SELECT 1 FROM moderation_actions ma
+                WHERE ma.font_id = f.id AND ma.action = 'review'
+              )
+            ORDER BY f.created_at DESC
+            LIMIT 50
+            """).all(decoding: Row.self).map(\.id)
+        if ids.isEmpty { return [] }
+
+        let candidates = try await Font.query(on: req.db)
+            .filter(\.$id ~~ ids)
+            .with(\.$creator)
+            .all()
+        let order = Dictionary(uniqueKeysWithValues: ids.enumerated().map { ($0.element, $0.offset) })
+        return candidates.compactMap { font in
+            guard let creator = font.$creator.value ?? nil else { return nil }
+            return ModerationSourceResponse(font: font, creator: creator)
+        }.sorted { order[$0.id, default: .max] < order[$1.id, default: .max] }
+    }
+
+    /// Marca una alta reciente como comprobada sin modificarla. Vive en el historial de
+    /// moderación para que dos moderadores compartan la misma cola y quede auditoría.
+    @Sendable func reviewModeration(req: Request) async throws -> HTTPStatus {
+        let actor = try req.auth.require(User.self)
+        guard actor.canModerate else { throw Abort(.forbidden) }
+        let font = try await find(req)
+        try await Self.audit(req.db, fontID: font.id, subjectID: font.$creator.id,
+                             actorID: actor.id, action: "review", reason: "new_account")
+        return .noContent
     }
 
     private static func audit(_ db: any Database, fontID: UUID?, subjectID: UUID?, actorID: UUID?,
@@ -840,6 +892,34 @@ struct FontController: RouteCollection {
     /// ¿`user` es el creador de la fuente o un admin?
     private func canManage(user: User, font: Font) -> Bool {
         user.isAdmin || (font.$creator.id != nil && font.$creator.id == user.id)
+    }
+}
+
+struct ModerationSourceResponse: Content {
+    let id: UUID
+    let name: String?
+    let latitude: Double
+    let longitude: Double
+    let image: String?
+    let createdAt: Date?
+    let authorID: UUID?
+    let authorName: String
+    let authorCreatedAt: Date?
+    let moderationStrikes: Int
+    let postingRestrictedUntil: Date?
+
+    init(font: Font, creator: User) {
+        self.id = font.id!
+        self.name = font.name
+        self.latitude = font.latitude
+        self.longitude = font.longitude
+        self.image = font.image
+        self.createdAt = font.createdAt
+        self.authorID = creator.id
+        self.authorName = creator.username
+        self.authorCreatedAt = creator.createdAt
+        self.moderationStrikes = creator.moderationStrikes
+        self.postingRestrictedUntil = creator.postingRestrictedUntil
     }
 }
 
