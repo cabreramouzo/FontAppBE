@@ -1210,7 +1210,7 @@ export function FontDetailPage() {
               {user ? (
                 <>
                   {!updating && (
-                    <Stack data-onboarding="status-actions" direction="row" sx={{ my: 1.5, gap: 1, flexWrap: 'wrap' }}>
+                    <Stack direction="row" sx={{ my: 1.5, gap: 1, flexWrap: 'wrap' }}>
                       {latest.waterStatus && latest.userID !== user.id && (
                         <Button
                           variant={latest.confirmedByMe ? 'contained' : 'outlined'}
@@ -1247,7 +1247,7 @@ export function FontDetailPage() {
               <Typography color="text.secondary">{t('detail.beFirst')}</Typography>
               {user ? (
                 !updating ? (
-                  <Button data-onboarding="status-actions" variant="contained" disableElevation startIcon={<EditIcon />} onClick={() => { trackInteraction('font_update'); setUpdating(true) }} sx={{ mt: 1 }}>
+                  <Button variant="contained" disableElevation startIcon={<EditIcon />} onClick={() => { trackInteraction('font_update'); setUpdating(true) }} sx={{ mt: 1 }}>
                     {t('detail.reportStatus')}
                   </Button>
                 ) : (

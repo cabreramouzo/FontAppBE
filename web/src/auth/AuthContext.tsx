@@ -4,7 +4,6 @@ import { ApiError, apiFetch, getToken, googleLoginRequest, loginRequest, loginWi
 import { saveSessionForSync } from '../lib/outbox'
 import { storedSource } from '../lib/campaign'
 import { forgetCapabilities } from '../lib/capabilities'
-import { startContextualOnboarding } from '../lib/onboarding'
 
 interface AuthState {
   user: UserResponse | null
@@ -55,6 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function restore() {
+      // Gancho de QA local: permite revisar las tres páginas sin crear cuentas basura.
+      // Vite elimina esta rama del build de producción.
+      if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('welcome')) {
+        setJustRegistered(true)
+      }
       // Se consume una sola vez: si el usuario recarga la portada, ya no reaparece.
       if (sessionStorage.getItem(JUST_REGISTERED_KEY)) {
         sessionStorage.removeItem(JUST_REGISTERED_KEY)
@@ -174,7 +178,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, loading, login, loginWithGoogle, loginWithPasskey, register, logout, refresh,
       justRegistered,
       dismissWelcome: () => {
-        startContextualOnboarding()
         setJustRegistered(false)
         setPromptLocation(true)
       },

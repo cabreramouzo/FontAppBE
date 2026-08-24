@@ -297,8 +297,9 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
     cuentan aportaciones **liquidadas** y eso son 72 h, así que enseñarla al publicar y
     retirarla dos días después porque la reseña se anuló sería una promesa rota. Salta la
     primera vez que la app ve una insignia que antes no tenías — en la práctica, tu
-    siguiente visita. Se compara contra una foto en `localStorage` (`badges:seen`), sin
-    estado en el servidor; por eso **la primera vez no celebra nada**, o quien ya tiene
+    siguiente visita. Se compara contra una foto por usuario en `localStorage`
+    (`badges:seen:<userID>` y `level:seen:<userID>`), sin
+    estado en el servidor; por eso **la primera vez de cada usuario no celebra nada**, o quien ya tiene
     ocho se comería ocho fiestas el día del despliegue. Una comprobación por sesión, solo
     con buena conexión (`navigator.connection`: nada con ahorro de datos ni en 2g) y
     usando `GET /users/:id/badges`, que ya existía, es pública y va cacheada 5 min. Si
@@ -1573,19 +1574,18 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - El estado vive en un módulo y no en un contexto: son cinco componentes en dos árboles
   (`App` y `Layout`) y un proveedor tendría que envolver los dos para nada más.
 
-## Onboarding contextual
+## Onboarding inicial
 
-- Tras registrarse, `WelcomeDialog` solo explica el propósito y avisa de que las ayudas
-  aparecerán en contexto. Ya no intenta enseñar cinco funciones antes de tocar la app.
-- `ContextualOnboarding` guarda un recorrido local y de una sola vez: marcador del mapa →
-  acciones para confirmar/cambiar el estado → botón para añadir una fuente. Cada ayuda
-  espera a que su elemento exista en la pantalla; no obliga a seguir una ruta artificial.
-- Solo se activa al cerrar la bienvenida de una cuenta recién creada, también cuando
-  Google crea la cuenta (`LoginResponse.isNewUser`). Las cuentas
-  existentes no reciben tutoriales retroactivos. «Omitir las ayudas» termina todo el
-  recorrido, y el estado `done` impide que vuelva a aparecer.
-- Participa en `lib/asks.ts`: nunca se superpone a la bienvenida ni a una medalla, y tiene
-  prioridad sobre peticiones de instalar la PWA o responder encuestas.
+- `WelcomeDialog` da una visión completa pero digerible en tres páginas controladas por
+  la persona: encontrar y leer una fuente; confirmar/cambiar/añadir; uso sin cobertura y
+  qué significan Gota y las gotas. Se puede omitir desde la primera página.
+- Se descartó el experimento de popovers contextuales (**24/08/2026**): dependían de que
+  existiera un pin o un botón concreto en el DOM. Con el mapa de densidad, clusters o una
+  ficha aún cargando aparecían unas veces sí y otras no; además explicaban una acción sin
+  permitir completarla allí mismo. Una ayuda contextual futura solo vale si nace de la
+  acción que la persona acaba de iniciar y se completa en esa misma pantalla.
+- La bienvenida aparece al crear una cuenta con contraseña y también cuando Google crea
+  una (`LoginResponse.isNewUser`), pero nunca en posteriores inicios de sesión.
 
 ## Instalar la app (`lib/install.ts` + `/install`)
 

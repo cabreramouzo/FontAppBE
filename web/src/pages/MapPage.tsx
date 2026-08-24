@@ -1301,7 +1301,7 @@ export function MapPage() {
             <NearMeIcon />
           </Fab>
           {user && (
-            <Fab data-onboarding="add-font" variant="extended" color="primary" onClick={() => { trackInteraction('map_add_font'); startPlacing() }}>
+            <Fab variant="extended" color="primary" onClick={() => { trackInteraction('map_add_font'); startPlacing() }}>
               <AddIcon sx={{ mr: 1 }} /> {noEmoji(t('map.addFont'))}
             </Fab>
           )}

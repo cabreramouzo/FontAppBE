@@ -1,5 +1,6 @@
 import { getMyBadgesPreview } from '../api/client'
 import type { PublicBadge, PublicGamification } from '../api/client'
+import { celebrationStorageKey } from './celebrationStorage'
 
 /**
  * Detectar que acabas de ganar una insignia, para poder celebrarlo.
@@ -37,9 +38,9 @@ function marca(b: PublicBadge): string {
   return `${b.family}:${b.tier}`
 }
 
-function leerVistas(): string[] | null {
+function leerVistas(userID: string): string[] | null {
   try {
-    const crudo = localStorage.getItem(CLAVE)
+    const crudo = localStorage.getItem(celebrationStorageKey(CLAVE, userID))
     if (crudo == null) return null
     const v = JSON.parse(crudo)
     return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : null
@@ -50,26 +51,26 @@ function leerVistas(): string[] | null {
   }
 }
 
-function leerNivel(): string | null {
+function leerNivel(userID: string): string | null {
   try {
-    return localStorage.getItem(CLAVE_NIVEL)
+    return localStorage.getItem(celebrationStorageKey(CLAVE_NIVEL, userID))
   } catch {
     return null
   }
 }
 
-function guardarNivel(nivel: string | null) {
+function guardarNivel(userID: string, nivel: string | null) {
   try {
-    if (nivel) localStorage.setItem(CLAVE_NIVEL, nivel)
-    else localStorage.removeItem(CLAVE_NIVEL)
+    if (nivel) localStorage.setItem(celebrationStorageKey(CLAVE_NIVEL, userID), nivel)
+    else localStorage.removeItem(celebrationStorageKey(CLAVE_NIVEL, userID))
   } catch {
     // igual que arriba
   }
 }
 
-function guardarVistas(marcas: string[]) {
+function guardarVistas(userID: string, marcas: string[]) {
   try {
-    localStorage.setItem(CLAVE, JSON.stringify(marcas))
+    localStorage.setItem(celebrationStorageKey(CLAVE, userID), JSON.stringify(marcas))
   } catch {
     // igual que arriba
   }
@@ -111,14 +112,15 @@ export interface Novedad {
  * Marca todas como vistas aunque solo se enseñe una, a propósito — la fiesta es por
  * haberlas ganado, no una cola pendiente de reproducir.
  */
-export async function buscarNovedades(forzar = false): Promise<Novedad | null> {
+export async function buscarNovedades(userID: string, forzar = false): Promise<Novedad | null> {
   if (!buenaConexion()) return null
   // Una vez por sesión del navegador, salvo que acabemos de aportar. Sin esto, cada
   // recarga de la página pide la lista otra vez.
   if (!forzar) {
     try {
-      if (sessionStorage.getItem(YA_MIRADO)) return null
-      sessionStorage.setItem(YA_MIRADO, '1')
+      const checkedKey = celebrationStorageKey(YA_MIRADO, userID)
+      if (sessionStorage.getItem(checkedKey)) return null
+      sessionStorage.setItem(checkedKey, '1')
     } catch {
       // Sin sessionStorage se mira igual: es una petición barata, no un desastre.
     }
@@ -133,25 +135,25 @@ export async function buscarNovedades(forzar = false): Promise<Novedad | null> {
 
   const { badges, level } = datos
   const marcas = badges.map(marca)
-  const vistas = leerVistas()
-  const nivelVisto = leerNivel()
+  const vistas = leerVistas(userID)
+  const nivelVisto = leerNivel(userID)
 
   if (vistas == null) {
     // Primera vez en este navegador: se guarda todo y no se celebra nada.
-    guardarVistas(marcas)
-    guardarNivel(level)
+    guardarVistas(userID, marcas)
+    guardarNivel(userID, level)
     return null
   }
 
   const conocidas = new Set(vistas)
   const nuevas = badges.filter((b) => !conocidas.has(marca(b)))
-  guardarVistas(marcas)
+  guardarVistas(userID, marcas)
 
   // El ascenso va primero: subir de peldaño es más grande que una insignia más, y si
   // coinciden —lo normal, porque las dos salen de la misma aportación— es lo que apetece
   // ver. La insignia se queda contada en «y N más».
   const subida = level != null && level !== nivelVisto && nivelVisto != null
-  guardarNivel(level)
+  guardarNivel(userID, level)
   if (subida) return { badge: null, level, otras: nuevas.length }
 
   if (nuevas.length === 0) return null
@@ -174,10 +176,10 @@ export async function buscarNovedades(forzar = false): Promise<Novedad | null> {
  *
  * Se salta el candado de «una vez por sesión»: aquí sabemos que algo ha cambiado.
  */
-export async function buscarNovedadesTrasAportar(): Promise<Novedad | null> {
+export async function buscarNovedadesTrasAportar(userID: string): Promise<Novedad | null> {
   for (const espera of [2000, 4000, 8000]) {
     await new Promise((r) => setTimeout(r, espera))
-    const n = await buscarNovedades(true)
+    const n = await buscarNovedades(userID, true)
     if (n) return n
   }
   return null

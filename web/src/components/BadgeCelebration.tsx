@@ -53,17 +53,18 @@ export function BadgeCelebration() {
   const userID = user?.id
   useEffect(() => {
     if (!userID) return
+    const currentUserID = userID
     let vivo = true
 
     // Al arrancar: por si la ganaste en otro sitio o en otra sesión.
     const id = window.setTimeout(() => {
-      buscarNovedades().then((n) => { if (vivo && n) setNovedad(n) }).catch(() => {})
+      buscarNovedades(currentUserID).then((n) => { if (vivo && n) setNovedad(n) }).catch(() => {})
     }, ESPERA)
 
     // Y justo después de aportar, que es para lo que sirve esto: la felicitación llega
     // mientras todavía tienes la fuente delante.
     function alAportar() {
-      buscarNovedadesTrasAportar().then((n) => { if (vivo && n) setNovedad(n) }).catch(() => {})
+      buscarNovedadesTrasAportar(currentUserID).then((n) => { if (vivo && n) setNovedad(n) }).catch(() => {})
     }
     window.addEventListener('fontapp:contributed', alAportar)
 
