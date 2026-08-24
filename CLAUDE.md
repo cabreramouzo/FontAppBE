@@ -484,9 +484,13 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   seguía `MoreMenu`.
 - **Lo que NO baja: la campana y el menú.** Las pestañas son los sitios donde se está, no
   las cosas que se hacen; un aviso no es un destino y un cajón de ajustes tampoco.
-- La pestaña activa se decide **por prefijo** (`/me/badges` sigue siendo «Yo») salvo el
-  mapa, que va por igualdad o sería el prefijo de todo. Y sin sesión, «Yo» lleva a entrar:
-  una pestaña que da 401 no es una pestaña.
+- La sección activa se decide **una sola vez** en `lib/navigation.ts`, para móvil y
+  escritorio. Incluye la jerarquía: una ficha `/fonts/:id` sigue siendo «Mapa»;
+  `/me/badges`, ajustes y gamificación siguen siendo «Yo»; y el acceso también marca
+  «Yo» cuando se llega desde esa pestaña sin sesión. El elemento activo lleva color,
+  fondo y `aria-current="page"`: orientación visual y accesible, no solo decoración.
+  Support e instalar son acciones y no fingen ser pestañas. Sin sesión, «Yo» lleva a
+  entrar: una pestaña que da 401 no es una pestaña.
 - **El pie desaparece del mapa en móvil** y se queda en el resto de páginas. La atribución
   de OSM/ICGC es obligación de licencia y no se pierde: en el mapa la pinta Leaflet abajo a
   la derecha, y en las demás páginas sigue el pie entero.

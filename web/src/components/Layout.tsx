@@ -35,6 +35,14 @@ import { RoleChip, StaffStripe, staffRole } from './StaffBadge'
 import { NotificationBell } from './NotificationBell'
 import { MoreMenu } from './MoreMenu'
 import { TabBar } from './TabBar'
+import { mainSection } from '../lib/navigation'
+
+const desktopTabSx = (selected: boolean) => ({
+  display: { xs: 'none', sm: 'inline-flex' },
+  color: selected ? 'primary.main' : 'inherit',
+  bgcolor: selected ? 'action.selected' : 'transparent',
+  '&:hover': { bgcolor: selected ? 'action.selected' : 'action.hover' },
+})
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -51,6 +59,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const [zumbidos, setZumbidos] = useState(0)
   const { pathname } = useLocation()
   const enElMapa = pathname === '/'
+  const seccionActiva = mainSection(pathname)
 
   useEffect(() => { trackPlatformOnce() }, [])
 
@@ -200,8 +209,9 @@ export function Layout({ children }: { children: ReactNode }) {
               color="inherit"
               size="small"
               aria-label={t('nav.map')}
+              aria-current={seccionActiva === 'map' ? 'page' : undefined}
               onClick={() => trackInteraction('nav_map')}
-              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+              sx={desktopTabSx(seccionActiva === 'map')}
             >
               <MapOutlinedIcon />
             </IconButton>
@@ -220,8 +230,9 @@ export function Layout({ children }: { children: ReactNode }) {
               color="inherit"
               size="small"
               aria-label={t('news.title')}
+              aria-current={seccionActiva === 'activity' ? 'page' : undefined}
               onClick={() => trackInteraction('nav_activity')}
-              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+              sx={desktopTabSx(seccionActiva === 'activity')}
             >
               <NewspaperIcon
                 key={zumbidos}
@@ -254,8 +265,9 @@ export function Layout({ children }: { children: ReactNode }) {
               color="inherit"
               size="small"
               aria-label={t('zones.title')}
+              aria-current={seccionActiva === 'zones' ? 'page' : undefined}
               onClick={() => trackInteraction('nav_zones')}
-              sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+              sx={desktopTabSx(seccionActiva === 'zones')}
             >
               <PublicOutlinedIcon />
             </IconButton>
@@ -295,7 +307,12 @@ export function Layout({ children }: { children: ReactNode }) {
                 to="/me"
                 color="inherit"
                 size="small"
-                sx={{ textTransform: 'none', display: { xs: 'none', sm: 'inline-flex' } }}
+                aria-current={seccionActiva === 'profile' ? 'page' : undefined}
+                sx={{
+                  ...desktopTabSx(seccionActiva === 'profile'),
+                  textTransform: 'none',
+                  fontWeight: seccionActiva === 'profile' ? 700 : undefined,
+                }}
                 title={t('nav.profile')}
                 onClick={() => trackInteraction('nav_profile')}
               >
