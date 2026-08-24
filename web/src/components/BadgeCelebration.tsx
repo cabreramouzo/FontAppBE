@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import Dialog from '@mui/material/Dialog'
 import Box from '@mui/material/Box'
@@ -39,8 +39,13 @@ export function BadgeCelebration() {
   const { user } = useAuth()
   const modo = useTheme().palette.mode === 'dark' ? 'dark' : 'light'
   const [novedad, setNovedad] = useState<Novedad | null>(null)
+  // Un toque involuntario fuera no debe comerse la medalla; un segundo toque ya es una
+  // intención razonable de salir. Escape y los botones siguen cerrando al instante.
+  const backdropClicks = useRef(0)
   // En la cola para que ni el aviso de instalar ni la encuesta se le pongan encima.
   const miTurno = useTurno('badge', novedad !== null)
+
+  useEffect(() => { backdropClicks.current = 0 }, [novedad])
 
   // La dependencia es el identificador y no el objeto: `AuthContext` rehace el usuario
   // al refrescar la sesión, y con el objeto esto se dispararía otra vez sin que haya
@@ -84,12 +89,18 @@ export function BadgeCelebration() {
     ? null
     : badge!.tier === 'special' ? '#9c27b0' : TIER_COLOR[modo][badge!.tier]
 
+  function cierra(_event: object, reason: 'backdropClick' | 'escapeKeyDown') {
+    if (reason === 'escapeKeyDown') { setNovedad(null); return }
+    backdropClicks.current += 1
+    if (backdropClicks.current >= 2) setNovedad(null)
+  }
+
   return (
     <>
       <Confetti activo />
       <Dialog
         open
-        onClose={() => setNovedad(null)}
+        onClose={cierra}
         maxWidth="xs"
         fullWidth
         slotProps={{
