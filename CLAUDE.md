@@ -1623,6 +1623,26 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   se consume al usarlo. Quien lo pida tiene que saber vivir sin él — cuando falta, quedan
   las instrucciones a mano, nunca las dos cosas a la vez.
 
+## Actualizar una PWA suspendida (`AppUpdatePrompt`)
+
+- iOS puede reanimar durante días el **mismo proceso y el mismo JavaScript** de una PWA.
+  Que el service worker nuevo se instale no sustituye el código que ya está ejecutándose,
+  y `sw.js` además no cambia en la mayoría de despliegues.
+- Cada build genera por eso un identificador compartido: Vite lo incrusta como
+  `__BUILD_ID__` y publica el mismo valor en `/version.json`. `_headers` marca ese fichero
+  `no-store`; la petición lleva además una query única para atravesar cachés intermedias.
+- `AppUpdatePrompt` lo consulta al arrancar y al volver del segundo plano (`visibilitychange`,
+  `pageshow`, `focus` y recuperación de red), con un minuto mínimo entre comprobaciones.
+  Si no coincide, aparece en `FranjaDeAvisos`, entre la bandeja pendiente y el aviso de
+  instalación.
+- **Nunca recarga sola.** Una actualización automática puede tirar un formulario o una
+  foto todavía sin enviar. El usuario pulsa «Actualizar»; antes se pide al navegador que
+  compruebe también el service worker y después se recarga la navegación, que es
+  network-first. Cerrar el aviso solo lo calla para ese build mientras el componente siga
+  montado: una apertura futura lo vuelve a ofrecer si sigue en la versión antigua.
+- La comprobación está apagada en desarrollo. `version.json` solo existe en el build de
+  producción y `npm run dev` no debe generar falsos avisos ni 404 periódicos.
+
 ## El hueco de la tab bar en iOS (sin resolver, con sonda)
 
 - **Síntoma reportado**: en el primer arranque de la app instalada en un iPhone queda una

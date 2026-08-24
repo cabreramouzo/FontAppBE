@@ -31,6 +31,7 @@ import { InstallPrompt } from './InstallPrompt'
 import { FranjaDeAvisos } from './Avisos'
 import { SafeAreaProbe } from './SafeAreaProbe'
 import { PendingUploads } from './PendingUploads'
+import { AppUpdatePrompt } from './AppUpdatePrompt'
 import { RoleChip, StaffStripe, staffRole } from './StaffBadge'
 import { NotificationBell } from './NotificationBell'
 import { MoreMenu } from './MoreMenu'
@@ -327,6 +328,7 @@ export function Layout({ children }: { children: ReactNode }) {
           pisarse; el porqué del orden está en `Avisos.tsx`. */}
       <FranjaDeAvisos>
         <PendingUploads />
+        <AppUpdatePrompt />
         <InstallPrompt />
       </FranjaDeAvisos>
       <Box component="main" className="main">{children}</Box>

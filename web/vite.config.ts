@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Identificador compartido por el bundle y `/version.json`. Lleva la hora además del
+// commit porque un redespliegue del mismo commit puede cambiar variables VITE_*.
+const buildId = `${process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || 'local'}-${Date.now()}`
+
 // En dev, /api -> backend Vapor (evita CORS y hardcodear el puerto).
 // Mismo proxy en dev (`server`) y al servir el build (`preview`), para poder
 // probar la PWA/service worker del build de producción contra el backend local.
@@ -22,7 +26,20 @@ const proxy = {
 }
 
 export default defineConfig({
-  plugins: [react()],
+  define: { __BUILD_ID__: JSON.stringify(buildId) },
+  plugins: [
+    react(),
+    {
+      name: 'fontapp-build-version',
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'version.json',
+          source: JSON.stringify({ version: buildId }),
+        })
+      },
+    },
+  ],
   server: { proxy },
   preview: { proxy },
 })
