@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
@@ -20,6 +20,9 @@ export function IntroDialog() {
   const { t } = useI18n()
   const [listo, setListo] = useState(false)
   const open = useTurno('intro', listo)
+  const backdropClicks = useRef(0)
+
+  useEffect(() => { backdropClicks.current = 0 }, [open])
 
   useEffect(() => {
     if (loading || user) return // espera a restaurar sesión; no la muestres a logueados
@@ -34,27 +37,37 @@ export function IntroDialog() {
     try { localStorage.setItem(SEEN_KEY, '1') } catch { /* no se puede persistir: da igual */ }
   }
 
+  function requestClose(_event: object, reason: 'backdropClick' | 'escapeKeyDown') {
+    if (reason === 'escapeKeyDown') { close(); return }
+    backdropClicks.current += 1
+    if (backdropClicks.current >= 2) close()
+  }
+
   return (
     <Dialog
       open={open}
-      onClose={(_event, reason) => { if (reason !== 'backdropClick') close() }}
+      onClose={requestClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { overflow: 'hidden' } } }}
+      slotProps={{ paper: { sx: {
+        overflowX: 'hidden', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+        maxHeight: 'calc(100dvh - 16px)', m: '8px',
+      } } }}
     >
       <Box
         component="img"
         src="/welcome.jpg"
         alt="FontApp"
         sx={{
-          width: '100%', height: 240, objectFit: 'cover', objectPosition: 'center 10%', display: 'block',
+          width: '100%', height: 240, flex: '0 0 auto', objectFit: 'cover', objectPosition: 'center 10%', display: 'block',
+          '@media (max-height: 600px)': { height: 112 },
           maskImage: 'linear-gradient(to bottom, #000 0%, #000 28%, transparent 100%)',
           WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 28%, transparent 100%)',
         }}
       />
       {/* Solapamos el contenido sobre la cola desvanecida de la imagen: el degradado
           continúa por detrás del título en vez de cortarse justo encima. */}
-      <DialogContent sx={{ textAlign: 'center', pt: 0, mt: -6 }}>
+      <DialogContent sx={{ textAlign: 'center', pt: 0, mt: -6, overflow: 'visible', flex: '0 0 auto' }}>
         {/* El selector global queda detrás del modal. Intentar usarlo contaba como clic
             en el backdrop, cerraba la presentación y la marcaba para siempre como vista.
             Aquí el idioma cambia en vivo sin abandonar el onboarding. */}
@@ -71,7 +84,7 @@ export function IntroDialog() {
         </Box>
         <Typography sx={{ mt: 2, fontWeight: 600 }}>{t('intro.solves')}</Typography>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3, flexDirection: 'column', gap: 1 }}>
+      <DialogActions sx={{ px: 3, pb: 3, flexDirection: 'column', gap: 1, flex: '0 0 auto' }}>
         <Button variant="contained" disableElevation fullWidth onClick={close}>{t('intro.cta')}</Button>
         <Typography variant="body2" color="text.secondary">
           <Link href="/register" onClick={close}>{t('intro.register')}</Link>
