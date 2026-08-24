@@ -1658,7 +1658,10 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   network-first. Cerrar el aviso solo lo calla para ese build mientras el componente siga
   montado: una apertura futura lo vuelve a ofrecer si sigue en la versión antigua.
 - La comprobación está apagada en desarrollo. `version.json` solo existe en el build de
-  producción y `npm run dev` no debe generar falsos avisos ni 404 periódicos.
+  producción y el aviso solo aparece en una **PWA instalada** (`display-mode: standalone`
+  o el modo standalone de iOS), nunca en una pestaña normal. Antes de navegar verifica
+  que el HTML y sus assets ya estén publicados; si la propagación no ha terminado,
+  conserva la versión actual y permite reintentar en vez de dejar una pantalla blanca.
 
 ## El hueco de la tab bar en iOS (sin resolver, con sonda)
 

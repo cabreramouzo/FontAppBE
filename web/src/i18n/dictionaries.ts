@@ -1053,6 +1053,7 @@ const ca: Dict = {
   'update.body': 'Hi ha una versió nova de FontApp.',
   'update.action': 'Actualitza',
   'update.updating': 'Actualitzant…',
+  'update.failed': 'L\'actualització encara no està disponible. Torna-ho a provar en un moment.',
   'update.later': 'Més tard',
 
   // Potabilidad
@@ -2114,6 +2115,7 @@ const es: Dict = {
   'update.body': 'Hay una nueva versión de FontApp.',
   'update.action': 'Actualizar',
   'update.updating': 'Actualizando…',
+  'update.failed': 'La actualización todavía no está disponible. Prueba de nuevo en un momento.',
   'update.later': 'Más tarde',
 
   'drink.yes': 'Potable',
@@ -3171,6 +3173,7 @@ const gl: Dict = {
   'update.body': 'Hai unha nova versión de FontApp.',
   'update.action': 'Actualizar',
   'update.updating': 'Actualizando…',
+  'update.failed': 'A actualización aínda non está dispoñible. Téntao de novo nun momento.',
   'update.later': 'Máis tarde',
 
   'drink.yes': 'Potable',
@@ -4228,6 +4231,7 @@ const eu: Dict = {
   'update.body': 'FontApp-en bertsio berri bat dago.',
   'update.action': 'Eguneratu',
   'update.updating': 'Eguneratzen…',
+  'update.failed': 'Eguneratzea oraindik ez dago erabilgarri. Saiatu berriro une batean.',
   'update.later': 'Geroago',
 
   'drink.yes': 'Edangarria',
@@ -5285,6 +5289,7 @@ const en: Dict = {
   'update.body': 'A new version of FontApp is ready.',
   'update.action': 'Update',
   'update.updating': 'Updating…',
+  'update.failed': 'The update is not available yet. Try again in a moment.',
   'update.later': 'Later',
 
   'drink.yes': 'Potable',
@@ -6320,6 +6325,7 @@ const fr: Dict = {
   'update.body': "Une nouvelle version de FontApp est disponible.",
   'update.action': "Mettre à jour",
   'update.updating': "Mise à jour…",
+  'update.failed': 'La mise à jour n’est pas encore disponible. Réessayez dans un instant.',
   'update.later': "Plus tard",
   'drink.yes': "Potable",
   'drink.no': "Non potable",
