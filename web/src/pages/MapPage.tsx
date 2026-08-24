@@ -76,8 +76,10 @@ import { timeAgo } from '../lib/time'
 import { isReliable } from '../lib/confidence'
 import { ConfidenceChip } from '../components/ConfidenceChip'
 
-// Centro por defecto: demarcación del Moianès.
-const MOIANES: [number, number] = [41.81, 2.09]
+// Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
+// península aproximadamente centrada y el zoom 5 permite verla entera también en móvil.
+const DEFAULT_CENTER: [number, number] = [40.4168, -3.7038]
+const DEFAULT_ZOOM = 5
 
 // Última vista del mapa (centro + zoom), para restaurarla al volver del detalle.
 // En sessionStorage: persiste durante la navegación y recargas de la sesión, y se
@@ -934,7 +936,7 @@ export function MapPage() {
   const [missionsOpen, setMissionsOpen] = useState(false)
   const [place, setPlace] = useState<Place | null>(null)
   const [params, setParams] = useSearchParams()
-  // Vista inicial: la última guardada (al volver del detalle) o el Moianès por defecto.
+  // Vista inicial: la última guardada (al volver del detalle) o la península por defecto.
   const [initialView] = useState(loadView)
 
   // Llegada desde el detalle (?lat&lng&sel): centra el mapa en esa fuente y la selecciona.
@@ -1206,8 +1208,8 @@ export function MapPage() {
 
       <MapContainer
         ref={setMap}
-        center={initialView ? [initialView.lat, initialView.lng] : MOIANES}
-        zoom={initialView?.zoom ?? 12}
+        center={initialView ? [initialView.lat, initialView.lng] : DEFAULT_CENTER}
+        zoom={initialView?.zoom ?? DEFAULT_ZOOM}
         className="map"
         scrollWheelZoom
         zoomControl={false}
