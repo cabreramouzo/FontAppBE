@@ -195,6 +195,9 @@ export function SupportPage() {
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
         {t('donate.monthly')}
       </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 1 }}>
+        {t('donate.flexibleAmount')}
+      </Typography>
 
       {potPagar && !CARDS_EN_REVISION && (
         <>

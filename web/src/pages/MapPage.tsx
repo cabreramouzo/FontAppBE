@@ -367,12 +367,13 @@ function FlyToPlace({ place }: { place: Place | null }) {
 
 // Control de zoom Material (sustituye al +/- por defecto de Leaflet).
 function ZoomControls() {
+  const { t } = useI18n()
   const map = useMap()
   return (
     <Paper className="zoom-ctrl" elevation={3} sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', borderRadius: 3, overflow: 'hidden' }}>
-      <IconButton size="small" onClick={() => map.zoomIn()} aria-label="zoom in"><AddIcon fontSize="small" /></IconButton>
+      <IconButton size="small" onClick={() => map.zoomIn()} aria-label={t('map.zoomIn')}><AddIcon fontSize="small" /></IconButton>
       <Divider />
-      <IconButton size="small" onClick={() => map.zoomOut()} aria-label="zoom out"><RemoveIcon fontSize="small" /></IconButton>
+      <IconButton size="small" onClick={() => map.zoomOut()} aria-label={t('map.zoomOut')}><RemoveIcon fontSize="small" /></IconButton>
     </Paper>
   )
 }
@@ -389,6 +390,7 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
   const [q, setQ] = useState('')
   const [matches, setMatches] = useState<Font[]>([])
   const [places, setPlaces] = useState<Place[]>([])
+  const [searched, setSearched] = useState(false)
 
   // Al girar el móvil o cambiar de tamaño, el buscador vuelve a su forma natural.
   useEffect(() => setAbierto(!compacto), [compacto])
@@ -399,8 +401,11 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
     if (term.length < 2) {
       setMatches([])
       setPlaces([])
+      setSearched(false)
       return
     }
+    setSearched(false)
+    let active = true
     const ctrl = new AbortController()
     const timer = setTimeout(() => {
       trackInteraction('search_run')
@@ -408,12 +413,15 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
         apiFetch<Page<Font>>(`/fonts?search=${encodeURIComponent(term)}&per=6`).then((p) => p.items).catch(() => [] as Font[]),
         searchPlaces(term, lang, ctrl.signal),
       ]).then(([fonts, foundPlaces]) => {
+        if (!active) return
         setMatches(fonts); setPlaces(foundPlaces)
+        setSearched(true)
         if (fonts.length === 0 && foundPlaces.length === 0) trackInteraction('search_no_results')
       })
     }, 350)
     return () => {
       clearTimeout(timer)
+      active = false
       ctrl.abort()
     }
   }, [q, lang])
@@ -422,6 +430,7 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
     setQ('')
     setMatches([])
     setPlaces([])
+    setSearched(false)
   }
 
   function abrir() {
@@ -436,6 +445,17 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
   }
 
   const hasResults = matches.length > 0 || places.length > 0
+  const noResults = searched && q.trim().length >= 2 && !hasResults
+
+  const senseResultats = (aPantallaCompleta: boolean) => (
+    <Box sx={{ p: aPantallaCompleta ? 3 : 2, textAlign: 'center' }}>
+      <Typography sx={{ fontWeight: 700 }}>{t('search.noResultsTitle')}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+        {t('search.noResultsBody')}
+      </Typography>
+      <Button size="small" onClick={clear}>{t('search.clear')}</Button>
+    </Box>
+  )
 
   // De qué fuente estamos hablando. Sin esto, buscar «font» devolvía **seis filas
   // seguidas llamadas «A Fonte»** sin nada que las distinga: en un desplegable pequeño se
@@ -520,6 +540,8 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
         <Box sx={{ flex: 1, overflowY: 'auto', pb: 'env(safe-area-inset-bottom)' }}>
           {hasResults
             ? resultados(true)
+            : noResults
+              ? senseResultats(true)
             : (
               // Ni resultados ni ruido: solo se dice qué se puede buscar. Sin esto la
               // pantalla queda en blanco y parece que se ha roto algo.
@@ -581,6 +603,11 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
       {hasResults && (
         <Paper elevation={4} sx={{ mt: 0.5, borderRadius: 3, overflow: 'hidden', maxHeight: '50vh', overflowY: 'auto' }}>
           {resultados(false)}
+        </Paper>
+      )}
+      {noResults && (
+        <Paper elevation={4} sx={{ mt: 0.5, borderRadius: 3 }}>
+          {senseResultats(false)}
         </Paper>
       )}
     </Box>
