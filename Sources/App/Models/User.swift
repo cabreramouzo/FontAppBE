@@ -39,6 +39,9 @@ final class User: Model, @unchecked Sendable {
     /// Última vez que se le vio por la app. Solo sirve para no mandar un correo a quien
     /// ya tiene el aviso en la campana. Ver `AddLastSeenAtToUser`.
     @OptionalField(key: "last_seen_at") var lastSeenAt: Date?
+    /// Sanciones confirmadas y, si aplica, fin de la restricción para publicar.
+    @Field(key: "moderation_strikes") var moderationStrikes: Int
+    @OptionalField(key: "posting_restricted_until") var postingRestrictedUntil: Date?
     // Idioma con el que se registró, para los correos que no nacen de una petición suya.
     @OptionalField(key: "lang") var lang: String?
     // Código del cartel por el que llegó (`?p=castellcir`), si venía con uno.
@@ -68,6 +71,12 @@ final class User: Model, @unchecked Sendable {
         self.mentionEmails = mentionEmails
         self.lang = lang
         self.signupSource = signupSource
+        self.moderationStrikes = 0
+    }
+
+    var postingIsRestricted: Bool {
+        guard let until = postingRestrictedUntil else { return false }
+        return until > Date()
     }
 }
 

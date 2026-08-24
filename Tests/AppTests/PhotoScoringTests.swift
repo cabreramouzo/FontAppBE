@@ -57,8 +57,10 @@ final class PhotoScoringTests: XCTestCase {
                         lat: Double = 41.0, long: Double = 2.0) async throws -> UUID {
         var id = UUID()
         try await app.test(.POST, "fonts", headers: bearer(token), beforeRequest: { req in
-            try req.content.encode(CreateFontDTO(name: nombre, latitude: lat, longitude: long,
-                                                 image: nil, description: nil, source: nil, drinkable: nil))
+            var dto = CreateFontDTO(name: nombre, latitude: lat, longitude: long,
+                                    image: nil, description: nil, source: nil, drinkable: nil)
+            dto.allowNearbyDuplicate = true
+            try req.content.encode(dto)
         }, afterResponse: { res in
             XCTAssertEqual(res.status, .created)
             id = try XCTUnwrap(res.content.decode(FontOut.self).id)

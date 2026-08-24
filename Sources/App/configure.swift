@@ -157,6 +157,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateInteractionAnalytics()) // clics agregables, sin usuario/IP
     app.migrations.add(CreateInteractionAnalyticsDaily()) // histórico diario sin UUID de sesión
     app.migrations.add(CreateUserSupportInteraction()) // apoyo identificado, solo con sesión y 180 días
+    app.migrations.add(AddAbuseModeration()) // cuarentena reversible y sanciones contra abuso
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

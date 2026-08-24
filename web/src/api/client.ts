@@ -175,7 +175,7 @@ export async function uploadImage(file: File, meta?: PhotoUploadMeta): Promise<s
 }
 
 export interface NewFont {
-  /** Obligatorio al crear; puede ser `null` al editar una importada sin topónimo. */
+  /** `null` si no hay un topónimo real; la interfaz mostrará el tipo traducido. */
   name: string | null
   latitude: number
   longitude: number
@@ -183,6 +183,8 @@ export interface NewFont {
   description?: string
   source?: WaterSource
   drinkable?: Drinkable
+  /** Confirmación consciente tras mostrar que ya existe otra fuente a menos de 25 m. */
+  allowNearbyDuplicate?: boolean
 }
 
 export async function createFont(data: NewFont, queuedOffline = false): Promise<Font> {
@@ -638,6 +640,16 @@ export async function dismissFlag(id: string): Promise<void> {
   await apiFetch(`/flags/${id}`, { method: 'DELETE' })
 }
 
+export async function hideFontAbuse(id: string, reason: 'spam' | 'fake' | 'abuse'): Promise<Font> {
+  return apiFetch<Font>(`/fonts/${id}/moderation/hide`, {
+    method: 'POST', body: JSON.stringify({ reason }),
+  })
+}
+
+export async function restoreFontAbuse(id: string): Promise<Font> {
+  return apiFetch<Font>(`/fonts/${id}/moderation/hide`, { method: 'DELETE' })
+}
+
 // Historial de ediciones de información de fuentes (admin): listar, revertir, revisar.
 export const FONT_EDITS_PER = 50
 
@@ -698,6 +710,16 @@ export async function getUsersAdmin(page = 1, search = ''): Promise<Page<AdminUs
   const q = new URLSearchParams({ page: String(page), per: String(USERS_ADMIN_PER) })
   if (search.trim()) q.set('search', search.trim())
   return apiFetch<Page<AdminUser>>(`/users/admin?${q}`)
+}
+
+export async function restrictUserPosting(userID: string, days: number): Promise<AdminUser> {
+  return apiFetch<AdminUser>(`/users/${userID}/posting-restriction`, {
+    method: 'POST', body: JSON.stringify({ days }),
+  })
+}
+
+export async function unrestrictUserPosting(userID: string): Promise<AdminUser> {
+  return apiFetch<AdminUser>(`/users/${userID}/posting-restriction`, { method: 'DELETE' })
 }
 
 // Perfil público de un usuario: identidad + su actividad (fuentes y reseñas).

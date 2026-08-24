@@ -1,4 +1,5 @@
 import Fluent
+import SQLKit
 import Vapor
 
 // Denuncias de contenido inapropiado. Crear: cualquier usuario autenticado.
@@ -18,10 +19,33 @@ struct FlagController: RouteCollection {
     /// POST /flags — denuncia una reseña o fuente. Idempotente-ish: no bloqueamos duplicados.
     @Sendable func create(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
+        let userID = try user.requireID()
         try CreateFlagDTO.validate(content: req)
         let dto = try req.content.decode(CreateFlagDTO.self)
-        let flag = ContentFlag(flaggerID: try user.requireID(), targetType: dto.targetType, targetID: dto.targetID, fontID: dto.fontID, reason: dto.reason)
+        let existing = try await ContentFlag.query(on: req.db)
+            .filter(\.$flagger.$id == userID)
+            .filter(\.$targetType == dto.targetType)
+            .filter(\.$targetID == dto.targetID)
+            .first()
+        if existing != nil { return Response(status: .noContent) }
+        let flag = ContentFlag(flaggerID: userID, targetType: dto.targetType, targetID: dto.targetID, fontID: dto.fontID, reason: dto.reason)
         try await flag.save(on: req.db)
+
+        // Tres personas distintas pueden sacar preventivamente una fuente del mapa,
+        // pero nunca sancionar al autor: esa decisión sigue siendo de un moderador.
+        if dto.targetType == "font", let sql = req.db as? SQLDatabase {
+            struct Count: Decodable { let count: Int }
+            let count = try await sql.raw("""
+                SELECT COUNT(DISTINCT flagger_id)::int AS count FROM content_flags
+                WHERE target_type = 'font' AND target_id = \(bind: dto.targetID)
+                """).first(decoding: Count.self)?.count ?? 0
+            if count >= 3, let font = try await Font.find(dto.targetID, on: req.db), font.moderationState == "visible" {
+                font.moderationState = "pending"
+                font.moderationReason = "community_reports"
+                font.moderatedAt = Date()
+                try await font.save(on: req.db)
+            }
+        }
         return Response(status: .created)
     }
 

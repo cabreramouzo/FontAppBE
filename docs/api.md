@@ -99,6 +99,8 @@ del agua; `gone` es un **testimonio**, no una decisión: no retira la fuente del
 | GET | `/users/staff` | Bearer (owner) | — | 200 `[{id, username, role}]` (rol > user) | 401, 403 |
 | GET | `/users/admin` | Bearer (owner) | `?page=&per=&search=` | 200 `Page<AdminUser>` (todas las columnas menos el hash; PII) | 401, 403 |
 | PUT | `/users/:id/role` | Bearer (owner) | `{role: user\|moderator\|admin}` | 200 `UserResponse` | 400, 401, 403, 404 |
+| POST | `/users/:id/posting-restriction` | Bearer (owner) | `{days: 1...365}` | 200 `AdminUser` | 400, 401, 403, 404 |
+| DELETE | `/users/:id/posting-restriction` | Bearer (owner) | — | 200 `AdminUser` | 401, 403, 404 |
 | PUT | `/users/:id` | Bearer | `{name, username, email, password?, emailPublic?, namePublic?, weeklyDigest?}` | 200 `UserResponse` | 400, 401, 403 (no eres tú), 404, 409 |
 | DELETE | `/users/:id` | Bearer | — | 204 | 401, 403, 404 |
 

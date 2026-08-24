@@ -32,6 +32,8 @@ struct UserController: RouteCollection {
             user.put(use: update)
             user.delete(use: destroy)
             user.put("role", use: setRole)                   // owner: cambiar rol
+            user.post("posting-restriction", use: restrictPosting) // owner: suspender aportaciones
+            user.delete("posting-restriction", use: unrestrictPosting)
         }
     }
 
@@ -161,6 +163,40 @@ struct UserController: RouteCollection {
         target.role = role
         try await target.save(on: req.db)
         return UserResponse(target, includeEmail: true)
+    }
+
+    @Sendable func restrictPosting(req: Request) async throws -> AdminUser {
+        let actor = try req.auth.require(User.self)
+        guard actor.isOwner else { throw Abort(.forbidden) }
+        struct DTO: Content { let days: Int }
+        let dto = try req.content.decode(DTO.self)
+        guard (1...365).contains(dto.days) else { throw Abort(.badRequest) }
+        let target = try await find(req)
+        guard !target.isOwner else { throw Abort(.forbidden) }
+        target.postingRestrictedUntil = Date().addingTimeInterval(Double(dto.days) * 86_400)
+        try await target.save(on: req.db)
+        try await auditRestriction(req, actor: actor, target: target, action: "restrict", reason: "\(dto.days)d")
+        return AdminUser(target)
+    }
+
+    @Sendable func unrestrictPosting(req: Request) async throws -> AdminUser {
+        let actor = try req.auth.require(User.self)
+        guard actor.isOwner else { throw Abort(.forbidden) }
+        let target = try await find(req)
+        target.postingRestrictedUntil = nil
+        try await target.save(on: req.db)
+        try await auditRestriction(req, actor: actor, target: target, action: "unrestrict", reason: nil)
+        return AdminUser(target)
+    }
+
+    private func auditRestriction(_ req: Request, actor: User, target: User,
+                                  action: String, reason: String?) async throws {
+        guard let sql = req.db as? SQLDatabase else { return }
+        try await sql.raw("""
+            INSERT INTO moderation_actions (id, subject_user_id, actor_id, action, reason, created_at)
+            VALUES (\(bind: UUID()), \(bind: target.id), \(bind: actor.id), \(bind: action),
+                    \(bind: reason), CURRENT_TIMESTAMP)
+            """).run()
     }
 
     /// GET /users/stats/regions — nº de usuarios por región de registro (solo admins).
@@ -533,6 +569,8 @@ struct AdminUser: Content {
     let createdAt: Date?
     let supportClickedAt: Date?
     let aixetaClickedAt: Date?
+    let moderationStrikes: Int
+    let postingRestrictedUntil: Date?
 
     init(_ u: User, support: [String: Date] = [:]) {
         self.id = u.id
@@ -549,6 +587,8 @@ struct AdminUser: Content {
         self.createdAt = u.createdAt
         self.supportClickedAt = support["support_heart"]
         self.aixetaClickedAt = support["support_aixeta"]
+        self.moderationStrikes = u.moderationStrikes
+        self.postingRestrictedUntil = u.postingRestrictedUntil
     }
 }
 

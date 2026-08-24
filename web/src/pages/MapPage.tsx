@@ -53,7 +53,7 @@ import { useHeading } from '../lib/useHeading'
 import 'leaflet-rotate'
 
 import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, WaterSource } from '../api/types'
-import { apiFetch, createComment, createFont, describeError, trackInteraction, uploadImage } from '../api/client'
+import { apiFetch, createComment, createFont, describeError, nearbyFonts, trackInteraction, uploadImage } from '../api/client'
 import { nombreFuente } from '../lib/fontName'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -630,13 +630,25 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
     // como para guardarla en la cola si resulta que no hay cobertura.
     const preparada = file ? await prepararFoto(file) : undefined
     const photo = preparada?.photo
+    let allowNearbyDuplicate = false
+    try {
+      const nearby = await nearbyFonts(coords.lat, coords.lng, 10)
+      const tooClose = nearby.some((f) => haversineKm(coords.lat, coords.lng, f.latitude, f.longitude) <= 0.025)
+      if (tooClose) {
+        if (!confirm(t('newFont.nearDuplicate'))) { setSaving(false); return }
+        allowNearbyDuplicate = true
+      }
+    } catch {
+      // La API repetirá esta comprobación de forma autoritativa al crear.
+    }
     const data = {
-      name,
+      name: name.trim() || null,
       latitude: coords.lat,
       longitude: coords.lng,
       description: description || undefined,
       source: source || undefined,
       drinkable: drinkable || undefined,
+      allowNearbyDuplicate,
     }
     try {
       const image = photo ? await uploadImage(photo, preparada?.meta) : undefined
@@ -677,7 +689,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
       </Typography>
       <Typography variant="caption" color="text.secondary">{t('newFont.tapToMove')}</Typography>
       <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
-        <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} required size="small" />
+        <TextField label={t('newFont.nameOpt')} value={name} onChange={(e) => setName(e.target.value)} size="small" />
         {/* El estado del agua, aquí mismo: es el dato más útil y quien añade la fuente
             está delante de ella. Evita crear → volver al mapa → abrir el detalle. */}
         <TextField select label={t('update.status')} value={waterStatus} onChange={(e) => setWaterStatus(e.target.value)} size="small">

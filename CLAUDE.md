@@ -1317,6 +1317,14 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   30 fuentes/h: un rechazo no prolonga la ventana y responde `Retry-After` con el tiempo
   real restante. Los demás límites siguen siendo por IP salvo que indiquen lo contrario.
   A escala multi-instancia el rate-limit debería ir a Redis.
+- **Defensa antiabuso de fuentes:** crear se limita por usuario (30/h; cuentas de menos de
+  una semana, 5/día), el nombre propio es opcional y rechaza enlaces, y se avisa si hay otra
+  fuente a ≤25 m antes de aceptar una confirmación expresa. Una denuncia por usuario y fuente;
+  tres usuarios distintos ponen la ficha en `moderation_state=pending` y la sacan de todas las
+  lecturas públicas sin sancionar aún al autor. Moderador+ confirma spam/falsa/abuso o restaura;
+  cada ocultación confirmada suma un aviso (2 → 7 días sin publicar, 3+ → 365 días). Owner puede
+  levantar o fijar restricciones desde `/admin/users`. Todo cambio queda en
+  `moderation_actions`; nunca se borra la ficha ni se mezclan abuso, duplicado y retirada física.
 - Ubicación de registro (`GeoLocator`): al crear cuenta se deduce país/región/ciudad de la IP
   (solo estadística; nunca se guarda la IP). Noop en dev; en prod `IPAPIGeoLocator` (ip-api.com,
   **tercero**, uso no comercial) con `GEOIP_ENABLED=true`. Alternativa futura: BD local MaxMind

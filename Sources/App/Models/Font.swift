@@ -94,11 +94,16 @@ final class Font: Model, Content, @unchecked Sendable {
     /// Retirada porque ya no existe sobre el terreno. Nulo = sigue en pie.
     @OptionalField(key: "retired_at") var retiredAt: Date?
     @OptionalParent(key: "retired_by") var retiredBy: User?
+    /// Cuarentena de moderación, distinta de duplicada o retirada físicamente.
+    @Field(key: "moderation_state") var moderationState: String
+    @OptionalField(key: "moderation_reason") var moderationReason: String?
+    @OptionalField(key: "moderated_at") var moderatedAt: Date?
+    @OptionalParent(key: "moderated_by") var moderatedBy: User?
 
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     /// ¿Sale en el mapa? Falso si es duplicada de otra o si se ha retirado.
-    var isVisible: Bool { $duplicateOf.id == nil && retiredAt == nil }
+    var isVisible: Bool { $duplicateOf.id == nil && retiredAt == nil && moderationState == "visible" }
 
     /// Consulta de fuentes **que salen al público**: sin duplicadas ni retiradas.
     ///
@@ -108,10 +113,11 @@ final class Font: Model, Content, @unchecked Sendable {
     /// viejo y hay que poder ver **por qué** ya no está, no un 404.
     static func visible(on db: any Database) -> QueryBuilder<Font> {
         Font.query(on: db).filter(\.$duplicateOf.$id == nil).filter(\.$retiredAt == nil)
+            .filter(\.$moderationState == "visible")
     }
 
     /// La misma condición en SQL crudo, para las consultas que no pasan por Fluent.
-    static let visibleSQL = "duplicate_of IS NULL AND retired_at IS NULL"
+    static let visibleSQL = "duplicate_of IS NULL AND retired_at IS NULL AND moderation_state = 'visible'"
 
     init() {}
 
@@ -143,6 +149,7 @@ final class Font: Model, Content, @unchecked Sendable {
         self.admin1 = admin1
         self.$creator.id = creatorID
         self.queuedOffline = queuedOffline
+        self.moderationState = "visible"
     }
 
     // MARK: - Salida
@@ -169,7 +176,7 @@ final class Font: Model, Content, @unchecked Sendable {
         // está en pie: la ficha se llega a ver por un enlace viejo y tiene que poder
         // explicar por qué el punto no aparece, en vez de dar un 404 o, peor, parecer
         // normal. Explícitos, como todo opcional de esta API.
-        case duplicateOf, retiredAt
+        case duplicateOf, retiredAt, moderationState
     }
 
     /// El padre opcional sale como `{"id": …}`, igual que lo serializaba Fluent.
@@ -204,5 +211,6 @@ final class Font: Model, Content, @unchecked Sendable {
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode($duplicateOf.id, forKey: .duplicateOf)
         try c.encode(retiredAt, forKey: .retiredAt)
+        try c.encode(moderationState, forKey: .moderationState)
     }
 }

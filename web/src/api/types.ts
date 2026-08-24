@@ -22,6 +22,8 @@ export interface Font {
   duplicateOf?: string | null
   /** Cuándo se retiró del mapa por no existir ya. `null` si sigue ahí. */
   retiredAt?: string | null
+  /** `pending` o `hidden_*` si la fuente está en cuarentena de moderación. */
+  moderationState?: string
 }
 
 export type UserRole = 'user' | 'moderator' | 'admin' | 'owner'
@@ -68,6 +70,8 @@ export interface AdminUser {
   createdAt: string | null
   supportClickedAt: string | null
   aixetaClickedAt: string | null
+  moderationStrikes: number
+  postingRestrictedUntil: string | null
 }
 
 export interface Flag {

@@ -16,6 +16,7 @@ import Typography from '@mui/material/Typography'
 import HistoryIcon from '@mui/icons-material/HistoryOutlined'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import LayersClearIcon from '@mui/icons-material/LayersClearOutlined'
+import ReportProblemIcon from '@mui/icons-material/ReportProblemOutlined'
 import type { Font, FontEdit } from '../api/types'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
@@ -24,13 +25,15 @@ import InputAdornment from '@mui/material/InputAdornment'
 import SearchIcon from '@mui/icons-material/SearchOutlined'
 import type { FontSummary } from '../api/types'
 import {
-  describeError, getFontHistory, markDuplicate, nearbyFonts, retireFont, unmarkDuplicate, unretireFont,
+  describeError, getFontHistory, hideFontAbuse, markDuplicate, nearbyFonts, restoreFontAbuse, retireFont, unmarkDuplicate, unretireFont,
 } from '../api/client'
 import { capabilities } from '../lib/capabilities'
 import { useI18n } from '../i18n/I18nContext'
 import { timeAgo } from '../lib/time'
 import { haversineKm } from '../lib/geo'
 import { nombreFuente } from '../lib/fontName'
+import { useAuth } from '../auth/AuthContext'
+import { canModerate } from '../lib/roles'
 
 /**
  * El aviso de que esta ficha ya no sale en el mapa.
@@ -59,6 +62,14 @@ export function FontHiddenNotice({ font }: { font: Font }) {
       </Alert>
     )
   }
+  if (font.moderationState && font.moderationState !== 'visible') {
+    return (
+      <Alert severity="warning" sx={{ mb: 2 }}>
+        <AlertTitle>{t(font.moderationState === 'pending' ? 'hidden.pendingTitle' : 'hidden.moderationTitle')}</AlertTitle>
+        {t(font.moderationState === 'pending' ? 'hidden.pendingBody' : 'hidden.moderationBody')}
+      </Alert>
+    )
+  }
   return null
 }
 
@@ -71,6 +82,7 @@ export function FontHiddenNotice({ font }: { font: Font }) {
  */
 export function FontMaintenance({ font, onChanged }: { font: Font; onChanged: () => void }) {
   const { t } = useI18n()
+  const { user } = useAuth()
   const [puedo, setPuedo] = useState<string[]>([])
   const [historial, setHistorial] = useState<FontEdit[] | null>(null)
   const [verHistorial, setVerHistorial] = useState(false)
@@ -79,6 +91,7 @@ export function FontMaintenance({ font, onChanged }: { font: Font; onChanged: ()
   const [filtro, setFiltro] = useState('')
   const [error, setError] = useState('')
   const [ocupado, setOcupado] = useState(false)
+  const [abuseOpen, setAbuseOpen] = useState(false)
 
   useEffect(() => { capabilities().then((c) => setPuedo(c as string[])) }, [])
 
@@ -97,7 +110,8 @@ export function FontMaintenance({ font, onChanged }: { font: Font; onChanged: ()
   const puedeHistorial = puedo.includes('viewFontHistory')
   const puedeDuplicar = puedo.includes('markDuplicate')
   const puedeRetirar = puedo.includes('retireFont')
-  if (!puedeHistorial && !puedeDuplicar && !puedeRetirar) return null
+  const puedeModerar = canModerate(user)
+  if (!puedeHistorial && !puedeDuplicar && !puedeRetirar && !puedeModerar) return null
 
   async function corre(accion: () => Promise<unknown>) {
     setError('')
@@ -138,7 +152,33 @@ export function FontMaintenance({ font, onChanged }: { font: Font; onChanged: ()
                     onClick={() => { if (confirm(t('maint.confirmRetire'))) corre(() => retireFont(font.id)) }}>
               {t('maint.retire')}
             </Button>)}
+        {puedeModerar && (font.moderationState && font.moderationState !== 'visible'
+          ? <Button size="small" disabled={ocupado} onClick={() => corre(() => restoreFontAbuse(font.id))}>
+              {t('maint.restoreAbuse')}
+            </Button>
+          : <Button size="small" color="error" startIcon={<ReportProblemIcon />} disabled={ocupado}
+                    onClick={() => setAbuseOpen(true)}>
+              {t('maint.hideAbuse')}
+            </Button>)}
       </Stack>
+
+      <Dialog open={abuseOpen} onClose={() => setAbuseOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{t('maint.abuseTitle')}</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary">{t('maint.abuseHelp')}</Typography>
+          <Stack spacing={1} sx={{ mt: 2 }}>
+            {(['spam', 'fake', 'abuse'] as const).map((reason) => (
+              <Button key={reason} color="error" variant="outlined" disabled={ocupado} onClick={() => {
+                setAbuseOpen(false)
+                void corre(() => hideFontAbuse(font.id, reason))
+              }}>
+                {t(`maint.abuse.${reason}`)}
+              </Button>
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions><Button onClick={() => setAbuseOpen(false)}>{t('form.cancel')}</Button></DialogActions>
+      </Dialog>
 
       <Collapse in={verHistorial}>
         <Box sx={{ mt: 1.5 }}>

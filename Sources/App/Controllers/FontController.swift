@@ -25,7 +25,8 @@ struct FontController: RouteCollection {
         let protected = fonts.grouped(UserToken.authenticator(), User.guardMiddleware())
         // En una ruta larga se pueden encontrar muchas fuentes, pero no 30 en una hora:
         // por encima de eso ya no es alguien caminando.
-        protected.grouped(RateLimitMiddleware(scope: "font-create", max: 30, window: 60 * 60)).post(use: create)
+        protected.grouped(RateLimitMiddleware(scope: "font-create", max: 30, window: 60 * 60,
+                                              identity: .authenticatedUser)).post(use: create)
         // Historial de ediciones (moderación): solo admins. Antes de `:fontID`
         // para que "edits" no se interprete como un id de fuente.
         protected.get("edits", use: edits)
@@ -49,6 +50,9 @@ struct FontController: RouteCollection {
             font.delete("duplicate-of", use: unmarkDuplicate)
             font.post("retire", use: retire)
             font.delete("retire", use: unretire)
+            // Moderación de abuso: cuarentena reversible, solo moderadores.
+            font.post("moderation", "hide", use: hideAbuse)
+            font.delete("moderation", "hide", use: restoreAbuse)
         }
     }
 
@@ -178,10 +182,41 @@ struct FontController: RouteCollection {
 
     @Sendable func create(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
+        guard !user.postingIsRestricted else {
+            throw AppError(.forbidden, "user.postingRestricted", "Esta cuenta tiene temporalmente restringidas las aportaciones")
+        }
         try CreateFontDTO.validate(content: req)
         let dto = try req.content.decode(CreateFontDTO.self)
-        guard let creado = dto.name?.trimmingCharacters(in: .whitespacesAndNewlines), !creado.isEmpty else {
-            throw AppError(.badRequest, "font.nameRequired", "El nombre es obligatorio al crear una fuente.")
+        let creado = dto.name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        if let creado, creado.count > 120 || creado.contains("\n") || creado.lowercased().contains("http://") || creado.lowercased().contains("https://") {
+            throw AppError(.badRequest, "font.badName", "El nombre debe ser un topónimo breve, sin enlaces")
+        }
+
+        // Una cuenta nueva sin historial fiable empieza con un cupo pequeño. Se amplía
+        // sola al cumplir una semana. El límite global por usuario sigue protegiendo el
+        // endpoint después; éste frena específicamente cuentas desechables.
+        if !user.isAdmin, let userID = user.id, let joined = user.createdAt,
+           Date().timeIntervalSince(joined) < 7 * 86_400 {
+            let today = try await Font.query(on: req.db)
+                .filter(\.$creator.$id == userID)
+                .filter(\.$createdAt > Date().addingTimeInterval(-86_400))
+                .count()
+            guard today < 5 else {
+                throw RateLimitExceeded(retryAfter: 24 * 60 * 60, code: "font.newAccountLimit")
+            }
+        }
+
+        // Evita el duplicado accidental. El cliente puede confirmarlo expresamente tras
+        // enseñar las vecinas; la API nunca decide sola que dos puntos son el mismo.
+        if dto.allowNearbyDuplicate != true {
+            let delta = 0.0005 // caja pequeña; la decisión exacta se hace con haversine
+            let nearby = try await Font.visible(on: req.db)
+                .filter(\.$latitude >= dto.latitude - delta).filter(\.$latitude <= dto.latitude + delta)
+                .filter(\.$longitude >= dto.longitude - delta).filter(\.$longitude <= dto.longitude + delta)
+                .all()
+            if nearby.contains(where: { haversineKm(dto.latitude, dto.longitude, $0.latitude, $0.longitude) <= 0.025 }) {
+                throw AppError(.conflict, "font.nearDuplicate", "Ya hay una fuente a menos de 25 metros; revisa si es la misma")
+            }
         }
         let font = Font(name: creado, latitude: dto.latitude, longitude: dto.longitude,
                         image: dto.image, description: dto.description, source: dto.source,
@@ -199,6 +234,72 @@ struct FontController: RouteCollection {
         let response = Response(status: .created)
         try response.content.encode(font)
         return response
+    }
+
+    @Sendable func hideAbuse(req: Request) async throws -> Font {
+        let actor = try req.auth.require(User.self)
+        guard actor.canModerate else { throw Abort(.forbidden) }
+        struct DTO: Content { let reason: String }
+        let dto = try req.content.decode(DTO.self)
+        let allowed = ["spam", "fake", "abuse"]
+        guard allowed.contains(dto.reason) else { throw Abort(.badRequest, reason: "Motivo no válido") }
+        let font = try await find(req)
+        guard !font.moderationState.hasPrefix("hidden_") else { return font }
+        let creatorID = font.$creator.id
+        try await req.db.transaction { db in
+            font.moderationState = "hidden_\(dto.reason)"
+            font.moderationReason = dto.reason
+            font.moderatedAt = Date()
+            font.$moderatedBy.id = try actor.requireID()
+            try await font.save(on: db)
+            if let creatorID, let creator = try await User.find(creatorID, on: db) {
+                creator.moderationStrikes += 1
+                if creator.moderationStrikes == 2 {
+                    creator.postingRestrictedUntil = Date().addingTimeInterval(7 * 86_400)
+                } else if creator.moderationStrikes >= 3 {
+                    creator.postingRestrictedUntil = Date().addingTimeInterval(365 * 86_400)
+                }
+                try await creator.save(on: db)
+            }
+            try await Self.audit(db, fontID: font.id, subjectID: creatorID, actorID: actor.id,
+                                 action: "hide", reason: dto.reason)
+        }
+        return font
+    }
+
+    @Sendable func restoreAbuse(req: Request) async throws -> Font {
+        let actor = try req.auth.require(User.self)
+        guard actor.canModerate else { throw Abort(.forbidden) }
+        let font = try await find(req)
+        guard font.moderationState != "visible" else { return font }
+        let confirmed = font.moderationState.hasPrefix("hidden_")
+        let previousReason = font.moderationReason
+        let creatorID = font.$creator.id
+        try await req.db.transaction { db in
+            font.moderationState = "visible"
+            font.moderationReason = nil
+            font.moderatedAt = Date()
+            font.$moderatedBy.id = try actor.requireID()
+            try await font.save(on: db)
+            if confirmed, let creatorID, let creator = try await User.find(creatorID, on: db) {
+                creator.moderationStrikes = max(0, creator.moderationStrikes - 1)
+                if creator.moderationStrikes < 2 { creator.postingRestrictedUntil = nil }
+                try await creator.save(on: db)
+            }
+            try await Self.audit(db, fontID: font.id, subjectID: creatorID, actorID: actor.id,
+                                 action: "restore", reason: previousReason)
+        }
+        return font
+    }
+
+    private static func audit(_ db: any Database, fontID: UUID?, subjectID: UUID?, actorID: UUID?,
+                              action: String, reason: String?) async throws {
+        guard let sql = db as? SQLDatabase else { return }
+        try await sql.raw("""
+            INSERT INTO moderation_actions (id, font_id, subject_user_id, actor_id, action, reason, created_at)
+            VALUES (\(bind: UUID()), \(bind: fontID), \(bind: subjectID), \(bind: actorID),
+                    \(bind: action), \(bind: reason), CURRENT_TIMESTAMP)
+            """).run()
     }
 
     /// Copia país/región de la fuente ya clasificada más cercana.
@@ -718,8 +819,8 @@ struct CreateFontDTO: Content {
     ///
     /// Casi toda fuente importada no tiene nombre propio, y quien la edita para arreglar
     /// otra cosa no debe verse obligado a inventarle uno — es exactamente así como
-    /// vuelven los «Fuente» a la base. Al **crear** sigue siendo obligatorio, porque ahí
-    /// hay una persona delante que sabe cómo se llama; lo impone `nameRequired`.
+    /// vuelven los «Fuente» a la base. También al crear puede no haber topónimo: el tipo
+    /// traducido es una representación de interfaz, no un nombre que guardar en la BD.
     let name: String?
     let latitude: Double
     let longitude: Double
@@ -727,6 +828,8 @@ struct CreateFontDTO: Content {
     let description: String?
     let source: WaterSource?
     let drinkable: Drinkable?
+    /// Confirmación explícita después de enseñar una fuente a menos de 25 m.
+    var allowNearbyDuplicate: Bool? = nil
 }
 
 extension CreateFontDTO: Validatable {

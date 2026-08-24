@@ -205,7 +205,11 @@ final class IntegrationTests: XCTestCase {
     private func createFont(_ app: Application, token: String, name: String, lat: Double, long: Double) async throws -> UUID {
         var id = UUID()
         try await app.test(.POST, "fonts", headers: bearer(token), beforeRequest: { req in
-            try req.content.encode(CreateFontDTO(name: name, latitude: lat, longitude: long, image: nil, description: nil, source: nil, drinkable: nil))
+            var dto = CreateFontDTO(name: name, latitude: lat, longitude: long, image: nil, description: nil, source: nil, drinkable: nil)
+            // Esta factoría prepara fixtures deliberadamente cercanas en muchos tests;
+            // no está probando el aviso de duplicado, así que confirma que son distintas.
+            dto.allowNearbyDuplicate = true
+            try req.content.encode(dto)
         }, afterResponse: { res in
             XCTAssertEqual(res.status, .created)
             id = try res.content.decode(FontJSON.self).id ?? id
@@ -2015,11 +2019,97 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    func testCreateAllowsUnnamedButRequiresConfirmationForNearbyFountain() async throws {
+        try await withApp { app in
+            try await register(app, username: "anti-duplicate")
+            let token = try await login(app, username: "anti-duplicate")
+            struct PublicFont: Content { let id: UUID?; let name: String? }
+
+            try await app.test(.POST, "fonts", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: nil, latitude: 41.5, longitude: 2.5,
+                                                     image: nil, description: nil, source: .mountain, drinkable: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+                XCTAssertNil(try res.content.decode(PublicFont.self).name)
+            })
+
+            try await app.test(.POST, "fonts", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(CreateFontDTO(name: "Massa a prop", latitude: 41.50001, longitude: 2.50001,
+                                                     image: nil, description: nil, source: .tap, drinkable: nil))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .conflict) })
+
+            try await app.test(.POST, "fonts", headers: bearer(token), beforeRequest: { req in
+                var dto = CreateFontDTO(name: "Confirmada", latitude: 41.50001, longitude: 2.50001,
+                                        image: nil, description: nil, source: .tap, drinkable: nil)
+                dto.allowNearbyDuplicate = true
+                try req.content.encode(dto)
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+        }
+    }
+
+    func testThreeIndependentFlagsQuarantineWithoutStrikingAuthor() async throws {
+        try await withApp { app in
+            let authorID = try await register(app, username: "flag-author")
+            let authorToken = try await login(app, username: "flag-author")
+            let fontID = try await createFont(app, token: authorToken, name: "Sospitosa", lat: 41.2, long: 2.2)
+
+            for i in 1...3 {
+                let username = "flag-reporter-\(i)"
+                try await register(app, username: username)
+                let token = try await login(app, username: username)
+                try await app.test(.POST, "flags", headers: bearer(token), beforeRequest: { req in
+                    try req.content.encode(CreateFlagDTO(targetType: "font", targetID: fontID,
+                                                        fontID: fontID, reason: "fake"))
+                }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+            }
+
+            let font = try await Font.find(fontID, on: app.db)
+            XCTAssertEqual(font?.moderationState, "pending")
+            let author = try await User.find(authorID, on: app.db)
+            let visibleCount = try await Font.visible(on: app.db).filter(\.$id == fontID).count()
+            XCTAssertEqual(author?.moderationStrikes, 0)
+            XCTAssertEqual(visibleCount, 0)
+        }
+    }
+
+    func testConfirmedAbuseCreatesProgressiveRestrictionAndRestoreReversesStrike() async throws {
+        try await withApp { app in
+            let authorID = try await register(app, username: "repeat-offender")
+            let authorToken = try await login(app, username: "repeat-offender")
+            let first = try await createFont(app, token: authorToken, name: "Falsa 1", lat: 40.1, long: 1.1)
+            let second = try await createFont(app, token: authorToken, name: "Falsa 2", lat: 40.2, long: 1.2)
+            let moderatorID = try await register(app, username: "abuse-moderator")
+            let moderator = try await User.find(moderatorID, on: app.db)!
+            moderator.role = .moderator
+            try await moderator.save(on: app.db)
+            let moderatorToken = try await login(app, username: "abuse-moderator")
+
+            for id in [first, second] {
+                try await app.test(.POST, "fonts/\(id)/moderation/hide", headers: bearer(moderatorToken), beforeRequest: { req in
+                    try req.content.encode(["reason": "fake"])
+                }, afterResponse: { res in XCTAssertEqual(res.status, .ok) })
+            }
+            var author = try await User.find(authorID, on: app.db)
+            XCTAssertEqual(author?.moderationStrikes, 2)
+            XCTAssertTrue(author?.postingIsRestricted == true)
+
+            try await app.test(.DELETE, "fonts/\(second)/moderation/hide", headers: bearer(moderatorToken), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
+            author = try await User.find(authorID, on: app.db)
+            XCTAssertEqual(author?.moderationStrikes, 1)
+            XCTAssertFalse(author?.postingIsRestricted == true)
+        }
+    }
+
     /// El tamaño de página que pide el cliente va acotado: `?per=100000` devolvía
     /// catorce megas por una petición anónima.
     func testPageSizeIsCapped() async throws {
         try await withApp { app in
-            try await register(app, username: "pager")
+            let userID = try await register(app, username: "pager")
+            let user = try await User.find(userID, on: app.db)!
+            user.createdAt = Date().addingTimeInterval(-8 * 86_400)
+            try await user.save(on: app.db)
             let token = try await login(app, username: "pager")
             for i in 0..<12 {
                 _ = try await createFont(app, token: token, name: "Font \(i)", lat: 41.0 + Double(i) / 1000, long: 2.0)
@@ -3261,6 +3351,9 @@ final class IntegrationTests: XCTestCase {
         func testCataloniaIgnoresContributionsYouCanMakeFromHome() async throws {
         try await withApp { app in
             let id = try await register(app, username: "desdecasa")
+            let user = try await User.find(id, on: app.db)!
+            user.createdAt = Date().addingTimeInterval(-8 * 86_400)
+            try await user.save(on: app.db)
             let token = try await login(app, username: "desdecasa")
 
             /// Coloca una aportación del tipo pedido sobre una fuente de esa demarcación.

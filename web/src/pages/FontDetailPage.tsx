@@ -594,6 +594,7 @@ export function FontDetailPage() {
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [updating, setUpdating] = useState(false) // formulario de nueva actualización desplegado
+  const [flagFontOpen, setFlagFontOpen] = useState(false)
   const toast = useToast()
   // Poner la foto es una acción sola: se elige el fichero y se sube, y ya está. Antes
   // esto abría el formulario de reseña y bajaba hasta él, que era pedirle al usuario el
@@ -725,6 +726,17 @@ export function FontDetailPage() {
     try {
       await deleteFont(id)
       navigate('/')
+    } catch (e) {
+      setError(describeError(e, t))
+    }
+  }
+
+  async function flagCurrentFont(reason: string) {
+    if (!font) return
+    try {
+      await createFlag('font', font.id, font.id, reason)
+      setFlagFontOpen(false)
+      toast.show(t('flag.done'))
     } catch (e) {
       setError(describeError(e, t))
     }
@@ -1314,6 +1326,28 @@ export function FontDetailPage() {
       </Box>
 
       <FontMaintenance font={font} onChanged={() => { load().catch(() => {}) }} />
+
+      {user && user.id !== font.creator?.id && (
+        <Button size="small" color="inherit" startIcon={<OutlinedFlagIcon />} sx={{ mt: 2, color: 'text.secondary' }}
+                onClick={() => setFlagFontOpen(true)}>
+          {t('flag.font')}
+        </Button>
+      )}
+
+      <Dialog open={flagFontOpen} onClose={() => setFlagFontOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{t('flag.fontTitle')}</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary">{t('flag.fontHelp')}</Typography>
+          <Stack spacing={1} sx={{ mt: 2 }}>
+            {(['fake', 'duplicate', 'nonexistent', 'spam', 'abuse'] as const).map((reason) => (
+              <Button key={reason} variant="outlined" color="warning" onClick={() => void flagCurrentFont(reason)}>
+                {t(`flag.reason.${reason}`)}
+              </Button>
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions><Button onClick={() => setFlagFontOpen(false)}>{t('form.cancel')}</Button></DialogActions>
+      </Dialog>
 
       {!dosColumnas && insignias}
 

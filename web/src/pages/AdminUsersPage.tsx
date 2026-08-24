@@ -20,7 +20,7 @@ import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import SearchIcon from '@mui/icons-material/Search'
 import type { AdminUser, UserRole } from '../api/types'
-import { describeError, getUsersAdmin, setUserRole, USERS_ADMIN_PER } from '../api/client'
+import { describeError, getUsersAdmin, restrictUserPosting, setUserRole, unrestrictUserPosting, USERS_ADMIN_PER } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -74,6 +74,22 @@ export function AdminUsersPage() {
     }
   }
 
+  async function changeRestriction(u: AdminUser, days?: number) {
+    setError('')
+    try {
+      const updated = days ? await restrictUserPosting(u.id, days) : await unrestrictUserPosting(u.id)
+      // La respuesta de esta acción no recalcula las analíticas de apoyo; conserva la
+      // fila cargada y sustituye únicamente los dos campos que realmente cambian.
+      setRows((rs) => rs?.map((r) => (r.id === u.id ? {
+        ...r,
+        moderationStrikes: updated.moderationStrikes,
+        postingRestrictedUntil: updated.postingRestrictedUntil,
+      } : r)) ?? null)
+    } catch (e) {
+      setError(describeError(e, t))
+    }
+  }
+
   if (!isOwner(user)) return null
 
   const pages = Math.max(1, Math.ceil(total / USERS_ADMIN_PER))
@@ -117,6 +133,7 @@ export function AdminUsersPage() {
                 <TableCell>{t('admin.colJoined')}</TableCell>
                 <TableCell>{t('admin.colSupport')}</TableCell>
                 <TableCell>{t('admin.colAixeta')}</TableCell>
+                <TableCell>{t('admin.colModeration')}</TableCell>
                 <TableCell>{t('admin.colRole')}</TableCell>
               </TableRow>
             </TableHead>
@@ -144,6 +161,22 @@ export function AdminUsersPage() {
                     {u.aixetaClickedAt
                       ? <Chip size="small" color="success" label={timeAgo(u.aixetaClickedAt, t)} />
                       : <Typography variant="body2" color="text.secondary">{t('admin.supportUnknown')}</Typography>}
+                  </TableCell>
+                  <TableCell sx={{ minWidth: 190 }}>
+                    <Typography variant="caption" color={u.moderationStrikes ? 'error' : 'text.secondary'} sx={{ display: 'block' }}>
+                      {t('admin.strikes', { n: u.moderationStrikes ?? 0 })}
+                    </Typography>
+                    {u.postingRestrictedUntil && new Date(u.postingRestrictedUntil) > new Date() ? (
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                        <Chip size="small" color="warning" label={t('admin.restrictedUntil', { date: new Date(u.postingRestrictedUntil).toLocaleDateString() })} />
+                        <Button size="small" onClick={() => void changeRestriction(u)}>{t('admin.unrestrict')}</Button>
+                      </Stack>
+                    ) : u.role !== 'owner' && (
+                      <Stack direction="row" spacing={0.5}>
+                        <Button size="small" color="warning" onClick={() => void changeRestriction(u, 7)}>{t('admin.restrict7')}</Button>
+                        <Button size="small" color="warning" onClick={() => void changeRestriction(u, 30)}>{t('admin.restrict30')}</Button>
+                      </Stack>
+                    )}
                   </TableCell>
                   <TableCell>
                     {u.id === user?.id ? (
