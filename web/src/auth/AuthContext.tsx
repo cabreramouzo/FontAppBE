@@ -4,6 +4,7 @@ import { ApiError, apiFetch, getToken, googleLoginRequest, loginRequest, loginWi
 import { saveSessionForSync } from '../lib/outbox'
 import { storedSource } from '../lib/campaign'
 import { forgetCapabilities } from '../lib/capabilities'
+import { startContextualOnboarding } from '../lib/onboarding'
 
 interface AuthState {
   user: UserResponse | null
@@ -114,6 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user)
     forgetCapabilities()
     void saveSessionForSync(res.token)
+    // Google también puede CREAR la cuenta. El servidor lo distingue para que esa
+    // persona no se pierda la bienvenida ni el onboarding contextual.
+    if (res.isNewUser) setJustRegistered(true)
   }
 
   async function loginWithPasskey() {
@@ -169,7 +173,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, loading, login, loginWithGoogle, loginWithPasskey, register, logout, refresh,
       justRegistered,
-      dismissWelcome: () => { setJustRegistered(false); setPromptLocation(true) },
+      dismissWelcome: () => {
+        startContextualOnboarding()
+        setJustRegistered(false)
+        setPromptLocation(true)
+      },
       promptLocation,
       dismissLocationPrompt: () => setPromptLocation(false),
     }}>

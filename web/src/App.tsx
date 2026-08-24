@@ -12,6 +12,7 @@ import { BadgeCelebration } from './components/BadgeCelebration'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useI18n } from './i18n/I18nContext'
 import { IntroDialog } from './components/IntroDialog'
+import { ContextualOnboarding } from './components/ContextualOnboarding'
 
 // Code-splitting por ruta: cada página es su propio chunk (Leaflet solo se carga
 // con el mapa). Las páginas son exports con nombre, de ahí el mapeo a `default`.
@@ -85,6 +86,7 @@ export default function App() {
               </BarreraDePantalla>
             </Layout>
             <WelcomeDialog />
+            <ContextualOnboarding />
             {/* Fuera de la barrera de errores y del layout: es un aviso de la sesión, no
                 de una pantalla, y tiene que poder salir estés donde estés. */}
             <BadgeCelebration />

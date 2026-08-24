@@ -140,6 +140,7 @@ export interface LoginResponse {
   token: string
   expiresAt: string | null
   user: UserResponse
+  isNewUser?: boolean
 }
 
 export interface ReportResponse {

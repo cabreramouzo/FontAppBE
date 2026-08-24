@@ -33,6 +33,7 @@ import { useEffect, useSyncExternalStore } from 'react'
  *
  * - `intro` y `welcome` explican qué es esto. Sin ellos lo demás no se entiende.
  * - `badge` es un premio por algo que la persona acaba de hacer; nada debe taparlo.
+ * - `onboarding` espera a que la acción esté en pantalla y enseña sin interrumpir a lo anterior.
  * - `install` y `interest` piden un favor. Van los últimos porque son los únicos que la
  *   persona no ha pedido de ninguna manera.
  */
@@ -40,8 +41,9 @@ const PRIORIDAD = {
   intro: 0,
   welcome: 0,
   badge: 1,
-  install: 2,
-  interest: 3,
+  onboarding: 2,
+  install: 3,
+  interest: 4,
 } as const
 
 export type Aviso = keyof typeof PRIORIDAD

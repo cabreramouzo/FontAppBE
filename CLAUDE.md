@@ -1573,6 +1573,20 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - El estado vive en un módulo y no en un contexto: son cinco componentes en dos árboles
   (`App` y `Layout`) y un proveedor tendría que envolver los dos para nada más.
 
+## Onboarding contextual
+
+- Tras registrarse, `WelcomeDialog` solo explica el propósito y avisa de que las ayudas
+  aparecerán en contexto. Ya no intenta enseñar cinco funciones antes de tocar la app.
+- `ContextualOnboarding` guarda un recorrido local y de una sola vez: marcador del mapa →
+  acciones para confirmar/cambiar el estado → botón para añadir una fuente. Cada ayuda
+  espera a que su elemento exista en la pantalla; no obliga a seguir una ruta artificial.
+- Solo se activa al cerrar la bienvenida de una cuenta recién creada, también cuando
+  Google crea la cuenta (`LoginResponse.isNewUser`). Las cuentas
+  existentes no reciben tutoriales retroactivos. «Omitir las ayudas» termina todo el
+  recorrido, y el estado `done` impide que vuelva a aparecer.
+- Participa en `lib/asks.ts`: nunca se superpone a la bienvenida ni a una medalla, y tiene
+  prioridad sobre peticiones de instalar la PWA o responder encuestas.
+
 ## Instalar la app (`lib/install.ts` + `/install`)
 
 - **Los avisos de arriba no pueden ir en flujo.** `InstallPrompt` se pintaba entre la

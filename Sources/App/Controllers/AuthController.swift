@@ -55,6 +55,7 @@ struct AuthController: RouteCollection {
         }
 
         let user: User
+        var isNewUser = false
         if let identity = try await AuthIdentity.query(on: req.db)
             .filter(\.$provider == "google").filter(\.$subject == profile.subject)
             .with(\.$user).first() {
@@ -73,6 +74,7 @@ struct AuthController: RouteCollection {
                                    userID: existing.requireID()).save(on: req.db)
             user = existing
         } else {
+            isNewUser = true
             let username = try await availableGoogleUsername(email: profile.email, on: req.db)
             let created = User(name: profile.name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
                                 ?? username,
@@ -97,7 +99,7 @@ struct AuthController: RouteCollection {
         let token = try UserToken.generate(for: user)
         try await token.save(on: req.db)
         return LoginResponse(token: token.value, expiresAt: token.expiresAt,
-                             user: UserResponse(user, includeEmail: true))
+                             user: UserResponse(user, includeEmail: true), isNewUser: isNewUser)
     }
 
     private func availableGoogleUsername(email: String, on db: Database) async throws -> String {
@@ -250,6 +252,7 @@ struct LoginResponse: Content {
     let token: String
     let expiresAt: Date?
     let user: UserResponse
+    var isNewUser: Bool? = nil
 }
 
 struct GoogleLoginDTO: Content {

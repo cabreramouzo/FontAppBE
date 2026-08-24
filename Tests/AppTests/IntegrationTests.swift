@@ -52,13 +52,14 @@ final class IntegrationTests: XCTestCase {
             ))
 
             var firstUserID: UUID?
-            for _ in 0..<2 {
+            for attempt in 0..<2 {
                 try await app.test(.POST, "auth/google", beforeRequest: { req in
                     try req.content.encode(GoogleLoginDTO(credential: "signed-id-token", lang: "ca", source: " Cartell-Galicia! "))
                 }, afterResponse: { res in
                     XCTAssertEqual(res.status, .ok)
                     let login = try res.content.decode(LoginResponse.self)
                     XCTAssertFalse(login.token.isEmpty)
+                    XCTAssertEqual(login.isNewUser, attempt == 0)
                     if let firstUserID { XCTAssertEqual(login.user.id, firstUserID) }
                     else { firstUserID = login.user.id }
                 })
