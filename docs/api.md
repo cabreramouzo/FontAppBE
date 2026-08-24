@@ -281,6 +281,9 @@ ranking mensual de la página `/zones` sin ejecutar otro comando.
 
 ## Pendiente (no implementado)
 
+- Verificación del correo de registro: token de un solo uso con hash y caducidad, reenvío
+  limitado y bloqueo de todas las aportaciones hasta verificar. Las cuentas existentes se
+  migrarán como verificadas y Google solo lo hará automáticamente con `email_verified=true`.
 - Almacenamiento de imágenes en producción (hoy es disco local, no escala): migrar a S3/similar.
 - Limpieza de tokens expirados y rate-limit en el login.
 - Paginación en reports/comments si una fuente acumula muchos.

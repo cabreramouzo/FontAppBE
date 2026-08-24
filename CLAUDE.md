@@ -1126,6 +1126,19 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   (`youtube`, no `yt`) para que la tabla del panel se lea sola.
 
 ## Pendiente / deuda
+- **TODO — verificar el correo de registro antes de permitir aportaciones.** Añadir
+  `users.email_verified_at` y tokens de verificación aleatorios, de un solo uso, almacenados
+  con hash y con caducidad. El alta y el login deben seguir funcionando, pero una cuenta sin
+  verificar solo podrá explorar y gestionar su sesión: no podrá crear/editar fuentes, subir
+  fotos, reseñar, confirmar estados ni denunciar contenido. La pantalla debe explicar el
+  bloqueo y permitir reenviar el mensaje con rate-limit para que no se convierta en un relay
+  de correo. El enlace tendrá una página de éxito/error localizada y no iniciará sesión por
+  sí solo. Google marcará el correo como verificado únicamente cuando el proveedor entregue
+  `email_verified=true`; futuros proveedores deberán aplicar la misma regla. Al desplegar,
+  las cuentas existentes se marcarán como verificadas para no bloquear aportaciones previas.
+  Hay que cubrir token caducado/usado, cambio de email (vuelve a quedar sin verificar),
+  reenvío, enumeración de cuentas y el caso de dos altas simultáneas. No confundirlo con el
+  correo de bienvenida actual: ese envío no prueba que el buzón pertenezca al usuario.
 - `R2ImageStorage` (Soto) **está en producción y funcionando** (comprobado el 18/08/2026: las
   fotos se sirven desde `pub-….r2.dev` con 200 y los cinco secretos `R2_*` están puestos).
   En local sigue usando disco. Ojo, `fly.toml` **no monta ningún volumen**: si R2 se cayera
