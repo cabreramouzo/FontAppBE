@@ -182,8 +182,8 @@ export function SupportPage() {
         <Alert severity="success" sx={{ mb: 2 }}>{t('donate.stripeThanks')}</Alert>
       )}
 
-      {/* La línea de debajo se queda aunque ya no haya con qué comparar: dice que es una
-          suscripción **antes** de pulsar, que es lo mínimo si el botón lleva a pagar. */}
+      {/* Aclara antes de pulsar que Aixeta permite apoyo periódico o puntual; mostrar solo
+          «cada mes» hacía parecer que la suscripción era obligatoria. */}
       <Button
         fullWidth variant="contained" disableElevation startIcon={<LocalCafeIcon />}
         component="a" href={AIXETA_URL} target="_blank" rel="noreferrer"
