@@ -624,6 +624,48 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   paralelo, no se escala uno al otro. El corte es siempre `breakpoints.down('sm')` y la
   forma cambia de verdad —hoja, pantalla, barra de abajo—, no solo de tamaño.
 
+## «Agua en mi ruta»: importar un GPX (`lib/gpxImport.ts` + `/gpx`)
+
+- Sueltas el GPX de tu recorrido y te dice qué fuentes hay por el camino, **en qué
+  kilómetro**, a cuánto del trazado y qué sabemos de cada una. La pregunta que trae quien
+  llega aquí no es «dónde hay fuentes» —eso ya lo contesta el mapa— sino «en cuál lleno el
+  bidón», y eso solo se contesta con su recorrido delante.
+- **El fichero no sale del dispositivo.** Un GPX es por dónde se mueve una persona y casi
+  siempre empieza en su casa; no hay ninguna razón para que eso viaje a un servidor. Se lee
+  en el navegador y al servidor solo se le pide la **caja** que envuelve el recorrido, que
+  es lo mismo que ya se le pide al mover el mapa por esa zona. Se dice en pantalla **antes**
+  de que suelte el fichero, que es cuando se lo pregunta.
+- **Lector propio, no `DOMParser`**: `DOMParser` no existe en Node y con él nada de esto se
+  podría probar sin una dependencia o un DOM de mentira. Se acota a `trkpt` y `rtept`, que
+  son de lo más regular que hay en XML. Los `wpt` sueltos **se ignoran a propósito**: son
+  marcas del usuario, no el trazado, y colarlos mete un punto en medio del Atlántico que
+  desplaza todas las distancias (hay test, y caza la regresión).
+- **La caja se ensancha con el corredor máximo, y esto era un fallo de verdad.** Sin margen
+  se piden solo las fuentes que caen dentro del trazado, así que una fuente **al lado** de
+  la ruta queda fuera de la caja y no se pide nunca. Con una ruta recta la caja tiene altura
+  cero y no sale ni una; con una normal el fallo es peor porque es **silencioso** — dice «8
+  fuentes» cuando eran doce. Se ensancha con el corredor mayor (1 km) y no con el elegido,
+  así cambiar el desplegable no vuelve a preguntar al servidor.
+- Se ordena **por kilómetro de ruta**, no por cercanía: quien mira esto decide dónde parar,
+  y eso se decide en el orden en que se pedalea.
+- El resumen separa lo confirmado de lo que **no ha comprobado nadie nunca**
+  (`lib/confidence.ts`). En una base donde la mayoría de las fuentes no las ha visto nadie,
+  un «12 fuentes» a secas es una promesa que el día que estés sediento no se sostiene.
+- **La altitud que se enseña es la del RECORRIDO**, no la de la fuente. Se dijo al proponer
+  esto que se podría decir «12 m por debajo» y **era falso**: `fonts` no guarda altitud, así
+  que el desnivel hasta la fuente no se puede saber. Prometerlo habría sido inventar un dato.
+- Cierra el círculo con la exportación: desde la misma pantalla se bajan **solo las de la
+  ruta**, con su kilómetro y su desvío en la descripción del waypoint.
+- Ruta `/gpx` y no `/route`: en esta app «rutas» ya son las propuestas de gamificación, y
+  dos cosas con el mismo nombre en la misma pantalla es confusión garantizada. El rótulo
+  visible sí es «Agua en mi ruta».
+- **Aviso sobre los tests, que aquí falló dos veces:** el de la caja pasaba el margen a mano
+  (`cajaDe(ruta, 1000)`), así que probaba un valor que la pantalla no usa y **no habría
+  cazado el fallo**; y el del corredor ponía la fuente al norte de un tramo este-oeste, o
+  sea desplazada en latitud, donde el coseno de la longitud no interviene — pasaba igual con
+  el coseno quitado. Los dos se arreglaron y **se verificaron rompiendo el código**. Un test
+  que no falla al romper lo que dice cubrir no cubre nada.
+
 ## Llevarse las fuentes al GPS (`lib/gpx.ts` + `ExportGpxButton`)
 
 - Lo pidió el mismo ciclista de los últimos metros, y el detalle que lo decide es **dónde

@@ -30,6 +30,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage'
 const LegalPage = lazy(() => import('./pages/LegalPage').then((m) => ({ default: m.LegalPage })))
 const SupportPage = lazy(() => import('./pages/SupportPage').then((m) => ({ default: m.SupportPage })))
 const InstallPage = lazy(() => import('./pages/InstallPage').then((m) => ({ default: m.InstallPage })))
+const RouteWaterPage = lazy(() => import('./pages/RouteWaterPage').then((m) => ({ default: m.RouteWaterPage })))
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })))
@@ -78,6 +79,10 @@ export default function App() {
                   <Route path="/unsubscribe" element={<UnsubscribePage />} />
                   <Route path="/support" element={<SupportPage />} />
                   <Route path="/install" element={<InstallPage />} />
+                  {/* «/gpx» y no «/route»: en esta app «rutas» ya son las propuestas de
+                      gamificación, y dos cosas con el mismo nombre en la misma pantalla es
+                      confusión garantizada. */}
+                  <Route path="/gpx" element={<RouteWaterPage />} />
                   <Route path="/legal" element={<LegalPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

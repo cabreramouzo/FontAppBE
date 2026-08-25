@@ -78,6 +78,7 @@ import { timeAgo } from '../lib/time'
 import { isReliable } from '../lib/confidence'
 import { ConfidenceChip } from '../components/ConfidenceChip'
 import { ExportGpxButton } from '../components/ExportGpxButton'
+import UploadIcon from '@mui/icons-material/UploadFileOutlined'
 
 // Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
 // península aproximadamente centrada y el zoom 5 permite verla entera también en móvil.
@@ -1415,8 +1416,12 @@ export function MapPage() {
             {/* Descargar no es un filtro, así que va separado y al final. Vive dentro de
                 las herramientas y no como un cuarto botón flotante: la columna ya tiene
                 tres y un mapa tapado por sus propios controles deja de ser un mapa. */}
-            <Box sx={{ width: 210 }}>
+            <Box sx={{ width: 210, display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <ExportGpxButton map={map} />
+              <Button component={Link} to="/gpx" variant="outlined" startIcon={<UploadIcon />}
+                      sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48, bgcolor: 'background.paper' }} fullWidth>
+                {t('gpxIn.title')}
+              </Button>
             </Box>
           </Collapse>
         )}
@@ -1427,6 +1432,10 @@ export function MapPage() {
             {filtros('movil')}
             <Divider sx={{ my: 0.5 }} />
             <ExportGpxButton map={map} />
+            <Button component={Link} to="/gpx" variant="outlined" startIcon={<UploadIcon />}
+                    sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48 }} fullWidth>
+              {t('gpxIn.title')}
+            </Button>
             {/* Dice para qué sirve: «GPX» a secas no lo entiende quien no lleva GPS, y
                 quien sí lo lleva es exactamente a quien hay que hablarle. */}
             <Typography variant="caption" color="text.secondary" sx={{ px: 0.5 }}>
