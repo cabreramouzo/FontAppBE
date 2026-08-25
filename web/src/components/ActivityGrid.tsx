@@ -20,7 +20,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 import { askPosition, positionIfAllowed } from '../lib/quietPosition'
-import { comparteTexto } from '../lib/share'
+import { comparteTexto, enlaceLocalizado } from '../lib/share'
 import { PAISES, TODOS, nombrePais, paisRecordado, recuerdaPais } from '../lib/countries'
 import { DryFountain } from './DryFountain'
 import { useToast } from './ToastContext'
@@ -260,7 +260,7 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
  * para revisar, esta para mirar. Comparten el endpoint `/activity`.
  */
 export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: number; showFilter?: boolean }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const theme = useTheme()
   const compacto = useMediaQuery(theme.breakpoints.down('sm'))
   const { show } = useToast()
@@ -329,7 +329,7 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
    * portapapeles. Sin depender de ninguna red social concreta.
    */
   async function invitar() {
-    const mensaje = `${t('activity.inviteText')} ${location.origin}/?p=invite`
+    const mensaje = `${t('activity.inviteText')} ${enlaceLocalizado(`${location.origin}/?p=invite`, lang)}`
     if (await comparteTexto(mensaje) === 'copiado') show(t('activity.inviteCopied'))
   }
 

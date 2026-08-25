@@ -14,7 +14,7 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { FeedbackButton } from '../components/FeedbackButton'
-import { comparteTexto } from '../lib/share'
+import { comparteTexto, enlaceLocalizado } from '../lib/share'
 import { trackInteraction } from '../api/client'
 
 // Ko-fi se retiró el 19/08/2026, cuando entró el mecenatge d'Aixeta. Dos botones que
@@ -61,7 +61,7 @@ const ENLACE = 'https://fontapp.net/?p=amigos'
 const CARDS_EN_REVISION = true
 
 export function SupportPage() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const toast = useToast()
   const [copiado, setCopiado] = useState(false)
   const [pagant, setPagant] = useState<'once' | 'monthly' | null>(null)
@@ -117,7 +117,7 @@ export function SupportPage() {
 
   async function compartir() {
     trackInteraction('support_share')
-    if (await comparteTexto(`${t('support.shareText')} ${ENLACE}`) === 'copiado') {
+    if (await comparteTexto(`${t('support.shareText')} ${enlaceLocalizado(ENLACE, lang)}`) === 'copiado') {
       toast.show(t('toast.linkCopied'))
     }
   }
@@ -156,7 +156,7 @@ export function SupportPage() {
           fullWidth variant="outlined" size="large"
           startIcon={<WhatsAppIcon />}
           component="a"
-          href={`https://wa.me/?text=${encodeURIComponent(`${t('support.shareText')} ${ENLACE}`)}`}
+          href={`https://wa.me/?text=${encodeURIComponent(`${t('support.shareText')} https://fontapp.net/wa${lang}`)}`}
           target="_blank" rel="noreferrer"
           onClick={() => trackInteraction('support_whatsapp')}
           sx={{ textTransform: 'none' }}

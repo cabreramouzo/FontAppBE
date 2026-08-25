@@ -6,6 +6,8 @@ const SUPPORTED: Lang[] = ['ca', 'es', 'gl', 'eu', 'en', 'fr', 'pt']
 
 // Idioma inicial: elección guardada → idioma del navegador → catalán por defecto.
 function detectLang(): Lang {
+  const requested = new URLSearchParams(window.location.search).get('lang') as Lang | null
+  if (requested && SUPPORTED.includes(requested)) return requested
   const saved = localStorage.getItem(LANG_KEY) as Lang | null
   if (saved && SUPPORTED.includes(saved)) return saved
   const nav = navigator.language?.slice(0, 2).toLowerCase() as Lang | undefined

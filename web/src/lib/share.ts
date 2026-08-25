@@ -25,6 +25,14 @@ export interface NavegadorQueComparte {
   clipboard: { writeText: (texto: string) => Promise<void> }
 }
 
+/** Añade el idioma explícito al enlace para que los scrapers sociales, que no ejecutan
+ * React ni ven localStorage, reciban la tarjeta localizada correcta. */
+export function enlaceLocalizado(raw: string, lang: string): string {
+  const url = new URL(raw)
+  url.searchParams.set('lang', lang)
+  return url.toString()
+}
+
 export async function comparteTexto(
   mensaje: string,
   nav: NavegadorQueComparte = navigator as unknown as NavegadorQueComparte,

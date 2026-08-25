@@ -1,4 +1,4 @@
-import { apiOrigin, esc, recorta, siteOrigin, type Env } from '../_meta'
+import { apiOrigin, esc, recorta, SHARE_META, shareLang, siteOrigin, type Env } from '../_meta'
 
 /**
  * Etiquetas propias para cada ficha de fuente.
@@ -66,11 +66,14 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
 
   const origin = siteOrigin(ctx.request)
   const canonica = `${origin}/fonts/${font.id}`
+  const lang = shareLang(ctx.request)
+  const meta = SHARE_META[lang]
+  const compartida = `${canonica}?lang=${lang}`
   const zona = [font.region, font.country].filter(Boolean).join(', ')
-  // Esta función no conoce el idioma del lector. Para una fuente sin topónimo usa una
-  // frase neutra en catalán (idioma por defecto del sitio), nunca `null` ni un relleno
-  // territorial guardado en la base.
-  const nombre = font.name?.trim() || "Font d'aigua"
+  // El idioma viaja explícitamente en la URL compartida: un scraper social no ve el
+  // idioma del navegador. Para una fuente sin topónimo usa el nombre genérico localizado,
+  // nunca `null` ni un relleno territorial guardado en la base.
+  const nombre = font.name?.trim() || meta.unnamed
   const titulo = `${nombre} · FontApp`
 
   // Si hay descripción, manda: la ha escrito una persona, dice algo de verdad y ya está
@@ -78,12 +81,12 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   // aquí no hay a quién preguntarle qué idioma lee, así que cuanto menos texto, mejor.
   const descripcion = font.description?.trim()
     ? recorta(font.description, 200)
-    : recorta([nombre, zona].filter(Boolean).join(' · ') + " · Font d'aigua a FontApp", 200)
+    : recorta([nombre, zona].filter(Boolean).join(' · ') + ` · ${meta.unnamed} · FontApp`, 200)
 
   const propia = !!font.image
   const imagen = font.image
     ? (/^https?:\/\//.test(font.image) ? font.image : api + font.image)
-    : `${origin}/og-card.jpg`
+    : `${origin}/og-card-${lang}.jpg`
 
   const escondida = !!font.duplicateOf || !!font.retiredAt
 
@@ -92,9 +95,10 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     .on('meta[name="description"]', { element: (e) => { e.setAttribute('content', descripcion) } })
     .on('meta[property="og:title"]', { element: (e) => { e.setAttribute('content', titulo) } })
     .on('meta[property="og:description"]', { element: (e) => { e.setAttribute('content', descripcion) } })
-    .on('meta[property="og:url"]', { element: (e) => { e.setAttribute('content', canonica) } })
+    .on('meta[property="og:url"]', { element: (e) => { e.setAttribute('content', compartida) } })
     .on('meta[property="og:image"]', { element: (e) => { e.setAttribute('content', imagen) } })
     .on('meta[property="og:image:alt"]', { element: (e) => { e.setAttribute('content', nombre) } })
+    .on('meta[property="og:locale"]', { element: (e) => { e.setAttribute('content', meta.locale) } })
     // El 1200×630 del HTML es el de la tarjeta genérica. La foto de una fuente la hizo
     // alguien con el móvil y es vertical la mitad de las veces: dejar las medidas puestas
     // le dice al scraper que recorte a un formato que no es el de la imagen.

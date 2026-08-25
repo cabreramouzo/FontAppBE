@@ -81,7 +81,7 @@ import { PhotoExifNote } from '../components/PhotoExifNote'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { nombreFuente } from '../lib/fontName'
 import { prepararFoto } from '../lib/image'
-import { comparteTexto } from '../lib/share'
+import { comparteTexto, enlaceLocalizado } from '../lib/share'
 import { RelocateFont } from '../components/RelocateFont'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { DRINKABLE_EMOJI, DRINKABLE_OPTIONS, SOURCE_EMOJI, SOURCE_OPTIONS, drinkableInfo, sourceInfo } from '../lib/waterType'
@@ -306,7 +306,7 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; 
 }
 
 function LocationActions({ font }: { font: Font }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const toast = useToast()
   const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
@@ -326,7 +326,7 @@ function LocationActions({ font }: { font: Font }) {
     // Con nombre y motivo, no la dirección a secas: llega a un chat entre otras cosas y
     // tiene que decir qué es sin que nadie pulse. Ver `comparteTexto` para por qué el
     // enlace va dentro del texto.
-    const mensaje = `${t('detail.shareText', { name: nombreFuente(font, t) })} ${window.location.href}`
+    const mensaje = `${t('detail.shareText', { name: nombreFuente(font, t) })} ${enlaceLocalizado(window.location.href, lang)}`
     if (await comparteTexto(mensaje) === 'copiado') toast.show(t('toast.linkCopied'))
   }
 

@@ -17,6 +17,23 @@ export interface Env {
   STRIPE_MONTHLY_PRICE_ID?: string
 }
 
+export type ShareLang = 'ca' | 'es' | 'gl' | 'eu' | 'en' | 'fr' | 'pt'
+
+export const SHARE_META: Record<ShareLang, { locale: string; title: string; description: string; unnamed: string }> = {
+  ca: { locale: 'ca_ES', title: "FontApp · fonts d'aigua a prop teu", description: "Troba fonts d'aigua a prop teu i consulta'n l'estat abans de desviar-te.", unnamed: "Font d'aigua" },
+  es: { locale: 'es_ES', title: 'FontApp · fuentes de agua cerca de ti', description: 'Encuentra fuentes de agua y comprueba su estado antes de desviarte.', unnamed: 'Fuente de agua' },
+  gl: { locale: 'gl_ES', title: 'FontApp · fontes de auga preto de ti', description: 'Atopa fontes de auga e comproba o seu estado antes de desviarte.', unnamed: 'Fonte de auga' },
+  eu: { locale: 'eu_ES', title: 'FontApp · ur-iturriak zugandik gertu', description: 'Aurkitu ur-iturriak eta begiratu haien egoera bidetik desbideratu aurretik.', unnamed: 'Ur-iturria' },
+  en: { locale: 'en_GB', title: 'FontApp · water fountains near you', description: 'Find water fountains and check their status before making a detour.', unnamed: 'Water fountain' },
+  fr: { locale: 'fr_FR', title: "FontApp · points d'eau près de vous", description: "Trouvez des points d'eau et vérifiez leur état avant de faire un détour.", unnamed: "Point d'eau" },
+  pt: { locale: 'pt_PT', title: 'FontApp · fontes de água perto de si', description: 'Encontre fontes de água e verifique o seu estado antes de fazer um desvio.', unnamed: 'Fonte de água' },
+}
+
+export function shareLang(req: Request): ShareLang {
+  const lang = new URL(req.url).searchParams.get('lang')
+  return lang && lang in SHARE_META ? lang as ShareLang : 'ca'
+}
+
 /** El origen del backend, o `null` si no está configurado. */
 export function apiOrigin(env: Env): string | null {
   const raw = (env.API_ORIGIN || env.VITE_API_URL || '').trim().replace(/\/+$/, '')

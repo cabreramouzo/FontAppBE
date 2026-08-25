@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { comparteTexto, type NavegadorQueComparte } from '../src/lib/share.ts'
+import { comparteTexto, enlaceLocalizado, type NavegadorQueComparte } from '../src/lib/share.ts'
 
 /**
  * Lo que se le entrega a la hoja del sistema.
@@ -48,4 +48,11 @@ test('cancelar la hoja no es un error que haya que contar', async () => {
     clipboard: { writeText: async () => {} },
   } as NavegadorQueComparte
   assert.equal(await comparteTexto('x', nav), 'nada')
+})
+
+test('el idioma viaja en la dirección que leerá el scraper social', () => {
+  assert.equal(
+    enlaceLocalizado('https://fontapp.net/fonts/123?p=invite', 'pt'),
+    'https://fontapp.net/fonts/123?p=invite&lang=pt',
+  )
 })
