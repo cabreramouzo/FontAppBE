@@ -3,6 +3,7 @@ import { Link as RouterLink, useLocation } from 'react-router-dom'
 import AppBar from '@mui/material/AppBar'
 import Toolbar from '@mui/material/Toolbar'
 import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
@@ -316,6 +317,21 @@ export function Layout({ children }: { children: ReactNode }) {
               <FavoriteBorderIcon />
               <span className="desktop-nav-label">{t('donate.button')}</span>
             </Button>
+          </Tooltip>
+          {/* En móvil conserva un acceso visible: la campana es condicional, pero nunca
+              sustituye al corazón. Solo se quita el texto para no apretar la barra. */}
+          <Tooltip title={t('support.title')}>
+            <IconButton
+              component={RouterLink}
+              to="/support"
+              color="inherit"
+              size="small"
+              aria-label={t('support.title')}
+              onClick={() => trackInteraction('support_heart')}
+              sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+            >
+              <FavoriteBorderIcon />
+            </IconButton>
           </Tooltip>
           {/* La campana solo tiene sentido con sesión, y solo se pinta si hay algo:
               un icono que nunca hace nada es ruido en una barra que ya va justa. */}
