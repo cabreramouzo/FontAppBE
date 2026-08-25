@@ -1063,6 +1063,82 @@ devolvía **14 MB** — ambos sin necesidad de tener cuenta.
 Siguiente nivel si aparecen bots de verdad: **Cloudflare Turnstile** en el formulario de
 registro (gratuito, sin cookies ni puzles) y verificación del correo antes de poder publicar.
 
+### Excepción temporal para una cuenta colaboradora
+
+Las cuentas con menos de siete días tienen además un cupo de **5 fuentes durante las
+últimas 24 horas**. Sirve contra cuentas desechables, pero puede bloquear a una persona
+conocida que está cartografiando una zona. Para ese caso existe una excepción temporal
+por usuario; no se debe ascender a la persona a moderador/admin ni cambiar a mano su fecha
+de registro.
+
+La excepción **solo omite el cupo de cuenta nueva**. Se mantienen:
+
+- el límite general de 30 fuentes por hora;
+- la detección de duplicados cercanos;
+- las restricciones y sanciones de moderación;
+- todos los permisos normales del rol `user`.
+
+#### Concederla en producción
+
+Primero despliega el commit que contiene la migración
+`AddSourceLimitExemptionToUser`. Producción tiene `AUTO_MIGRATE=true`, así que la columna
+nullable se crea al arrancar y no altera ninguna cuenta existente. Cuando `/health`
+responda desde el nuevo despliegue:
+
+```bash
+fly ssh console -a fontapp -C "/app/App set-source-limit-exemption USUARIO --days 7"
+```
+
+Ejemplo real:
+
+```bash
+fly ssh console -a fontapp -C "/app/App set-source-limit-exemption font199 --days 7"
+```
+
+El valor predeterminado también es siete días, pero en operaciones conviene escribirlo
+para que la intención quede clara. El comando acepta entre 0 y 30 días y muestra la fecha
+exacta de caducidad. También registra la concesión en `moderation_actions` con
+`source_limit_exemption_granted`; al ejecutarse desde CLI, `actor_id` queda nulo.
+
+#### Revocarla antes de tiempo
+
+```bash
+fly ssh console -a fontapp -C "/app/App set-source-limit-exemption USUARIO --days 0"
+```
+
+La revocación elimina la fecha y deja una acción
+`source_limit_exemption_revoked`. No hace falta ningún proceso de limpieza cuando vence:
+el backend compara `source_limit_exempt_until` con la hora actual en cada alta y vuelve a
+aplicar el cupo automáticamente.
+
+#### Probarlo en local
+
+Después de migrar la base local:
+
+```bash
+export $(cat env.development | xargs)
+swift run App migrate --yes
+swift run App set-source-limit-exemption USUARIO --days 7
+```
+
+El comando actúa sobre la base indicada por el entorno del proceso. `swift run` no
+significa por sí solo «base local»: con variables de producción apuntaría a producción.
+En Fly se usa `/app/App` porque la imagen final solo contiene el binario compilado, no el
+código fuente ni la toolchain de Swift.
+
+#### Verificación y diagnóstico
+
+1. La salida debe decir `Excepción para 'USUARIO' activa hasta ...`.
+2. Si responde `No existe el usuario`, comprueba mayúsculas/minúsculas del `username`.
+3. Si Postgres dice que no existe `source_limit_exempt_until`, el backend nuevo todavía
+   no terminó de desplegar/migrar: no manipules la tabla; espera y repite el comando.
+4. Si aún recibe un 429 después de concederla, comprueba el código del error: la excepción
+   no elimina el rate limit general de **30 altas/hora**.
+
+El comportamiento está cubierto por
+`IntegrationTests.testTemporarySourceLimitExemption`: quinta permitida, sexta bloqueada,
+sexta permitida con excepción y bloqueo restaurado al caducar.
+
 ## Backups de la base de datos
 
 La BD es lo irreemplazable (fuentes, reseñas, cuentas aportadas por los usuarios). Estrategia:

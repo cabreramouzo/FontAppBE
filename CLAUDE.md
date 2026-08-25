@@ -354,6 +354,10 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
     niega. No congela las anulaciones: borrar o denunciar una reseña anula igual, esté
     donde esté respecto a la línea.
 - Roles: `swift run App set-role <username> <user|moderator|admin|owner>` (owner solo por CLI).
+- Excepción temporal al cupo de 5 fuentes de una cuenta nueva:
+  `swift run App set-source-limit-exemption <username> --days <0...30>`; `0` revoca.
+  Solo salta ese cupo, no el rate limit de 30/h ni concede permisos. Runbook local/Fly,
+  ver `DEPLOY.md` → «Excepción temporal para una cuenta colaboradora».
 - Servidor: `swift run App serve` (`127.0.0.1:8080`). Cargar entorno: `export $(cat env.development | xargs)`.
 - Web (dev): `cd web && npm run dev` (proxy `/api` y `/uploads` → backend).
 - Imagen Docker del backend: `docker build -t fontappbe .` (probada; ver [DEPLOY.md](DEPLOY.md)).
