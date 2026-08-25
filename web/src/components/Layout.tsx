@@ -320,14 +320,10 @@ export function Layout({ children }: { children: ReactNode }) {
           {/* La campana solo tiene sentido con sesión, y solo se pinta si hay algo:
               un icono que nunca hace nada es ruido en una barra que ya va justa. */}
           {user && <NotificationBell desktopLabel />}
-          {/* Tema e idioma se ponen una vez en la vida: en móvil bajan al cajón y aquí
-              solo se quedan donde hay sitio de sobra, que es donde un control suelto se
-              ve y se toca mejor que un menú. */}
-          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><ThemeToggle showLabel /></Box>
-          <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <LanguageSwitcher />
-            <Typography component="span" sx={{ fontSize: 10, lineHeight: 1.15 }}>{t('lang.label')}</Typography>
-          </Box>
+          {/* Tema e idioma son controles evidentes por icono/código. Conservan `title`
+              y `aria-label`, pero no repiten debajo un rótulo que cargaba la barra. */}
+          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><ThemeToggle /></Box>
+          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><LanguageSwitcher /></Box>
           {user ? (
             <>
               {/* Perfil: texto con saludo en pantallas anchas; solo icono en móvil para que quepa. */}
