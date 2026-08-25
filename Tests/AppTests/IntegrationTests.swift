@@ -1273,6 +1273,21 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// El JSON público dice que una ficha está escondida, pero **no por qué**.
+    ///
+    /// El motivo (`hidden_spam`, `hidden_fake`, `hidden_abuse`) es un veredicto de
+    /// moderación sobre el trabajo de una persona, y `creator` también es público: juntos
+    /// publicarían «a fulano le marcaron esto como spam». Nadie lo usa — el aviso de la
+    /// ficha solo distingue `pending`, y el botón del moderador solo mira si es `visible`.
+    func testFontJSONDoesNotPublishWhyItWasHidden() throws {
+        XCTAssertEqual(Font.publicModerationState("visible"), "visible")
+        XCTAssertEqual(Font.publicModerationState("pending"), "pending",
+                       "«en cuarentena» sí es público: la ficha lo explica de otra forma")
+        XCTAssertEqual(Font.publicModerationState("hidden_spam"), "hidden")
+        XCTAssertEqual(Font.publicModerationState("hidden_fake"), "hidden")
+        XCTAssertEqual(Font.publicModerationState("hidden_abuse"), "hidden")
+    }
+
     func testFontJSONHidesInternalColumns() async throws {
         try await withApp { app in
             _ = try await register(app, username: "shape")

@@ -405,6 +405,46 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   `GOOGLE_CLIENT_ID` (login Google).
 - Web: build con `VITE_API_URL=<origen del backend>`. Guía completa: [DEPLOY.md](DEPLOY.md).
 
+## Qué se puede sacar de FontApp, y qué se protege
+
+- **La API de lectura del mapa es pública y siempre lo ha sido.** Medido en producción:
+  `/fonts/in-bounds` devuelve hasta **3.000 fuentes por llamada** (925 KB, 3,1 s) y hay
+  **89.228**; con unas **30 peticiones** se lleva cualquiera la base entera, ~27 MB. El
+  botón de descargar GPX **no cambia nada** — compone el fichero en el navegador con lo que
+  esa ruta ya daba, y encima topado en 500 waypoints, o sea el camino más lento posible.
+- **Y la mayoría de esos datos no son nuestros para cerrarlos**: vienen de OpenStreetMap
+  (ODbL) y del ICGC/ACA (CC BY 4.0). La ODbL es *share-alike*, así que una base derivada
+  tiene que ofrecerse también bajo ODbL. Bloquear el acceso a lo que se usa gracias a esa
+  licencia es una posición incómoda con la propia licencia.
+- Lo que **sí** es de la casa es la capa que construye la gente: reseñas, estado del agua,
+  fotos, frescura, pionero y creador. **Ahora está licenciada y dicho en la página legal**,
+  en los siete idiomas: datos bajo **ODbL** y fotos bajo **CC BY-SA 4.0**, con atribución a
+  «FontApp y sus colaboradores». Antes no había nada escrito, lo que dejaba las dos partes
+  a ciegas: no se pueden reclamar condiciones que no se han publicado, y quien contribuye
+  no sabía qué cedía.
+  **Pendiente y necesario para que eso sea sólido:** decirlo también **en el momento de
+  aportar** (registro y formulario de reseña). Un aviso legal que nadie ha visto al enviar
+  es más débil que una casilla junto al botón.
+- **El límite de 600/h por IP en las lecturas del mapa no protege de que te copien**, y
+  conviene no venderlo como tal: cualquier tope que permita usar el mapa con normalidad
+  permite también las treinta peticiones que hacen falta. Lo que evita es el **gasto** —un
+  bucle desbocado o alguien martilleando sale caro en Fly y en Neon— y hasta ahora no había
+  nada. Está calibrado midiendo: diez movimientos de mapa son **20 peticiones**, así que
+  600/h son unas tres horas seguidas de uso intenso. Comprobado que corta en la 601 con
+  `Retry-After`.
+- Ojo: `RateLimitMiddleware` es **en memoria y por instancia**. Con más de una, el tope
+  real se multiplica por el número de instancias.
+- **Lo que NO se hace: fuentes falsas de control** para detectar copias. Envenenaría el
+  mapa de gente real y contradice el principio que sostiene la app entera.
+- **El motivo por el que una ficha está escondida ya no es público.** `moderation_state`
+  sale como `visible`, `pending` o `hidden` a secas; el sufijo (`hidden_spam`,
+  `hidden_fake`, `hidden_abuse`) es un veredicto de moderación **sobre el trabajo de una
+  persona**, y `creator` también es público: juntos publicaban «a fulano le marcaron esto
+  como spam». No lo usaba nadie — el aviso de la ficha solo distingue `pending` y el botón
+  del moderador solo mira si es `visible`. Hay test.
+  Que el **hecho** salga sí es a propósito: la ficha se alcanza por un enlace viejo y tiene
+  que poder explicar por qué el punto no aparece.
+
 ## Analítica interna de apoyo
 - `POST /analytics` acepta únicamente la lista cerrada de eventos de uso de
   `InteractionAnalyticsController`; el cliente genera un UUID por pestaña en `sessionStorage`.

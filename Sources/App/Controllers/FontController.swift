@@ -13,10 +13,24 @@ struct FontController: RouteCollection {
         let fonts = routes.grouped("fonts")
 
         // Lectura pública.
-        fonts.get(use: index)
-        fonts.get("near", use: near)
-        fonts.get("in-bounds", use: inBounds)
-        fonts.get("map", use: mapItems)
+        // Las lecturas del mapa llevan un límite **generoso**, y conviene ser claro sobre
+        // qué protege y qué no.
+        //
+        // **No impide copiar la base.** `in-bounds` devuelve hasta 3.000 fuentes por
+        // llamada y en producción hay ~89.000: con treinta peticiones se lleva cualquiera
+        // el conjunto entero. Cualquier tope que deje usar el mapa con normalidad permite
+        // también eso, y bajar `maxInBoundsResults` no es salida — dejaría zonas del mapa
+        // vacías, que es justo lo que la agrupación por servidor vino a arreglar.
+        //
+        // Lo que sí evita es el **gasto**: un bucle desbocado en un cliente o alguien
+        // martilleando la API sale caro en Fly y en Neon, y hasta ahora no había nada que
+        // lo parara. Medido sobre el mapa real, diez movimientos son unas veinte
+        // peticiones, así que 600/h son unas tres horas seguidas de uso intenso.
+        let lecturaMapa = fonts.grouped(RateLimitMiddleware(scope: "font-read", max: 600, window: 60 * 60))
+        lecturaMapa.get(use: index)
+        lecturaMapa.get("near", use: near)
+        lecturaMapa.get("in-bounds", use: inBounds)
+        lecturaMapa.get("map", use: mapItems)
         fonts.get(":fontID", use: show)
         fonts.get(":fontID", "photo-author", use: photoAuthor)
 

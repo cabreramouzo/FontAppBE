@@ -169,6 +169,14 @@ final class Font: Model, Content, @unchecked Sendable {
     /// con sus envoltorios de propiedad es Fluent, no la síntesis.
     ///
     /// Al añadir una columna nueva hay que decidir aquí si es pública. Ese es el punto.
+    /// Lo que se publica de `moderation_state`: `visible`, `pending` o `hidden` a secas.
+    ///
+    /// Los estados internos son `visible`, `pending` y `hidden_<motivo>`. Fuera solo hace
+    /// falta saber que no está en el mapa; el motivo se queda en moderación.
+    static func publicModerationState(_ interno: String) -> String {
+        interno.hasPrefix("hidden_") ? "hidden" : interno
+    }
+
     private enum PublicKey: String, CodingKey {
         case id, name, latitude, longitude, image, description
         case source, drinkable, country, region, admin1, creator, createdAt
@@ -211,6 +219,14 @@ final class Font: Model, Content, @unchecked Sendable {
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode($duplicateOf.id, forKey: .duplicateOf)
         try c.encode(retiredAt, forKey: .retiredAt)
-        try c.encode(moderationState, forKey: .moderationState)
+        // El **hecho** de que esté escondida es público, el **motivo** no.
+        //
+        // La ficha tiene que poder explicar por qué el punto no sale —se llega por un
+        // enlace viejo— pero para eso basta con `hidden`. El sufijo del motivo (`_spam`,
+        // `_fake`, `_abuse`) es un veredicto de moderación **sobre el trabajo de una
+        // persona**, y `creator` también es público: juntos publican «a fulano le
+        // marcaron esto como spam». Nadie lo usaba: el aviso de la ficha solo distingue
+        // `pending` de escondida, y el botón del moderador solo mira si es `visible`.
+        try c.encode(Self.publicModerationState(moderationState), forKey: .moderationState)
     }
 }

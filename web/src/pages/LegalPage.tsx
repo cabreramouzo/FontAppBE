@@ -119,6 +119,24 @@ function LegalCA() {
         {' '}Part de les fonts provenen de l'<a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> i
         l'ACA, sota llicència <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
       </p>
+
+      <h2>El que aportes i com es pot reutilitzar</h2>
+      <p>
+        El que expliques sobre una font —l'estat de l'aigua, les ressenyes, les incidències, les
+        correccions— s'afegeix a una base de dades pública, i les <strong>fotos</strong> es publiquen
+        al costat de la fitxa. En publicar-ho acceptes que es difonguin així:
+      </p>
+      <ul>
+        <li><strong>Les dades</strong> (fonts, estats, ressenyes) sota <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>, la mateixa
+          llicència d'OpenStreetMap: qualsevol pot reutilitzar-les si <strong>atribueix</strong> la
+          font i comparteix el resultat amb la mateixa llicència.</li>
+        <li><strong>Les fotos</strong> sota <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. Conserves els drets de les teves; el que dones és
+          permís per publicar-les amb aquestes condicions.</li>
+      </ul>
+      <p>
+        Si reutilitzes aquestes dades, atribueix-les a <strong>FontApp i els seus col·laboradors</strong>,
+        a més d'OpenStreetMap i l'ICGC/ACA quan escaigui.
+      </p>
     </>
   )
 }
@@ -201,6 +219,24 @@ function LegalES() {
         <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
         {' '}Parte de las fuentes provienen del <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> y
         la ACA, bajo licencia <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
+      </p>
+
+      <h2>Lo que aportas y cómo puede reutilizarse</h2>
+      <p>
+        Lo que cuentas sobre una fuente —el estado del agua, las reseñas, las incidencias, las
+        correcciones— se añade a una base de datos pública, y las <strong>fotos</strong> se publican
+        junto a la ficha. Al publicarlo aceptas que se difunda así:
+      </p>
+      <ul>
+        <li><strong>Los datos</strong> (fuentes, estados, reseñas) bajo <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>, la misma licencia
+          que OpenStreetMap: cualquiera puede reutilizarlos si <strong>atribuye</strong> el origen y
+          comparte el resultado con la misma licencia.</li>
+        <li><strong>Las fotos</strong> bajo <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. Conservas los derechos de las tuyas; lo que
+          concedes es permiso para publicarlas con esas condiciones.</li>
+      </ul>
+      <p>
+        Si reutilizas estos datos, atribúyelos a <strong>FontApp y sus colaboradores</strong>, además
+        de a OpenStreetMap y al ICGC/ACA cuando corresponda.
       </p>
     </>
   )
@@ -290,6 +326,24 @@ function LegalPT() {
         {' '}Algumas fontes provêm do <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> e da
         ACA, sob a licença <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
       </p>
+
+      <h2>O que contribuis e como pode ser reutilizado</h2>
+      <p>
+        O que contas sobre uma fonte —o estado da água, as avaliações, as ocorrências, as correções—
+        junta-se a uma base de dados pública, e as <strong>fotografias</strong> são publicadas junto
+        à ficha. Ao publicá-lo aceitas que seja difundido assim:
+      </p>
+      <ul>
+        <li><strong>Os dados</strong> (fontes, estados, avaliações) sob <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>, a mesma licença do
+          OpenStreetMap: qualquer pessoa pode reutilizá-los se <strong>atribuir</strong> a origem e
+          partilhar o resultado com a mesma licença.</li>
+        <li><strong>As fotografias</strong> sob <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. Manténs os direitos das tuas; o que concedes
+          é permissão para as publicar nessas condições.</li>
+      </ul>
+      <p>
+        Se reutilizares estes dados, atribui-os à <strong>FontApp e aos seus colaboradores</strong>,
+        além do OpenStreetMap e do ICGC/ACA quando aplicável.
+      </p>
     </>
   )
 }
@@ -375,6 +429,24 @@ function LegalEN() {
         {' '}Some fountains come from the <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> and
         ACA, under the <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> licence.
       </p>
+
+      <h2>What you contribute, and how it may be reused</h2>
+      <p>
+        What you report about a fountain —the water status, the reviews, the incidents, the
+        corrections— goes into a public database, and <strong>photos</strong> are published next to
+        the fountain. By posting it you agree that it is shared as follows:
+      </p>
+      <ul>
+        <li><strong>The data</strong> (fountains, statuses, reviews) under <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>, the same licence
+          as OpenStreetMap: anyone may reuse it provided they <strong>attribute</strong> the source
+          and share the result under the same licence.</li>
+        <li><strong>The photos</strong> under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. You keep the rights to yours; what you grant is
+          permission to publish them on those terms.</li>
+      </ul>
+      <p>
+        If you reuse this data, attribute it to <strong>FontApp and its contributors</strong>, along
+        with OpenStreetMap and ICGC/ACA where applicable.
+      </p>
     </>
   )
 }
@@ -445,6 +517,24 @@ function LegalFR() {
         © contributeurs OpenStreetMap, sous licence <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
         {' '}Certaines fontaines proviennent de l’<a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> et de l’ACA,
         sous licence <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
+      </p>
+
+      <h2>Ce que vous apportez et comment cela peut être réutilisé</h2>
+      <p>
+        Ce que vous rapportez sur une fontaine —l'état de l'eau, les avis, les signalements, les
+        corrections— rejoint une base de données publique, et les <strong>photos</strong> sont
+        publiées à côté de la fiche. En le publiant, vous acceptez cette diffusion :
+      </p>
+      <ul>
+        <li><strong>Les données</strong> (fontaines, états, avis) sous <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>, la licence même
+          d'OpenStreetMap : chacun peut les réutiliser s'il <strong>attribue</strong> la source et
+          partage le résultat sous la même licence.</li>
+        <li><strong>Les photos</strong> sous <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. Vous conservez vos droits ; ce que vous accordez
+          est l'autorisation de les publier à ces conditions.</li>
+      </ul>
+      <p>
+        Si vous réutilisez ces données, attribuez-les à <strong>FontApp et ses contributeurs</strong>,
+        ainsi qu'à OpenStreetMap et à l'ICGC/ACA le cas échéant.
       </p>
     </>
   )
@@ -531,6 +621,24 @@ function LegalGL() {
         {' '}Parte das fontes proveñen do <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> e
         a ACA, baixo licenza <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
       </p>
+
+      <h2>O que achegas e como se pode reutilizar</h2>
+      <p>
+        O que contas sobre unha fonte —o estado da auga, as recensións, as incidencias, as
+        correccións— engádese a unha base de datos pública, e as <strong>fotos</strong> publícanse
+        canda a ficha. Ao publicalo aceptas que se difunda así:
+      </p>
+      <ul>
+        <li><strong>Os datos</strong> (fontes, estados, recensións) baixo <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>, a mesma licenza que
+          OpenStreetMap: calquera pode reutilizalos se <strong>atribúe</strong> a orixe e comparte o
+          resultado coa mesma licenza.</li>
+        <li><strong>As fotos</strong> baixo <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. Conservas os dereitos das túas; o que concedes é
+          permiso para publicalas nesas condicións.</li>
+      </ul>
+      <p>
+        Se reutilizas estes datos, atribúeos a <strong>FontApp e mais os seus colaboradores</strong>,
+        ademais de a OpenStreetMap e ao ICGC/ACA cando corresponda.
+      </p>
     </>
   )
 }
@@ -614,6 +722,24 @@ function LegalEU() {
         © OpenStreetMap-eko laguntzaileak, <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a> lizentziapean.
         {' '}Iturri batzuk <a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a>-tik eta
         ACA-tik datoz, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> lizentziapean.
+      </p>
+
+      <h2>Zuk ekartzen duzuna eta nola berrerabil daitekeen</h2>
+      <p>
+        Iturri bati buruz kontatzen duzuna —uraren egoera, iritziak, gorabeherak, zuzenketak—
+        datu-base publiko batera gehitzen da, eta <strong>argazkiak</strong> fitxaren ondoan
+        argitaratzen dira. Argitaratzean, honela zabaltzea onartzen duzu:
+      </p>
+      <ul>
+        <li><strong>Datuak</strong> (iturriak, egoerak, iritziak) <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a> lizentziapean, OpenStreetMapek
+          berak duen berbera: edonork berrerabil ditzake jatorria <strong>aitortzen</strong> badu eta
+          emaitza lizentzia berarekin partekatzen badu.</li>
+        <li><strong>Argazkiak</strong> <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a> lizentziapean. Zureen eskubideak zureak dira; ematen
+          duzuna baldintza horietan argitaratzeko baimena da.</li>
+      </ul>
+      <p>
+        Datu hauek berrerabiltzen badituzu, <strong>FontApp eta bere laguntzaileei</strong> egotzi,
+        OpenStreetMapi eta ICGC/ACAri ere bai dagokionean.
       </p>
     </>
   )
