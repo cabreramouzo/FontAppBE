@@ -666,6 +666,36 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   el coseno quitado. Los dos se arreglaron y **se verificaron rompiendo el código**. Un test
   que no falla al romper lo que dice cubrir no cubre nada.
 
+## Cerrar el círculo: contar cómo estaban al volver (`lib/routeMemory.ts`)
+
+- La parte que convierte «Agua en mi ruta» en **datos** y no en una consulta. Quien más
+  kilómetros hace es quien mejor puede decir si una fuente manaba, y hasta ahora no había
+  ningún momento en que se le preguntara.
+- **La ruta se recuerda al importarla**, en `localStorage` y separada por cuenta. Sin esto
+  el círculo no se cierra: el GPX se sube **antes** de salir y lo que se vio se sabe
+  **después**, así que contarlo obligaría a rebuscar el fichero en el móvil y subirlo otra
+  vez. Nadie hace eso, y se perdería justo la información de quien acaba de estar delante.
+- Al volver a abrir la pantalla, la ruta ya está puesta y cada fuente tiene **tres chips a
+  un toque**. Publica una reseña **solo con el estado**, igual que el atajo de la foto en la
+  ficha, y **sin `unknown` ni `gone`**: el primero no dice nada viniendo de quien ha pasado
+  por allí, y «ya no está» es el estado más caro —dos testimonios retiran la fuente del
+  mapa— así que no se pone a un toque en una lista de veinte.
+- **Sin cobertura va a la bandeja de salida**, que es donde tiene que ir: el monte es
+  exactamente donde sabes cómo estaba la fuente y no hay red.
+- **El aviso es condicional y esto importa:** dice «si la has hecho, cuenta cómo estaban»,
+  no «has pasado cerca de 8 fuentes». La app sabe que importaste un recorrido, **no** que
+  saliste a hacerlo. Afirmarlo sería inventarse un hecho sobre el usuario, y la primera vez
+  que se equivoque deja de creerse lo demás.
+- «hace 0 días» no lo dice nadie: el mismo día tiene su propia frase.
+- El tope de 4.000 puntos guardados no es por el tamaño del JSON sino por **con quién
+  comparte** `localStorage`: la bandeja de salida guarda aportaciones **sin enviar**, que es
+  lo único aquí que no se puede perder. Si no cabe, no se guarda y no se rompe nada.
+- Al leer la ruta guardada se **validan los puntos**: un `lat` que sea texto no da error, da
+  distancias absurdas mucho después, y entonces el fallo parece del cálculo y no del dato.
+- Importar sin sesión y entrar después pierde la ruta, porque el ámbito cambia de
+  `anonymous` a tu id. Es el precio de que en un móvil prestado no salga la ruta del otro,
+  y es el mismo trato que el historial de búsquedas.
+
 ## Llevarse las fuentes al GPS (`lib/gpx.ts` + `ExportGpxButton`)
 
 - Lo pidió el mismo ciclista de los últimos metros, y el detalle que lo decide es **dónde

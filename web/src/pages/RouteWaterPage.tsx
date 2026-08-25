@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -15,7 +15,12 @@ import Typography from '@mui/material/Typography'
 import UploadIcon from '@mui/icons-material/UploadFileOutlined'
 import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import type { FontSummary } from '../api/types'
-import { apiFetch } from '../api/client'
+import { apiFetch, createComment, describeError } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
+import { useToast } from '../components/ToastContext'
+import { enqueue, isOffline } from '../lib/outbox'
+import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
+import { diasDesde, olvidaRuta, recuerdaRuta, rutaRecordada } from '../lib/routeMemory'
 import { useI18n } from '../i18n/I18nContext'
 import { nombreFuente } from '../lib/fontName'
 import { confidenceOf, CONFIDENCE_EMOJI, confidenceLabelKey, type ConfidenceLevel } from '../lib/confidence'
@@ -54,7 +59,14 @@ const CORREDORES = [100, 250, 500, 1000]
  */
 export function RouteWaterPage() {
   const { t } = useI18n()
+  const { user } = useAuth()
+  const toast = useToast()
   const input = useRef<HTMLInputElement>(null)
+  const scope = user?.id ?? 'anonymous'
+  const [recordada, setRecordada] = useState(() => rutaRecordada(user?.id ?? 'anonymous'))
+  // Las que ya has contado en esta visita. Se guardan aquí y no en `localStorage`: es
+  // información de un rato, y la de verdad ya está publicada en la fuente.
+  const [contadas, setContadas] = useState<Record<string, string>>({})
   const [ruta, setRuta] = useState<ReturnType<typeof leeGPX>>([])
   const [fuentes, setFuentes] = useState<FontSummary[] | null>(null)
   const [corredor, setCorredor] = useState(CORREDOR_M)
@@ -72,7 +84,13 @@ export function RouteWaterPage() {
         return
       }
       setRuta(puntos)
-      setNombreRuta(file.name.replace(/\.gpx$/i, ''))
+      const nombre = file.name.replace(/\.gpx$/i, '')
+      setNombreRuta(nombre)
+      setContadas({})
+      // Se recuerda al importar, no al salir: quien sube el GPX lo hace antes de la ruta,
+      // y es al volver cuando hace falta tenerla puesta sin buscar el fichero otra vez.
+      recuerdaRuta({ nombre, cuando: new Date().toISOString(), puntos }, scope)
+      setRecordada(rutaRecordada(scope))
       const caja = cajaDe(puntos)
       const params = new URLSearchParams({
         minLat: String(caja.minLat), maxLat: String(caja.maxLat),
@@ -83,6 +101,45 @@ export function RouteWaterPage() {
       setError(t('gpxIn.failed'))
     } finally {
       setCargando(false)
+    }
+  }
+
+  // Al abrir, si hay una ruta recordada se pone sola y se piden sus fuentes. Sin esto,
+  // volver a contar cómo estaban obligaría a rebuscar el fichero en el móvil, que es
+  // exactamente lo que nadie hace.
+  useEffect(() => {
+    if (!recordada || ruta.length > 1 || cargando) return
+    setRuta(recordada.puntos)
+    setNombreRuta(recordada.nombre)
+    const caja = cajaDe(recordada.puntos)
+    const params = new URLSearchParams({
+      minLat: String(caja.minLat), maxLat: String(caja.maxLat),
+      minLong: String(caja.minLong), maxLong: String(caja.maxLong),
+    })
+    setCargando(true)
+    apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`)
+      .then(setFuentes)
+      .catch(() => setError(t('gpxIn.failed')))
+      .finally(() => setCargando(false))
+    // Solo al montar: si dependiera de `ruta`, se volvería a pedir en cada cambio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function cuenta(fontID: string, estado: string) {
+    setContadas((c) => ({ ...c, [fontID]: estado }))
+    try {
+      await createComment(fontID, { waterStatus: estado })
+      toast.show(t('toast.reviewPosted'))
+    } catch (e) {
+      if (isOffline(e)) {
+        // En el monte y sin cobertura es justo donde se sabe cómo estaba la fuente. La
+        // bandeja de salida ya existe para esto y la vacía sola al volver la red.
+        await enqueue({ kind: 'comment', fontID, data: { waterStatus: estado } })
+        toast.show(t('offline.savedUpdate'))
+      } else {
+        setContadas((c) => { const n = { ...c }; delete n[fontID]; return n })
+        toast.show(describeError(e, t))
+      }
     }
   }
 
@@ -140,6 +197,29 @@ export function RouteWaterPage() {
         {t('gpxIn.privacy')}
       </Typography>
 
+      {/* La invitación a cerrar el círculo. Va **condicional** —«si la has hecho»— y no
+          «has pasado cerca de 8 fuentes»: la app no sabe si de verdad saliste, solo que
+          importaste el recorrido. Afirmarlo sería inventarse un hecho sobre el usuario, y
+          la primera vez que se equivoque deja de creerse lo demás. */}
+      {recordada && ruta.length > 1 && (
+        <Alert
+          severity="info" icon={false} sx={{ mt: 2 }}
+          action={
+            <Button size="small" color="inherit" onClick={() => { olvidaRuta(scope); setRecordada(null) }}>
+              {t('gpxIn.forget')}
+            </Button>
+          }
+        >
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            {/* «hace 0 días» no lo dice nadie. El mismo día tiene su propia frase. */}
+            {diasDesde(recordada.cuando) === 0
+              ? t('gpxIn.backToday', { name: recordada.nombre })
+              : t('gpxIn.backTitle', { name: recordada.nombre, d: String(diasDesde(recordada.cuando)) })}
+          </Typography>
+          <Typography variant="body2">{t('gpxIn.backBody')}</Typography>
+        </Alert>
+      )}
+
       {cargando && <Box sx={{ my: 3, textAlign: 'center' }}><CircularProgress /></Box>}
       {error && <Alert severity="warning" sx={{ my: 2 }}>{error}</Alert>}
 
@@ -180,7 +260,14 @@ export function RouteWaterPage() {
             <Alert severity="info" sx={{ mt: 2 }}>{t('gpxIn.none')}</Alert>
           ) : (
             <List sx={{ mt: 1 }}>
-              {enRuta.map((x) => <Fila key={x.fuente.id ?? `${x.kmRuta}`} x={x} />)}
+              {enRuta.map((x) => (
+                <Fila
+                  key={x.fuente.id ?? `${x.kmRuta}`}
+                  x={x}
+                  contado={x.fuente.id ? contadas[x.fuente.id] : undefined}
+                  onCuenta={user && x.fuente.id ? (estado) => void cuenta(x.fuente.id!, estado) : undefined}
+                />
+              ))}
             </List>
           )}
         </>
@@ -189,7 +276,12 @@ export function RouteWaterPage() {
   )
 }
 
-function Fila({ x }: { x: EnRuta<FontSummary> }) {
+function Fila({ x, contado, onCuenta }: {
+  x: EnRuta<FontSummary>
+  contado?: string
+  /** `undefined` sin sesión: sin ella no hay a quién atribuir la reseña. */
+  onCuenta?: (estado: string) => void
+}) {
   const { t } = useI18n()
   const ws = waterStatusInfo(x.fuente.lastWaterStatus ?? null)
   const nivel = confidenceOf(x.fuente)
@@ -210,6 +302,27 @@ function Fila({ x }: { x: EnRuta<FontSummary> }) {
             : `${CONFIDENCE_EMOJI[nivel]} ${t(confidenceLabelKey(nivel))}`,
         ].filter(Boolean).join(' · ')}
       </Typography>
+
+      {/* Contar el estado desde aquí es lo que convierte esta pantalla en datos. Va con la
+          misma regla que el atajo de la ficha: reseña **solo con el estado**, sin texto ni
+          valoración, y **sin `unknown` ni `gone`**. El primero no dice nada viniendo de
+          quien ha pasado por allí, y «ya no está» es el estado más caro —dos testimonios
+          retiran la fuente del mapa— así que no se pone a un toque en una lista de veinte.
+          Quien de verdad lo quiera decir tiene el formulario entero en la ficha. */}
+      {onCuenta && (
+        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', ml: '62px', mt: 0.75 }}>
+          {contado ? (
+            <Chip size="small" color="success" variant="outlined"
+                  label={`${WATER_STATUS[contado]?.emoji ?? ''} ${t('gpxIn.counted')}`} />
+          ) : (
+            WATER_STATUS_OPTIONS.filter((k) => k !== 'unknown' && k !== 'gone').map((k) => (
+              <Chip key={k} clickable size="small" variant="outlined"
+                    label={`${WATER_STATUS[k].emoji} ${t(`status.${k}`)}`}
+                    onClick={() => onCuenta(k)} />
+            ))
+          )}
+        </Box>
+      )}
     </ListItem>
   )
 }
