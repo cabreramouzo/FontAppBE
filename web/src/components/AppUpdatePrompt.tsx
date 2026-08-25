@@ -67,7 +67,15 @@ export function AppUpdatePrompt() {
       if (!response.ok) return
       const data = await response.json() as VersionResponse
       if (typeof data.version === 'string' && data.version !== __BUILD_ID__) {
-        setRemoteVersion(data.version)
+        // `version.json` y el resto del build no llegan necesariamente al CDN en el
+        // mismo instante. No enseñamos un botón que todavía no puede funcionar: primero
+        // comprobamos el documento y todos sus assets, y después confirmamos que la
+        // versión sigue siendo la misma (podría haber empezado otro despliegue).
+        if (!await deploymentIsReady()) return
+        const confirmation = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+        if (!confirmation.ok) return
+        const confirmed = await confirmation.json() as VersionResponse
+        if (confirmed.version === data.version) setRemoteVersion(data.version)
       }
     } catch {
       // Sin cobertura o durante un despliegue: se volverá a intentar al recuperar foco.
