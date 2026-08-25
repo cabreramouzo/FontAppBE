@@ -55,6 +55,7 @@ import 'leaflet-rotate'
 import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, WaterSource } from '../api/types'
 import { ApiError, apiFetch, createComment, createFont, describeError, nearbyFonts, requestSourceLimitExemption, trackInteraction, uploadImage } from '../api/client'
 import { nombreFuente } from '../lib/fontName'
+import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
@@ -614,7 +615,7 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
   )
 }
 
-function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () => void; onCreated: () => void }) {
+function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [number, number] | null; onCancel: () => void; onCreated: () => void }) {
   const { t } = useI18n()
   const toast = useToast()
   const [name, setName] = useState('')
@@ -633,6 +634,9 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
   // Ubicación efectiva: el clic del usuario, que la foto puede sugerir cambiar.
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: pos.lat, lng: pos.lng })
   const [gpsHint, setGpsHint] = useState<GpsCoords | null>(null)
+  const meCoords = me ? { lat: me[0], lng: me[1] } : null
+  const remote = isRemotePlacement(coords, meCoords)
+  const remoteKm = meCoords ? distanceMetres(coords, meCoords) / 1000 : null
 
   // El pin se puede seguir moviendo tocando el mapa con el formulario abierto:
   // hay que reflejarlo aquí o crearíamos la fuente en el punto inicial.
@@ -723,6 +727,14 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
       </Typography>
       <Typography variant="caption" color="text.secondary">{t('newFont.tapToMove')}</Typography>
       <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+        {remote && remoteKm != null && (
+          <Alert severity="info">
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {t('newFont.remoteTitle', { distance: remoteKm < 10 ? remoteKm.toFixed(1) : Math.round(remoteKm) })}
+            </Typography>
+            <Typography variant="body2">{t('newFont.remoteBody')}</Typography>
+          </Alert>
+        )}
         <TextField label={t('newFont.nameOpt')} value={name} onChange={(e) => setName(e.target.value)} size="small" />
         {/* El estado del agua, aquí mismo: es el dato más útil y quien añade la fuente
             está delante de ella. Evita crear → volver al mapa → abrir el detalle. */}
@@ -1009,18 +1021,19 @@ export function MapPage() {
     setSelectedID(f.id ?? null)
   }
 
-  // Añadir fuente: si ya sabemos dónde está el usuario, ponemos el pin ahí y abrimos
-  // el formulario directamente (lo normal es estar delante de la fuente). Si no, se
-  // pide la ubicación y mientras tanto se puede tocar el mapa para situarla.
+  // Añadir fuente: cerca de la persona manda el GPS (el camino presencial). Si ha
+  // buscado o desplazado el mapa más de 250 m, manda el centro visible: devolver el pin
+  // silenciosamente a casa convierte una búsqueda correcta en una fuente mal situada.
   function startPlacing() {
     setPlacing(true)
-    setPos(null)
-    if (me) {
-      setPos(L.latLng(me[0], me[1]))
-      setGoto([me[0], me[1]])
-    } else {
-      locate(false)
-    }
+    const center = map?.getCenter()
+    if (!center) { setPos(null); return }
+    const chosen = newFontPosition(
+      { lat: center.lat, lng: center.lng },
+      me ? { lat: me[0], lng: me[1] } : null,
+    )
+    setPos(L.latLng(chosen.lat, chosen.lng))
+    if (me && chosen.lat === me[0] && chosen.lng === me[1]) setGoto([me[0], me[1]])
   }
 
   // La ubicación puede llegar después de abrir el formulario: si el usuario aún no ha
@@ -1365,7 +1378,7 @@ export function MapPage() {
           {t('map.tapToPlace')} · <button className="link" onClick={cancel}>{t('map.cancel')}</button>
         </div>
       )}
-      {placing && pos && <NewFontForm pos={pos} onCancel={cancel} onCreated={created} />}
+      {placing && pos && <NewFontForm pos={pos} me={me} onCancel={cancel} onCreated={created} />}
 
       {/* El punto de partida es donde está el usuario si el mapa ya lo sabe; si no, el
           panel lo pide él (y solo en silencio si el permiso ya estaba dado). */}

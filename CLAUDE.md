@@ -636,6 +636,16 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   diálogo del navegador a bocajarro) y **si no venías de una vista guardada** ni de un
   enlace a una fuente concreta. El mapa te sigue hasta que tocas el mapa: arrastrar o
   hacer zoom desengancha el seguimiento; el botón «centrar en mí» lo vuelve a activar.
+- **Añadir respeta la intención del mapa.** Si el centro visible está a 250 m o menos
+  del GPS, el pin nace en la persona: estar delante de la fuente sigue siendo el camino
+  principal. Si ha buscado o desplazado el mapa más lejos, nace en el centro visible y
+  nunca vuelve silenciosamente a la ubicación actual. El pin se puede mover en ambos
+  casos. A distancia, el formulario dice cuántos kilómetros hay, pide revisar el punto e
+  incentiva aportar una foto. Sin permiso de ubicación manda siempre el mapa.
+  La decisión pura vive en `lib/newFontPlacement.ts` y tiene tests para los tres casos.
+  No se reutiliza `moderation_state=pending` para marcar estas altas: ese estado significa
+  cuarentena por denuncias y las oculta. Una futura verificación remota necesitará un
+  estado propio y una acción real que pueda completarlo.
 
 ## Carga y agrupación del mapa
 

@@ -67,6 +67,8 @@ const ca: Dict = {
   // Formulario nueva fuente
   'newFont.title': 'Nova font',
   'newFont.tapToMove': 'Toca el mapa per moure la ubicació.',
+  'newFont.remoteTitle': 'Afegeixes la font a {distance} km de la teva ubicació',
+  'newFont.remoteBody': 'Comprova bé el pin. Una foto de la font ajudarà la comunitat a verificar-la.',
   'newFont.name': 'Nom',
   'newFont.nameOpt': 'Nom propi (opcional)',
   'newFont.nearDuplicate': 'Ja hi ha una font a menys de 25 metres. Segur que és una font diferent?',
@@ -1177,6 +1179,8 @@ const es: Dict = {
 
   'newFont.title': 'Nueva fuente',
   'newFont.tapToMove': 'Toca el mapa para mover la ubicación.',
+  'newFont.remoteTitle': 'Estás añadiendo la fuente a {distance} km de tu ubicación',
+  'newFont.remoteBody': 'Revisa bien el pin. Una foto de la fuente ayudará a la comunidad a verificarla.',
   'newFont.name': 'Nombre',
   'newFont.nameOpt': 'Nombre propio (opcional)',
   'newFont.nearDuplicate': 'Ya hay una fuente a menos de 25 metros. ¿Seguro que es una fuente diferente?',
@@ -2276,6 +2280,8 @@ const gl: Dict = {
 
   'newFont.title': 'Nova fonte',
   'newFont.tapToMove': 'Toca o mapa para mover a localización.',
+  'newFont.remoteTitle': 'Estás engadindo a fonte a {distance} km da túa localización',
+  'newFont.remoteBody': 'Revisa ben o marcador. Unha foto da fonte axudará á comunidade a verificala.',
   'newFont.name': 'Nome',
   'newFont.nameOpt': 'Nome propio (opcional)',
   'newFont.nearDuplicate': 'Xa hai unha fonte a menos de 25 metros. Seguro que é diferente?',
@@ -3375,6 +3381,8 @@ const eu: Dict = {
 
   'newFont.title': 'Iturri berria',
   'newFont.tapToMove': 'Ukitu mapa kokapena mugitzeko.',
+  'newFont.remoteTitle': 'Iturria zure kokapenetik {distance} km-ra gehitzen ari zara',
+  'newFont.remoteBody': 'Egiaztatu marka ondo. Iturriaren argazki batek komunitateari egiaztatzen lagunduko dio.',
   'newFont.name': 'Izena',
   'newFont.nameOpt': 'Izen propioa (aukerakoa)',
   'newFont.nearDuplicate': '25 metro baino gutxiagora beste iturri bat dago. Ziur desberdina dela?',
@@ -4474,6 +4482,8 @@ const en: Dict = {
 
   'newFont.title': 'New fountain',
   'newFont.tapToMove': 'Tap the map to move the location.',
+  'newFont.remoteTitle': 'You are adding the fountain {distance} km from your location',
+  'newFont.remoteBody': 'Check the pin carefully. A photo of the fountain will help the community verify it.',
   'newFont.name': 'Name',
   'newFont.nameOpt': 'Proper name (optional)',
   'newFont.nearDuplicate': 'There is already a fountain within 25 metres. Are you sure this is a different one?',
@@ -5571,6 +5581,8 @@ const fr: Dict = {
   'map.nearbyEmpty': "Pas de fontaines à proximité.",
   'newFont.title': "Nouvelle fontaine",
   'newFont.tapToMove': "Appuyez sur la carte pour déplacer l'emplacement.",
+  'newFont.remoteTitle': 'Vous ajoutez la fontaine à {distance} km de votre position',
+  'newFont.remoteBody': 'Vérifiez soigneusement le repère. Une photo aidera la communauté à la vérifier.',
   'newFont.name': "Nom",
   'newFont.nameOpt': "Nom propre (facultatif)",
   'newFont.nearDuplicate': "Une fontaine existe déjà à moins de 25 mètres. Êtes-vous sûr qu'il s'agit d'une autre ?",
@@ -6644,6 +6656,8 @@ const pt: Dict = {
   'map.nearbyEmpty': 'Sem fontes por perto.',
   'newFont.title': 'Nova fonte',
   'newFont.tapToMove': 'Toque no mapa para mover a localização.',
+  'newFont.remoteTitle': 'Está a adicionar a fonte a {distance} km da sua localização',
+  'newFont.remoteBody': 'Confirme bem o marcador. Uma fotografia da fonte ajudará a comunidade a verificá-la.',
   'newFont.name': 'Nome',
   'newFont.nameOpt': 'Nome próprio (opcional)',
   'newFont.nearDuplicate': 'Já existe uma fonte a menos de 25 metros. Tem a certeza de que é uma fonte diferente?',
