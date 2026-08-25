@@ -306,6 +306,7 @@ export function Layout({ children }: { children: ReactNode }) {
               hace una vez. */}
           <Tooltip title={t('support.title')}>
             <Button
+              data-testid="desktop-support-link"
               component={RouterLink}
               to="/support"
               color="inherit"
@@ -322,6 +323,7 @@ export function Layout({ children }: { children: ReactNode }) {
               sustituye al corazón. Solo se quita el texto para no apretar la barra. */}
           <Tooltip title={t('support.title')}>
             <IconButton
+              data-testid="mobile-support-link"
               component={RouterLink}
               to="/support"
               color="inherit"

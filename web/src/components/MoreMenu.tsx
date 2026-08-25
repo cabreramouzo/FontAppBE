@@ -11,7 +11,6 @@ import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
 import LogoutIcon from '@mui/icons-material/Logout'
 import InstallMobileIcon from '@mui/icons-material/InstallMobile'
-import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { useI18n } from '../i18n/I18nContext'
 import { LANGS, type Lang } from '../i18n/dictionaries'
@@ -25,7 +24,7 @@ const TEMAS: { pref: ThemePref; key: string }[] = [
 ]
 
 /**
- * El cajón de la barra en móvil: zonas, tema, idioma y salir.
+ * El cajón de la barra en móvil: instalación, tema, idioma y salir.
  *
  * ## Por qué existe
  *
@@ -41,9 +40,8 @@ const TEMAS: { pref: ThemePref; key: string }[] = [
  * todo lo que se toca una vez en la vida. Como efecto secundario, el cajón le da casa a
  * lo que venga después en vez de que vuelva a competir por la fila.
  *
- * Y de paso arregla algo que estaba peor que apretado: **Zonas no se podía abrir desde
- * la barra en móvil**, estaba escondida con `display: none` justamente por falta de
- * sitio.
+ * Las cuatro secciones principales no se duplican aquí: ya están siempre visibles en
+ * la barra inferior. Un menú de desbordamiento no debe competir con la navegación.
  *
  * En pantallas anchas no se pinta: allí hay espacio de sobra y los controles sueltos se
  * ven y se tocan mejor que un menú.
@@ -68,10 +66,6 @@ export function MoreMenu({ onLogout }: { onLogout?: () => void }) {
         </IconButton>
       </Tooltip>
       <Menu anchorEl={ancla} open={!!ancla} onClose={cerrar} slotProps={{ list: { dense: true } }}>
-        <MenuItem component={RouterLink} to="/zones" onClick={cerrar}>
-          <ListItemIcon><PublicOutlinedIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('zones.title')}</ListItemText>
-        </MenuItem>
         {/* Instalar vive aquí porque es el único sitio permanente al que se llega
             **desde el mapa en móvil**, que es donde está la gente: allí el pie no se
             pinta. Sin esto, quien solo usa el mapa no tenía dónde volver a mirarlo
