@@ -5,7 +5,7 @@ import Vapor
 // Denuncias de contenido inapropiado. Crear: cualquier usuario autenticado.
 // Listar/descartar: solo admins (moderación).
 struct FlagController: RouteCollection {
-    static let targetTypes = ["comment", "font", "photo"]
+    static let targetTypes = ["comment", "font", "photo", "cover_photo_removal"]
 
     func boot(routes: RoutesBuilder) throws {
         let flags = routes.grouped("flags").grouped(UserToken.authenticator(), User.guardMiddleware())
@@ -13,6 +13,7 @@ struct FlagController: RouteCollection {
         flags.get(use: index)                // admin
         flags.group(":flagID") { f in
             f.delete(use: destroy)           // admin: descartar
+            f.post("approve-photo-removal", use: approvePhotoRemoval)
         }
     }
 
@@ -64,7 +65,10 @@ struct FlagController: RouteCollection {
         // por fuente es más superficie para el abuso que una sola, y la moderación tenía
         // que llegar con la función y no después.
         let photoIDs = flags.filter { $0.targetType == "photo" }.map { $0.targetID }
+        let removalEditIDs = flags.filter { $0.targetType == "cover_photo_removal" }.map { $0.targetID }
         let photos = photoIDs.isEmpty ? [] : try await FontPhoto.query(on: req.db).filter(\.$id ~~ photoIDs).all()
+        let removalEdits = removalEditIDs.isEmpty ? [] : try await FontEdit.query(on: req.db).filter(\.$id ~~ removalEditIDs).all()
+        let removalEditByID = Dictionary(uniqueKeysWithValues: removalEdits.compactMap { e in e.id.map { ($0, e) } })
         let photoByID = Dictionary(uniqueKeysWithValues: photos.compactMap { p in p.id.map { ($0, p) } })
         let comments = commentIDs.isEmpty ? [] : try await FontComment.query(on: req.db).filter(\.$id ~~ commentIDs).all()
         let fonts = fontIDs.isEmpty ? [] : try await Font.query(on: req.db).filter(\.$id ~~ fontIDs).all()
@@ -78,6 +82,7 @@ struct FlagController: RouteCollection {
             comments.compactMap { c in c.id.flatMap { id in c.$user.id.map { (id, $0) } } }
             + fonts.compactMap { f in f.id.flatMap { id in f.$creator.id.map { (id, $0) } } }
             + photos.compactMap { p in p.id.flatMap { id in p.$uploader.id.map { (id, $0) } } }
+            + removalEdits.compactMap { e in e.id.flatMap { id in e.$editor.id.map { (id, $0) } } }
         )
         let authorIDs = Array(Set(targetAuthors.values))
         let authors = authorIDs.isEmpty ? [] : try await User.query(on: req.db).filter(\.$id ~~ authorIDs).all()
@@ -103,6 +108,8 @@ struct FlagController: RouteCollection {
                 text = f.name; image = f.image
             } else if flag.targetType == "photo", let p = photoByID[flag.targetID] {
                 text = p.caption ?? p.kind.rawValue; image = p.url
+            } else if flag.targetType == "cover_photo_removal", let e = removalEditByID[flag.targetID] {
+                text = nil; image = e.after.image
             } else {
                 text = nil; image = nil // contenido ya borrado
             }
@@ -113,6 +120,27 @@ struct FlagController: RouteCollection {
                                 targetText: text, targetImage: image, author: author,
                                 font: relatedID.flatMap { allFonts[$0] })
         }
+    }
+
+    /// Aprueba una solicitud del autor. Solo actúa si la portada sigue siendo exactamente
+    /// la que motivó la petición; si cambió, responde conflicto y no toca la nueva.
+    @Sendable func approvePhotoRemoval(req: Request) async throws -> HTTPStatus {
+        let admin = try req.auth.require(User.self)
+        try requireAdmin(req)
+        guard let flag = try await ContentFlag.find(req.parameters.get("flagID"), on: req.db),
+              flag.targetType == "cover_photo_removal",
+              let edit = try await FontEdit.find(flag.targetID, on: req.db),
+              let font = try await Font.find(edit.$font.id, on: req.db) else { throw Abort(.notFound) }
+        guard edit.$editor.id == flag.$flagger.id, font.image == edit.after.image else {
+            throw AppError(.conflict, "font.photoRequestStale", "La foto principal ha cambiado; la solicitud ya no es aplicable")
+        }
+        let before = FontInfoSnapshot(font)
+        font.image = edit.before.image
+        try await font.save(on: req.db)
+        try await FontEdit(fontID: try font.requireID(), editorID: try admin.requireID(),
+                           before: before, after: FontInfoSnapshot(font)).save(on: req.db)
+        try await flag.delete(on: req.db)
+        return .noContent
     }
 
     /// DELETE /flags/:flagID — descarta una denuncia ya revisada (solo admins).

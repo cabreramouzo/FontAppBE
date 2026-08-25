@@ -53,11 +53,15 @@ import {
   describeError,
   getFavoriteStatus,
   getFontPhotoAuthor,
+  getPhotoRemovalRequest,
   getUser,
   getUserBadges,
   setFavorite,
   setFontPhoto,
   setFontPhotoFromComment,
+  requestPhotoRemoval,
+  cancelPhotoRemoval,
+  undoFontPhoto,
   trackInteraction,
   updateComment,
   updateFont,
@@ -601,6 +605,7 @@ export function FontDetailPage() {
   // estado del agua y una valoración cuando lo único que había dicho es «tengo la foto».
   // El salto además era lo más raro de todo: pulsas arriba y la página se va a otro sitio.
   const [subiendoFoto, setSubiendoFoto] = useState(false)
+  const [photoRemoval, setPhotoRemoval] = useState<{ canRequest: boolean; pending: boolean; canUndo: boolean } | null>(null)
   // Tras subir la foto se pregunta el estado del agua. La foto ilustra la fuente, pero lo
   // que la app viene a contestar es si mana HOY, y quien acaba de fotografiarla está
   // delante: es el único momento en que esa pregunta se responde sola. Sin esto, el
@@ -618,6 +623,7 @@ export function FontDetailPage() {
       const image = await uploadImage(photo, meta)
       await setFontPhoto(font.id, image)
       toast.show(t('toast.photoAdded'))
+      setPhotoRemoval({ canRequest: true, pending: false, canUndo: true })
       setPreguntaEstado(true)
       load()
     } catch (e) {
@@ -761,6 +767,33 @@ export function FontDetailPage() {
     }
   }
 
+  async function askToRemoveOwnPhoto() {
+    if (!font || !confirm(t('image.confirmRequestRemoval'))) return
+    try {
+      await requestPhotoRemoval(font.id)
+      setPhotoRemoval((s) => s ? { ...s, pending: true } : s)
+      toast.show(t('image.removalRequested'))
+    } catch (e) { setError(describeError(e, t)) }
+  }
+
+  async function cancelOwnPhotoRemoval() {
+    if (!font) return
+    try {
+      await cancelPhotoRemoval(font.id)
+      setPhotoRemoval((s) => s ? { ...s, pending: false } : s)
+    } catch (e) { setError(describeError(e, t)) }
+  }
+
+  async function undoOwnPhoto() {
+    if (!font) return
+    try {
+      const updated = await undoFontPhoto(font.id)
+      setFont(updated)
+      setPhotoRemoval(null)
+      toast.show(t('image.photoUndone'))
+    } catch (e) { setError(describeError(e, t)) }
+  }
+
   async function removeReport(reportID: string) {
     if (!id || !confirm(t('detail.confirmDeleteIncident'))) return
     try {
@@ -835,6 +868,15 @@ export function FontDetailPage() {
     getFontPhotoAuthor(id).then((u) => { if (vivo) setPhotoAuthor(u) }).catch(() => {})
     return () => { vivo = false }
   }, [id, font?.image])
+
+  useEffect(() => {
+    if (!user || !id || !font?.image) { setPhotoRemoval(null); return }
+    let alive = true
+    getPhotoRemovalRequest(id)
+      .then((status) => { if (alive) setPhotoRemoval(status) })
+      .catch(() => { if (alive) setPhotoRemoval(null) })
+    return () => { alive = false }
+  }, [user, id, font?.image])
 
   if (!font) return <Box className="pad" sx={{ maxWidth: 720, mx: 'auto' }}>{error ? <Alert severity="error">{error}</Alert> : <Skeleton lines={5} />}</Box>
 
@@ -1075,11 +1117,28 @@ export function FontDetailPage() {
             })()}
             {font.image ? (
               <Box>
+                {photoRemoval?.canUndo && (
+                  <Alert severity="success" action={<Button color="inherit" size="small" onClick={undoOwnPhoto}>{t('form.undo')}</Button>} sx={{ mb: 1 }}>
+                    {t('image.photoAddedUndo')}
+                  </Alert>
+                )}
                 <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={nombreFuente(font, t)} />
                 <PhotoExifNote image={font.image} lat={font.latitude} long={font.longitude} />
                 {user && (user.isAdmin || font.creator?.id === user.id) && (
                   <Box>
                     <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={removeFontPhoto}>{t('image.remove')}</Button>
+                  </Box>
+                )}
+                {!canManageFont && photoRemoval?.canRequest && (
+                  <Box>
+                    {photoRemoval.pending ? (
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary">{t('image.removalPending')}</Typography>
+                        <Button size="small" onClick={cancelOwnPhotoRemoval}>{t('form.cancel')}</Button>
+                      </Stack>
+                    ) : (
+                      <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={askToRemoveOwnPhoto}>{t('image.requestRemoval')}</Button>
+                    )}
                   </Box>
                 )}
               </Box>

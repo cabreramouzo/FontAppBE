@@ -299,6 +299,24 @@ export async function setFontPhoto(fontID: string, image: string, queuedOffline 
   return f
 }
 
+export interface PhotoRemovalRequestStatus { canRequest: boolean; pending: boolean; canUndo: boolean }
+
+export async function getPhotoRemovalRequest(fontID: string): Promise<PhotoRemovalRequestStatus> {
+  return apiFetch(`/fonts/${fontID}/photo-removal-request`)
+}
+
+export async function requestPhotoRemoval(fontID: string): Promise<void> {
+  await apiFetch(`/fonts/${fontID}/photo-removal-request`, { method: 'POST' })
+}
+
+export async function cancelPhotoRemoval(fontID: string): Promise<void> {
+  await apiFetch(`/fonts/${fontID}/photo-removal-request`, { method: 'DELETE' })
+}
+
+export async function undoFontPhoto(fontID: string): Promise<Font> {
+  return apiFetch(`/fonts/${fontID}/photo`, { method: 'DELETE' })
+}
+
 // Actualiza el perfil propio (self-only). Manda los campos actuales + los cambios.
 export async function updateProfile(id: string, data: { name: string; username: string; email: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean; mentionEmails?: boolean }): Promise<UserResponse> {
   return apiFetch<UserResponse>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) })
@@ -638,6 +656,10 @@ export async function getFlags(): Promise<Flag[]> {
 
 export async function dismissFlag(id: string): Promise<void> {
   await apiFetch(`/flags/${id}`, { method: 'DELETE' })
+}
+
+export async function approvePhotoRemoval(id: string): Promise<void> {
+  await apiFetch(`/flags/${id}/approve-photo-removal`, { method: 'POST' })
 }
 
 export async function hideFontAbuse(id: string, reason: 'spam' | 'fake' | 'abuse'): Promise<Font> {

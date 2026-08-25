@@ -1050,6 +1050,32 @@ final class IntegrationTests: XCTestCase {
             // cambian `image`, así que sin editor esta ruta no pagaría «primera foto».
             XCTAssertNotNil(ediciones.first?.$editor.id)
 
+            // El autor de la portada puede pedir retirarla, sin borrarla directamente.
+            struct RemovalStatus: Content { let canRequest: Bool; let pending: Bool; let canUndo: Bool }
+            try await app.test(.GET, "fonts/\(fontID)/photo-removal-request", headers: bearer(extraño)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let status = try res.content.decode(RemovalStatus.self)
+                XCTAssertTrue(status.canRequest)
+                XCTAssertFalse(status.pending)
+                XCTAssertTrue(status.canUndo)
+            }
+            try await app.test(.POST, "fonts/\(fontID)/photo-removal-request", headers: bearer(extraño)) { res in
+                XCTAssertEqual(res.status, .created)
+            }
+            let savedRequest = try await ContentFlag.query(on: app.db)
+                .filter(\.$targetType == "cover_photo_removal").first()
+            let request = try XCTUnwrap(savedRequest)
+            XCTAssertEqual(request.targetID, ediciones.first?.id)
+            XCTAssertEqual(request.fontID, fontID)
+            // La petición se puede cancelar y la foto permanece intacta.
+            try await app.test(.DELETE, "fonts/\(fontID)/photo-removal-request", headers: bearer(extraño)) { res in
+                XCTAssertEqual(res.status, .noContent)
+            }
+            let requestCount = try await ContentFlag.query(on: app.db).count()
+            let unchangedFont = try await Font.find(fontID, on: app.db)
+            XCTAssertEqual(requestCount, 0)
+            XCTAssertEqual(unchangedFont?.image, "/uploads/primera.jpg")
+
             // 2) Ya tiene: el extraño no la sustituye.
             try await app.test(.PUT, "fonts/\(fontID)/photo", headers: bearer(extraño), beforeRequest: { req in
                 try req.content.encode(PhotoDTO(image: "/uploads/otra.jpg"))

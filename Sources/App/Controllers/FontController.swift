@@ -42,6 +42,10 @@ struct FontController: RouteCollection {
             // a reenviar nombre y coordenadas que no ha tocado, y a pisarlos con su copia
             // si alguien los ha corregido mientras tanto.
             font.put("photo", use: setPhoto)
+            font.delete("photo", use: undoPhoto)
+            font.get("photo-removal-request", use: photoRemovalRequest)
+            font.post("photo-removal-request", use: requestPhotoRemoval)
+            font.delete("photo-removal-request", use: cancelPhotoRemoval)
             // Promover la foto de una reseña a foto principal (creador/admin).
             font.post("photo", "from-comment", ":commentID", use: setPhotoFromComment)
             // Historial de ESTA fuente: admins y quien tenga `viewFontHistory` (nivel 4).
@@ -144,6 +148,98 @@ struct FontController: RouteCollection {
         // La anterior ya no la usa nadie.
         if let anterior { try? await req.imageStorage.delete(anterior) }
         return font
+    }
+
+    /// Deshace una foto recién subida. El límite se comprueba también en el servidor:
+    /// ocultar el botón pasado un rato no sería una autorización real.
+    @Sendable func undoPhoto(req: Request) async throws -> Font {
+        let font = try await find(req)
+        let user = try req.auth.require(User.self)
+        let edit = try await currentPhotoEdit(font: font, userID: try user.requireID(), on: req.db)
+        guard let createdAt = edit.createdAt, Date().timeIntervalSince(createdAt) <= 5 * 60 else {
+            throw AppError(.forbidden, "font.photoUndoExpired", "El plazo para deshacer esta foto ha terminado")
+        }
+        let before = FontInfoSnapshot(font)
+        font.image = edit.before.image
+        try await font.save(on: req.db)
+        try await FontEdit(fontID: try font.requireID(), editorID: try user.requireID(),
+                           before: before, after: FontInfoSnapshot(font)).save(on: req.db)
+        if let editID = edit.id {
+            let requests = try await ContentFlag.query(on: req.db)
+                .filter(\.$targetType == "cover_photo_removal")
+                .filter(\.$targetID == editID).all()
+            for request in requests { try await request.delete(on: req.db) }
+        }
+        return font
+    }
+
+    struct PhotoRemovalRequestStatus: Content {
+        let canRequest: Bool
+        let pending: Bool
+        let canUndo: Bool
+    }
+
+    /// Estado de la petición del usuario actual. La identidad de la foto es el FontEdit
+    /// exacto que la instaló, no solo la fuente: una petición vieja no puede retirar una
+    /// portada que alguien haya sustituido después.
+    @Sendable func photoRemovalRequest(req: Request) async throws -> PhotoRemovalRequestStatus {
+        let font = try await find(req)
+        let userID = try req.auth.require(User.self).requireID()
+        guard let edit = try? await currentPhotoEdit(font: font, userID: userID, on: req.db),
+              let editID = edit.id else {
+            return .init(canRequest: false, pending: false, canUndo: false)
+        }
+        let pending = try await ContentFlag.query(on: req.db)
+            .filter(\.$flagger.$id == userID)
+            .filter(\.$targetType == "cover_photo_removal")
+            .filter(\.$targetID == editID).first() != nil
+        let canUndo = edit.createdAt.map { Date().timeIntervalSince($0) <= 5 * 60 } ?? false
+        return .init(canRequest: true, pending: pending, canUndo: canUndo)
+    }
+
+    @Sendable func requestPhotoRemoval(req: Request) async throws -> HTTPStatus {
+        let font = try await find(req)
+        let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
+        let userID = try user.requireID()
+        let edit = try await currentPhotoEdit(font: font, userID: userID, on: req.db)
+        let editID = try edit.requireID()
+        let exists = try await ContentFlag.query(on: req.db)
+            .filter(\.$flagger.$id == userID)
+            .filter(\.$targetType == "cover_photo_removal")
+            .filter(\.$targetID == editID).first()
+        if exists == nil {
+            try await ContentFlag(flaggerID: userID, targetType: "cover_photo_removal",
+                                  targetID: editID, fontID: try font.requireID()).save(on: req.db)
+        }
+        return .created
+    }
+
+    @Sendable func cancelPhotoRemoval(req: Request) async throws -> HTTPStatus {
+        let font = try await find(req)
+        let userID = try req.auth.require(User.self).requireID()
+        guard let edit = try? await currentPhotoEdit(font: font, userID: userID, on: req.db),
+              let editID = edit.id else { return .noContent }
+        let flags = try await ContentFlag.query(on: req.db)
+            .filter(\.$flagger.$id == userID)
+            .filter(\.$targetType == "cover_photo_removal")
+            .filter(\.$targetID == editID).all()
+        for flag in flags { try await flag.delete(on: req.db) }
+        return .noContent
+    }
+
+    private func currentPhotoEdit(font: Font, userID: UUID, on db: any Database) async throws -> FontEdit {
+        guard let image = font.image else {
+            throw AppError(.badRequest, "font.noPhoto", "La fuente no tiene foto")
+        }
+        let edits = try await FontEdit.query(on: db)
+            .filter(\.$font.$id == font.requireID())
+            .filter(\.$editor.$id == userID)
+            .sort(\.$createdAt, .descending).all()
+        guard let edit = edits.first(where: { $0.after.image == image && $0.before.image != $0.after.image }) else {
+            throw AppError(.forbidden, "font.notPhotoAuthor", "Solo quien subió la foto actual puede solicitar retirarla")
+        }
+        return edit
     }
 
     /// POST /fonts/:fontID/photo/from-comment/:commentID
