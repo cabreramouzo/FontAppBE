@@ -322,7 +322,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {user && <NotificationBell desktopLabel />}
           {/* Tema e idioma son controles evidentes por icono/código. Conservan `title`
               y `aria-label`, pero no repiten debajo un rótulo que cargaba la barra. */}
-          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><ThemeToggle /></Box>
+          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><ThemeToggle showLabel /></Box>
           <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><LanguageSwitcher /></Box>
           {user ? (
             <>

@@ -28,7 +28,7 @@ export function ThemeToggle({ showLabel = false }: { showLabel?: boolean }) {
       sx={showLabel ? { flexDirection: 'column', borderRadius: 2, px: 0.75, py: 0.375 } : undefined}
     >
       <Icon fontSize="small" />
-      {showLabel && <Typography component="span" sx={{ fontSize: 10, lineHeight: 1.15 }}>{t('theme.label')}</Typography>}
+      {showLabel && <Typography component="span" sx={{ fontSize: 10, lineHeight: 1.15 }}>{t(`theme.${pref}`)}</Typography>}
     </IconButton>
   )
 }
