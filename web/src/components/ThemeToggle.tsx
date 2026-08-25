@@ -27,8 +27,10 @@ export function ThemeToggle({ showLabel = false }: { showLabel?: boolean }) {
       size="small"
       sx={showLabel ? { flexDirection: 'column', borderRadius: 2, px: 0.75, py: 0.375 } : undefined}
     >
-      <Icon fontSize="small" />
-      {showLabel && <Typography component="span" sx={{ fontSize: 10, lineHeight: 1.15 }}>{t(`theme.${pref}`)}</Typography>}
+      {/* Mismo tamaño que la campana contigua. Con `small` el rótulo subía para ocupar
+          el hueco y ambos controles parecían apoyados en líneas distintas. */}
+      <Icon />
+      {showLabel && <Typography component="span" sx={{ fontSize: 10, lineHeight: 1.15, mt: 0.25 }}>{t(`theme.${pref}`)}</Typography>}
     </IconButton>
   )
 }
