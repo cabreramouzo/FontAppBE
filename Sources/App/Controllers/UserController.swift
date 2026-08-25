@@ -182,8 +182,24 @@ struct UserController: RouteCollection {
         guard !target.isOwner else {
             throw Abort(.forbidden, reason: "No puedes cambiar el rol del propietario")
         }
+        let previousRole = target.role
         target.role = role
         try await target.save(on: req.db)
+        if previousRole != role, let email = target.email {
+            let app = req.application
+            let mail = RoleChangedEmail.build(
+                lang: target.lang, name: target.name, role: role,
+                webOrigin: Environment.get("WEB_ORIGIN")?.split(separator: ",").first.map(String.init)
+                    ?? "http://localhost:5174")
+            Task.detached {
+                do {
+                    try await app.mailSender.send(to: email, subject: mail.subject,
+                                                  html: mail.html, text: mail.text, on: app.client)
+                } catch {
+                    app.logger.error("No s'ha pogut enviar el correu de canvi de rol a \(email): \(error)")
+                }
+            }
+        }
         return UserResponse(target, includeEmail: true)
     }
 

@@ -2,6 +2,22 @@ import XCTVapor
 @testable import App
 
 final class AppTests: XCTestCase {
+    func testRoleChangedEmailIsLocalizedAndEscapesUserName() throws {
+        let spanish = RoleChangedEmail.build(
+            lang: "es", name: "Ana <script>", role: .moderator,
+            webOrigin: "https://fontapp.net/")
+        XCTAssertTrue(spanish.subject.contains("rol"))
+        XCTAssertTrue(spanish.text.contains("Nuevo rol: Moderador"))
+        XCTAssertTrue(spanish.text.contains("https://fontapp.net"))
+        XCTAssertTrue(spanish.html.contains("Ana &lt;script&gt;"))
+        XCTAssertFalse(spanish.html.contains("Ana <script>"))
+
+        let portuguese = RoleChangedEmail.build(
+            lang: "pt", name: "Rui", role: .admin,
+            webOrigin: "https://fontapp.net")
+        XCTAssertTrue(portuguese.text.contains("Nova função: Administrador"))
+    }
+
     func testRateLimitRejectsWithoutExtendingTheBlock() async {
         let limiter = RateLimiter()
         let start = Date(timeIntervalSince1970: 1_000)
