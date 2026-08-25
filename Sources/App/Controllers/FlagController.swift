@@ -5,7 +5,7 @@ import Vapor
 // Denuncias de contenido inapropiado. Crear: cualquier usuario autenticado.
 // Listar/descartar: solo admins (moderación).
 struct FlagController: RouteCollection {
-    static let targetTypes = ["comment", "font", "photo", "cover_photo_removal"]
+    static let targetTypes = ["comment", "font", "photo", "cover_photo_removal", "source_limit_exemption"]
 
     func boot(routes: RoutesBuilder) throws {
         let flags = routes.grouped("flags").grouped(UserToken.authenticator(), User.guardMiddleware())
@@ -14,6 +14,7 @@ struct FlagController: RouteCollection {
         flags.group(":flagID") { f in
             f.delete(use: destroy)           // admin: descartar
             f.post("approve-photo-removal", use: approvePhotoRemoval)
+            f.post("approve-source-limit-exemption", use: approveSourceLimitExemption)
         }
     }
 
@@ -66,6 +67,7 @@ struct FlagController: RouteCollection {
         // que llegar con la función y no después.
         let photoIDs = flags.filter { $0.targetType == "photo" }.map { $0.targetID }
         let removalEditIDs = flags.filter { $0.targetType == "cover_photo_removal" }.map { $0.targetID }
+        let exemptionUserIDs = flags.filter { $0.targetType == "source_limit_exemption" }.map { $0.targetID }
         let photos = photoIDs.isEmpty ? [] : try await FontPhoto.query(on: req.db).filter(\.$id ~~ photoIDs).all()
         let removalEdits = removalEditIDs.isEmpty ? [] : try await FontEdit.query(on: req.db).filter(\.$id ~~ removalEditIDs).all()
         let removalEditByID = Dictionary(uniqueKeysWithValues: removalEdits.compactMap { e in e.id.map { ($0, e) } })
@@ -83,6 +85,7 @@ struct FlagController: RouteCollection {
             + fonts.compactMap { f in f.id.flatMap { id in f.$creator.id.map { (id, $0) } } }
             + photos.compactMap { p in p.id.flatMap { id in p.$uploader.id.map { (id, $0) } } }
             + removalEdits.compactMap { e in e.id.flatMap { id in e.$editor.id.map { (id, $0) } } }
+            + exemptionUserIDs.map { ($0, $0) }
         )
         let authorIDs = Array(Set(targetAuthors.values))
         let authors = authorIDs.isEmpty ? [] : try await User.query(on: req.db).filter(\.$id ~~ authorIDs).all()
@@ -110,6 +113,8 @@ struct FlagController: RouteCollection {
                 text = p.caption ?? p.kind.rawValue; image = p.url
             } else if flag.targetType == "cover_photo_removal", let e = removalEditByID[flag.targetID] {
                 text = nil; image = e.after.image
+            } else if flag.targetType == "source_limit_exemption", let u = authorByID[flag.targetID] {
+                text = u.username; image = nil
             } else {
                 text = nil; image = nil // contenido ya borrado
             }
@@ -120,6 +125,29 @@ struct FlagController: RouteCollection {
                                 targetText: text, targetImage: image, author: author,
                                 font: relatedID.flatMap { allFonts[$0] })
         }
+    }
+
+    /// Concede siete días de exención al cupo de cuentas nuevas y consume la
+    /// solicitud. Es una decisión administrativa, no una acción de moderador.
+    @Sendable func approveSourceLimitExemption(req: Request) async throws -> HTTPStatus {
+        let admin = try req.auth.require(User.self)
+        guard admin.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
+        guard let flag = try await ContentFlag.find(req.parameters.get("flagID"), on: req.db),
+              flag.targetType == "source_limit_exemption",
+              let user = try await User.find(flag.targetID, on: req.db) else { throw Abort(.notFound) }
+        user.sourceLimitExemptUntil = Date().addingTimeInterval(7 * 86_400)
+        try await req.db.transaction { database in
+            try await user.save(on: database)
+            try await flag.delete(on: database)
+        }
+        if let sql = req.db as? SQLDatabase {
+            try await sql.raw("""
+                INSERT INTO moderation_actions (id, subject_user_id, actor_id, action, reason, created_at)
+                VALUES (\(bind: UUID()), \(bind: user.id), \(bind: admin.id),
+                        'source_limit_exemption_granted', '7d', CURRENT_TIMESTAMP)
+                """).run()
+        }
+        return .noContent
     }
 
     /// Aprueba una solicitud del autor. Solo actúa si la portada sigue siendo exactamente

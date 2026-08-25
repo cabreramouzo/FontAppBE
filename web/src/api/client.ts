@@ -662,6 +662,14 @@ export async function approvePhotoRemoval(id: string): Promise<void> {
   await apiFetch(`/flags/${id}/approve-photo-removal`, { method: 'POST' })
 }
 
+export async function requestSourceLimitExemption(): Promise<void> {
+  await apiFetch('/users/source-limit-exemption-request', { method: 'POST' })
+}
+
+export async function approveSourceLimitExemption(id: string): Promise<void> {
+  await apiFetch(`/flags/${id}/approve-source-limit-exemption`, { method: 'POST' })
+}
+
 export async function hideFontAbuse(id: string, reason: 'spam' | 'fake' | 'abuse'): Promise<Font> {
   return apiFetch<Font>(`/fonts/${id}/moderation/hide`, {
     method: 'POST', body: JSON.stringify({ reason }),

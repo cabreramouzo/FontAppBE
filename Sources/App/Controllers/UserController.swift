@@ -26,6 +26,7 @@ struct UserController: RouteCollection {
         protected.get("stats", "online", use: onlineUsers)   // admin: presencia reciente
         protected.get("stats", "activity-ranking", use: activityRanking) // admin: retorno e inactividad
         protected.post("presence", use: touchPresence)       // heartbeat de la propia sesión
+        protected.post("source-limit-exemption-request", use: requestSourceLimitExemption)
         protected.get("staff", use: staff)                   // owner: moderadores/admins
         protected.get("admin", use: adminList)               // owner: listado completo paginado
         protected.group(":userID") { user in
@@ -35,6 +36,27 @@ struct UserController: RouteCollection {
             user.post("posting-restriction", use: restrictPosting) // owner: suspender aportaciones
             user.delete("posting-restriction", use: unrestrictPosting)
         }
+    }
+
+    /// Solicita ampliar temporalmente el cupo de fuentes de una cuenta nueva.
+    /// La solicitud vive en la cola de moderación y es idempotente: pulsar varias
+    /// veces nunca genera ruido ni varias tarjetas para el administrador.
+    @Sendable func requestSourceLimitExemption(req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
+        let userID = try user.requireID()
+        guard !user.hasSourceLimitExemption else { return .noContent }
+        guard let joined = user.createdAt, Date().timeIntervalSince(joined) < 7 * 86_400 else {
+            throw Abort(.badRequest, reason: "La cuenta ya no está sujeta al cupo de cuentas nuevas")
+        }
+        let existing = try await ContentFlag.query(on: req.db)
+            .filter(\.$targetType == "source_limit_exemption")
+            .filter(\.$targetID == userID)
+            .first()
+        guard existing == nil else { return .noContent }
+        try await ContentFlag(flaggerID: userID, targetType: "source_limit_exemption",
+                              targetID: userID).save(on: req.db)
+        return .created
     }
 
     /// POST /users/presence — heartbeat sin contenido. Como mucho escribe una vez cada

@@ -11,7 +11,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { Flag, ModerationSource } from '../api/types'
 import {
-  approvePhotoRemoval, assetUrl, deleteComment, deleteSecondaryPhoto, describeError, dismissFlag,
+  approvePhotoRemoval, approveSourceLimitExemption, assetUrl, deleteComment, deleteSecondaryPhoto, describeError, dismissFlag,
   getFlags, getModerationSources, hideFontAbuse, restoreFontAbuse,
   restrictUserPosting, reviewModerationSource,
 } from '../api/client'
@@ -79,6 +79,10 @@ export function AdminModerationPage() {
         await approvePhotoRemoval(group.first.id)
         return
       }
+      if (group.first.targetType === 'source_limit_exemption') {
+        await approveSourceLimitExemption(group.first.id)
+        return
+      }
       if (group.first.targetType === 'font' && group.first.fontModerationState !== 'visible') {
         await restoreFontAbuse(group.first.targetID)
       }
@@ -87,7 +91,7 @@ export function AdminModerationPage() {
   }
 
   function remove(group: FlagGroup, reason: Reason) {
-    if (group.first.targetType === 'cover_photo_removal') {
+    if (group.first.targetType === 'cover_photo_removal' || group.first.targetType === 'source_limit_exemption') {
       void run(group.key, () => clear(group))
       return
     }
@@ -154,6 +158,8 @@ export function AdminModerationPage() {
               t(`moderation.type.${group.first.targetType}`),
               group.first.targetType === 'cover_photo_removal'
                 ? t('moderation.authorRemovalRequest')
+                : group.first.targetType === 'source_limit_exemption'
+                  ? t('moderation.sourceLimitRequest')
                 : t('moderation.reportsCount', { n: group.flags.length }),
               ...[...new Set(group.flags.map((f) => f.reason).filter(Boolean) as string[])],
             ]}
@@ -161,6 +167,7 @@ export function AdminModerationPage() {
             onApprove={() => approve(group)}
             onRemove={(reason) => remove(group, reason)}
             removalRequest={group.first.targetType === 'cover_photo_removal'}
+            sourceLimitRequest={group.first.targetType === 'source_limit_exemption'}
             onRestrict={isOwner(user) ? () => restrict(group.first.targetAuthorID, group.key) : undefined}
             t={t}
           />
@@ -200,7 +207,8 @@ function ModerationCard(props: {
   strikes: number; restrictedUntil: string | null; createdAt: string | null
   chips: string[]; busy: boolean; onApprove: () => void
   onRemove: (reason: Reason) => void; onRestrict?: () => void
-  removalRequest?: boolean; t: (key: string, params?: Record<string, string | number>) => string
+  removalRequest?: boolean; sourceLimitRequest?: boolean
+  t: (key: string, params?: Record<string, string | number>) => string
 }) {
   const { t } = props
   return (
@@ -226,15 +234,15 @@ function ModerationCard(props: {
           )}
           <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1.5, flexWrap: 'wrap' }}>
             {props.fontID && <Button size="small" component={RouterLink} to={`/fonts/${props.fontID}`}>{t('admin.viewTarget')}</Button>}
-            <Button size="small" variant="contained" color="success" disableElevation disabled={props.busy} onClick={props.onApprove}>{props.removalRequest ? t('moderation.removePhoto') : t('moderation.approve')}</Button>
-            {props.removalRequest ? (
+            <Button size="small" variant="contained" color="success" disableElevation disabled={props.busy} onClick={props.onApprove}>{props.removalRequest ? t('moderation.removePhoto') : props.sourceLimitRequest ? t('moderation.grant7') : t('moderation.approve')}</Button>
+            {props.removalRequest || props.sourceLimitRequest ? (
               <Button size="small" disabled={props.busy} onClick={() => props.onRemove('fake')}>{t('moderation.rejectRequest')}</Button>
             ) : <>
               <Button size="small" color="error" disabled={props.busy} onClick={() => props.onRemove('fake')}>{t('moderation.fake')}</Button>
               <Button size="small" color="error" disabled={props.busy} onClick={() => props.onRemove('spam')}>{t('moderation.spam')}</Button>
               <Button size="small" color="error" disabled={props.busy} onClick={() => props.onRemove('abuse')}>{t('moderation.abuse')}</Button>
             </>}
-            {props.onRestrict && <Button size="small" variant="outlined" color="error" disabled={props.busy} onClick={props.onRestrict}>{t('moderation.restrict7')}</Button>}
+            {props.onRestrict && !props.sourceLimitRequest && <Button size="small" variant="outlined" color="error" disabled={props.busy} onClick={props.onRestrict}>{t('moderation.restrict7')}</Button>}
           </Stack>
         </Box>
       </CardContent>

@@ -53,7 +53,7 @@ import { useHeading } from '../lib/useHeading'
 import 'leaflet-rotate'
 
 import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, WaterSource } from '../api/types'
-import { apiFetch, createComment, createFont, describeError, nearbyFonts, trackInteraction, uploadImage } from '../api/client'
+import { ApiError, apiFetch, createComment, createFont, describeError, nearbyFonts, requestSourceLimitExemption, trackInteraction, uploadImage } from '../api/client'
 import { nombreFuente } from '../lib/fontName'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -626,6 +626,9 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
   // delante de ella). Se publica como primera actualización, sin abrir el detalle.
   const [waterStatus, setWaterStatus] = useState('')
   const [error, setError] = useState('')
+  const [limitReached, setLimitReached] = useState(false)
+  const [requestingException, setRequestingException] = useState(false)
+  const [exceptionRequested, setExceptionRequested] = useState(false)
   const [saving, setSaving] = useState(false)
   // Ubicación efectiva: el clic del usuario, que la foto puede sugerir cambiar.
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: pos.lat, lng: pos.lng })
@@ -654,6 +657,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
     trackInteraction('font_create_start')
     if (file) trackInteraction('font_create_photo')
     setError('')
+    setLimitReached(false)
     setSaving(true)
     // Comprimimos antes de nada: así la foto ya está lista tanto para subirla ahora
     // como para guardarla en la cola si resulta que no hay cobertura.
@@ -703,6 +707,7 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
         onCreated()
       } else {
         trackInteraction('font_create_error')
+        setLimitReached(e instanceof ApiError && e.code === 'font.newAccountLimit')
         setError(describeError(e, t))
       }
     } finally {
@@ -762,7 +767,28 @@ function NewFontForm({ pos, onCancel, onCreated }: { pos: LatLng; onCancel: () =
             {t('newFont.photoHasGps')}
           </Alert>
         )}
-        {error && <Alert severity="error">{error}</Alert>}
+        {error && (
+          <Alert severity="error">
+            {error}
+            {limitReached && (
+              <Box sx={{ mt: 1 }}>
+                <Button size="small" variant="outlined" color="inherit"
+                  disabled={requestingException || exceptionRequested}
+                  onClick={async () => {
+                    setRequestingException(true)
+                    try {
+                      await requestSourceLimitExemption()
+                      setExceptionRequested(true)
+                    } catch (e) {
+                      setError(describeError(e, t))
+                    } finally { setRequestingException(false) }
+                  }}>
+                  {exceptionRequested ? t('sourceLimit.requested') : requestingException ? t('sourceLimit.requesting') : t('sourceLimit.request')}
+                </Button>
+              </Box>
+            )}
+          </Alert>
+        )}
         <Stack direction="row" spacing={1}>
           <Button type="submit" variant="contained" disableElevation disabled={saving}>{saving ? t('form.saving') : t('form.create')}</Button>
           <Button onClick={onCancel}>{t('form.cancel')}</Button>

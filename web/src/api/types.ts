@@ -77,7 +77,7 @@ export interface AdminUser {
 export interface Flag {
   id: string
   flaggerName: string | null
-  targetType: 'comment' | 'font' | 'photo' | 'cover_photo_removal'
+  targetType: 'comment' | 'font' | 'photo' | 'cover_photo_removal' | 'source_limit_exemption'
   targetID: string
   fontID: string | null
   reason: string | null

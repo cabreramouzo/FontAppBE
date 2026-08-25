@@ -1139,6 +1139,48 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// El usuario puede pedir ayuda desde el propio límite y el administrador la
+    /// concede desde la cola. Repetir la petición no duplica tarjetas.
+    func testSourceLimitExemptionRequestFlow() async throws {
+        try await withApp { app in
+            let userID = try await register(app, username: "onfire")
+            let userToken = try await login(app, username: "onfire")
+            let adminID = try await register(app, username: "quota-admin")
+            try await setRole(app, userID: adminID, role: .admin)
+            let adminToken = try await login(app, username: "quota-admin")
+
+            for expected in [HTTPStatus.created, .noContent] {
+                try await app.test(.POST, "users/source-limit-exemption-request",
+                                   headers: bearer(userToken)) { response in
+                    XCTAssertEqual(response.status, expected)
+                }
+            }
+            let pendingCount = try await ContentFlag.query(on: app.db)
+                .filter(\.$targetType == "source_limit_exemption").count()
+            XCTAssertEqual(pendingCount, 1)
+
+            var requestID = UUID()
+            try await app.test(.GET, "flags", headers: bearer(adminToken)) { response in
+                let flags = try response.content.decode([FlagResponse].self)
+                let request = try XCTUnwrap(flags.first { $0.targetType == "source_limit_exemption" })
+                requestID = try XCTUnwrap(request.id)
+                XCTAssertEqual(request.targetID, userID)
+                XCTAssertEqual(request.targetAuthorName, "onfire")
+            }
+            try await app.test(.POST, "flags/\(requestID)/approve-source-limit-exemption",
+                               headers: bearer(adminToken)) { response in
+                XCTAssertEqual(response.status, .noContent)
+            }
+
+            let storedUser = try await User.find(userID, on: app.db)
+            let user = try XCTUnwrap(storedUser)
+            XCTAssertTrue(user.hasSourceLimitExemption)
+            let remainingCount = try await ContentFlag.query(on: app.db)
+                .filter(\.$targetType == "source_limit_exemption").count()
+            XCTAssertEqual(remainingCount, 0)
+        }
+    }
+
     /// Las dos mitades de la regla: una reseña con foto **pone** la portada si no había
     /// ninguna, y **no la sustituye** si ya la hay. La segunda es la que sostiene que
     /// esto pueda ser automático: añadir donde no había nada solo puede mejorar la ficha.
