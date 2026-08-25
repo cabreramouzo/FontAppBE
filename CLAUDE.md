@@ -624,6 +624,40 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   paralelo, no se escala uno al otro. El corte es siempre `breakpoints.down('sm')` y la
   forma cambia de verdad —hoja, pantalla, barra de abajo—, no solo de tamaño.
 
+## Los últimos metros (`lib/approach.ts` + `FinalApproach`)
+
+- **El problema no es el mapa, es llegar.** Lo contó un usuario que va en bici de montaña:
+  «paso por un pueblo y no sé dónde está la fuente», «sé que en ese parque tiene que haber
+  una y no la encuentro». El punto está bien puesto; lo que falla son los **últimos
+  doscientos metros**, que es justo donde ninguna app de navegación ayuda — te llevan a una
+  calle, y la fuente está detrás del quiosco, dentro del parque, donde no hay calle a la
+  que llevarte.
+- Las dos piezas ya existían y solo las usaba el mapa **para pintarte a ti**: la posición
+  en vivo y la brújula del cono de orientación (`useHeading`). Aquí se usan al revés, para
+  apuntar a la fuente. No hizo falta nada del servidor.
+- Aparece **solo por debajo de 150 m**, arriba de la columna izquierda de la ficha. Más
+  lejos una flecha en línea recta te manda contra un río, y una tarjeta permanente que casi
+  nunca sirve se vuelve decorado que se deja de ver.
+- **Y deja de apuntar cuando apuntar sería mentir.** Es lo que hace honesta la función: el
+  corte de llegada **no es fijo**, sale del margen que declara el propio GPS
+  (`coords.accuracy`). A 30 m con ±40 m de margen la flecha apunta al ruido — gira sola
+  estando quieto y te manda en círculos, que es peor que no decir nada. Con ±6 m, esos
+  mismos 30 m sí se apuntan. El suelo son 15 m, el orden del error de un móvil en buenas
+  condiciones. Hay test de las dos mitades.
+- En la fase de llegada el texto **manda a la foto** si la hay, y si no la hay pide una:
+  ahí es donde la foto y la descripción («junto a la pista de petanca») hacen el trabajo
+  que el sensor ya no puede. Es el mismo argumento por el que existe el hueco de la foto.
+- Sin brújula fiable **no se pinta flecha**, solo la distancia y un botón para activarla
+  — misma regla que el cono del punto azul, y el botón es además el gesto que iOS exige
+  para conceder el sensor. `giro` se normaliza a 0–360: un ángulo negativo rota la flecha
+  al revés en CSS y el test lo fija.
+- El permiso de ubicación **no se pide al abrir**: solo se sigue en vivo a quien ya lo
+  tenía concedido, igual que hace el mapa. Aquí sí con `enableHighAccuracy`, que es la
+  única pantalla de la app que guía a alguien andando.
+- La decisión vive en `lib/approach.ts`, pura y con tests, porque son todo casos límite que
+  fallan en silencio. Verificados rompiéndolos: quitar la precisión del corte y dejar el
+  giro sin normalizar salen los dos en rojo.
+
 ## Mapa y ubicación
 - Seguimiento continuo con `watchPosition` (`MapPage`): el punto azul se actualiza solo
   mientras caminas. Filtro anti-temblor de 15 m (el GPS baila estando quieto), pausa con

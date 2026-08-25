@@ -100,7 +100,9 @@ import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 import { ConfidenceChip } from '../components/ConfidenceChip'
 import { evidenceFromReports } from '../lib/confidence'
+import { rememberFountain } from '../lib/recentHistory'
 import { ConfidenceHelpButton } from '../components/ConfidenceHelp'
+import { FinalApproach } from '../components/FinalApproach'
 
 // Reseñas "Anteriores" que se muestran por tanda (el resto, tras "mostrar más").
 const REVIEWS_PAGE = 5
@@ -705,6 +707,7 @@ export function FontDetailPage() {
       apiFetch<CommentResponse[]>(`/fonts/${id}/comments`),
     ])
     setFont(f)
+    rememberFountain(f, user?.id ?? 'anonymous')
     setReports(r)
     setComments(c)
     // Estado de favorito (recuento público; "guardada por mí" si hay sesión).
@@ -721,7 +724,7 @@ export function FontDetailPage() {
       setCreatorName(null)
       setCreatorBadge(null)
     }
-  }, [id])
+  }, [id, user?.id])
 
   useEffect(() => {
     load().catch((e) => setError(describeError(e, t)))
@@ -1096,6 +1099,10 @@ export function FontDetailPage() {
           <EditFontForm font={font} canManage={!!user && (user.isAdmin || font.creator?.id === user.id)} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load() }} />
         ) : (
           <>
+            {/* Los últimos metros, lo primero de la columna: cuando de verdad se pinta es
+                porque ya estás allí, y en ese momento no hay nada en esta ficha que
+                importe más. El resto del tiempo no ocupa nada — no se pinta. */}
+            <FinalApproach lat={font.latitude} long={font.longitude} tieneFoto={!!font.image} />
             {font.description && (
               <Typography color="text.secondary">
                 {/* Sin menciones: el servidor no avisa de las que se escriban aquí. */}
