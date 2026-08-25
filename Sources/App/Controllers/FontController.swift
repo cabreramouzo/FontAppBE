@@ -15,7 +15,6 @@ struct FontController: RouteCollection {
         // Lectura pública.
         fonts.get(use: index)
         fonts.get("near", use: near)
-        fonts.get("near", "download", use: nearDownload)
         fonts.get("in-bounds", use: inBounds)
         fonts.get("map", use: mapItems)
         fonts.get(":fontID", use: show)
@@ -852,10 +851,6 @@ struct FontController: RouteCollection {
         return try await Font.summaries(for: sorted, on: req.db)
     }
 
-    /// GET /fonts/near/download — mismo conjunto que `near`, pensado para cachear offline en el cliente.
-    @Sendable func nearDownload(req: Request) async throws -> [FontSummary] {
-        try await near(req: req)
-    }
 
     /// GET /fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=
     /// Fuentes dentro del área visible de un mapa. Indexado por (latitude, longitude).

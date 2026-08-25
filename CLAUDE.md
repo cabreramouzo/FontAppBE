@@ -624,6 +624,43 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   paralelo, no se escala uno al otro. El corte es siempre `breakpoints.down('sm')` y la
   forma cambia de verdad —hoja, pantalla, barra de abajo—, no solo de tamaño.
 
+## Llevarse las fuentes al GPS (`lib/gpx.ts` + `ExportGpxButton`)
+
+- Lo pidió el mismo ciclista de los últimos metros, y el detalle que lo decide es **dónde
+  está cuando le hace falta**: planifica en Strava o Wikiloc y rueda con un Garmin en el
+  manillar. No va a sacar el móvil en una bajada, así que una app de fuentes que solo
+  existe en el teléfono no sirve en el momento en que hay sed. Por eso **exportar va antes
+  que importar** un recorrido, aunque lo segundo sea más vistoso.
+- **En el navegador, sin endpoint nuevo.** Las fuentes de la caja visible ya las sirve
+  `/fonts/in-bounds`, que existía y es pública; el fichero se compone en el cliente. Cero
+  coste de servidor y funciona sin cobertura con lo que el service worker tenga cacheado.
+- **El tope de 500 waypoints no es nuestro, es de los aparatos.** Muchos Garmin admiten del
+  orden de mil o dos mil en total y algunos truncan la importación **en silencio**; una
+  vista de ciudad son 3.000 puntos. Cuando se recorta se quedan **las del centro de la
+  vista**, que es lo que estabas mirando, y se dice cuántas de cuántas.
+- `<sym>Drinking Water</sym>` es el nombre del símbolo de Garmin: es la diferencia entre
+  ver gotas de agua en la pantalla del GPS o quinientas banderitas iguales.
+- La descripción dice el tipo y el último estado con su fecha, y **si nadie ha pasado nunca
+  lo dice**. Un waypoint que promete agua y no la tiene es peor que no llevarlo: ya te ha
+  hecho desviarte.
+- **El escapado XML no es cosmético**: un `&` sin escapar en un topónimo hace que el
+  aparato rechace el fichero **entero**, no esa fuente. Los caracteres de control se quitan
+  (en XML 1.0 no se pueden escapar) y **antes** de meter las entidades, o se comerían los
+  `&amp;` recién escritos. Hay test de las dos mitades.
+- Ojo con la trampa que costó una prueba: el botón recibe **el mapa**, no `map.getBounds()`.
+  Pasando los límites, se calculan en el render y React no repinta al mover el mapa — te
+  llevas la caja de la última vez que se pintó, que en la primera carga es antes de que el
+  mapa tenga tamaño. Medido: `minLat` igual a `maxLat`, caja de altura cero, fichero vacío
+  y **ningún error**. Lo que se mira al pulsar se lee al pulsar.
+- Vive dentro del panel de herramientas y no como un cuarto botón flotante: la columna ya
+  tiene tres, y un mapa tapado por sus propios controles deja de ser un mapa.
+- Se retiró `GET /fonts/near/download`, que devolvía exactamente lo mismo que `near` y no
+  la usaba nadie. Era un señuelo: una ruta llamada «download» que no descarga nada es lo
+  primero que mira quien viene a hacer esto.
+- El evento `map_export_gpx` se añadió a la lista cerrada de analítica con su rótulo en los
+  siete idiomas, que es lo que exige añadir uno. Sin eso no hay forma de saber si esta
+  apuesta se usa.
+
 ## Los últimos metros (`lib/approach.ts` + `FinalApproach`)
 
 - **El problema no es el mapa, es llegar.** Lo contó un usuario que va en bici de montaña:

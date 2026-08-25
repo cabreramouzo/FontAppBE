@@ -77,6 +77,7 @@ import { DRINKABLE_OPTIONS, SOURCE_OPTIONS, DRINKABLE_EMOJI, SOURCE_EMOJI, isNot
 import { timeAgo } from '../lib/time'
 import { isReliable } from '../lib/confidence'
 import { ConfidenceChip } from '../components/ConfidenceChip'
+import { ExportGpxButton } from '../components/ExportGpxButton'
 
 // Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
 // península aproximadamente centrada y el zoom 5 permite verla entera también en móvil.
@@ -1411,12 +1412,27 @@ export function MapPage() {
         {!movil && (
           <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
             {filtros('escritorio')}
+            {/* Descargar no es un filtro, así que va separado y al final. Vive dentro de
+                las herramientas y no como un cuarto botón flotante: la columna ya tiene
+                tres y un mapa tapado por sus propios controles deja de ser un mapa. */}
+            <Box sx={{ width: 210 }}>
+              <ExportGpxButton map={map} />
+            </Box>
           </Collapse>
         )}
       </div>
       {movil && (
         <BottomSheet open={controlsOpen} onClose={() => setControlsOpen(false)} titulo={t('map.filters')}>
-          <Stack spacing={1.25}>{filtros('movil')}</Stack>
+          <Stack spacing={1.25}>
+            {filtros('movil')}
+            <Divider sx={{ my: 0.5 }} />
+            <ExportGpxButton map={map} />
+            {/* Dice para qué sirve: «GPX» a secas no lo entiende quien no lleva GPS, y
+                quien sí lo lleva es exactamente a quien hay que hablarle. */}
+            <Typography variant="caption" color="text.secondary" sx={{ px: 0.5 }}>
+              {t('gpx.hint')}
+            </Typography>
+          </Stack>
         </BottomSheet>
       )}
       {geoError && <div className="hint hint-error">{geoError}</div>}
