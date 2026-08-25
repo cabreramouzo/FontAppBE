@@ -10,7 +10,9 @@ import L from 'leaflet'
  * haría parpadear el marcador con cada latido del sensor.
  */
 export function userLocationIcon(): L.DivIcon {
-  const size = 22
+  // 28 px: el de 22 dejaba un punto visible de solo 14 px, demasiado fácil de perder
+  // entre carreteras, etiquetas y marcadores en una pantalla de móvil.
+  const size = 28
   const html =
     `<div class="me-loc">` +
     `<span class="me-loc__cone"></span>` +

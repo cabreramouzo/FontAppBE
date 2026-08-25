@@ -625,6 +625,9 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   mientras caminas. Filtro anti-temblor de 15 m (el GPS baila estando quieto), pausa con
   la pestaña en segundo plano, y la lista de cercanas solo recarga al cambiar de casilla
   de ~100 m — si no, sería una petición por latido del GPS.
+- El marcador propio usa una caja de **28 px**, punto azul de **18 px**, borde blanco de
+  3 px y halo del mismo diámetro. El anterior (22/14 px) se perdía entre carreteras y
+  etiquetas en móvil; sigue siendo bastante menor que un pin de fuente para no confundirlos.
 - Al abrir la app se ubica sola **si el permiso ya estaba concedido** (nunca lanza el
   diálogo del navegador a bocajarro) y **si no venías de una vista guardada** ni de un
   enlace a una fuente concreta. El mapa te sigue hasta que tocas el mapa: arrastrar o

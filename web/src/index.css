@@ -482,15 +482,15 @@ select:not([class*="Mui"]) {
 
 /* Ubicación del usuario, estilo iOS: punto azul + onda expansiva. */
 .me-loc-wrap { background: none; border: none; }
-.me-loc { position: relative; width: 22px; height: 22px; }
+.me-loc { position: relative; width: 28px; height: 28px; }
 .me-loc__dot {
-  position: absolute; top: 50%; left: 50%; width: 14px; height: 14px;
+  position: absolute; top: 50%; left: 50%; width: 18px; height: 18px;
   transform: translate(-50%, -50%); border-radius: 50%;
-  background: #1a84ff; border: 2.5px solid #fff;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
+  background: #147efb; border: 3px solid #fff;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.45);
 }
 .me-loc__pulse {
-  position: absolute; top: 50%; left: 50%; width: 22px; height: 22px;
+  position: absolute; top: 50%; left: 50%; width: 28px; height: 28px;
   transform: translate(-50%, -50%); border-radius: 50%;
   background: rgba(26, 132, 255, 0.35);
   animation: me-loc-pulse 2s ease-out infinite;
