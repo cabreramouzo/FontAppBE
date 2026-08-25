@@ -56,6 +56,7 @@ import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, Water
 import { ApiError, apiFetch, createComment, createFont, describeError, nearbyFonts, requestSourceLimitExemption, trackInteraction, uploadImage } from '../api/client'
 import { nombreFuente } from '../lib/fontName'
 import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
+import { clearRecentHistory, recentFountains, recentSearches, rememberFountain, rememberSearch, type RecentFountain } from '../lib/recentHistory'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
@@ -379,7 +380,7 @@ function ZoomControls() {
   )
 }
 
-function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => void; onSelectPlace: (p: Place) => void; me: [number, number] | null }) {
+function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f: RecentFountain) => void; onSelectPlace: (p: Place) => void; me: [number, number] | null; historyScope: string }) {
   const { t, lang } = useI18n()
   const theme = useTheme()
   // En móvil el buscador ocupaba la franja superior entera: era, con diferencia, lo que
@@ -392,9 +393,38 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
   const [matches, setMatches] = useState<Font[]>([])
   const [places, setPlaces] = useState<Place[]>([])
   const [searched, setSearched] = useState(false)
+  const [historyVersion, setHistoryVersion] = useState(0)
+  // Si el desplegable está abierto. Vale para las tres cosas que cuelgan del campo
+  // —resultados, «sin resultados» e historial— y no solo para el historial: sin esto,
+  // tocar el mapa dejaba el panel puesto encima tapando justo lo que ibas a mirar. Ya
+  // pasaba con los resultados; el historial lo hizo evidente porque sale con solo
+  // enfocar, sin escribir nada.
+  const [desplegado, setDesplegado] = useState(false)
+  const caja = useRef<HTMLDivElement>(null)
+  const searches = useMemo(() => recentSearches(historyScope), [historyVersion, historyScope])
+  const fountains = useMemo(() => recentFountains(historyScope), [historyVersion, historyScope])
 
   // Al girar el móvil o cambiar de tamaño, el buscador vuelve a su forma natural.
   useEffect(() => setAbierto(!compacto), [compacto])
+
+  // Cerrar el desplegable al tocar fuera o con Escape. Va en `mousedown` y no en `blur`:
+  // el `blur` llega **antes** que el `click` de la lista, así que cerrar ahí impediría
+  // elegir con el ratón — es el mismo motivo por el que las sugerencias de menciones usan
+  // `onMouseDown`. Solo en escritorio: en móvil el buscador es un diálogo a pantalla
+  // completa con su propia aspa.
+  useEffect(() => {
+    if (compacto) return
+    const fuera = (e: MouseEvent) => {
+      if (caja.current && !caja.current.contains(e.target as Node)) setDesplegado(false)
+    }
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') setDesplegado(false) }
+    document.addEventListener('mousedown', fuera)
+    document.addEventListener('keydown', escape)
+    return () => {
+      document.removeEventListener('mousedown', fuera)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [compacto])
 
   // Búsqueda con debounce: fuentes (nuestra API) y lugares (Nominatim/OSM) en paralelo.
   useEffect(() => {
@@ -435,6 +465,8 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
   }
 
   function abrir() {
+    setHistoryVersion((version) => version + 1)
+    setDesplegado(true)
     setAbierto(true)
     // El foco va tras el render, o el teclado no sube en iOS.
     setTimeout(() => inputRef.current?.focus(), 0)
@@ -466,7 +498,7 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
   // ver «Comarca ≠ provincia»— así que se dice la **demarcación**, que es lo que de verdad
   // hay. Y delante la **distancia**, que es lo que responde a «¿a cuál voy?», solo si se
   // sabe dónde estás. Lo que falte simplemente no sale; nada se inventa.
-  const donde = (f: Font) => [
+  const donde = (f: RecentFountain) => [
     me ? formatDist(haversineKm(me[0], me[1], f.latitude, f.longitude)) : null,
     f.region,
   ].filter(Boolean).join(' · ')
@@ -479,7 +511,7 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
       {matches.map((f) => (
         <ListItemButton
           key={f.id}
-          onClick={() => { trackInteraction('search_font_select'); onSelect(f); compacto ? cerrar() : clear() }}
+          onClick={() => { trackInteraction('search_font_select'); rememberSearch(q, historyScope); rememberFountain(f, historyScope); onSelect(f); if (compacto) cerrar(); else { clear(); setDesplegado(false) } }}
           sx={aPantallaCompleta ? { minHeight: 56 } : undefined}
         >
           <ListItemText primary={nombreFuente(f, t)} secondary={donde(f) || undefined} />
@@ -489,7 +521,7 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
       {places.map((p, i) => (
         <ListItemButton
           key={`p${i}`}
-          onClick={() => { trackInteraction('search_place_select'); onSelectPlace(p); compacto ? cerrar() : clear() }}
+          onClick={() => { trackInteraction('search_place_select'); rememberSearch(q, historyScope); onSelectPlace(p); if (compacto) cerrar(); else { clear(); setDesplegado(false) } }}
           sx={aPantallaCompleta ? { minHeight: 56 } : undefined}
         >
           <ListItemText primary={p.name} sx={aPantallaCompleta ? undefined : { '& .MuiListItemText-primary': { fontSize: 13 } }} />
@@ -497,6 +529,39 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
       ))}
     </List>
   )
+
+  // Historial mínimo y local: las búsquedas solo se guardan al elegir algo, nunca
+  // mientras se escribe. Las fuentes son datos públicos; no guardamos la ubicación GPS.
+  const historial = (aPantallaCompleta: boolean) => (
+    <List dense={!aPantallaCompleta} disablePadding>
+      <ListSubheader sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>🕘 {t('search.recent')}</span>
+        <Button size="small" onClick={() => { clearRecentHistory(historyScope); setHistoryVersion((version) => version + 1) }}>
+          {t('search.clearHistory')}
+        </Button>
+      </ListSubheader>
+      {searches.map((term) => (
+        <ListItemButton key={`q:${term}`} onClick={() => setQ(term)} sx={aPantallaCompleta ? { minHeight: 48 } : undefined}>
+          <ListItemText primary={term} secondary={t('search.recentSearch')} />
+        </ListItemButton>
+      ))}
+      {fountains.length > 0 && <ListSubheader>💧 {t('search.recentFountains')}</ListSubheader>}
+      {fountains.map((font) => (
+        <ListItemButton
+          key={`h:${font.id}`}
+          // Se comporta **igual que un resultado de búsqueda**: centra el mapa y abre su
+          // globo. Antes navegaba a la ficha, y eso era una incoherencia con la lista de
+          // justo encima —dos filas casi idénticas que hacían cosas distintas— y además te
+          // sacaba del mapa, que es donde estás. A la ficha se llega desde el globo.
+          onClick={() => { rememberFountain(font, historyScope); onSelect(font); setDesplegado(false) }}
+          sx={aPantallaCompleta ? { minHeight: 56 } : undefined}
+        >
+          <ListItemText primary={nombreFuente(font, t)} secondary={donde(font) || undefined} />
+        </ListItemButton>
+      ))}
+    </List>
+  )
+  const hasHistory = searches.length > 0 || fountains.length > 0
 
   // En móvil, buscar es una pantalla, no un campo flotante. Es lo que hace Maps y lo que
   // espera cualquiera: al teclear sube el teclado, que se come media pantalla, y una lista
@@ -525,7 +590,8 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
           <InputBase
             inputRef={inputRef}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onFocus={() => { setHistoryVersion((v) => v + 1); setDesplegado(true) }}
+            onChange={(e) => { setDesplegado(true); setQ(e.target.value) }}
             placeholder={t('map.searchPlaceholder').replace(/^[^\p{L}]+/u, '')}
             fullWidth
             inputProps={{ maxLength: 80 }}
@@ -543,7 +609,9 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
             ? resultados(true)
             : noResults
               ? senseResultats(true)
-            : (
+            : hasHistory
+              ? historial(true)
+              : (
               // Ni resultados ni ruido: solo se dice qué se puede buscar. Sin esto la
               // pantalla queda en blanco y parece que se ha roto algo.
               <Typography variant="body2" color="text.secondary" sx={{ p: 3, textAlign: 'center' }}>
@@ -581,13 +649,14 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
   }
 
   return (
-    <Box className="search">
+    <Box className="search" ref={caja}>
       <Paper elevation={3} sx={{ display: 'flex', alignItems: 'center', px: 1.5, borderRadius: '24px' }}>
         <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
         <InputBase
           inputRef={inputRef}
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onFocus={() => { setHistoryVersion((v) => v + 1); setDesplegado(true) }}
+          onChange={(e) => { setDesplegado(true); setQ(e.target.value) }}
           placeholder={t('map.searchPlaceholder').replace(/^[^\p{L}]+/u, '')}
           fullWidth
           // Ningún topónimo se acerca a 80. El servidor también lo acota (ver
@@ -601,14 +670,19 @@ function SearchBox({ onSelect, onSelectPlace, me }: { onSelect: (f: Font) => voi
           </IconButton>
         )}
       </Paper>
-      {hasResults && (
+      {hasResults && desplegado && (
         <Paper elevation={4} sx={{ mt: 0.5, borderRadius: 3, overflow: 'hidden', maxHeight: '50vh', overflowY: 'auto' }}>
           {resultados(false)}
         </Paper>
       )}
-      {noResults && (
+      {noResults && desplegado && (
         <Paper elevation={4} sx={{ mt: 0.5, borderRadius: 3 }}>
           {senseResultats(false)}
+        </Paper>
+      )}
+      {!q && hasHistory && desplegado && (
+        <Paper elevation={4} sx={{ mt: 0.5, borderRadius: 3, overflow: 'hidden', maxHeight: '50vh', overflowY: 'auto' }}>
+          {historial(false)}
         </Paper>
       )}
     </Box>
@@ -1301,7 +1375,7 @@ export function MapPage() {
         {pos && <Marker position={pos} />}
       </MapContainer>
 
-      <SearchBox me={me} onSelect={(f) => { setGoto([f.latitude, f.longitude]); setSelectedID(f.id) }} onSelectPlace={setPlace} />
+      <SearchBox me={me} historyScope={user?.id ?? 'anonymous'} onSelect={(f) => { setGoto([f.latitude, f.longitude]); setSelectedID(f.id) }} onSelectPlace={setPlace} />
 
       <div className="map-controls">
         {/* Botón que despliega/esconde las herramientas. El puntito avisa si hay

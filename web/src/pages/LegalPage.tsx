@@ -92,7 +92,7 @@ function LegalCA() {
         <strong>Emmagatzematge al teu navegador:</strong> <strong>no fem servir cookies</strong>. Desem al teu propi
         dispositiu: el <em>token de sessió</em> (per mantenir-te identificat), les teves preferències (idioma, tema clar/fosc,
         avisos ja llegits), el codi del cartell pel qual vas arribar i, si afegeixes alguna cosa <strong>sense cobertura</strong>,
-        la teva aportació i la foto en una cua local fins que hi hagi xarxa. Tot això es queda al teu dispositiu i pots
+        la teva aportació i la foto en una cua local fins que hi hagi xarxa. També hi desem un <strong>historial curt de cerques</strong> (les últimes que has triat i les fonts que has obert des del cercador); <strong>no surt mai del teu dispositiu</strong> i el pots esborrar amb el botó «Esborra» del propi cercador. Tot això es queda al teu dispositiu i pots
         esborrar-ho buidant les dades del lloc al navegador.
       </p>
       <p>
@@ -175,7 +175,7 @@ function LegalES() {
         <strong>Almacenamiento en tu navegador:</strong> <strong>no usamos cookies</strong>. Guardamos en tu propio
         dispositivo: el <em>token de sesión</em> (para mantenerte identificado), tus preferencias (idioma, tema claro/oscuro,
         avisos ya leídos), el código del cartel por el que llegaste y, si añades algo <strong>sin cobertura</strong>,
-        tu aportación y la foto en una cola local hasta que haya red. Todo eso se queda en tu dispositivo y puedes
+        tu aportación y la foto en una cola local hasta que haya red. También guardamos ahí un <strong>historial corto de búsquedas</strong> (las últimas que elegiste y las fuentes que abriste desde el buscador); <strong>nunca sale de tu dispositivo</strong> y puedes borrarlo con el botón «Borrar» del propio buscador. Todo eso se queda en tu dispositivo y puedes
         borrarlo vaciando los datos del sitio en el navegador.
       </p>
       <p>
@@ -258,7 +258,7 @@ function LegalPT() {
         <strong>Armazenamento no navegador:</strong> <strong>não utilizamos cookies</strong>. Guardamos no teu dispositivo:
         o <em>token de sessão</em> (para manter a sessão iniciada), as tuas preferências (idioma, tema claro/escuro e avisos já lidos),
         o código do cartaz através do qual chegaste e, se adicionares algo <strong>sem rede</strong>, a tua contribuição e a fotografia
-        numa fila local até a ligação regressar. Tudo permanece no teu dispositivo e pode ser apagado eliminando os dados do site no navegador.
+        numa fila local até a ligação regressar. Guardamos aí também um <strong>histórico curto de pesquisas</strong> (as últimas que escolheste e as fontes que abriste a partir da pesquisa); <strong>nunca sai do teu dispositivo</strong> e podes apagá-lo com o botão «Apagar» da própria pesquisa. Tudo permanece no teu dispositivo e pode ser apagado eliminando os dados do site no navegador.
       </p>
       <p>
         <strong>Analítica:</strong> utilizamos <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
@@ -346,8 +346,10 @@ function LegalEN() {
         <strong>Storage in your browser:</strong> <strong>we use no cookies</strong>. We keep on your own device: the
         <em> session token</em> (to keep you signed in), your preferences (language, light/dark theme, notices already seen),
         the poster code you arrived with and, if you add something <strong>with no signal</strong>, your contribution and its
-        photo in a local queue until the network is back. All of it stays on your device and you can clear it by deleting
-        the site data in your browser.
+        photo in a local queue until the network is back. We also keep a <strong>short search history</strong> there (the last
+        searches you picked and the fountains you opened from the search box); it <strong>never leaves your device</strong>
+        and you can wipe it with the “Clear” button in the search box itself. All of it stays on your device and you can
+        clear it by deleting the site data in your browser.
       </p>
       <p>
         <strong>Analytics:</strong> we use <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
@@ -421,6 +423,9 @@ function LegalFR() {
       <p>
         <strong>Stockage dans votre navigateur :</strong> <strong>nous n’utilisons aucun cookie</strong>. Nous conservons sur votre appareil
         le jeton de session, vos préférences, le code de campagne et vos contributions hors connexion jusqu’au retour du réseau.
+        Nous y conservons aussi un <strong>court historique de recherches</strong> (les dernières que vous avez choisies et les
+        fontaines ouvertes depuis la recherche) ; il <strong>ne quitte jamais votre appareil</strong> et vous pouvez l’effacer
+        avec le bouton « Effacer » de la recherche elle-même.
         Vous pouvez tout effacer en supprimant les données du site dans votre navigateur.
       </p>
       <p>
@@ -497,7 +502,9 @@ function LegalGL() {
         <strong>Almacenamento no teu navegador:</strong> <strong>non usamos cookies</strong>. Gardamos no teu propio
         dispositivo: o <em>token de sesión</em> (para manterte identificado), as túas preferencias (idioma, tema claro/escuro,
         avisos xa lidos), o código do cartel polo que chegaches e, se engades algo <strong>sen cobertura</strong>,
-        a túa achega e a foto nunha cola local ata que haxa rede. Todo iso queda no teu dispositivo e podes
+        a túa achega e a foto nunha cola local ata que haxa rede. Tamén gardamos aí un <strong>historial curto de buscas</strong>
+        (as últimas que escolliches e as fontes que abriches desde o buscador); <strong>nunca sae do teu dispositivo</strong> e
+        podes borralo co botón «Borrar» do propio buscador. Todo iso queda no teu dispositivo e podes
         borralo baleirando os datos do sitio no navegador.
       </p>
       <p>
@@ -580,7 +587,9 @@ function LegalEU() {
         <strong>Zure nabigatzailean gordetzen dena:</strong> <strong>ez dugu cookierik erabiltzen</strong>. Zure gailuan
         bertan gordetzen ditugu: <em>saio-tokena</em> (identifikatuta jarraitzeko), zure hobespenak (hizkuntza, gai argia/iluna,
         jada irakurritako oharrak), iritsi zinen kartelaren kodea eta, <strong>estaldurarik gabe</strong> zerbait gehitzen baduzu,
-        zure ekarpena eta argazkia tokiko ilara batean, sarea itzuli arte. Hori guztia zure gailuan geratzen da eta
+        zure ekarpena eta argazkia tokiko ilara batean, sarea itzuli arte. Han <strong>bilaketen historial labur bat</strong> ere
+        gordetzen dugu (aukeratu dituzun azken bilaketak eta bilatzailetik ireki dituzun iturriak); <strong>ez da inoiz zure
+        gailutik ateratzen</strong> eta bilatzaileko «Ezabatu» botoiarekin garbi dezakezu. Hori guztia zure gailuan geratzen da eta
         ezaba dezakezu nabigatzailean gunearen datuak hustuz.
       </p>
       <p>
