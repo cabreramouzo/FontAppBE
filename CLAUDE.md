@@ -485,6 +485,10 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - **Solo en móvil.** En pantallas anchas la barra de arriba tiene sitio de sobra y una tab
   bar sería un préstamo del móvil que allí no significa nada; el mismo criterio que ya
   seguía `MoreMenu`.
+- **En escritorio los iconos llevan su etiqueta traducida debajo.** No se depende de que
+  alguien reconozca un globo, un periódico o el control de tema, y la sección activa
+  conserva color y fondo. También se etiquetan Apoyar, notificaciones, tema e idioma; en
+  móvil no se repiten arriba porque los destinos principales ya tienen nombre en la tab bar.
 - **Lo que NO baja: la campana y el menú.** Las pestañas son los sitios donde se está, no
   las cosas que se hacen; un aviso no es un destino y un cajón de ajustes tampoco.
 - La sección activa se decide **una sola vez** en `lib/navigation.ts`, para móvil y

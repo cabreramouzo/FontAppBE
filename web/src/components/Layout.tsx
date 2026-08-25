@@ -6,7 +6,6 @@ import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
-import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -42,6 +41,28 @@ const desktopTabSx = (selected: boolean) => ({
   color: selected ? 'primary.main' : 'inherit',
   bgcolor: selected ? 'action.selected' : 'transparent',
   '&:hover': { bgcolor: selected ? 'action.selected' : 'action.hover' },
+})
+
+const desktopNavSx = (selected: boolean) => ({
+  ...desktopTabSx(selected),
+  minWidth: 48,
+  px: 0.5,
+  py: 0.375,
+  flexDirection: 'column',
+  gap: 0.125,
+  borderRadius: 2,
+  textTransform: 'none',
+  lineHeight: 1,
+  fontWeight: selected ? 700 : 500,
+  '& .MuiSvgIcon-root': { fontSize: 22 },
+  '& .desktop-nav-label': {
+    maxWidth: 72,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    fontSize: 10,
+    lineHeight: 1.15,
+    whiteSpace: 'nowrap',
+  },
 })
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -203,7 +224,7 @@ export function Layout({ children }: { children: ReactNode }) {
               que no todo el mundo sabe que es un enlace. El orden de los tres iconos es
               el mismo que el de la tab bar: mapa, novedades, zonas. */}
           <Tooltip title={t('nav.map')}>
-            <IconButton
+            <Button
               component={RouterLink}
               to="/"
               color="inherit"
@@ -211,10 +232,11 @@ export function Layout({ children }: { children: ReactNode }) {
               aria-label={t('nav.map')}
               aria-current={seccionActiva === 'map' ? 'page' : undefined}
               onClick={() => trackInteraction('nav_map')}
-              sx={desktopTabSx(seccionActiva === 'map')}
+              sx={desktopNavSx(seccionActiva === 'map')}
             >
               <MapOutlinedIcon />
-            </IconButton>
+              <span className="desktop-nav-label">{t('nav.map')}</span>
+            </Button>
           </Tooltip>
           {/* Novedades vive aquí y no sobre el mapa: los botones del mapa hacen cosas
               SOBRE el mapa (filtran, cambian la capa, te centran) y este navega a otra
@@ -224,7 +246,7 @@ export function Layout({ children }: { children: ReactNode }) {
               para que alguien descubriera que Novedades existía, que era un parche a un
               problema de sitio. Una pestaña con su nombre escrito no necesita moverse. */}
           <Tooltip title={t('news.title')}>
-            <IconButton
+            <Button
               component={RouterLink}
               to="/activity"
               color="inherit"
@@ -232,7 +254,7 @@ export function Layout({ children }: { children: ReactNode }) {
               aria-label={t('news.title')}
               aria-current={seccionActiva === 'activity' ? 'page' : undefined}
               onClick={() => trackInteraction('nav_activity')}
-              sx={desktopTabSx(seccionActiva === 'activity')}
+              sx={desktopNavSx(seccionActiva === 'activity')}
             >
               <NewspaperIcon
                 key={zumbidos}
@@ -250,7 +272,8 @@ export function Layout({ children }: { children: ReactNode }) {
                   '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
                 }}
               />
-            </IconButton>
+              <span className="desktop-nav-label">{t('news.title')}</span>
+            </Button>
           </Tooltip>
           {/* Zonas: mismo sitio y mismo criterio que Novedades — navega fuera del mapa.
               Se esconde en pantallas estrechas, donde la barra ya iba justa y esta es la
@@ -259,7 +282,7 @@ export function Layout({ children }: { children: ReactNode }) {
               apuntando a otro sitio era la razón de que nadie encontrara ninguno de los
               dos. Zonas es cobertura por territorios, que es lo que un globo dice. */}
           <Tooltip title={t('zones.title')}>
-            <IconButton
+            <Button
               component={RouterLink}
               to="/zones"
               color="inherit"
@@ -267,10 +290,11 @@ export function Layout({ children }: { children: ReactNode }) {
               aria-label={t('zones.title')}
               aria-current={seccionActiva === 'zones' ? 'page' : undefined}
               onClick={() => trackInteraction('nav_zones')}
-              sx={desktopTabSx(seccionActiva === 'zones')}
+              sx={desktopNavSx(seccionActiva === 'zones')}
             >
               <PublicOutlinedIcon />
-            </IconButton>
+              <span className="desktop-nav-label">{t('zones.title')}</span>
+            </Button>
           </Tooltip>
           {/* El corazón: apoyar el proyecto. Va en **las dos** anchuras, y sí, en
               escritorio eso lo deja repetido con el enlace del pie. Se acepta a
@@ -280,25 +304,30 @@ export function Layout({ children }: { children: ReactNode }) {
               pestaña de la tab bar porque no es un lugar donde se esté, es algo que se
               hace una vez. */}
           <Tooltip title={t('support.title')}>
-            <IconButton
+            <Button
               component={RouterLink}
               to="/support"
               color="inherit"
               size="small"
               aria-label={t('support.title')}
               onClick={() => trackInteraction('support_heart')}
+              sx={desktopNavSx(false)}
             >
               <FavoriteBorderIcon />
-            </IconButton>
+              <span className="desktop-nav-label">{t('donate.button')}</span>
+            </Button>
           </Tooltip>
           {/* La campana solo tiene sentido con sesión, y solo se pinta si hay algo:
               un icono que nunca hace nada es ruido en una barra que ya va justa. */}
-          {user && <NotificationBell />}
+          {user && <NotificationBell desktopLabel />}
           {/* Tema e idioma se ponen una vez en la vida: en móvil bajan al cajón y aquí
               solo se quedan donde hay sitio de sobra, que es donde un control suelto se
               ve y se toca mejor que un menú. */}
-          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><ThemeToggle /></Box>
-          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><LanguageSwitcher /></Box>
+          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}><ThemeToggle showLabel /></Box>
+          <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <LanguageSwitcher />
+            <Typography component="span" sx={{ fontSize: 10, lineHeight: 1.15 }}>{t('lang.label')}</Typography>
+          </Box>
           {user ? (
             <>
               {/* Perfil: texto con saludo en pantallas anchas; solo icono en móvil para que quepa. */}

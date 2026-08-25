@@ -66,7 +66,7 @@ function cifras(excerpt: string): [number, number, number] {
   return [a ?? 0, b ?? 0, c ?? 0]
 }
 
-export function NotificationBell() {
+export function NotificationBell({ desktopLabel = false }: { desktopLabel?: boolean }) {
   const { t } = useI18n()
   const [items, setItems] = useState<NotificationItem[]>([])
   const [unread, setUnread] = useState(0)
@@ -101,10 +101,21 @@ export function NotificationBell() {
   return (
     <>
       <Tooltip title={t('notif.bell')}>
-        <IconButton color="inherit" size="small" onClick={abrir} aria-label={t('notif.bell')}>
+        <IconButton
+          color="inherit"
+          size="small"
+          onClick={abrir}
+          aria-label={t('notif.bell')}
+          sx={desktopLabel ? { flexDirection: 'column', borderRadius: 2, px: 0.75, py: 0.375 } : undefined}
+        >
           <Badge badgeContent={unread} color="error">
             <NotificationsNoneIcon />
           </Badge>
+          {desktopLabel && (
+            <Typography component="span" sx={{ display: { xs: 'none', sm: 'block' }, fontSize: 10, lineHeight: 1.15 }}>
+              {t('notif.bell')}
+            </Typography>
+          )}
         </IconButton>
       </Tooltip>
 
