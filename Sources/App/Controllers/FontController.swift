@@ -293,7 +293,8 @@ struct FontController: RouteCollection {
         // Una cuenta nueva sin historial fiable empieza con un cupo pequeño. Se amplía
         // sola al cumplir una semana. El límite global por usuario sigue protegiendo el
         // endpoint después; éste frena específicamente cuentas desechables.
-        if !user.isAdmin, let userID = user.id, let joined = user.createdAt,
+        if !user.isAdmin, !user.hasSourceLimitExemption,
+           let userID = user.id, let joined = user.createdAt,
            Date().timeIntervalSince(joined) < 7 * 86_400 {
             let today = try await Font.query(on: req.db)
                 .filter(\.$creator.$id == userID)

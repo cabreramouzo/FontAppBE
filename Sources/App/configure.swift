@@ -158,6 +158,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateInteractionAnalyticsDaily()) // histórico diario sin UUID de sesión
     app.migrations.add(CreateUserSupportInteraction()) // apoyo identificado, solo con sesión y 180 días
     app.migrations.add(AddAbuseModeration()) // cuarentena reversible y sanciones contra abuso
+    app.migrations.add(AddSourceLimitExemptionToUser()) // excepción temporal al cupo de cuentas nuevas
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
@@ -187,6 +188,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(PopulateRegionsCommand(), as: "populate-regions")
     app.asyncCommands.use(BackfillAdmin1Command(), as: "backfill-admin1")
     app.asyncCommands.use(SetRoleCommand(), as: "set-role")
+    app.asyncCommands.use(SetSourceLimitExemptionCommand(), as: "set-source-limit-exemption")
     app.asyncCommands.use(WeeklyDigestCommand(), as: "send-weekly-digest")
     app.asyncCommands.use(ScoreContributionsCommand(), as: "score-contributions")
     app.asyncCommands.use(GamificationSyncCommand(), as: "gamification-sync")

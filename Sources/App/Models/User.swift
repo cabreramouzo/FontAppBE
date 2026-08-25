@@ -42,6 +42,9 @@ final class User: Model, @unchecked Sendable {
     /// Sanciones confirmadas y, si aplica, fin de la restricción para publicar.
     @Field(key: "moderation_strikes") var moderationStrikes: Int
     @OptionalField(key: "posting_restricted_until") var postingRestrictedUntil: Date?
+    /// Excepción temporal y específica al cupo de cinco altas para cuentas nuevas.
+    /// No concede ningún otro permiso y no evita el rate limit general del endpoint.
+    @OptionalField(key: "source_limit_exempt_until") var sourceLimitExemptUntil: Date?
     // Idioma con el que se registró, para los correos que no nacen de una petición suya.
     @OptionalField(key: "lang") var lang: String?
     // Código del cartel por el que llegó (`?p=castellcir`), si venía con uno.
@@ -77,6 +80,10 @@ final class User: Model, @unchecked Sendable {
     var postingIsRestricted: Bool {
         guard let until = postingRestrictedUntil else { return false }
         return until > Date()
+    }
+
+    var hasSourceLimitExemption: Bool {
+        sourceLimitExemptUntil.map { $0 > Date() } ?? false
     }
 
     /// Puerta única para las aportaciones comunitarias. Borrar o deshacer contenido

@@ -1098,6 +1098,47 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Una excepción de confianza solo salta el cupo de cinco altas de las cuentas
+    /// nuevas. No exige convertir a la persona en staff ni tocar su fecha de registro.
+    func testTemporarySourceLimitExemption() async throws {
+        try await withApp { app in
+            let userID = try await register(app, username: "trusted-mapper")
+            let token = try await login(app, username: "trusted-mapper")
+
+            func create(_ n: Int) async throws -> HTTPStatus {
+                var status = HTTPStatus.ok
+                try await app.test(.POST, "fonts", headers: bearer(token), beforeRequest: { req in
+                    try req.content.encode(CreateFontDTO(
+                        name: "Fuente \(n)", latitude: 40 + Double(n) * 0.01,
+                        longitude: -3, image: nil, description: nil,
+                        source: .tap, drinkable: nil
+                    ))
+                }, afterResponse: { status = $0.status })
+                return status
+            }
+
+            for n in 1...5 {
+                let status = try await create(n)
+                XCTAssertEqual(status, .created)
+            }
+            let blocked = try await create(6)
+            XCTAssertEqual(blocked, .tooManyRequests)
+
+            let storedUser = try await User.find(userID, on: app.db)
+            let user = try XCTUnwrap(storedUser)
+            user.sourceLimitExemptUntil = Date().addingTimeInterval(7 * 86_400)
+            try await user.save(on: app.db)
+            let allowed = try await create(6)
+            XCTAssertEqual(allowed, .created)
+
+            // Caducada vuelve a proteger, sin depender de ningún proceso de limpieza.
+            user.sourceLimitExemptUntil = Date().addingTimeInterval(-1)
+            try await user.save(on: app.db)
+            let blockedAgain = try await create(7)
+            XCTAssertEqual(blockedAgain, .tooManyRequests)
+        }
+    }
+
     /// Las dos mitades de la regla: una reseña con foto **pone** la portada si no había
     /// ninguna, y **no la sustituye** si ya la hay. La segunda es la que sostiene que
     /// esto pueda ser automático: añadir donde no había nada solo puede mejorar la ficha.
