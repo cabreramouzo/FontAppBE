@@ -1252,8 +1252,59 @@ se escriben.
 
 Destino por defecto `~/Backups/fontapp-fotos`, configurable con `FONTAPP_FOTOS_DIR`.
 
-**3. Prográmalo** con el mismo launchd del backup de la base, añadiendo un segundo
-`.plist` que apunte a este script.
+**3. Prográmalo semanal con launchd.** Crea
+`~/Library/LaunchAgents/net.fontapp.backup-fotos.plist` (rutas absolutas; launchd no
+expande `~`):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>net.fontapp.backup-fotos</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/USER/RUTA_AL_REPO/scripts/backup-fotos.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key><integer>0</integer>
+    <key>Hour</key><integer>10</integer>
+    <key>Minute</key><integer>30</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/USER/Backups/fontapp-fotos.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/USER/Backups/fontapp-fotos.log</string>
+</dict>
+</plist>
+```
+
+```bash
+launchctl bootstrap "gui/$UID" ~/Library/LaunchAgents/net.fontapp.backup-fotos.plist
+```
+
+Domingos a las 10:30, media hora después del backup de la base para no solaparse.
+Pruébalo sin esperar a la semana que viene con
+`launchctl kickstart -k "gui/$UID/net.fontapp.backup-fotos"` y mira
+`launchctl list net.fontapp.backup-fotos | grep LastExitStatus` (0 = bien).
+
+> **`EnvironmentVariables` con el PATH no es opcional.** launchd arranca con
+> `/usr/bin:/bin:/usr/sbin:/sbin`, que **no** incluye `/opt/homebrew/bin`, donde vive
+> `rclone`. Sin esa clave el script muere con «falta rclone» cada domingo y no te enteras
+> hasta que abres el log — o hasta que te hace falta el backup.
+
+> **El log va FUERA del directorio del backup.** Ese directorio es un espejo exacto del
+> bucket, así que un `backup.log` dentro se contaría como una foto más (medido: decía 102
+> ficheros donde el checksum contaba 101) y, peor, acabaría **subido a R2** el día que se
+> restaure copiando el directorio de vuelta.
 
 > Usa `rclone copy` y **no `sync`** a propósito: `sync` borraría del disco lo que ya no
 > esté en R2, así que un borrado accidental en producción se propagaría al backup a la
@@ -1268,6 +1319,19 @@ Destino por defecto `~/Backups/fontapp-fotos`, configurable con `FONTAPP_FOTOS_D
 - `check` compara **checksums**, y ese sí lo caza. Por eso el script termina con él y sale
   con código **1** si encuentra diferencias, en vez de decir «OK» sobre un backup roto.
   Verificado: con el fichero corrompido sale 1, tras reponerlo sale 0.
+
+**Restaurar** las fotos a un bucket vacío (con `--dry-run` primero, siempre):
+
+```bash
+set -a; . ~/.config/fontapp/r2.env; set +a
+rclone copy ~/Backups/fontapp-fotos ":s3:$R2_BUCKET" --dry-run \
+  --s3-provider Cloudflare --s3-endpoint "$R2_ENDPOINT" --s3-region auto \
+  --s3-access-key-id "$R2_ACCESS_KEY_ID" --s3-secret-access-key "$R2_SECRET_ACCESS_KEY" \
+  --exclude '.DS_Store' --exclude '.*'
+```
+
+El `--exclude` importa: Finder deja `.DS_Store` dentro del directorio en cuanto lo abres
+una vez, y sin excluirlo se publicaría en el bucket.
 
 Primera ejecución real (27/08/2026): **101 ficheros, 47 MB, 12 segundos**. Son 10 más que
 los 91 que referencia la base de datos — huérfanos en R2 de reseñas borradas y portadas
