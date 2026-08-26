@@ -25,9 +25,14 @@
  * Consecuencia asumida: un país importado y no apuntado aquí **sale en `/zones` y no en
  * el selector de novedades**. Es la misma regla que las traducciones —al importar un
  * país, se añade aquí— y por eso van juntas: una lista, un sitio, un despiste posible.
+ *
+ * **El orden es de más a menos fuentes y no es decorativo**: quien abre el selector busca
+ * el suyo, y alfabéticamente Andorra (75 fuentes) saldría delante de España (53.000). Al
+ * añadir un país hay que colocarlo donde le toca, no al final — Suiza entró la última y
+ * con 15.246 fuentes le corresponde el segundo puesto. La cifra sale de `GET /zones`.
  */
 export const PAISES = [
-  'Spain', 'France', 'Portugal', 'Sweden', 'Finland', 'Chile', 'Andorra', 'Switzerland',
+  'Spain', 'Switzerland', 'France', 'Portugal', 'Sweden', 'Finland', 'Chile', 'Andorra',
 ]
 
 const TRADUCIDOS = new Set(PAISES)
