@@ -1263,7 +1263,7 @@ final class IntegrationTests: XCTestCase {
             try await Font(name: "Deu sense tractar", latitude: 41.7, longitude: 2.7,
                            source: .mountain, drinkable: .untreated).create(on: app.db)
 
-            try await app.test(.GET, "fonts") { res in
+            try await app.test(.GET, "fonts?search=Deu") { res in
                 XCTAssertEqual(res.status, .ok)
                 let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
                 let items = json?["items"] as? [[String: Any]] ?? []
@@ -1289,20 +1289,18 @@ final class IntegrationTests: XCTestCase {
     /// El corte va en «hay término» y **no** en la ruta entera: cerrarla habría roto el
     /// buscador para quien no tiene cuenta, que es justo quien llega por un cartel.
     func testFontsListNeedsASearchTerm() async throws {
-        let app = try await Application.make(.testing)
-        defer { Task { try? await app.asyncShutdown() } }
-        try await configure(app)
-
-        try await app.test(.GET, "/fonts?per=100&page=2") { res in
-            XCTAssertEqual(res.status, .forbidden, "barrer sin término no")
-        }
-        try await app.test(.GET, "/fonts?search=font&per=6") { res in
-            XCTAssertEqual(res.status, .ok, "buscar sí, y sin sesión")
-        }
-        // Y la profundidad: exigir un término sin esto no cierra nada, porque `search=a`
-        // casa con casi cualquier nombre y paginando se vuelve a barrer con una letra.
-        try await app.test(.GET, "/fonts?search=a&page=\(FontController.maxPublicPage + 1)") { res in
-            XCTAssertEqual(res.status, .forbidden, "quien va por la página 40 está barriendo")
+        try await withApp { app in
+            try await app.test(.GET, "/fonts?per=100&page=2") { res in
+                XCTAssertEqual(res.status, .forbidden, "barrer sin término no")
+            }
+            try await app.test(.GET, "/fonts?search=font&per=6") { res in
+                XCTAssertEqual(res.status, .ok, "buscar sí, y sin sesión")
+            }
+            // Y la profundidad: exigir un término sin esto no cierra nada, porque `search=a`
+            // casa con casi cualquier nombre y paginando se vuelve a barrer con una letra.
+            try await app.test(.GET, "/fonts?search=a&page=\(FontController.maxPublicPage + 1)") { res in
+                XCTAssertEqual(res.status, .forbidden, "quien va por la página 40 está barriendo")
+            }
         }
     }
 
@@ -1324,7 +1322,7 @@ final class IntegrationTests: XCTestCase {
             // Una importada: sin creador, que es el caso donde el `null` importa.
             try await Font(name: "Importada", latitude: 41.5, longitude: 2.5).create(on: app.db)
 
-            try await app.test(.GET, "fonts") { res in
+            try await app.test(.GET, "fonts?search=Importada") { res in
                 XCTAssertEqual(res.status, .ok)
                 let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
                 let items = json?["items"] as? [[String: Any]] ?? []
@@ -2339,7 +2337,7 @@ final class IntegrationTests: XCTestCase {
             for i in 0..<12 {
                 _ = try await createFont(app, token: token, name: "Font \(i)", lat: 41.0 + Double(i) / 1000, long: 2.0)
             }
-            try await app.test(.GET, "fonts?per=100000", afterResponse: { res in
+            try await app.test(.GET, "fonts?search=Font&per=100000", afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)
                 let page = try res.content.decode(Page<FontJSON>.self)
                 XCTAssertLessThanOrEqual(page.metadata.per, SafePage.maxPer)
@@ -3948,7 +3946,7 @@ final class IntegrationTests: XCTestCase {
             }, afterResponse: { res in XCTAssertEqual(res.status, .ok) })
 
             // Fuera del listado…
-            try await app.test(.GET, "fonts?per=100", afterResponse: { res in
+            try await app.test(.GET, "fonts?search=Font&per=100", afterResponse: { res in
                 let p = try res.content.decode(Page<FontJSON>.self)
                 XCTAssertTrue(p.items.contains { $0.id == buena })
                 XCTAssertFalse(p.items.contains { $0.id == mala }, "la duplicada no sale en el listado")
@@ -3973,7 +3971,7 @@ final class IntegrationTests: XCTestCase {
             try await app.test(.DELETE, "fonts/\(mala)/duplicate-of", headers: bearer(token), afterResponse: { res in
                 XCTAssertEqual(res.status, .ok)
             })
-            try await app.test(.GET, "fonts?per=100", afterResponse: { res in
+            try await app.test(.GET, "fonts?search=Font&per=100", afterResponse: { res in
                 let p = try res.content.decode(Page<FontJSON>.self)
                 XCTAssertTrue(p.items.contains { $0.id == mala }, "al deshacerlo vuelve")
             })
@@ -4018,7 +4016,7 @@ final class IntegrationTests: XCTestCase {
                 XCTAssertEqual(res.status, .ok)
             })
 
-            try await app.test(.GET, "fonts?per=100", afterResponse: { res in
+            try await app.test(.GET, "fonts?search=Font&per=100", afterResponse: { res in
                 let p = try res.content.decode(Page<FontJSON>.self)
                 XCTAssertFalse(p.items.contains { $0.id == fontID }, "una fuente retirada no sale")
             })
