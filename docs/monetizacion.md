@@ -163,27 +163,115 @@ no como resultado patrocinado en el mapa. Reglas mínimas:
 - Sin influencia sobre el contenido o la confianza.
 - Fecha de inicio y fin y objetivo verificable.
 
-## 6. Funciones premium para usuarios
+## 6. FontApp Pro para usuarios
 
-Solo tiene sentido cuando exista suficiente uso recurrente. El núcleo debe continuar
-gratuito; se cobraría comodidad avanzada:
+Una suscripción puede tener sentido especialmente para ciclistas, senderistas y personas
+que planifican rutas. La frontera del producto debe ser clara: FontApp cobra por ahorrar
+trabajo en la planificación y ofrecer comodidad avanzada, nunca por encontrar agua o
+conocer su estado.
 
-- Descarga completa de zonas para uso offline.
-- Planificación de rutas pasando por fuentes fiables.
-- Alertas avanzadas sobre favoritas o rutas.
-- Colecciones privadas y sincronización entre dispositivos.
-- Importación y exportación GPX.
-- Capas especializadas o histórico ampliado.
+Propuesta de posicionamiento:
 
-Riesgos:
+> FontApp siempre será gratuito para encontrar y compartir fuentes. Pro ayuda a
+> planificar rutas, trabajar sin cobertura y evitar kilómetros sin agua.
 
-- Desarrollo y soporte en web, iOS y Android.
-- Comisiones y reglas de las tiendas si se vende en apps nativas.
-- Fragmentar el producto demasiado pronto.
-- Colocar tras un muro algo que la comunidad considera parte esencial de FontApp.
+### Lo que continúa gratuito
 
-Antes de construirlo se puede medir interés con una pantalla explicativa sin cobrar ni
-prometer una fecha, y entrevistar a quienes seleccionen cada función.
+- Consultar todas las fuentes, su estado, potabilidad, confianza, fotos y reseñas.
+- Añadir fuentes, fotos, reseñas y confirmaciones.
+- Navegación básica, búsqueda, favoritos y gamificación.
+- Consultar la información necesaria para encontrar agua con seguridad.
+- Una prueba limitada del análisis de rutas, para que se pueda evaluar su utilidad antes
+  de pagar.
+
+### Funciones candidatas para Pro
+
+- Importación y almacenamiento de rutas GPX sin límite práctico.
+- Fuentes dentro de un corredor configurable de 100 m, 500 m, 1 km u otra distancia.
+- Cálculo del tramo más largo de la ruta sin una fuente fiable.
+- Rutas y colecciones privadas sincronizadas entre dispositivos.
+- Exportación de un GPX enriquecido con las fuentes como waypoints.
+- Descarga de mapas, rutas y fuentes para trabajar sin cobertura.
+- Alertas cuando cambia el estado de una fuente guardada o situada en una ruta.
+- Filtros avanzados por potabilidad, funcionamiento reciente, confianza y presencia de
+  fotografías.
+- Historial completo de fuentes visitadas, rutas y búsquedas.
+- Estadísticas personales de planificación y contribuciones.
+
+### Precio que se puede validar
+
+Como hipótesis inicial, no como tarifa definitiva:
+
+- 2,49 EUR al mes.
+- 19,99 EUR al año, destacado como opción principal.
+- 14,99 EUR al año como precio fundador para los primeros usuarios.
+- Prueba gratuita de 14 días, sin restringir nunca el mapa público.
+
+El plan anual encaja mejor con un uso estacional: una persona puede planificar muchas
+rutas en verano y muy pocas en invierno. Se debería medir activación, conversión,
+renovación y cancelación antes de crear más planes.
+
+### Cobro desde la PWA
+
+Mientras FontApp sea una web/PWA y no una aplicación distribuida por la App Store, puede
+contratarse Pro directamente mediante Stripe Checkout y Billing, sin implementar compras
+in-app. Stripe alojaría el formulario de pago y el Customer Portal permitiría cambiar o
+cancelar la suscripción; FontApp no almacenaría datos de tarjetas.
+
+El estado de la suscripción debe confirmarse mediante webhooks de Stripe y persistirse en
+el backend. No se debe desbloquear Pro basándose únicamente en la URL de retorno del
+navegador. Los identificadores de producto y precio serán distintos en test y producción
+y se configurarán mediante variables de entorno.
+
+Si en el futuro se publica una aplicación nativa en una tienda, habrá que revisar las
+reglas vigentes de esa tienda antes de reutilizar este flujo de compra. El derecho a Pro
+puede vivir en la cuenta y sincronizarse entre plataformas, pero el método permitido para
+contratarlo puede variar.
+
+### MVP recomendado
+
+No se deberían construir todas las funciones a la vez. La primera versión puede contener:
+
+1. Importación y almacenamiento de rutas.
+2. Corredor configurable alrededor del track.
+3. Tramo más largo sin agua.
+4. Exportación GPX enriquecida con fuentes.
+5. Un único plan anual fundador.
+
+Antes de cobrar se puede mostrar una pantalla explicativa al terminar un análisis y medir
+cuántas personas consultan el detalle de Pro. El paywall debe aparecer después de haber
+mostrado valor, no antes de que la persona vea qué fuentes hay en su ruta.
+
+### Riesgos y límites
+
+- Construir demasiado para una base todavía pequeña de usuarios recurrentes.
+- Convertir una funcionalidad de seguridad o acceso al agua en una barrera de pago.
+- Incrementar el soporte de sincronización, pagos, renovaciones y recuperación de cuenta.
+- Fragmentar la experiencia entre web y futuras aplicaciones nativas.
+- Confundir datos comunitarios con contenido propietario. Se cobra el análisis, la
+  automatización y el servicio, no la mera existencia de los puntos del mapa.
+
+## 6.1 FontApp Pro para organizaciones
+
+La suscripción individual puede validar el interés, pero el mayor potencial económico
+está probablemente en organizaciones: ayuntamientos, parques naturales, clubes ciclistas
+y excursionistas, organizadores de carreras, campings y alojamientos rurales.
+
+Una oferta organizativa podría incluir:
+
+- Panel de fuentes de un territorio o conjunto de rutas.
+- Avisos de averías y seguimiento de incidencias.
+- Exportación CSV y GeoJSON e informes periódicos.
+- Estadísticas agregadas de cobertura, actividad y frescura.
+- Moderadores territoriales e identidad institucional verificada.
+- Página pública personalizada e integración con la web de la entidad.
+- API, webhooks o sincronización con sus sistemas internos.
+
+Como hipótesis para entrevistas se puede explorar un rango de 19 a 79 EUR al mes, o una
+cuota anual equivalente, según territorio, soporte e integraciones. No debe publicarse
+como tarifa cerrada antes de conocer los procesos de contratación y ejecutar pilotos.
+Una sola organización puede aportar ingresos equivalentes a muchas suscripciones
+individuales sin degradar la experiencia pública.
 
 ## 7. Subvenciones y financiación institucional
 
