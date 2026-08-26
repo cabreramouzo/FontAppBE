@@ -17,9 +17,14 @@
 # abierta desde antes del último despliegue— devuelve **200 con el index.html** en vez de
 # un 404. El navegador recibe `text/html` donde esperaba un módulo, no lo puede
 # interpretar, y la pantalla cae en la barrera de error: «Esta pantalla ha fallado».
-# Con el 404 explícito, el fallo es reconocible y `AppUpdatePrompt`/la barrera pueden
-# tratarlo como lo que es —la app se ha actualizado— en vez de como un error de la página.
-# Comprobado en producción: `/assets/index-XXXXXXXX.js` devolvía 200 y `text/html`.
-/assets/*   /assets/:splat   404
+# Con el 404 explícito, el fallo es reconocible y la barrera puede tratarlo como lo que es
+# —la app se ha actualizado— en vez de como un error de la página.
+#
+# OJO con el destino: la primera versión ponía `/assets/:splat`, que **se apunta a sí
+# misma**, y Cloudflare descarta esas reglas por bucle sin avisar más que en el log del
+# build («Infinite loop detected in this rule and has been ignored»). El resultado era que
+# la regla no existía y el asset inexistente seguía devolviendo 200 con `text/html`.
+# Comprobado en producción después de desplegarla.
+/assets/*   /404.html   404
 
 /*    /index.html   200

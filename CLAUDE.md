@@ -1752,6 +1752,13 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   el mundo.
 - **La regla `/assets/* … 404` va antes del catch-all** y hace que el fallo sea reconocible.
   Un 404 se puede tratar; un 200 con HTML solo se puede sufrir.
+  Ojo con el destino: la primera versión ponía `/assets/:splat`, que **se apunta a sí
+  misma**, y Cloudflare **descarta esas reglas por bucle** — solo lo dice en el log del
+  build («Infinite loop detected in this rule and has been ignored»), así que desde fuera
+  parece que la regla está puesta y no hace nada. Se vio al desplegarla: el asset
+  inexistente seguía devolviendo 200 con `text/html`. El destino es `/404.html`, un fichero
+  mínimo que no lee ninguna persona — quien pide un asset con huella es el navegador, y lo
+  único que necesita es que la respuesta no sea HTML con un 200.
 - Y no se pinta como un error de la pantalla, porque **no lo es**: es una versión caducada.
   Se recarga **una vez** (marca en `sessionStorage`, que muere con la pestaña — en
   `localStorage` dejaría a esa persona sin poder recargar nunca más si el fallo fuera real)
