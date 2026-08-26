@@ -11,20 +11,18 @@
 # no va a volver: el resto de rutas públicas están en inglés y esta era la excepción.
 /novedades  /activity   301
 
-# Los ficheros con huella (`/assets/*`) NO caen en el catch-all.
+# NO añadir aquí una regla para `/assets/*` con destino `/404.html`.
 #
-# Sin esta línea, pedir un trozo que ya no existe —lo que le pasa a cualquier pestaña
-# abierta desde antes del último despliegue— devuelve **200 con el index.html** en vez de
-# un 404. El navegador recibe `text/html` donde esperaba un módulo, no lo puede
-# interpretar, y la pantalla cae en la barrera de error: «Esta pantalla ha fallado».
-# Con el 404 explícito, el fallo es reconocible y la barrera puede tratarlo como lo que es
-# —la app se ha actualizado— en vez de como un error de la página.
+# Se intentó, para que un trozo que ya no existe diera 404 en vez de 200 con el
+# `index.html`, y **tumbó producción entera**: Cloudflare Pages le da un significado
+# especial al fichero `404.html` y lo sirve para cualquier ruta que no sea un fichero,
+# **por delante de este catch-all**. Resultado medido: `/login`, `/gpx`, `/zones`,
+# `/activity` y todas las fichas de fuente devolvían 404. La portada seguía bien, que es
+# lo que hace que se tarde en ver.
 #
-# OJO con el destino: la primera versión ponía `/assets/:splat`, que **se apunta a sí
-# misma**, y Cloudflare descarta esas reglas por bucle sin avisar más que en el log del
-# build («Infinite loop detected in this rule and has been ignored»). El resultado era que
-# la regla no existía y el asset inexistente seguía devolviendo 200 con `text/html`.
-# Comprobado en producción después de desplegarla.
-/assets/*   /404.html   404
+# El problema que aquello quería resolver ya lo resuelve el cliente (`lib/staleChunk.ts`):
+# reconoce el HTML servido como si fuera un módulo y recarga. Si algún día se vuelve a
+# intentar por aquí, que el destino **no se llame `404.html`** y que se compruebe
+# `/login` en producción antes de dar el despliegue por bueno.
 
 /*    /index.html   200

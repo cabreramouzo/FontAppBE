@@ -1771,15 +1771,15 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   El síntoma es exactamente el que se reportó: «me sale muchas veces al cargar una página o
   al hacer clic en un botón», y con varios despliegues seguidos en una tarde le pasa a todo
   el mundo.
-- **La regla `/assets/* … 404` va antes del catch-all** y hace que el fallo sea reconocible.
-  Un 404 se puede tratar; un 200 con HTML solo se puede sufrir.
-  Ojo con el destino: la primera versión ponía `/assets/:splat`, que **se apunta a sí
-  misma**, y Cloudflare **descarta esas reglas por bucle** — solo lo dice en el log del
-  build («Infinite loop detected in this rule and has been ignored»), así que desde fuera
-  parece que la regla está puesta y no hace nada. Se vio al desplegarla: el asset
-  inexistente seguía devolviendo 200 con `text/html`. El destino es `/404.html`, un fichero
-  mínimo que no lee ninguna persona — quien pide un asset con huella es el navegador, y lo
-  único que necesita es que la respuesta no sea HTML con un 200.
+- **Y NO se arregla con una regla en `_redirects`.** Se intentó (`/assets/* → /404.html
+  404`) y **tumbó producción entera**: Cloudflare Pages le da un significado especial al
+  fichero `404.html` y lo sirve para cualquier ruta que no sea un fichero, **por delante
+  del catch-all del SPA**. Medido: `/login`, `/gpx`, `/zones`, `/activity` y todas las
+  fichas devolvían 404. La portada seguía bien, que es lo que hace que tarde en verse.
+  Antes de eso, la misma regla con destino `/assets/:splat` se descartaba en silencio por
+  bucle. Dos intentos, dos formas de fallar: el aviso está escrito en `_redirects`.
+- Lo que **sí** funciona es el lado del cliente, y es suficiente: reconoce el HTML servido
+  como si fuera un módulo y recarga.
 - Y no se pinta como un error de la pantalla, porque **no lo es**: es una versión caducada.
   Se recarga sola, y se coge por dos sitios: el `vite:preloadError`, que llega antes de que
   React lance, y la propia barrera como red de seguridad.
