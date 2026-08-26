@@ -1219,6 +1219,42 @@ launchctl start net.fontapp.backup   # ejecución inmediata de prueba
 > (subir el `.dump` a un bucket **privado** R2/B2, o un Action programado). El `.dump` lleva emails y
 > hashes → mantenlo en sitio privado, **nunca** en git ni carpeta sincronizada/pública.
 
+## Backup de las fotos (`scripts/backup-fotos.sh`)
+
+Las fotos viven **solo en R2**, y R2 es una copia única: sin versiones, sin papelera. Un
+bucket borrado o una credencial filtrada se las lleva todas. Y son lo único de FontApp que
+**no se puede reconstruir**: las fuentes vuelven de OpenStreetMap y del ICGC, pero la foto
+de una fuente la hizo alguien que pasó por allí.
+
+Medido el 26/08/2026: **91 ficheros, 43,5 MB**, media de 489 KB. O sea que hoy el backup
+cabe en un correo; el motivo de hacerlo no es el tamaño, es que no hay segunda copia.
+
+**1. Credenciales** en `~/.config/fontapp/r2.env` (`chmod 600`), con `R2_ACCOUNT_ID`,
+`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` y `R2_BUCKET`. Se sacan del panel de Cloudflare
+→ R2 → *Manage API tokens*. **No se pueden recuperar de Fly**: allí los secretos solo se
+escriben.
+
+**2. `brew install rclone`** y lánzalo:
+
+```bash
+./scripts/backup-fotos.sh
+```
+
+Destino por defecto `~/Backups/fontapp-fotos`, configurable con `FONTAPP_FOTOS_DIR`.
+
+**3. Prográmalo** con el mismo launchd del backup de la base, añadiendo un segundo
+`.plist` que apunte a este script.
+
+> Usa `rclone copy` y **no `sync`** a propósito: `sync` borraría del disco lo que ya no
+> esté en R2, así que un borrado accidental en producción se propagaría al backup a la
+> siguiente pasada. Con `copy` el destino solo crece. El precio es que se acumulan fotos
+> retiradas por moderación; con 43 MB eso todavía no es un problema.
+
+**Cuota de R2:** el plan gratuito cubre 10 GB de almacenamiento y la salida de datos no se
+cobra nunca (es lo que distingue a R2 de S3). A 489 KB por foto son unas **20.000 fotos**
+antes de pagar nada. El script avisa al pasar de 8 GB. Conviene confirmar los importes en
+el panel de Cloudflare antes de fiarse de esta línea: los precios cambian.
+
 ## Checklist antes de abrir al público
 
 - [x] `WEB_ORIGIN` restringido al dominio real del web.
