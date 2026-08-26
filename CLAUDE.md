@@ -967,6 +967,12 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   agotó los 512 MB de una máquina de producción. `/fonts/in-bounds` queda solo como
   compatibilidad durante despliegues o rollback; la web recurre a él exclusivamente si
   `/map` responde 404. Un timeout, cancelación o 5xx no puede duplicar la carga.
+- El resumen de estado de esos marcadores se agrega **en PostgreSQL**
+  (`Font.summaries`): una fila compacta por fuente con último parte, confirmaciones y
+  conflicto/autores de los últimos 30 días. No se deben volver a materializar en Swift
+  todas las reseñas históricas de hasta 3.000 fuentes; bajo varias peticiones concurrentes
+  esos arrays fueron la segunda mitad del OOM. `OptimizeMapSummaries` mantiene el índice
+  parcial `(font_id, created_at DESC)` de los comentarios que sí llevan estado.
 
 ## El popup del mapa
 

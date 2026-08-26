@@ -1,4 +1,5 @@
 import Fluent
+import SQLKit
 import Vapor
 
 /// Fuente + resumen del último estado del agua reportado. Para el listado del mapa,
@@ -46,6 +47,30 @@ struct FontSummary: Content {
         self.recentStatusReporters = recentStatusReporters
         self.recentStatusConflict = recentStatusConflict
     }
+
+    /// Construcción directa desde la consulta compacta del mapa. Evita materializar
+    /// modelos Fluent de reseñas y confirmaciones que solo se usan para resumirlas.
+    fileprivate init(row: any SQLRow) throws {
+        self.id = try row.decode(column: "id", as: UUID.self)
+        self.name = try row.decode(column: "name", as: String?.self)
+        self.latitude = try row.decode(column: "latitude", as: Double.self)
+        self.longitude = try row.decode(column: "longitude", as: Double.self)
+        self.image = try row.decode(column: "image", as: String?.self)
+        self.description = try row.decode(column: "description", as: String?.self)
+        let source = try row.decode(column: "source", as: String?.self)
+        self.source = source.flatMap(WaterSource.init(rawValue:))
+        let drinkable = try row.decode(column: "drinkable", as: String?.self)
+        self.drinkable = drinkable.flatMap(Drinkable.init(rawValue:))
+        self.country = try row.decode(column: "country", as: String?.self)
+        self.region = try row.decode(column: "region", as: String?.self)
+        self.admin1 = try row.decode(column: "admin1", as: String?.self)
+        self.createdAt = try row.decode(column: "created_at", as: Date?.self)
+        self.lastWaterStatus = try row.decode(column: "last_water_status", as: String?.self)
+        self.lastUpdate = try row.decode(column: "last_update", as: Date?.self)
+        self.latestConfirmations = Int(try row.decode(column: "latest_confirmations", as: Int64.self))
+        self.recentStatusReporters = Int(try row.decode(column: "recent_status_reporters", as: Int64.self))
+        self.recentStatusConflict = try row.decode(column: "recent_status_conflict", as: Bool.self)
+    }
 }
 
 extension Font {
@@ -55,6 +80,63 @@ extension Font {
         let ids = fonts.compactMap { $0.id }
         guard !ids.isEmpty else {
             return fonts.map { FontSummary($0, lastWaterStatus: nil, lastUpdate: nil) }
+        }
+
+        // PostgreSQL hace el trabajo de resumen y devuelve una fila por fuente. Antes se
+        // cargaban en Swift TODAS las reseñas históricas de hasta 3.000 fuentes, se
+        // agrupaban en diccionarios y después se cargaban sus confirmaciones. Con varias
+        // peticiones de mapa simultáneas esos arrays sobrevivían a la vez y agotaban los
+        // 512 MB de Fly. La consulta conserva exactamente las mismas reglas: último parte,
+        // confirmaciones independientes y conflicto/autores distintos en 30 días.
+        if let sql = db as? SQLDatabase {
+            let rows = try await sql.raw("""
+                WITH selected_fonts AS (
+                  SELECT id, name, latitude, longitude, image, description, source,
+                         drinkable, country, region, admin1, created_at
+                  FROM fonts
+                  WHERE id = ANY(\(bind: ids))
+                ), latest AS (
+                  SELECT DISTINCT ON (c.font_id)
+                         c.font_id, c.id AS comment_id, c.user_id, c.water_status, c.created_at
+                  FROM font_comments c
+                  JOIN selected_fonts f ON f.id = c.font_id
+                  WHERE c.water_status IS NOT NULL
+                  ORDER BY c.font_id, c.created_at DESC
+                ), confirmations AS (
+                  SELECT l.font_id,
+                         count(fc.id) FILTER (
+                           WHERE l.user_id IS NULL OR fc.user_id <> l.user_id
+                         )::bigint AS quantity,
+                         max(fc.created_at) FILTER (
+                           WHERE l.user_id IS NULL OR fc.user_id <> l.user_id
+                         ) AS last_at
+                  FROM latest l
+                  LEFT JOIN font_confirmations fc ON fc.comment_id = l.comment_id
+                  GROUP BY l.font_id
+                ), recent AS (
+                  SELECT c.font_id,
+                         count(DISTINCT c.user_id)::bigint AS reporters,
+                         (bool_or(c.water_status IN ('flowing', 'trickle')) AND
+                          bool_or(c.water_status IN ('dry', 'broken', 'gone'))) AS conflict
+                  FROM font_comments c
+                  JOIN selected_fonts f ON f.id = c.font_id
+                  WHERE c.created_at >= now() - interval '30 days'
+                    AND c.water_status IS NOT NULL
+                    AND c.water_status <> 'unknown'
+                  GROUP BY c.font_id
+                )
+                SELECT f.*,
+                       l.water_status AS last_water_status,
+                       greatest(l.created_at, cf.last_at) AS last_update,
+                       coalesce(cf.quantity, 0)::bigint AS latest_confirmations,
+                       coalesce(r.reporters, 0)::bigint AS recent_status_reporters,
+                       coalesce(r.conflict, false) AS recent_status_conflict
+                FROM selected_fonts f
+                LEFT JOIN latest l ON l.font_id = f.id
+                LEFT JOIN confirmations cf ON cf.font_id = f.id
+                LEFT JOIN recent r ON r.font_id = f.id
+                """).all()
+            return try rows.map(FontSummary.init(row:))
         }
 
         let comments = try await FontComment.query(on: db)
