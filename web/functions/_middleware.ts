@@ -1,4 +1,4 @@
-import { SHARE_META, shareLang } from './_meta'
+import { SHARE_META, shareCard, shareLang } from './_meta'
 
 /** Localiza la tarjeta genérica. Las fichas tienen su propia función y no deben perder
  * la foto de la fuente ni sus metadatos específicos. */
@@ -11,7 +11,7 @@ export const onRequest: PagesFunction = async (ctx) => {
   const meta = SHARE_META[lang]
   const origin = url.origin.replace('://www.', '://')
   const sharedUrl = `${origin}${url.pathname}?lang=${lang}`
-  const image = `${origin}/og-card-${lang}.jpg`
+  const image = `${origin}/${shareCard(lang)}`
 
   return new HTMLRewriter()
     .on('html', { element: (e) => { e.setAttribute('lang', lang) } })

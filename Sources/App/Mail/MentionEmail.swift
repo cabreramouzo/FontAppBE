@@ -137,6 +137,15 @@ enum MentionEmail {
                 cta: "Ver a fonte",
                 unsubscribe: "Deixar de receber estes avisos",
                 footer: "Recebes esta mensagem porque alguém te mencionou no FontApp.")
+        case "it":
+            let fontana = fontName ?? "una fontana senza nome"
+            return Copy(
+                subject: "@\(by) ti ha menzionato su FontApp",
+                title: "Ti hanno menzionato",
+                intro: "@\(by) ti ha nominato su «\(fontana)».",
+                cta: "Vedi la fontana",
+                unsubscribe: "Smetti di ricevere questi avvisi",
+                footer: "Ricevi questo messaggio perché qualcuno ti ha menzionato su FontApp.")
         default:
             let font = fontName ?? "una font sense nom"
             return Copy(

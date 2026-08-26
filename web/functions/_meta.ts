@@ -17,7 +17,7 @@ export interface Env {
   STRIPE_MONTHLY_PRICE_ID?: string
 }
 
-export type ShareLang = 'ca' | 'es' | 'gl' | 'eu' | 'en' | 'fr' | 'pt'
+export type ShareLang = 'ca' | 'es' | 'gl' | 'eu' | 'en' | 'fr' | 'pt' | 'it'
 
 export const SHARE_META: Record<ShareLang, { locale: string; title: string; description: string; unnamed: string }> = {
   ca: { locale: 'ca_ES', title: "FontApp · fonts d'aigua a prop teu", description: "Troba fonts d'aigua a prop teu i consulta'n l'estat abans de desviar-te.", unnamed: "Font d'aigua" },
@@ -27,6 +27,26 @@ export const SHARE_META: Record<ShareLang, { locale: string; title: string; desc
   en: { locale: 'en_GB', title: 'FontApp · water fountains near you', description: 'Find water fountains and check their status before making a detour.', unnamed: 'Water fountain' },
   fr: { locale: 'fr_FR', title: "FontApp · points d'eau près de vous", description: "Trouvez des points d'eau et vérifiez leur état avant de faire un détour.", unnamed: "Point d'eau" },
   pt: { locale: 'pt_PT', title: 'FontApp · fontes de água perto de si', description: 'Encontre fontes de água e verifique o seu estado antes de fazer um desvio.', unnamed: 'Fonte de água' },
+  it: { locale: 'it_IT', title: 'FontApp · fontane d’acqua vicino a te', description: 'Trova fontane d’acqua e controlla il loro stato prima di fare una deviazione.', unnamed: 'Fontana d’acqua' },
+}
+
+/**
+ * Los idiomas que tienen su propia tarjeta `public/og-card-<lang>.jpg`.
+ *
+ * Existe porque la tarjeta es una **imagen con texto dentro** y no se genera desde el
+ * código: al añadir un idioma hay que dibujarla, y mientras no esté, `og:image` apuntaría
+ * a un fichero que no existe y el enlace compartido saldría **sin ninguna imagen**, que
+ * es peor que salir con la de otro idioma. El respaldo es `en` y no `ca`: quien comparte
+ * en un idioma sin tarjeta es, por definición, alguien de fuera.
+ *
+ * Al dibujar `og-card-<lang>.jpg`, añadir aquí su código. Si se olvida no se rompe nada
+ * visible — de ahí el aviso.
+ */
+const CON_TARJETA = new Set<ShareLang>(['ca', 'es', 'gl', 'eu', 'en', 'fr', 'pt', 'it'])
+
+/** El fichero de la tarjeta genérica de un idioma, con respaldo si aún no está dibujada. */
+export function shareCard(lang: ShareLang): string {
+  return `og-card-${CON_TARJETA.has(lang) ? lang : 'en'}.jpg`
 }
 
 export function shareLang(req: Request): ShareLang {

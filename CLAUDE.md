@@ -15,8 +15,8 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   `PendingUploads` unifica el estado visible de conexión y cola: distingue sin conexión, guardado
   local, sincronización en curso, sesión caducada y confirmación temporal al terminar. El evento
   `fontapp:outbox-sync-state-changed` refleja tanto los reintentos manuales como los automáticos.
-  i18n propio sin dependencias en `web/src/i18n/` (CA por defecto + ES, GL, EU, EN, FR y
-  **PT-PT**; selector en la barra, detecta navegador y persiste en `localStorage`). El
+  i18n propio sin dependencias en `web/src/i18n/` (CA por defecto + ES, GL, EU, EN, FR,
+  **PT-PT e IT**; selector en la barra, detecta navegador y persiste en `localStorage`). El
   portugués es europeo a propósito: Portugal ya forma parte de los datos. También están
   localizados en `pt` la página legal y los correos transaccionales/semanales.
 
@@ -24,7 +24,7 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - Build / tests backend: `swift build` · `swift test` (los tests de integración usan la DB `fontapp_test`).
 - ¿Toca ya generar miniaturas? `node web/scripts/peso-fotos.mjs` (mide producción).
   Ver «Peso de las fotos» más abajo: la respuesta hoy es que no, y el script dice por qué.
-- Traducciones: `npm --prefix web run check:i18n` comprueba que los cinco diccionarios
+- Traducciones: `npm --prefix web run check:i18n` comprueba que los ocho diccionarios
   llevan **las mismas claves**. Va dentro de `npm run build`, así que también corre en CI.
   Existe porque un diccionario incompleto **no rompe nada visible**: `t()` devuelve la
   clave cruda, así que solo se ve un `maint.retire` en mitad de un botón y solo en un
@@ -1846,13 +1846,13 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   añaden — con la etiqueta repetida los scrapers cogen la primera, que es la genérica. Y
   el `og:image:width/height` de 1200×630 se **quita** cuando la foto es de la fuente: la
   hizo alguien con el móvil y es vertical la mitad de las veces.
-- **El idioma de una tarjeta viaja en la URL** (`?lang=ca|es|gl|eu|en|fr|pt`). Un scraper
+- **El idioma de una tarjeta viaja en la URL** (`?lang=ca|es|gl|eu|en|fr|pt|it`). Un scraper
   de WhatsApp no ejecuta React, no ve `localStorage` y su `Accept-Language` pertenece al
   robot, no a quien comparte. `web/functions/_middleware.ts` localiza la tarjeta genérica
   y la función de la ficha localiza sus textos de respaldo; si la fuente tiene foto, esa
   foto sigue mandando. `I18nContext` también respeta el parámetro al abrir el enlace.
-- Hay siete imágenes de 1200×630, `og-card-{idioma}.jpg`. Los accesos cortos `/waca`,
-  `/waes`, `/wagl`, `/waeu`, `/waen`, `/wafr` y `/wapt` redirigen con 302 al idioma
+- Hay ocho imágenes de 1200×630, `og-card-{idioma}.jpg`. Los accesos cortos `/waca`,
+  `/waes`, `/wagl`, `/waeu`, `/waen`, `/wafr`, `/wapt` y `/wait` redirigen con 302 al idioma
   correspondiente y añaden `p=whatsapp`; el botón directo de WhatsApp usa esos accesos.
   Los demás botones comparten la URL concreta con `lang`, mediante `enlaceLocalizado`.
 - `web/functions/sitemap.xml.ts` + `GET /sitemap/fonts` (`SitemapController`). Se genera al

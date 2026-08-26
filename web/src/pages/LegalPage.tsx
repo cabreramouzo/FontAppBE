@@ -33,6 +33,7 @@ export function LegalPage() {
         : lang === 'en' ? <LegalEN />
         : lang === 'fr' ? <LegalFR />
         : lang === 'pt' ? <LegalPT />
+        : lang === 'it' ? <LegalIT />
         : lang === 'gl' ? <LegalGL />
         : lang === 'eu' ? <LegalEU />
         : <LegalES />}
@@ -343,6 +344,112 @@ function LegalPT() {
       <p>
         Se reutilizares estes dados, atribui-os à <strong>FontApp e aos seus colaboradores</strong>,
         além do OpenStreetMap e do ICGC/ACA quando aplicável.
+      </p>
+    </>
+  )
+}
+
+function LegalIT() {
+  return (
+    <>
+      <h1>Note legali e privacy</h1>
+
+      <h2>⚠️ Avviso sull’acqua e responsabilità</h2>
+      <p className="stale-warn">
+        FontApp è un servizio di informazione <strong>collaborativa</strong>: le fontane, lo stato dell’acqua e la potabilità
+        sono indicati dalle persone che la usano e da fonti di dati aperti, e possono essere <strong>non aggiornati, incompleti o errati</strong>.
+        L’informazione è <strong>puramente indicativa</strong> e non sostituisce un’analisi ufficiale dell’acqua. FontApp <strong>non garantisce</strong> la
+        potabilità né la salubrità dell’acqua di nessuna fontana. Bere l’acqua delle fontane indicate resta
+        <strong> a discrezione e a rischio esclusivo di chi la beve</strong>. Nel dubbio, non bere l’acqua oppure trattala (bollila o purificala).
+        Né FontApp né il suo responsabile rispondono di danni derivanti dall’uso di queste informazioni.
+      </p>
+
+      <h2>Note legali</h2>
+      <p>
+        Responsabile di questo sito: <strong>Miguel Cabrera</strong>. Contatto:{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>. L’uso del servizio implica l’accettazione di queste condizioni.
+        Il contenuto pubblicato dagli utenti (fontane, recensioni, fotografie e segnalazioni) è responsabilità di chi lo pubblica.
+      </p>
+
+      <h2>Privacy (GDPR)</h2>
+      <p><strong>Titolare del trattamento:</strong> Miguel Cabrera, <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.</p>
+      <p><strong>Dati che trattiamo:</strong></p>
+      <ul>
+        <li>Il tuo <strong>nome utente e nome</strong>, il tuo <strong>indirizzo email</strong> e la tua <strong>password</strong> (salvata con hash bcrypt, mai in chiaro).</li>
+        <li>Il <strong>contenuto che pubblichi</strong>: fontane, recensioni, valutazioni, fotografie e segnalazioni.</li>
+        <li>La tua <strong>posizione esatta</strong> nel browser viene usata solo, con il tuo permesso, per mostrarti le fontane vicine; <strong>non viene salvata</strong> sul server.</li>
+        <li>Delle <strong>fotografie che carichi</strong> conserviamo, quando ci sono, la <strong>data e le coordinate registrate dal telefono</strong> (EXIF). Servono solo per la <strong>moderazione</strong> — confermare il luogo e il momento dello scatto — e <strong>vi hanno accesso solo gli amministratori</strong>. L’immagine pubblicata non contiene questi dati.</li>
+        <li>Quando ti <strong>registri</strong>, conserviamo la tua <strong>regione approssimativa</strong> (paese/regione dedotti dall’IP, <strong>non l’IP stesso</strong>) e la <strong>lingua</strong> dell’interfaccia, per statistiche d’uso e per scriverti nella tua lingua.</li>
+        <li>Se arrivi da un <strong>volantino o da una campagna</strong> con un codice (<code>fontapp.net/?p=castellcir</code>), associamo quel codice all’iscrizione per sapere quale volantino funziona. Non identifica nessuna persona.</li>
+      </ul>
+      <p><strong>Per cosa usiamo la tua email:</strong></p>
+      <ul>
+        <li>Messaggi necessari al servizio: benvenuto e recupero della password.</li>
+        <li>Un <strong>riepilogo settimanale</strong> delle novità sulle fontane che hai aggiunto o a cui hai contribuito. Puoi disattivarlo quando vuoi dal tuo profilo o con il link di cancellazione presente in ogni email, senza accedere.</li>
+      </ul>
+      <p>
+        <strong>Finalità e base giuridica:</strong> fornire il servizio che richiedi (esecuzione) e il consenso dato al momento dell’iscrizione.
+        <strong> Conservazione:</strong> finché mantieni l’account.
+      </p>
+      <p>
+        <strong>I tuoi diritti:</strong> accesso, rettifica, cancellazione, portabilità, limitazione e opposizione.
+        Puoi <strong>eliminare il tuo account</strong> dall’app stessa (cancella i tuoi dati) oppure scrivere a{' '}
+        <a href="mailto:admin@fontapp.net">admin@fontapp.net</a>.
+        Puoi anche presentare un reclamo all’autorità di protezione dei dati competente.
+      </p>
+      <p>
+        <strong>Archiviazione nel browser:</strong> <strong>non usiamo cookie</strong>. Salviamo sul tuo dispositivo:
+        il <em>token di sessione</em> (per tenerti connesso), le tue preferenze (lingua, tema chiaro/scuro e avvisi già letti),
+        il codice del volantino da cui sei arrivato e, se aggiungi qualcosa <strong>senza rete</strong>, il tuo contributo e la fotografia
+        in una coda locale finché la connessione non torna. Ci salviamo anche una <strong>breve cronologia di ricerche</strong> (le ultime che hai scelto e le fontane che hai aperto dalla ricerca); <strong>non esce mai dal tuo dispositivo</strong> e puoi cancellarla con il pulsante «Cancella» della ricerca stessa. Tutto resta sul tuo dispositivo e si può cancellare eliminando i dati del sito dal browser.
+      </p>
+      <p>
+        <strong>Analisi:</strong> usiamo <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noreferrer">Cloudflare Web Analytics</a>,
+        che misura le visite in modo <strong>aggregato, senza cookie e senza identificarti</strong>; per questo non chiediamo il consenso.
+        Contiamo anche alcune visite e interazioni con i pulsanti tramite un identificatore casuale per scheda: salviamo solo
+        il tipo di azione, il giorno e il conteggio, mai l’utente, l’IP, l’URL o il dispositivo. Dopo 180 giorni eliminiamo l’identificatore
+        e teniamo solo i totali giornalieri anonimi. Classifichiamo localmente ogni sessione solo come iOS/iPadOS, Android, altro
+        dispositivo mobile o computer e come PWA installata o browser; non salviamo user-agent, modello, versione o risoluzione.
+        Se hai la sessione aperta, associamo al tuo account l’apertura di «Sostieni» o Aixeta, il numero di volte e la data più recente,
+        per misurare l’interesse a sostenere il servizio. Questo dettaglio viene eliminato dopo 180 giorni o quando l’account viene cancellato.
+        Aggiorniamo inoltre l’ora della tua ultima attività mentre usi il sito; solo gli amministratori possono vedere se un account
+        è stato attivo negli ultimi 10 minuti, senza IP, pagina o dispositivo. Non usiamo Google Analytics né reti pubblicitarie
+        e non vendiamo né cediamo dati a terzi.
+      </p>
+      <p><strong>Responsabili che trattano dati per nostro conto:</strong></p>
+      <ul>
+        <li><strong>Fly.io</strong> (server) e <strong>Neon</strong> (database PostgreSQL).</li>
+        <li><strong>Cloudflare</strong>: sito e CDN, analisi aggregata e archiviazione delle fotografie (R2).</li>
+        <li><strong>Resend</strong>: invio delle email (riceve il tuo indirizzo e il contenuto del messaggio).</li>
+        <li><strong>ip-api.com</strong>: solo al momento dell’iscrizione, per dedurre paese e regione. <strong>Riceve il tuo IP</strong>, che non conserviamo.</li>
+      </ul>
+
+      <h2>Dati cartografici</h2>
+      <p>
+        La mappa di base e i dati delle fontane provengono da{' '}
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>,
+        © collaboratori di OpenStreetMap, con licenza{' '}
+        <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>.
+        {' '}Alcune fontane provengono dall’<a href="https://www.icgc.cat" target="_blank" rel="noreferrer">ICGC</a> e dall’
+        ACA, con licenza <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
+      </p>
+
+      <h2>Cosa contribuisci e come può essere riutilizzato</h2>
+      <p>
+        Quello che racconti di una fontana —lo stato dell’acqua, le recensioni, le segnalazioni, le correzioni—
+        entra in una banca dati pubblica, e le <strong>fotografie</strong> vengono pubblicate insieme
+        alla scheda. Pubblicandolo accetti che venga diffuso così:
+      </p>
+      <ul>
+        <li><strong>I dati</strong> (fontane, stati, recensioni) con licenza <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noreferrer">ODbL</a>, la stessa di
+          OpenStreetMap: chiunque può riutilizzarli se <strong>attribuisce</strong> l’origine e
+          condivide il risultato con la stessa licenza.</li>
+        <li><strong>Le fotografie</strong> con licenza <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. Mantieni i diritti sulle tue; quello che concedi
+          è il permesso di pubblicarle a queste condizioni.</li>
+      </ul>
+      <p>
+        Se riutilizzi questi dati, attribuiscili a <strong>FontApp e ai suoi collaboratori</strong>,
+        oltre che a OpenStreetMap e all’ICGC/ACA quando è il caso.
       </p>
     </>
   )

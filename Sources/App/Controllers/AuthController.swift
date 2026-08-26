@@ -332,6 +332,17 @@ enum ResetEmail {
                 """,
                 "Pediste para repor a palavra-passe do FontApp.\nO teu nome de utilizador é: \(username)\nAbre esta ligação (expira dentro de 1 hora): \(link)\nSe não fizeste este pedido, ignora este email."
             )
+        case "it":
+            return (
+                "Reimposta la password · FontApp",
+                """
+                <p>Hai chiesto di reimpostare la password di FontApp.</p>
+                <p>Il tuo nome utente è: <strong>\(userHTML)</strong></p>
+                <p><a href="\(link)">Reimposta la password</a> (il link scade tra 1 ora).</p>
+                <p>Se non sei stato tu, ignora questa email.</p>
+                """,
+                "Hai chiesto di reimpostare la password di FontApp.\nIl tuo nome utente è: \(username)\nApri questo link (scade tra 1 ora): \(link)\nSe non sei stato tu, ignora questa email."
+            )
         default: // ca (idioma por defecto de la app)
             return (
                 "Restablir la contrasenya · FontApp",

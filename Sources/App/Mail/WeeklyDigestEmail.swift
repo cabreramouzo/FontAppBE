@@ -417,6 +417,32 @@ enum WeeklyDigestEmail {
                 reportLabel: "Aviso", editLabel: "Editada",
                 daysAgo: { d in d <= 0 ? "hoje" : (d == 1 ? "ontem" : "há \(d) dias") }
             )
+        case "it":
+            return Copy(
+                subject: "Il tuo riepilogo settimanale di FontApp 💧",
+                header: "Il tuo riepilogo settimanale",
+                greeting: "Ciao, \(name) 👋",
+                intro: "Questa settimana c\u{2019}è stato movimento sulle fontane che hai aggiunto o a cui hai partecipato.",
+                statFonts: "fontane aggiunte", statStatuses: "stati confermati", statNews: "novità per te",
+                activityTitle: "Sono passati dalle tue fontane",
+                activitySubtitle: "Fontane che hai aggiunto tu o dove hai lasciato una recensione.",
+                nearbyTitle: "Fontane nuove vicino alle tue",
+                nearbySubtitle: "Aggiunte questa settimana nella zona in cui ti muovi di solito.",
+                zoneTitle: { "Come va \($0)" },
+                zoneSubtitle: "Le foto sono quello che manca di più. Ognuna la mette qualcuno che è passato di lì.",
+                zoneLine: { "\($0) fontane su \($1) hanno già una foto (\($2) %)." },
+                zoneMissing: { "Ne restano \($0) da fotografare →" },
+                addedBy: "aggiunta da",
+                editedBody: "Qualcuno ha modificato le informazioni della fontana.",
+                cta: "Vedi la mappa",
+                nudge: "Esci questo fine settimana? Confermare lo stato di una fontana sono 10 secondi e risparmia a qualcuno una deviazione fino a una fontana secca. Funziona senza campo: si invia da sola quando torna il segnale.",
+                footer: "Ricevi questo riepilogo perché hai un account su FontApp. Puoi",
+                unsubscribe: "smettere di riceverlo",
+                statusLabels: ["flowing": "Esce acqua", "trickle": "Poca acqua", "dry": "Secca"],
+                unnamed: "Fontana senza nome",
+                reportLabel: "Avviso", editLabel: "Modificata",
+                daysAgo: { d in d <= 0 ? "oggi" : (d == 1 ? "ieri" : "\(d) giorni fa") }
+            )
         default: // ca
             return Copy(
                 subject: "El teu resum setmanal a FontApp 💧",

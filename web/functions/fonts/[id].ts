@@ -1,4 +1,4 @@
-import { apiOrigin, esc, recorta, SHARE_META, shareLang, siteOrigin, type Env } from '../_meta'
+import { apiOrigin, esc, recorta, SHARE_META, shareCard, shareLang, siteOrigin, type Env } from '../_meta'
 
 /**
  * Etiquetas propias para cada ficha de fuente.
@@ -86,7 +86,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const propia = !!font.image
   const imagen = font.image
     ? (/^https?:\/\//.test(font.image) ? font.image : api + font.image)
-    : `${origin}/og-card-${lang}.jpg`
+    : `${origin}/${shareCard(lang)}`
 
   const escondida = !!font.duplicateOf || !!font.retiredAt
 
