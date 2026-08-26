@@ -31,11 +31,18 @@ export const RADIO_GUIA_M = 150
 /**
  * Suelo del radio de llegada, en metros.
  *
- * 15 m es el orden de magnitud del error de un GPS de móvil en buenas condiciones, así que
- * por debajo de eso la dirección ya no es información aunque el aparato diga que sí. Si
- * declara un margen peor, manda el suyo.
+ * Empezó en 15, con el argumento de que es el orden de magnitud del error de un GPS de
+ * móvil en buenas condiciones. **Probándolo sobre el terreno resultó ser demasiado
+ * pronto**: a 15 m de una fuente todavía no la has visto —es el ancho de una plaza— y la
+ * app ya decía «ya estás» y dejaba de apuntar justo cuando aún hacía falta.
+ *
+ * El fallo del razonamiento es que 15 era **una suposición** puesta como suelo por encima
+ * de un dato medido. Con 5, el suelo casi nunca manda: el corte lo decide `accuracy`, que
+ * es lo que el aparato dice de sí mismo en ese momento y ahí, bajo arbolado o entre
+ * edificios, sí se dispara. El suelo se queda solo para el caso en que el móvil declara un
+ * margen sospechosamente optimista.
  */
-export const RADIO_LLEGADA_M = 15
+export const RADIO_LLEGADA_M = 5
 
 export type Guia =
   /** Demasiado lejos: esto no se pinta. Para llegar hasta aquí están el mapa y las indicaciones. */

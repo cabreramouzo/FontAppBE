@@ -4,7 +4,9 @@ import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import ExploreIcon from '@mui/icons-material/ExploreOutlined'
+import CheckIcon from '@mui/icons-material/CheckCircleOutlined'
 import PlaceIcon from '@mui/icons-material/PlaceOutlined'
+import { alpha } from '@mui/material/styles'
 import { useI18n } from '../i18n/I18nContext'
 import { useHeading } from '../lib/useHeading'
 import { haversineKm } from '../lib/geo'
@@ -84,11 +86,25 @@ export function FinalApproach({ lat, long, tieneFoto }: { lat: number; long: num
   if (estado.fase === 'lejos') return null
 
   const metros = Math.round(distanciaM)
+  // Al llegar, la tarjeta entera se pone verde, como hace FindMy. Es lo que convierte un
+  // dato que hay que leer en una señal que se ve con el móvil en la mano y sin gafas.
+  //
+  // Aquí el verde **no lleva el significado él solo** —el texto ya cambia a «Ya estás» y
+  // la flecha desaparece—, así que es refuerzo y no información. Es justo la distinción
+  // que hizo descartar el verde/rojo en guardar y descartar: allí el color era lo único
+  // que separaba dos acciones, y eso se cae con daltonismo.
+  const hasLlegado = estado.fase === 'llegando'
 
   return (
     <Paper
       variant="outlined"
-      sx={{ p: 2, borderRadius: 3, mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}
+      sx={{
+        p: 2, borderRadius: 3, mb: 2, display: 'flex', alignItems: 'center', gap: 2,
+        ...(hasLlegado && {
+          borderColor: 'success.main',
+          bgcolor: (th) => alpha(th.palette.success.main, th.palette.mode === 'dark' ? 0.18 : 0.10),
+        }),
+      }}
     >
       {estado.fase === 'guiando' && estado.giro !== null ? (
         <Box
@@ -107,11 +123,15 @@ export function FinalApproach({ lat, long, tieneFoto }: { lat: number; long: num
           <path d="M24 7 L34 34 L24 28 L14 34 Z" fill="currentColor" />
         </Box>
       ) : (
-        <PlaceIcon sx={{ fontSize: 44, color: 'primary.main', flexShrink: 0 }} />
+        // Solo al llegar es una marca de verificación. Sin brújula y a 80 m sería mentira:
+        // ahí no se ha llegado a nada, simplemente no se puede apuntar.
+        hasLlegado
+          ? <CheckIcon sx={{ fontSize: 44, color: 'success.main', flexShrink: 0 }} />
+          : <PlaceIcon sx={{ fontSize: 44, color: 'primary.main', flexShrink: 0 }} />
       )}
 
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontWeight: 800, fontSize: 20, lineHeight: 1.2 }}>
+        <Typography sx={{ fontWeight: 800, fontSize: 20, lineHeight: 1.2, color: hasLlegado ? 'success.main' : undefined }}>
           {estado.fase === 'llegando' ? t('approach.here') : t('approach.away', { m: String(metros) })}
         </Typography>
         <Typography variant="body2" color="text.secondary">

@@ -805,8 +805,21 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   corte de llegada **no es fijo**, sale del margen que declara el propio GPS
   (`coords.accuracy`). A 30 m con ±40 m de margen la flecha apunta al ruido — gira sola
   estando quieto y te manda en círculos, que es peor que no decir nada. Con ±6 m, esos
-  mismos 30 m sí se apuntan. El suelo son 15 m, el orden del error de un móvil en buenas
-  condiciones. Hay test de las dos mitades.
+  mismos 30 m sí se apuntan. Hay test de las dos mitades.
+- **El suelo bajó de 15 m a 5 m, y lo corrigió el terreno.** 15 salió de un razonamiento
+  —«es el orden del error de un GPS de móvil»— y al probarlo andando resultó demasiado
+  pronto: a 15 m de una fuente todavía no la has visto (es el ancho de una plaza) y la app
+  ya decía «ya estás» y dejaba de apuntar. El fallo era poner **una suposición** como suelo
+  por encima de un dato medido; con 5 el suelo casi nunca manda y decide `accuracy`, que es
+  lo que el aparato dice de sí mismo **en ese momento** y bajo arbolado sí se dispara.
+- **Al llegar, la tarjeta se pone verde** con una marca de verificación, como FindMy: eso
+  convierte un dato que hay que leer en una señal que se ve con el móvil en la mano. El
+  verde **no lleva el significado él solo** —el texto cambia a «ya estás» y la flecha
+  desaparece—, así que es refuerzo y no información. Es justo la distinción por la que se
+  descartó el verde/rojo en guardar y descartar: allí el color era lo único que separaba
+  dos acciones, y eso se cae con daltonismo.
+  Ojo: la marca de verificación es **solo** para la llegada. El mismo hueco lo ocupa un pin
+  cuando se guía sin brújula, y ahí un «hecho» a 80 m sería mentira.
 - En la fase de llegada el texto **manda a la foto** si la hay, y si no la hay pide una:
   ahí es donde la foto y la descripción («junto a la pista de petanca») hacen el trabajo
   que el sensor ya no puede. Es el mismo argumento por el que existe el hueco de la foto.

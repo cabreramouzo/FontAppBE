@@ -47,8 +47,18 @@ test('un GPS malo adelanta la llegada, porque su flecha sería ruido', () => {
 })
 
 test('sin margen declarado manda el suelo fijo, no un cero optimista', () => {
-  assert.deepEqual(guia(10, null, 0, 90), { fase: 'llegando' })
-  assert.deepEqual(guia(20, null, 0, 90), { fase: 'guiando', giro: 90 })
+  assert.deepEqual(guia(RADIO_LLEGADA_M - 1, null, 0, 90), { fase: 'llegando' })
+  assert.deepEqual(guia(RADIO_LLEGADA_M + 5, null, 0, 90), { fase: 'guiando', giro: 90 })
+})
+
+test('a 10 m con buena senal se SIGUE apuntando', () => {
+  // Probado sobre el terreno: con el suelo en 15 la app decia «ya estas» a 15 m, que es
+  // el ancho de una plaza y todavia no has visto la fuente. Ahora manda `accuracy`.
+  assert.deepEqual(guia(10, 4, 0, 90), { fase: 'guiando', giro: 90 })
+})
+
+test('pero un GPS que declara mal margen sigue mandando sobre el suelo', () => {
+  assert.deepEqual(guia(10, 12, 0, 90), { fase: 'llegando' })
 })
 
 test('una distancia imposible no rompe la pantalla', () => {
