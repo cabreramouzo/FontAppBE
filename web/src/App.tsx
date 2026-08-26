@@ -118,7 +118,12 @@ function BarreraDePantalla({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   const { t } = useI18n()
   return (
-    <ErrorBoundary key={pathname} mensaje={t('error.screen')} reintentar={t('error.retry')}>
+    <ErrorBoundary
+      key={pathname}
+      mensaje={t('error.screen')}
+      mensajeCaducado={t('error.stale')}
+      reintentar={t('error.retry')}
+    >
       {children}
     </ErrorBoundary>
   )

@@ -1781,10 +1781,19 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   mínimo que no lee ninguna persona — quien pide un asset con huella es el navegador, y lo
   único que necesita es que la respuesta no sea HTML con un 200.
 - Y no se pinta como un error de la pantalla, porque **no lo es**: es una versión caducada.
-  Se recarga **una vez** (marca en `sessionStorage`, que muere con la pestaña — en
-  `localStorage` dejaría a esa persona sin poder recargar nunca más si el fallo fuera real)
-  y se coge por dos sitios: el `vite:preloadError`, que llega antes de que React lance, y la
-  propia barrera como red de seguridad.
+  Se recarga sola, y se coge por dos sitios: el `vite:preloadError`, que llega antes de que
+  React lance, y la propia barrera como red de seguridad.
+- **El tope no es «una recarga por pestaña», es una cada 30 s.** La primera versión permitía
+  una sola y era demasiado estricto: quien deja la pestaña abierta un día entero pasa por
+  varios despliegues, y a partir del segundo se le enseñaba el error en vez de recargar —le
+  pasó al autor con el mapa. Lo que hay que evitar es el **bucle**, que reaparece al
+  instante; recargar dos veces con horas de diferencia es lo correcto. La marca va en
+  `sessionStorage`, que muere con la pestaña: en `localStorage` dejaría a esa persona sin
+  poder recargar nunca más si el fallo fuera real.
+- Cuando **no** se puede recargar (hace menos de 30 s que se hizo), la barrera enseña un
+  mensaje distinto: «la aplicación se ha actualizado, recarga para seguir». Decir «esta
+  pantalla ha fallado» ahí le echa la culpa a la página que la persona acaba de abrir y la
+  manda a buscar el problema donde no está.
 - **Se reconoce por el texto del error**, que es feo y es lo que hay: no existe un tipo para
   esto y cada navegador lo dice a su manera. Están cubiertas las tres formas conocidas, más
   el `Unexpected token '<'` que produce justamente el caso de Cloudflare. Hay test de que un

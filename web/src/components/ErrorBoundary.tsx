@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { recargaSiEsTrozoCaducado } from '../lib/staleChunk'
+import { esTrozoCaducado, recargaSiEsTrozoCaducado } from '../lib/staleChunk'
 import type { ErrorInfo, ReactNode } from 'react'
 
 /**
@@ -24,18 +24,29 @@ interface Props {
   children: ReactNode
   /** Se pinta cuando algo revienta. Es texto plano y ya traducido. */
   mensaje: string
+  /**
+   * Para cuando lo que ha fallado es **cargar la aplicación**, no la pantalla.
+   *
+   * Se intenta recargar solo, pero si ya se recargó hace nada no se insiste —sería un
+   * bucle— y entonces hay que decir algo. Y lo que hay que decir no es «esta pantalla ha
+   * fallado»: eso le echa la culpa a la página que la persona acaba de abrir y la manda a
+   * buscar el problema donde no está.
+   */
+  mensajeCaducado: string
   reintentar: string
 }
 
 interface State {
   roto: boolean
+  /** Si lo que falló fue cargar un trozo de la app y no la pantalla en sí. */
+  caducado: boolean
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { roto: false }
+  state: State = { roto: false, caducado: false }
 
-  static getDerivedStateFromError(): State {
-    return { roto: true }
+  static getDerivedStateFromError(error: Error): State {
+    return { roto: true, caducado: esTrozoCaducado(error) }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -55,7 +66,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.roto) return this.props.children
     return (
       <div className="pad" style={{ maxWidth: 640, margin: '0 auto' }}>
-        <p>{this.props.mensaje}</p>
+        <p>{this.state.caducado ? this.props.mensajeCaducado : this.props.mensaje}</p>
         <button type="button" onClick={() => window.location.reload()}>
           {this.props.reintentar}
         </button>

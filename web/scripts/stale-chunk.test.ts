@@ -33,19 +33,34 @@ test('un error normal de la pantalla NO se confunde con esto', () => {
   assert.equal(esTrozoCaducado('vaya'), false)
 })
 
-test('recarga una vez, y solo una', () => {
+test('no recarga dos veces seguidas: eso seria un bucle', () => {
   conSession()
   let veces = 0
   const err = new Error('Failed to fetch dynamically imported module: /a.js')
-  assert.equal(recargaSiEsTrozoCaducado(err, () => { veces += 1 }), true)
-  assert.equal(recargaSiEsTrozoCaducado(err, () => { veces += 1 }), false, 'la segunda no: seria un bucle')
+  const t0 = 1_000_000
+  assert.equal(recargaSiEsTrozoCaducado(err, t0, () => { veces += 1 }), true)
+  assert.equal(recargaSiEsTrozoCaducado(err, t0 + 500, () => { veces += 1 }), false)
   assert.equal(veces, 1)
+})
+
+test('pero SI vuelve a recargar en un despliegue posterior', () => {
+  // La primera version permitia una sola recarga por pestana, y quien deja la pestana
+  // abierta un dia entero pasa por varios despliegues: a partir del segundo se le
+  // ensenaba el error en vez de recargar. Lo que hay que evitar es el bucle —que
+  // reaparece al instante— no recargar dos veces con horas de diferencia.
+  conSession()
+  let veces = 0
+  const err = new Error('Failed to fetch dynamically imported module: /a.js')
+  const t0 = 1_000_000
+  recargaSiEsTrozoCaducado(err, t0, () => { veces += 1 })
+  assert.equal(recargaSiEsTrozoCaducado(err, t0 + 3_600_000, () => { veces += 1 }), true, 'una hora despues')
+  assert.equal(veces, 2)
 })
 
 test('un error normal no recarga nunca', () => {
   conSession()
   let veces = 0
-  assert.equal(recargaSiEsTrozoCaducado(new Error('algo raro'), () => { veces += 1 }), false)
+  assert.equal(recargaSiEsTrozoCaducado(new Error('algo raro'), Date.now(), () => { veces += 1 }), false)
   assert.equal(veces, 0)
 })
 
@@ -55,6 +70,6 @@ test('sin almacenamiento no se recarga, para no dejar la pantalla parpadeando', 
     setItem: () => { throw new Error('bloqueado') },
   }
   let veces = 0
-  assert.equal(recargaSiEsTrozoCaducado(new Error('Failed to fetch dynamically imported module'), () => { veces += 1 }), false)
+  assert.equal(recargaSiEsTrozoCaducado(new Error('Failed to fetch dynamically imported module'), Date.now(), () => { veces += 1 }), false)
   assert.equal(veces, 0)
 })

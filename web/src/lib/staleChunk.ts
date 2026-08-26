@@ -28,6 +28,19 @@
 
 const MARCA = 'chunk:reloaded'
 
+/**
+ * Cuánto hay que esperar antes de volver a recargar por lo mismo.
+ *
+ * La primera versión permitía **una sola recarga por pestaña**, y eso era demasiado
+ * estricto: quien deja la pestaña abierta un día entero pasa por varios despliegues, y a
+ * partir del segundo se le enseñaba el error en vez de recargar. Le pasó al autor.
+ *
+ * Lo que hay que evitar es el **bucle** —recargar, fallar, recargar—, no recargar dos
+ * veces con horas de diferencia. Treinta segundos separan las dos cosas: un bucle real
+ * reaparece al instante, y un despliegue nuevo llega mucho después.
+ */
+const ESPERA_MS = 30_000
+
 const SEÑALES = [
   'failed to fetch dynamically imported module',
   'error loading dynamically imported module',
@@ -52,14 +65,16 @@ export function esTrozoCaducado(error: unknown): boolean {
  */
 export function recargaSiEsTrozoCaducado(
   error: unknown,
+  ahora: number = Date.now(),
   // `globalThis` y no `window`: este módulo lo carga también `node --test`, donde
   // `window` no existe y el tipo ni siquiera compila.
   recargar: () => void = () => { (globalThis as { location?: { reload(): void } }).location?.reload() },
 ): boolean {
   if (!esTrozoCaducado(error)) return false
   try {
-    if (sessionStorage.getItem(MARCA)) return false
-    sessionStorage.setItem(MARCA, '1')
+    const ultima = Number(sessionStorage.getItem(MARCA) ?? 0)
+    if (Number.isFinite(ultima) && ahora - ultima < ESPERA_MS) return false
+    sessionStorage.setItem(MARCA, String(ahora))
   } catch {
     // Sin almacenamiento no se puede evitar el bucle, así que no se recarga: mejor un
     // mensaje raro una vez que una pantalla parpadeando para siempre.
