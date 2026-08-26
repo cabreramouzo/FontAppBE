@@ -136,7 +136,23 @@ extension Font {
                 LEFT JOIN confirmations cf ON cf.font_id = f.id
                 LEFT JOIN recent r ON r.font_id = f.id
                 """).all()
-            return try rows.map(FontSummary.init(row:))
+            // `WHERE id = ANY(...)` devuelve las filas en el orden del índice (o sea
+            // por UUID), NUNCA en el del array que se le pasa: comprobado pidiendo ocho
+            // ids barajados y recibiéndolos ordenados por id. El camino de Fluent hacía
+            // `fonts.map { ... }`, así que conservaba el orden de entrada, y `near`
+            // depende de él —ordena por distancia en Swift y recorta con `prefix`—, igual
+            // que el selector de duplicados de la ficha. Se rehace aquí el orden de
+            // `fonts` en vez de poner un ORDER BY: quien manda es quien llama, y así una
+            // fuente sin fila (borrada entre las dos consultas) sigue saliendo, como antes.
+            var porID = [UUID: FontSummary](minimumCapacity: rows.count)
+            for row in rows {
+                let summary = try FontSummary(row: row)
+                if let id = summary.id { porID[id] = summary }
+            }
+            return fonts.compactMap { font in
+                guard let id = font.id else { return nil }
+                return porID[id] ?? FontSummary(font, lastWaterStatus: nil, lastUpdate: nil)
+            }
         }
 
         let comments = try await FontComment.query(on: db)

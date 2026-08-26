@@ -469,6 +469,24 @@ final class IntegrationTests: XCTestCase {
                 XCTAssertEqual(fonts.count, 1)
                 XCTAssertEqual(fonts.first?.name, "Sol")
             }
+
+            // Con `quantity=1` sólo se comprueba QUÉ fuente sale, no en qué orden salen
+            // varias, y ése era justo el hueco: al pasar el resumen a PostgreSQL, la
+            // respuesta empezó a venir ordenada por UUID y este test seguía en verde.
+            // Se piden varias a propósito, y se crean en orden inverso al esperado para
+            // que devolver el orden de inserción tampoco baste.
+            // Tres y no más: una cuenta nueva sólo puede añadir 5 fuentes al día.
+            for (index, name) in ["c", "b", "a"].enumerated() {
+                _ = try await createFont(app, token: token, name: name,
+                                         lat: 40.4168 + 0.03 - Double(index) * 0.01, long: -3.7038)
+            }
+
+            try await app.test(.GET, "fonts/near?lat=40.4168&long=-3.7038&quantity=4") { res in
+                XCTAssertEqual(res.status, .ok)
+                let fonts = try res.content.decode([FontSummary].self)
+                XCTAssertEqual(fonts.map(\.name), ["Sol", "a", "b", "c"],
+                               "«Cerca de ti» pinta la distancia en cada fila: si el orden no es por distancia, la lista se lee como un error.")
+            }
         }
     }
 
