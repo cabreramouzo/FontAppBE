@@ -1,0 +1,70 @@
+/**
+ * Distinguir «la app se ha actualizado» de «esta pantalla ha fallado».
+ *
+ * ## Qué pasa de verdad
+ *
+ * Las páginas se cargan en trozos (`lazy()`), y cada trozo lleva una huella en el nombre.
+ * Al desplegar, esas huellas cambian. Una pestaña abierta desde antes sigue apuntando a
+ * los nombres viejos, así que al navegar a otra página pide un fichero que ya no existe.
+ *
+ * Eso **no es un error de la pantalla**, es una versión caducada, y el arreglo es recargar.
+ * Presentarlo como «esta pantalla ha fallado» le echa la culpa a la página que la persona
+ * acaba de abrir y le ofrece justo lo que no toca.
+ *
+ * ## Cómo se reconoce
+ *
+ * No hay un tipo de error para esto: cada navegador lo dice a su manera. Se reconoce por
+ * el texto, que es feo pero es lo que hay, y se cubren las tres formas conocidas —fallo de
+ * red al importar, MIME incorrecto (el caso de Cloudflare devolviendo `index.html` con
+ * 200) y el `vite:preloadError` del propio empaquetador—.
+ *
+ * ## Y se recarga UNA vez
+ *
+ * Con marca en `sessionStorage`, no en `localStorage`: si el fallo fuera de verdad
+ * permanente, una marca que sobrevive a la pestaña dejaría a esa persona sin recargar
+ * nunca más. Y sin marca de ningún tipo, un fallo permanente daría un bucle de recargas,
+ * que es la peor pantalla posible: parpadea y no se puede ni leer el error.
+ */
+
+const MARCA = 'chunk:reloaded'
+
+const SEÑALES = [
+  'failed to fetch dynamically imported module',
+  'error loading dynamically imported module',
+  'expected a javascript module script',
+  'importing a module script failed',
+  "unexpected token '<'",
+]
+
+/** Si este error es «la app se ha actualizado» y no un fallo de la pantalla. */
+export function esTrozoCaducado(error: unknown): boolean {
+  const texto = error instanceof Error
+    ? `${error.name} ${error.message}`
+    : String(error ?? '')
+  const bajo = texto.toLowerCase()
+  return SEÑALES.some((s) => bajo.includes(s))
+}
+
+/**
+ * Recarga si el error es un trozo caducado y aún no se ha recargado en esta pestaña.
+ *
+ * Devuelve `true` si va a recargar, para que quien llame sepa que no tiene que pintar nada.
+ */
+export function recargaSiEsTrozoCaducado(
+  error: unknown,
+  // `globalThis` y no `window`: este módulo lo carga también `node --test`, donde
+  // `window` no existe y el tipo ni siquiera compila.
+  recargar: () => void = () => { (globalThis as { location?: { reload(): void } }).location?.reload() },
+): boolean {
+  if (!esTrozoCaducado(error)) return false
+  try {
+    if (sessionStorage.getItem(MARCA)) return false
+    sessionStorage.setItem(MARCA, '1')
+  } catch {
+    // Sin almacenamiento no se puede evitar el bucle, así que no se recarga: mejor un
+    // mensaje raro una vez que una pantalla parpadeando para siempre.
+    return false
+  }
+  recargar()
+  return true
+}

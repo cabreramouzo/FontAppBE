@@ -5,6 +5,7 @@ import App from './App.tsx'
 import { startOutboxAutoFlush } from './lib/outbox'
 import { captureSource } from './lib/campaign'
 import { trackInteraction } from './api/client'
+import { recargaSiEsTrozoCaducado } from './lib/staleChunk'
 
 // PWA (Android/Chromium): captura `beforeinstallprompt` LO ANTES posible. Chrome
 // puede dispararlo antes de que React monte; si en ese instante no hay listener, el
@@ -80,3 +81,13 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// Vite avisa cuando falla la precarga de un trozo, **antes** de que React llegue a lanzar.
+// Cogerlo aquí es más limpio que esperar a la barrera de error: se recarga y la persona no
+// llega a ver nada raro. Ver `lib/staleChunk.ts` para por qué esto no es un error de la
+// pantalla sino una versión caducada.
+window.addEventListener('vite:preloadError', (e) => {
+  if (recargaSiEsTrozoCaducado((e as { payload?: unknown }).payload ?? new Error('vite:preloadError'))) {
+    e.preventDefault()
+  }
+})

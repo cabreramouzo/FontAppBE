@@ -11,4 +11,15 @@
 # no va a volver: el resto de rutas públicas están en inglés y esta era la excepción.
 /novedades  /activity   301
 
+# Los ficheros con huella (`/assets/*`) NO caen en el catch-all.
+#
+# Sin esta línea, pedir un trozo que ya no existe —lo que le pasa a cualquier pestaña
+# abierta desde antes del último despliegue— devuelve **200 con el index.html** en vez de
+# un 404. El navegador recibe `text/html` donde esperaba un módulo, no lo puede
+# interpretar, y la pantalla cae en la barrera de error: «Esta pantalla ha fallado».
+# Con el 404 explícito, el fallo es reconocible y `AppUpdatePrompt`/la barrera pueden
+# tratarlo como lo que es —la app se ha actualizado— en vez de como un error de la página.
+# Comprobado en producción: `/assets/index-XXXXXXXX.js` devolvía 200 y `text/html`.
+/assets/*   /assets/:splat   404
+
 /*    /index.html   200

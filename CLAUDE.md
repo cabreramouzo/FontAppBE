@@ -1717,6 +1717,30 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   `npm run build`, así que también corren en CI. Aquí sí valía la pena montar esto —lo que
   antes no— porque un parser tiene casos límite que se rompen en silencio.
 
+## «Esta pantalla ha fallado» al desplegar (`lib/staleChunk.ts`)
+
+- **El catch-all del SPA se tragaba los ficheros que faltan.** Con `/* /index.html 200` a
+  secas, pedir `/assets/index-XXXXXXXX.js` devolvía **200 con el `index.html`** y
+  `content-type: text/html` — medido en producción. El navegador recibe HTML donde esperaba
+  un módulo, no lo puede interpretar, y la pantalla cae en la barrera de error.
+- A quién le pasa: **a cualquier pestaña abierta desde antes del último despliegue**. Las
+  páginas se cargan en trozos con huella en el nombre, y al desplegar esas huellas cambian.
+  El síntoma es exactamente el que se reportó: «me sale muchas veces al cargar una página o
+  al hacer clic en un botón», y con varios despliegues seguidos en una tarde le pasa a todo
+  el mundo.
+- **La regla `/assets/* … 404` va antes del catch-all** y hace que el fallo sea reconocible.
+  Un 404 se puede tratar; un 200 con HTML solo se puede sufrir.
+- Y no se pinta como un error de la pantalla, porque **no lo es**: es una versión caducada.
+  Se recarga **una vez** (marca en `sessionStorage`, que muere con la pestaña — en
+  `localStorage` dejaría a esa persona sin poder recargar nunca más si el fallo fuera real)
+  y se coge por dos sitios: el `vite:preloadError`, que llega antes de que React lance, y la
+  propia barrera como red de seguridad.
+- **Se reconoce por el texto del error**, que es feo y es lo que hay: no existe un tipo para
+  esto y cada navegador lo dice a su manera. Están cubiertas las tres formas conocidas, más
+  el `Unexpected token '<'` que produce justamente el caso de Cloudflare. Hay test de que un
+  error normal —un `undefined.algo`, un fallo de hooks— **no** se confunde: si se
+  confundiera, un fallo real se taparía con una recarga y volvería a fallar.
+
 ## Compartir y buscadores (Cloudflare Pages Functions)
 
 - La web es un SPA: **un** `index.html` para las 60.000 fichas, así que todas compartían
