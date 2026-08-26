@@ -39,6 +39,14 @@ set -euo pipefail
 
 BACKUP_DIR="${FONTAPP_FOTOS_DIR:-$HOME/Backups/fontapp-fotos}"   # evita carpetas sincronizadas (iCloud)
 
+# **No muevas las fotos de aquí a otro sitio: apunta esto a ese otro sitio.**
+#
+# Si vacías el destino, la siguiente pasada se vuelve a bajar el bucket entero y te queda
+# el backup partido en dos —lo viejo donde lo moviste, sin verificar, y una copia nueva
+# aquí—, con el log diciendo OK. Con `FONTAPP_FOTOS_DIR=/Volumes/TuRAID/fontapp-fotos` la
+# copia es incremental contra el RAID y el `check` semanal comprueba **ese** disco, que es
+# justo lo que quieres vigilar.
+
 # --- Resolver credenciales (sin dejarlas en el repo) ---
 if [ -f "$HOME/.config/fontapp/r2.env" ]; then
   # shellcheck disable=SC1090
@@ -59,7 +67,45 @@ if ! command -v rclone >/dev/null 2>&1; then
   exit 1
 fi
 
-mkdir -p "$BACKUP_DIR"
+# `mkdir` a secas y NO `mkdir -p`, a propósito: solo se crea el último directorio, nunca
+# el árbol entero. Con el destino en un disco externo, `mkdir -p` lo crearía **vacío sobre
+# el punto de montaje** si el disco no está conectado, y entonces todo sale bien — se baja
+# el bucket al disco interno, el checksum cuadra consigo mismo y el log dice OK mientras el
+# backup de verdad no se ha tocado. Un backup que falla en silencio es peor que no tenerlo.
+if [ ! -d "$BACKUP_DIR" ]; then
+  padre="$(dirname "$BACKUP_DIR")"
+  if [ ! -d "$padre" ]; then
+    echo "ERROR: no existe $padre." >&2
+    echo "Si el destino está en un disco externo, compruébalo: parece que no está montado." >&2
+    exit 1
+  fi
+  mkdir "$BACKUP_DIR"
+fi
+
+antes="$(find "$BACKUP_DIR" -type f ! -name '.*' | wc -l | tr -d ' ')"
+
+# Cuántas había la última vez. Vive FUERA del espejo del bucket, junto a las credenciales,
+# por lo mismo que el log: lo que hay en `$BACKUP_DIR` tiene que poder subirse tal cual a
+# R2 el día que haya que restaurar.
+#
+# Contar los ficheros presentes no basta para detectar el caso que importa. Si alguien
+# **mueve** las fotos a otro disco, el directorio queda a cero y eso es idéntico a una
+# primera ejecución: se baja el bucket entero, el checksum cuadra y el log dice OK,
+# mientras el backup de verdad se ha quedado huérfano en otro sitio y sin verificar. La
+# única forma de distinguirlo es acordarse de lo que había.
+ESTADO="$HOME/.config/fontapp/fotos-ultimo-recuento"
+anterior=0
+if [ -f "$ESTADO" ]; then
+  # Se guarda con la ruta: cambiar de disco a propósito no debe dar un aviso falso.
+  ruta_previa="$(cut -f1 "$ESTADO")"
+  [ "$ruta_previa" = "$BACKUP_DIR" ] && anterior="$(cut -f2 "$ESTADO")"
+fi
+if [ "$anterior" -gt 0 ] && [ "$antes" -eq 0 ]; then
+  echo "AVISO: la última vez había $anterior ficheros en $BACKUP_DIR y ahora está vacío." >&2
+  echo "       Si has movido las fotos a otro disco, NO las muevas: apunta el backup allí" >&2
+  echo "       con FONTAPP_FOTOS_DIR. Si no, el backup queda partido en dos y solo se" >&2
+  echo "       verifica la mitad nueva." >&2
+fi
 
 # `copy` y **NO `sync`**, y esto es la decisión importante de todo el script.
 #
@@ -97,7 +143,14 @@ fi
 
 ficheros="$(find "$BACKUP_DIR" -type f ! -name '.*' | wc -l | tr -d ' ')"
 peso="$(du -sh "$BACKUP_DIR" | cut -f1)"
-echo "[$(date '+%F %T')] OK. $ficheros ficheros · $peso en $BACKUP_DIR"
+nuevas=$((ficheros - antes))
+echo "[$(date '+%F %T')] OK. $ficheros ficheros ($nuevas nuevas) · $peso en $BACKUP_DIR"
+
+# Bajarse el bucket entero cuando ya había un backup significa que el destino se vació:
+# alguien movió las fotos, o el disco de siempre no era el que estaba montado. No es un
+# error —la copia es correcta— pero hay que verlo en el log y no dentro de seis meses.
+mkdir -p "$(dirname "$ESTADO")"
+printf '%s\t%s\n' "$BACKUP_DIR" "$ficheros" > "$ESTADO"
 
 # Aviso de cuota: el plan gratuito de R2 son 10 GB de almacenamiento. Que lo diga el script
 # evita tener que acordarse de mirarlo, que es como se descubren estas cosas tarde.

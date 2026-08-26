@@ -1252,6 +1252,24 @@ se escriben.
 
 Destino por defecto `~/Backups/fontapp-fotos`, configurable con `FONTAPP_FOTOS_DIR`.
 
+> **Si el backup va a un disco externo, apunta el script ahí — no muevas las fotos después.**
+> Vaciar el destino no da error: la siguiente pasada se baja el bucket entero, el checksum
+> cuadra consigo mismo y el log dice OK, mientras la copia buena se ha quedado en otro
+> disco sin que nadie la verifique. O sea que acabas con dos medios backups y ninguno
+> comprobado. Con `FONTAPP_FOTOS_DIR=/Volumes/TuRAID/fontapp-fotos` la copia es incremental
+> contra el RAID y el `check` semanal vigila **ese** disco, que es el que quieres vigilar.
+>
+> El script defiende las dos formas de estropear esto:
+>
+> - **Disco sin montar.** Crea el último directorio con `mkdir` y **no** con `mkdir -p`, así
+>   que si `/Volumes/TuRAID` no existe se para con un error en vez de crear la carpeta sobre
+>   el punto de montaje y bajarse 47 MB al disco interno creyendo que ha hecho el backup.
+> - **Destino vaciado.** Recuerda cuántos ficheros había en `~/.config/fontapp/fotos-ultimo-recuento`
+>   (fuera del espejo, como el log). Si la última vez había fotos y ahora no hay ninguna,
+>   avisa. Contar los ficheros presentes no basta: al mover las carpetas el destino queda a
+>   cero, que es exactamente igual que una primera ejecución. El estado guarda también la
+>   ruta, así que cambiar de disco a propósito no da un aviso falso.
+
 **3. Prográmalo semanal con launchd.** Crea
 `~/Library/LaunchAgents/net.fontapp.backup-fotos.plist` (rutas absolutas; launchd no
 expande `~`):
