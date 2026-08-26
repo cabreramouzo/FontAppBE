@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Button from '@mui/material/Button'
 import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
+import type { SxProps, Theme } from '@mui/material/styles'
 import type { Map as LeafletMap } from 'leaflet'
 import type { FontSummary } from '../api/types'
 import { apiFetch, trackInteraction } from '../api/client'
@@ -38,7 +39,7 @@ import { construyeGPX, nombreFichero, MAX_WAYPOINTS, type PuntoGPX } from '../li
  * `maxLat`, o sea una caja de altura cero, y el fichero venía vacío sin ningún error. Lo
  * que se mira al pulsar hay que leerlo al pulsar.
  */
-export function ExportGpxButton({ map }: { map: LeafletMap | null }) {
+export function ExportGpxButton({ map, sx }: { map: LeafletMap | null; sx?: SxProps<Theme> }) {
   const { t } = useI18n()
   const toast = useToast()
   const [bajando, setBajando] = useState(false)
@@ -116,7 +117,10 @@ export function ExportGpxButton({ map }: { map: LeafletMap | null }) {
       startIcon={<DownloadIcon />}
       onClick={() => void descargar()}
       disabled={!map || bajando}
-      sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48 }}
+      // `sx` entra desde fuera porque este botón vive en dos sitios muy distintos: dentro
+      // de la hoja de móvil, que ya tiene fondo, y flotando sobre el mapa, donde hace
+      // falta uno opaco o el texto se pierde entre las teselas (ver `sobreElMapaSx`).
+      sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48, ...sx }}
       fullWidth
     >
       {bajando ? t('gpx.working') : t('gpx.download')}

@@ -190,6 +190,35 @@ function VigilaGiro({ onChange }: { onChange: (deg: number) => void }) {
 const noEmoji = (s: string) => s.replace(/^[^\p{L}\d]+/u, '')
 
 // Estilo Material para los chips de control (superficie elevada; acento si activo).
+/**
+ * Lo mínimo para que algo se lea **encima del mapa**.
+ *
+ * Un control flotante sin fondo propio se pinta sobre teselas: bosque verde, mar azul,
+ * ortofoto. Un `variant="outlined"` de MUI es transparente, así que ahí el texto compite
+ * con lo que haya debajo y desaparece — pasó con los dos botones de GPX, que salieron
+ * ilegibles sobre el Mediterráneo mientras los chips de al lado se leían perfectamente.
+ *
+ * La regla ya existía dentro de `chipSx`; está aquí fuera para que el siguiente control
+ * que se cuelgue del mapa la herede en vez de tener que descubrirla otra vez.
+ *
+ * No es una cuestión de gusto ni de daltonismo: es **contraste**. Un fondo opaco resuelve
+ * el problema para todo el mundo, y de paso hace que el color deje de ser lo único que
+ * separa el control del fondo.
+ */
+export const sobreElMapaSx = {
+  bgcolor: 'background.paper',
+  color: 'text.primary',
+  borderColor: 'divider',
+  boxShadow: 3,
+  // `&&` para ganarle al hover translúcido de MUI, igual que en `chipSx`: si al pasar por
+  // encima se vuelve semitransparente, vuelve el problema justo al ir a pulsar.
+  '&&:hover': {
+    boxShadow: 6,
+    backgroundColor: (theme: Theme) =>
+      theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[200],
+  },
+}
+
 const chipSx = (active: boolean) => ({
   height: 40,
   borderRadius: '20px',
@@ -1417,9 +1446,9 @@ export function MapPage() {
                 las herramientas y no como un cuarto botón flotante: la columna ya tiene
                 tres y un mapa tapado por sus propios controles deja de ser un mapa. */}
             <Box sx={{ width: 210, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <ExportGpxButton map={map} />
+              <ExportGpxButton map={map} sx={sobreElMapaSx} />
               <Button component={Link} to="/gpx" variant="outlined" startIcon={<UploadIcon />}
-                      sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48, bgcolor: 'background.paper' }} fullWidth>
+                      sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48, ...sobreElMapaSx }} fullWidth>
                 {t('gpxIn.title')}
               </Button>
             </Box>

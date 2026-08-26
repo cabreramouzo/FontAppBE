@@ -780,6 +780,18 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   y **ningún error**. Lo que se mira al pulsar se lee al pulsar.
 - Vive dentro del panel de herramientas y no como un cuarto botón flotante: la columna ya
   tiene tres, y un mapa tapado por sus propios controles deja de ser un mapa.
+- **Todo lo que flote sobre el mapa necesita fondo opaco** (`sobreElMapaSx`). Un
+  `variant="outlined"` de MUI es transparente, así que el texto compite con las teselas:
+  los dos botones de GPX salieron ilegibles sobre el mar y el bosque mientras los chips de
+  al lado se leían bien. La regla ya existía dentro de `chipSx` —«fondo OPACO para que se
+  lea bien sobre el mapa»— y estaba encerrada ahí; ahora es una constante exportada para
+  que el siguiente control la herede en vez de descubrirla otra vez.
+  El `&&:hover` no es cosmético: sin él MUI pone un hover semitransparente y el problema
+  vuelve **justo al ir a pulsar**.
+  Y no es cuestión de daltonismo aunque salga en esa conversación: es **contraste**. Un
+  fondo sólido lo arregla para todo el mundo, y de paso hace que el color deje de ser lo
+  único que separa el control del fondo. Comprobado sobre satélite y en modo oscuro, que
+  son los dos peores casos.
 - Se retiró `GET /fonts/near/download`, que devolvía exactamente lo mismo que `near` y no
   la usaba nadie. Era un señuelo: una ruta llamada «download» que no descarga nada es lo
   primero que mira quien viene a hacer esto.
