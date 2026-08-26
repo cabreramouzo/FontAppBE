@@ -95,13 +95,21 @@ struct ImportCommand: AsyncCommand {
 
     /// Mapea el tag OSM `drinking_water` a nuestra potabilidad (ausente ⇒ desconocido).
     ///
-    /// Nunca devuelve `.untreated`: OSM no tiene ningún tag que lo diga, y deducirlo del
-    /// tipo de punto sería inventarse un dato que luego nadie distingue del que puso una
-    /// persona delante de la fuente. Esa etiqueta la ponen los usuarios.
+    /// `untreated` **sí se lee**, y el comentario que había aquí estaba equivocado.
+    ///
+    /// Decía que OSM no tiene ningún tag que lo diga. Lo tiene: `drinking_water=untreated`
+    /// no está en la lista oficial del wiki pero se usa —20 nodos en Italia, 1 en
+    /// Finlandia— y es exactamente lo que la etiqueta significa aquí.
+    ///
+    /// Lo que sigue en pie es el motivo de fondo: lo que **no** se hace es deducirla del
+    /// tipo de punto. Un manantial sin más no se marca como no tratada, porque eso sería
+    /// inventarse un dato que luego nadie distingue del que puso una persona delante de la
+    /// fuente. Leer lo que alguien escribió es otra cosa.
     private static func drinkable(from tags: [String: String]) -> Drinkable? {
         switch tags["drinking_water"] {
         case "yes": return .yes
         case "no": return .no
+        case "untreated": return .untreated
         case "conditional": return .conditional
         default: return nil
         }
