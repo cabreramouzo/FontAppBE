@@ -799,6 +799,25 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   por segundo sobre un perfil de miles de puntos, y recorrer la lista en cada uno se nota en
   un móvil. Hay test de que da lo mismo que buscar a lo bruto — que es lo que lo hace
   seguro, porque la bisección solo vale si los puntos vienen ordenados.
+- **Al recorrer el perfil, el mapa marca el mismo punto** (`lib/routeScrub.ts`), como
+  Wikiloc. Lo pidió el autor con una captura, y cierra el hueco entre las dos vistas: el
+  perfil dice a qué altura estás y el mapa dónde, pero hasta ahora había que adivinar la
+  correspondencia.
+  **El kilómetro viaja por un módulo con suscripción y NO por el estado de la página.**
+  Recorrer el perfil dispara decenas de eventos por segundo, y subiéndolo al padre común
+  se repintaría también la lista de fuentes —más de cien filas con sus chips— en cada uno.
+  Es el mismo argumento por el que `lib/asks.ts` vive en un módulo. Medido con un
+  `MutationObserver` sobre las dos zonas durante 31 movimientos: **0 mutaciones en la
+  lista y 1.686 en el mapa**.
+  Se publica el kilómetro de **la marca** y no el del dedo: sobre una fuente la marca se
+  imanta a ella, y si el mapa siguiera al dedo las dos marcas del mismo sitio estarían en
+  puntos distintos. Y se publica desde un efecto y no desde el manejador, porque
+  `fuenteCerca` se calcula durante el render — avisando antes se enviaría el imantado del
+  movimiento anterior, el mismo render de retraso que ya obligó a rehacer la marca.
+  `coordenadaEnKm` **interpola** entre los dos vértices que rodean el kilómetro en vez de
+  saltar al más cercano: un GPX simplificado tiene los vértices a cientos de metros y el
+  punto del mapa avanzaría a saltos mientras el del perfil va suave. Usa el mismo
+  haversine que `largoKm`, o los dos puntos se irían separando a lo largo del recorrido.
 - **El mapa existe, y se carga a demanda** (`RouteMap` tras un `lazy()` y un botón).
   Contesta dos cosas que ni la lista ni el perfil pueden —si has subido el fichero correcto,
   y de qué lado del camino cae cada fuente— y no contesta bien la del tramo seco, por eso va

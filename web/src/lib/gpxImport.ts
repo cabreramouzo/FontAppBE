@@ -128,6 +128,67 @@ export function largoKm(puntos: PuntoRuta[]): number {
   return total / 1000
 }
 
+/**
+ * El kilómetro acumulado de cada punto del recorrido.
+ *
+ * Se calcula una vez y se bisecta después: al recorrer el perfil con el dedo esto se
+ * consulta muchas veces por segundo sobre una ruta de miles de puntos, y sumar distancias
+ * desde el principio en cada consulta se nota en un móvil. Usa `metros`, el mismo
+ * haversine que `largoKm`, o el punto del mapa se iría separando del del perfil a medida
+ * que avanza el recorrido.
+ */
+export function kilometrajes(ruta: readonly PuntoRuta[]): number[] {
+  const km: number[] = new Array(ruta.length)
+  let total = 0
+  for (let i = 0; i < ruta.length; i += 1) {
+    if (i > 0) total += metros(ruta[i - 1].lat, ruta[i - 1].lon, ruta[i].lat, ruta[i].lon) / 1000
+    km[i] = total
+  }
+  return km
+}
+
+/**
+ * Dónde cae, en coordenadas, un kilómetro del recorrido.
+ *
+ * **Interpola entre los dos puntos que lo rodean** en vez de devolver el más cercano: un
+ * GPX simplificado puede tener sus vértices a cientos de metros, y quedándose en el vértice
+ * el punto del mapa avanzaría a saltos mientras el del perfil se mueve suave. Son dos
+ * marcas del mismo sitio y tienen que ir juntas.
+ *
+ * La interpolación es lineal en lat/lon, que a la escala de dos vértices seguidos es
+ * indistinguible de seguir el arco.
+ */
+export function coordenadaEnKm(
+  ruta: readonly PuntoRuta[],
+  kms: readonly number[],
+  km: number,
+): { lat: number; lon: number } | null {
+  if (ruta.length === 0) return null
+  if (ruta.length === 1) return { lat: ruta[0].lat, lon: ruta[0].lon }
+  if (km <= kms[0]) return { lat: ruta[0].lat, lon: ruta[0].lon }
+  const ultimo = ruta.length - 1
+  if (km >= kms[ultimo]) return { lat: ruta[ultimo].lat, lon: ruta[ultimo].lon }
+  let lo = 0
+  let hi = ultimo
+  while (hi - lo > 1) {
+    const medio = (lo + hi) >> 1
+    if (kms[medio] < km) lo = medio
+    else hi = medio
+  }
+  const tramo = kms[hi] - kms[lo]
+  // Dos puntos en el mismo sitio darían un tramo de cero, una división por cero y un
+  // `NaN` — que en Leaflet es un marcador que simplemente no se pinta, sin ningún error.
+  // Hoy es **inalcanzable**: los cortes de los extremos atrapan el caso de todo el
+  // recorrido en un punto, y con duplicados en medio la bisección empuja `lo` más allá de
+  // los valores iguales. Se queda como red por si algún día se tocan esos cortes, y está
+  // dicho en el test que ninguno la protege.
+  const t = tramo > 0 ? (km - kms[lo]) / tramo : 0
+  return {
+    lat: ruta[lo].lat + (ruta[hi].lat - ruta[lo].lat) * t,
+    lon: ruta[lo].lon + (ruta[hi].lon - ruta[lo].lon) * t,
+  }
+}
+
 /** Lo que se sabe de una fuente respecto al recorrido. */
 export interface EnRuta<T> {
   fuente: T

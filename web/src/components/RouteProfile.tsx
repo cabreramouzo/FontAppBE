@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { useTheme } from '@mui/material/styles'
 import { useI18n } from '../i18n/I18nContext'
 import { puntoEnKm, type PuntoPerfil } from '../lib/gpxImport'
+import { señala } from '../lib/routeScrub'
 
 /**
  * El perfil del recorrido con las fuentes marcadas encima.
@@ -77,6 +78,24 @@ export function RouteProfile({ puntos, fuentes, largoKm }: {
     return Math.abs(fuentes[mejor].kmRuta - señalado) <= CERCA * largoKm ? mejor : -1
   })()
   const fuenteCerca = iCerca >= 0 ? fuentes[iCerca] : null
+
+  /**
+   * Se le dice al mapa dónde está el dedo, para que ponga su punto en el mismo sitio.
+   *
+   * Se publica el kilómetro de **la marca** y no el del dedo: sobre una fuente la marca se
+   * imanta a ella, y si el mapa siguiera al dedo las dos marcas del mismo sitio estarían
+   * en puntos distintos, que es peor que no tener la segunda.
+   *
+   * Va en un efecto y no dentro de `sigue`: `fuenteCerca` se calcula durante el render, y
+   * avisar desde el manejador publicaría el imantado del movimiento **anterior** — el
+   * mismo render de retraso que ya obligó a rehacer la marca del perfil.
+   */
+  const kmPublicado = señalado === null ? null : (fuenteCerca ? fuenteCerca.kmRuta : señalado)
+  useEffect(() => {
+    señala(kmPublicado)
+    // Al desmontar se limpia, o el mapa se quedaría con un punto de una ruta que ya no está.
+    return () => señala(null)
+  }, [kmPublicado])
 
   if (puntos.length < 2 || largoKm <= 0) return null
 

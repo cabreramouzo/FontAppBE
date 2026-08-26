@@ -1,11 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import { MapContainer, Polyline, CircleMarker, Tooltip } from 'react-leaflet'
 import { useTheme } from '@mui/material/styles'
 import type { LatLngTuple } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { BaseLayerTile } from './BaseLayers'
 import { MAP_LAYERS } from '../lib/mapLayers'
-import type { PuntoRuta } from '../lib/gpxImport'
+import { coordenadaEnKm, kilometrajes, type PuntoRuta } from '../lib/gpxImport'
+import { kmSeñalado, suscribe } from '../lib/routeScrub'
 
 /**
  * El recorrido y sus fuentes sobre el mapa.
@@ -33,6 +34,13 @@ export function RouteMap({ ruta, fuentes }: {
 }) {
   const tema = useTheme()
   const linea = useMemo<LatLngTuple[]>(() => ruta.map((p) => [p.lat, p.lon]), [ruta])
+  const kms = useMemo(() => kilometrajes(ruta), [ruta])
+
+  // Solo ESTE componente se repinta al mover el dedo por el perfil. Con el kilómetro en
+  // el estado de la página se repintaría también la lista de fuentes, que son más de cien
+  // filas con sus chips, decenas de veces por segundo.
+  const km = useSyncExternalStore(suscribe, kmSeñalado, () => null)
+  const señal = km === null ? null : coordenadaEnKm(ruta, kms, km)
 
   // El encuadre sale del propio recorrido: no hay «centro» que valga para una ruta.
   const bounds = useMemo<[LatLngTuple, LatLngTuple]>(() => {
@@ -71,6 +79,25 @@ export function RouteMap({ ruta, fuentes }: {
           <Tooltip direction="top">{`km ${f.kmRuta.toFixed(1)} · ${f.nombre}`}</Tooltip>
         </CircleMarker>
       ))}
+      {/* El punto que sigue al dedo sobre el perfil, como en Wikiloc. Va DESPUÉS de las
+          fuentes para que quede por encima cuando pasa sobre una, y en un color de
+          contraste: si fuera del mismo azul que la línea y las fuentes, sobre el trazado
+          no se distinguiría de ellas justo cuando se está mirando.
+          `interactive: false` porque no es un objetivo que pulsar, y sin ello se traga
+          los clics del mapa por donde pasa. */}
+      {señal && (
+        <CircleMarker
+          center={[señal.lat, señal.lon]}
+          radius={7}
+          pathOptions={{
+            color: tema.palette.background.paper,
+            weight: 3,
+            fillColor: tema.palette.text.primary,
+            fillOpacity: 1,
+            interactive: false,
+          }}
+        />
+      )}
     </MapContainer>
   )
 }
