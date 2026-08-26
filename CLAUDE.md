@@ -2079,6 +2079,11 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 
 ## Actualizar una PWA suspendida (`AppUpdatePrompt`)
 
+- Si una pantalla cae, `ErrorBoundary` limpia únicamente los cachés
+  `fontapp-shell-*` antes de recargar. No borra autenticación, teselas, API offline ni
+  la bandeja de salida. Esto recupera instalaciones cuyo bundle quedó obsoleto aunque
+  una pestaña de incógnito funcione correctamente.
+
 - iOS puede reanimar durante días el **mismo proceso y el mismo JavaScript** de una PWA.
   Que el service worker nuevo se instale no sustituye el código que ya está ejecutándose,
   y `sw.js` además no cambia en la mayoría de despliegues.

@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import { esTrozoCaducado, recargaSiEsTrozoCaducado } from '../lib/staleChunk'
+import { recoverAppShell } from '../lib/recoverApp'
 import type { ErrorInfo, ReactNode } from 'react'
 
 /**
@@ -49,13 +50,18 @@ export class ErrorBoundary extends Component<Props, State> {
     return { roto: true, caducado: esTrozoCaducado(error) }
   }
 
+  private recuperarYRecargar = async () => {
+    await recoverAppShell()
+    window.location.reload()
+  }
+
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Antes de dar la pantalla por rota: si lo que ha fallado es cargar un trozo de la
     // app, no es un fallo de la pantalla — es que se ha desplegado una versión nueva y
     // esta pestaña sigue pidiendo ficheros que ya no existen. Se recarga una vez y ya.
     // Decirle a la persona «esta pantalla ha fallado» le echa la culpa a la página que
     // acaba de abrir y le ofrece justo lo que no toca.
-    if (recargaSiEsTrozoCaducado(error)) return
+    if (recargaSiEsTrozoCaducado(error, Date.now(), () => { void this.recuperarYRecargar() })) return
     // A la consola y nada más: no hay servicio de errores en este proyecto y mandar
     // trazas a un tercero sería añadir una dependencia y un asunto de privacidad para
     // resolver un problema que se ve igual de bien en el navegador.
@@ -67,7 +73,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="pad" style={{ maxWidth: 640, margin: '0 auto' }}>
         <p>{this.state.caducado ? this.props.mensajeCaducado : this.props.mensaje}</p>
-        <button type="button" onClick={() => window.location.reload()}>
+        <button type="button" onClick={this.recuperarYRecargar}>
           {this.props.reintentar}
         </button>
       </div>

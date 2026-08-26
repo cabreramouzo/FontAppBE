@@ -28,6 +28,14 @@ function cargaSW(hrefDelSW: string) {
   return fn(self, {}, () => {}, class {}, {})
 }
 
+test('el shell actual invalida el bundle persistente anterior', () => {
+  const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+  assert.match(codigo, /const SHELL_CACHE = 'fontapp-shell-v6'/)
+  // El remedio no debe borrar mapas ni respuestas offline.
+  assert.match(codigo, /const TILE_CACHE = 'fontapp-tiles-v2'/)
+  assert.match(codigo, /const API_CACHE = 'fontapp-api-v3'/)
+})
+
 const PROD = cargaSW('https://fontapp.net/sw.js?api=https%3A%2F%2Ffontapp.fly.dev')
 const DEV = cargaSW('http://localhost:5173/sw.js')
 

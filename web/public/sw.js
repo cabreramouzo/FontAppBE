@@ -3,7 +3,7 @@
 // - Teselas del mapa (OSM, otro dominio): cache-first con tope (LRU sencillo).
 // - API GET del mismo origen: stale-while-revalidate (sirve al instante, refresca si hay red).
 // - Navegación SPA: network-first con respaldo en el shell.
-const SHELL_CACHE = 'fontapp-shell-v5'
+const SHELL_CACHE = 'fontapp-shell-v6'
 const TILE_CACHE = 'fontapp-tiles-v2'
 const API_CACHE = 'fontapp-api-v3'
 // El shell NO se pide a `/index.html`: en Cloudflare Pages esa ruta responde 308 hacia
