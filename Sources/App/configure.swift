@@ -194,6 +194,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(GamificationSyncCommand(), as: "gamification-sync")
     app.asyncCommands.use(AdoptCoverPhotosCommand(), as: "adopt-cover-photos")
     app.asyncCommands.use(ClearPlaceholderNamesCommand(), as: "clear-placeholder-names")
+    app.asyncCommands.use(DedupeImportedCommand(), as: "dedupe-imported")
 
     // Rutas.
     try routes(app)

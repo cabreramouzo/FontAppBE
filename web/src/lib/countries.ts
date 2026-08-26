@@ -32,7 +32,7 @@
  * con 15.246 fuentes le corresponde el segundo puesto. La cifra sale de `GET /zones`.
  */
 export const PAISES = [
-  'Spain', 'Switzerland', 'France', 'Portugal', 'Sweden', 'Finland', 'Chile', 'Andorra',
+  'Spain', 'Italy', 'Switzerland', 'France', 'Portugal', 'Sweden', 'Finland', 'Chile', 'Andorra',
 ]
 
 const TRADUCIDOS = new Set(PAISES)
