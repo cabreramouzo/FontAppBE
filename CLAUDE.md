@@ -1847,6 +1847,39 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - El estado vive en un módulo y no en un contexto: son cinco componentes en dos árboles
   (`App` y `Layout`) y un proveedor tendría que envolver los dos para nada más.
 
+## «Qué hay de nuevo» (`lib/whatsNew.ts`)
+
+- **Nuevo para ti, no nuevo en el calendario.** Lo natural es enseñar un «NUEVO» durante
+  una semana desde el despliegue, y mide el tiempo equivocado: el del *release* y no el de
+  la persona. Con un plazo fijo, a quien **instala hoy** le saldría «NUEVO» sobre tres
+  cosas cuando para él la app **entera** es nueva —le señala lo accesorio antes que lo
+  básico—, y a quien **lleva seis meses** y vuelve al octavo día no le sale nada siendo
+  justo a quien había que avisar.
+- Se guarda **qué versión de novedades ha leído** cada uno. `VERSION_NOVEDADES` se sube al
+  añadir algo que merezca contarse y **no en cada despliegue**: si se subiera siempre, el
+  aviso saldría por un arreglo de un margen y dejaría de creerse.
+- **El diálogo solo se le enseña a quien ya usaba la app** (`sesiones() > 1`). A quien llega
+  hoy no: tiene el de bienvenida, y contarle «novedades» de algo que nunca ha tenido es
+  ruido. Ojo con el caso que parece un detalle y es el que hace que esto funcione la primera
+  vez: **sin marca y con visitas previas, sí** — si no, nadie se comería el aviso nunca,
+  porque al publicarlo nadie tiene marca todavía.
+- **Va en la cola de `lib/asks`**, con `news` entre `badge` e `install`: detrás del premio
+  —tapar una insignia recién ganada con un changelog es cambiar algo suyo por algo nuestro—
+  y delante de los que piden un favor.
+- **Los distintivos «nuevo» se encienden AL LEER el aviso, no antes**, y duran
+  `SESIONES_CON_DISTINTIVO` visitas **suyas**. La primera versión lo hacía al revés y por
+  eso **no los veía nadie**: quedaban detrás del modal y se apagaban en el mismo gesto que
+  lo cerraba. Se descubrió probándolo entero — el diálogo salía perfecto y el distintivo no
+  aparecía jamás. Repartidos así las dos piezas se complementan: el diálogo **cuenta** qué
+  hay de nuevo y los distintivos **enseñan dónde está** las siguientes veces que entras.
+- Se cuenta en sesiones y no en días por lo mismo de siempre: quien abre la app una vez al
+  mes tiene tres aperturas para verlos, no tres días.
+- Un distintivo cuya clave ya no está en `NOVEDADES` **no se pinta**: si no, sobreviviría
+  al borrado de su novedad y se quedaría puesto para siempre.
+- Los cambios en `localStorage` no repintan React, así que el distintivo aparece en la
+  **siguiente** carga, no en la misma en que se cierra el diálogo. Encaja con el diseño y
+  conviene saberlo antes de perseguirlo como un fallo.
+
 ## Onboarding inicial
 
 - `WelcomeDialog` da una visión completa pero digerible en tres páginas controladas por

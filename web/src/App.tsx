@@ -26,6 +26,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { UnsubscribePage } from './pages/UnsubscribePage'
 import { AdminActivityPage } from './pages/AdminActivityPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { WhatsNewDialog } from './components/WhatsNewDialog'
 
 const LegalPage = lazy(() => import('./pages/LegalPage').then((m) => ({ default: m.LegalPage })))
 const SupportPage = lazy(() => import('./pages/SupportPage').then((m) => ({ default: m.SupportPage })))
@@ -93,6 +94,9 @@ export default function App() {
             {/* Fuera de la barrera de errores y del layout: es un aviso de la sesión, no
                 de una pantalla, y tiene que poder salir estés donde estés. */}
             <BadgeCelebration />
+            {/* Va tras la insignia en la cola de `lib/asks`, no aquí: el orden del JSX
+                no decide nada, lo decide `PRIORIDAD`. */}
+            <WhatsNewDialog />
             <IntroDialog />
           </AuthProvider>
         </ToastProvider>

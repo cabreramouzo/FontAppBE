@@ -33,6 +33,9 @@ import { useEffect, useSyncExternalStore } from 'react'
  *
  * - `intro` y `welcome` explican qué es esto. Sin ellos lo demás no se entiende.
  * - `badge` es un premio por algo que la persona acaba de hacer; nada debe taparlo.
+ * - `news` cuenta lo que ha cambiado desde la última vez. Va **detrás del premio** —tapar
+ *   una insignia recién ganada con un changelog es cambiar algo suyo por algo nuestro— y
+ *   **delante de los favores**, porque al menos habla de lo que la persona vino a usar.
  * - `install` y `interest` piden un favor. Van los últimos porque son los únicos que la
  *   persona no ha pedido de ninguna manera.
  */
@@ -40,8 +43,9 @@ const PRIORIDAD = {
   intro: 0,
   welcome: 0,
   badge: 1,
-  install: 2,
-  interest: 3,
+  news: 2,
+  install: 3,
+  interest: 4,
 } as const
 
 export type Aviso = keyof typeof PRIORIDAD

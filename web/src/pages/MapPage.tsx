@@ -79,6 +79,7 @@ import { isReliable } from '../lib/confidence'
 import { ConfidenceChip } from '../components/ConfidenceChip'
 import { ExportGpxButton } from '../components/ExportGpxButton'
 import UploadIcon from '@mui/icons-material/UploadFileOutlined'
+import { NuevoBadge } from '../components/NuevoBadge'
 
 // Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
 // península aproximadamente centrada y el zoom 5 permite verla entera también en móvil.
@@ -1445,16 +1446,18 @@ export function MapPage() {
             El botón dice **GPX** con letras y no con un icono a propósito: quien lleva un
             GPS en el manillar reconoce esas tres letras al instante, y quien no, con
             cualquier icono tendría que adivinar igual. */}
-        <Fab
-          size="medium"
-          onClick={() => { trackInteraction('map_gpx'); setGpxOpen((v) => !v) }}
-          aria-label={t('gpx.group')}
-          title={t('gpx.group')}
-          sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 800, fontSize: 13,
-                letterSpacing: 0.5, '&:hover': { bgcolor: 'background.paper' } }}
-        >
-          GPX
-        </Fab>
+        <NuevoBadge clave="gpx">
+          <Fab
+            size="medium"
+            onClick={() => { trackInteraction('map_gpx'); setGpxOpen((v) => !v) }}
+            aria-label={t('gpx.group')}
+            title={t('gpx.group')}
+            sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 800, fontSize: 13,
+                  letterSpacing: 0.5, '&:hover': { bgcolor: 'background.paper' } }}
+          >
+            GPX
+          </Fab>
+        </NuevoBadge>
         {!movil && (
           <Collapse in={gpxOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
             <Box sx={{ width: 210, display: 'flex', flexDirection: 'column', gap: '10px' }}>
