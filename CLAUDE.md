@@ -794,6 +794,20 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   ficha, y **sin `unknown` ni `gone`**: el primero no dice nada viniendo de quien ha pasado
   por allí, y «ya no está» es el estado más caro —dos testimonios retiran la fuente del
   mapa— así que no se pone a un toque en una lista de veinte.
+- **Que se puede reseñar desde aquí hay que decirlo.** Los chips de cada fila en escritorio
+  aún se deducen; en un móvil eran cuatro etiquetas pequeñas que parecen información y no
+  botones. Ahora hay un aviso encima de la lista, **una vez** y no en cada fila —repetirlo
+  veinte veces es ruido—, y **sin sesión también se dice**, en vez de no pintar nada: si los
+  chips simplemente no salen, quien no ha entrado ni se entera de que esto existe.
+- En móvil los chips van **rellenos y a 48 px**, la misma medida que las hojas del mapa y la
+  barra de guardar. Y en **rejilla de dos columnas**: a 48 px de alto los cuatro se partían
+  en tres líneas desiguales y cada fuente se comía media pantalla (189 px por fila). Dos
+  detalles medidos que se pagan si se tocan: `minmax(0, 1fr)` y no `1fr` a secas, o cada
+  columna crece hasta su contenido y salen desiguales (149 contra 131 px); y **sin el
+  sangrado de 62 px**, que alinea con la columna del kilómetro pero en un teléfono es un
+  tercio del ancho tirado justo donde hacen falta los objetivos grandes.
+- En escritorio no cambia nada: pequeños, `outlined` y con el sangrado. Mismo corte
+  `down('sm')` que el resto de la app.
 - **Sin cobertura va a la bandeja de salida**, que es donde tiene que ir: el monte es
   exactamente donde sabes cómo estaba la fuente y no hay red.
 - **El aviso es condicional y esto importa:** dice «si la has hecho, cuenta cómo estaban»,

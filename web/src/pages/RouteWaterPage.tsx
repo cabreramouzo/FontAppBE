@@ -1,4 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import type { Theme } from '@mui/material/styles'
 import { Link as RouterLink } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -87,6 +89,8 @@ export function RouteWaterPage() {
   const [error, setError] = useState('')
   const [nombreRuta, setNombreRuta] = useState('')
   const [mapaAbierto, setMapaAbierto] = useState(false)
+  // El mismo corte que usa toda la app: la forma cambia de verdad, no solo el tamaño.
+  const movil = useMediaQuery((tema: Theme) => tema.breakpoints.down('sm'))
 
   async function abrir(file: File) {
     setError(''); setCargando(true); setFuentes(null); setRuta([])
@@ -315,6 +319,27 @@ export function RouteWaterPage() {
             )}
           </Box>
 
+          {/* Que se puede reseñar desde aquí hay que **decirlo**. Los chips de cada fila
+              en escritorio aún se deducen; en un móvil son cuatro etiquetas pequeñas que
+              parecen información, no botones. Va una vez encima de la lista y no en cada
+              fila: repetirlo veinte veces es ruido.
+              Y sin sesión también se dice, en vez de no pintar nada: si los chips
+              simplemente no salen, quien no ha entrado ni se entera de que esto existe. */}
+          {enRuta.length > 0 && (
+            <Alert severity="success" icon={false} sx={{ mt: 2 }}>
+              {user ? (
+                <>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{t('gpxIn.reportTitle')}</Typography>
+                  <Typography variant="body2">{t('gpxIn.reportBody')}</Typography>
+                </>
+              ) : (
+                <Typography variant="body2">
+                  <Link component={RouterLink} to="/login">{t('gpxIn.reportLogin')}</Link>
+                </Typography>
+              )}
+            </Alert>
+          )}
+
           {enRuta.length === 0 ? (
             <Alert severity="info" sx={{ mt: 2 }}>{t('gpxIn.none')}</Alert>
           ) : (
@@ -325,6 +350,7 @@ export function RouteWaterPage() {
                   x={x}
                   contado={x.fuente.id ? contadas[x.fuente.id] : undefined}
                   onCuenta={user && x.fuente.id ? (estado) => void cuenta(x.fuente.id!, estado) : undefined}
+                  movil={movil}
                 />
               ))}
             </List>
@@ -335,11 +361,12 @@ export function RouteWaterPage() {
   )
 }
 
-function Fila({ x, contado, onCuenta }: {
+function Fila({ x, contado, onCuenta, movil }: {
   x: EnRuta<FontSummary>
   contado?: string
   /** `undefined` sin sesión: sin ella no hay a quién atribuir la reseña. */
   onCuenta?: (estado: string) => void
+  movil: boolean
 }) {
   const { t } = useI18n()
   const ws = waterStatusInfo(x.fuente.lastWaterStatus ?? null)
@@ -380,15 +407,37 @@ function Fila({ x, contado, onCuenta }: {
           retiran la fuente del mapa— así que no se pone a un toque en una lista de veinte.
           Quien de verdad lo quiera decir tiene el formulario entero en la ficha. */}
       {onCuenta && (
-        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', ml: '62px', mt: 0.75 }}>
+        <Box sx={{
+          // Sin sangrado en móvil: los 62 px alinean con la columna del kilómetro, pero en
+          // un teléfono son un tercio del ancho tirado justo donde hacen falta los
+          // objetivos grandes. Alinear importa menos que poder pulsar.
+          ml: movil ? 0 : '62px',
+          mt: 0.75, gap: 0.75,
+          // En móvil, rejilla de dos columnas en vez de dejarlos fluir. A 48 px de alto
+          // los cuatro se parten en tres líneas desiguales —«Sale agua» sola, «Poca agua»
+          // con «Seca», «Averiada» sola— y cada fuente se come media pantalla. En 2×2
+          // ocupan dos líneas parejas y la lista vuelve a ser recorrible.
+          ...(movil
+            // `minmax(0, 1fr)` y no `1fr` a secas: con `1fr` cada columna crece hasta el
+            // ancho de su contenido y salen desiguales —medido, 149 px «Sale agua» contra
+            // 131 «Seca»—, que es justo lo que la rejilla venía a evitar.
+            ? { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }
+            : { display: 'flex', flexWrap: 'wrap' }),
+        }}>
           {contado ? (
-            <Chip size="small" color="success" variant="outlined"
-                  label={`${WATER_STATUS[contado]?.emoji ?? ''} ${t('gpxIn.counted')}`} />
+            <Chip size={movil ? 'medium' : 'small'} color="success" variant="outlined"
+                  label={`${WATER_STATUS[contado]?.emoji ?? ''} ${t('gpxIn.counted')}`}
+                  sx={movil ? { height: 48, borderRadius: 3, fontSize: 15, gridColumn: '1 / -1' } : undefined} />
           ) : (
             WATER_STATUS_OPTIONS.filter((k) => k !== 'unknown' && k !== 'gone').map((k) => (
-              <Chip key={k} clickable size="small" variant="outlined"
+              // Rellenos y a 48 px con el pulgar: un chip `outlined` y pequeño se lee
+              // como una etiqueta, no como algo que se pulsa. En escritorio se quedan
+              // pequeños, que es donde el ratón apunta fino — mismo corte que el resto.
+              <Chip key={k} clickable variant={movil ? 'filled' : 'outlined'}
+                    size={movil ? 'medium' : 'small'}
                     label={`${WATER_STATUS[k].emoji} ${t(`status.${k}`)}`}
-                    onClick={() => onCuenta(k)} />
+                    onClick={() => onCuenta(k)}
+                    sx={movil ? { height: 48, borderRadius: 3, fontSize: 15, px: 0.5, width: '100%' } : undefined} />
             ))
           )}
         </Box>
