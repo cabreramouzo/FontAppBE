@@ -1555,6 +1555,23 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   Hay que cubrir token caducado/usado, cambio de email (vuelve a quedar sin verificar),
   reenvío, enumeración de cuentas y el caso de dos altas simultáneas. No confundirlo con el
   correo de bienvenida actual: ese envío no prueba que el buzón pertenezca al usuario.
+- **La memoria de las máquinas vive en `fly.toml`, no en `fly scale memory`.** Ese comando
+  cambia las máquinas en marcha pero **no escribe el fichero**, así que el siguiente
+  despliegue lo deshace — lo avisa el propio flyctl al ejecutarlo, y es fácil no leerlo.
+  Pasó: estaba en 1 GB, se perdió, y con 512 MB el proceso se mata solo bajo el tráfico
+  normal del mapa («Out of memory: Killed process (App) anon-rss:408360kB»). El ciclo es
+  reconocible — arranca, sirve unos 40 s, se le agota el pool de conexiones, falla el
+  health check y el kernel la mata a los 60 s—; con las dos máquinas ahí dentro Fly no
+  tiene a quién enrutar y las lecturas del mapa devuelven **500**. En la web eso se ve
+  como «falla la carga del GPX», que es donde se reportó, y manda a buscar el problema al
+  sitio equivocado.
+- **CI solo despliega el backend si el backend cambia.** Antes `deploy-backend` solo miraba
+  la rama, así que un commit de front desplegaba igual: 22 minutos medidos para no cambiar
+  nada, un reinicio que se lleva el rate limit y las cachés en memoria, y —lo caro— volver
+  a aplicar `fly.toml` y deshacer cualquier `fly scale` hecho a mano. El filtro va por
+  **exclusión** (`web/`, `flyer/`, `docs/`, `*.md`): con una lista de rutas de backend, una
+  carpeta nueva sin apuntar dejaría de desplegarse en silencio. Ante la duda —rama nueva,
+  force-push— se despliega.
 - `R2ImageStorage` (Soto) **está en producción y funcionando** (comprobado el 18/08/2026: las
   fotos se sirven desde `pub-….r2.dev` con 200 y los cinco secretos `R2_*` están puestos).
   En local sigue usando disco. Ojo, `fly.toml` **no monta ningún volumen**: si R2 se cayera

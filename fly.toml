@@ -38,6 +38,19 @@ primary_region = 'fra'
     path = '/health'
 
 [[vm]]
-  memory = '512mb'
+  # 1 GB y no 512 MB. Con 512 el proceso se mata solo bajo el tráfico normal del mapa:
+  # medido en los logs de Fly, «Out of memory: Killed process (App) anon-rss:408360kB» —
+  # 408 de 512— y detrás el bucle de siempre: arranca, sirve unos 40 s, se le agota el
+  # pool de conexiones, falla el health check y el kernel la mata a los 60 s. Con las dos
+  # máquinas en ese ciclo, Fly no tiene a quién enrutar y `/fonts/in-bounds` devuelve 500;
+  # en la web eso se ve como que «falla la carga del GPX», que es justo donde se reportó.
+  #
+  # **Y tiene que estar AQUÍ, no en un `fly scale memory`.** Ese comando cambia las
+  # máquinas en marcha pero no escribe este fichero, así que el siguiente despliegue lo
+  # deshace — lo avisa el propio flyctl al ejecutarlo. Ya había estado en 1 GB y se perdió
+  # así: hoy hubo diez despliegues en ocho horas, y como `deploy-backend` no filtraba por
+  # rutas, hasta un commit que solo tocaba `web/` bajaba la memoria otra vez a 512.
+  memory = '1gb'
   cpus = 1
-  memory_mb = 512
+  # `memory_mb` es la clave antigua y quedaba duplicando a `memory`. Dos sitios para el
+  # mismo número es la forma de que un día digan cosas distintas.
