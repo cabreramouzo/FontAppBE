@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -13,6 +13,7 @@ import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import UploadIcon from '@mui/icons-material/UploadFileOutlined'
+import MapIcon from '@mui/icons-material/MapOutlined'
 import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import type { FontSummary } from '../api/types'
 import { apiFetch, createComment, describeError } from '../api/client'
@@ -28,8 +29,20 @@ import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 import { construyeGPX, nombreFichero, type PuntoGPX } from '../lib/gpx'
 import {
-  cajaDe, fuentesEnRuta, largoKm, leeGPX, simplifica, CORREDOR_M, type EnRuta,
+  cajaDe, fuentesEnRuta, largoKm, leeGPX, perfil, simplifica, tramoMasSeco,
+  CORREDOR_M, type EnRuta,
 } from '../lib/gpxImport'
+import { RouteProfile } from '../components/RouteProfile'
+
+/**
+ * El mapa se carga **solo si lo piden**.
+ *
+ * Leaflet y sus capas rondan los 300 KB, treinta veces lo que ocupa esta página. Casi
+ * siempre se abre en casa preparando la ruta, así que ese peso no es un veto —pero tampoco
+ * hay razón para que lo pague quien solo quiere la lista y el perfil, que es lo que
+ * contesta las preguntas importantes. Quien lo pide, lo carga.
+ */
+const RouteMap = lazy(() => import('../components/RouteMap').then((m) => ({ default: m.RouteMap })))
 
 const CORREDORES = [100, 250, 500, 1000]
 
@@ -73,6 +86,7 @@ export function RouteWaterPage() {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const [nombreRuta, setNombreRuta] = useState('')
+  const [mapaAbierto, setMapaAbierto] = useState(false)
 
   async function abrir(file: File) {
     setError(''); setCargando(true); setFuentes(null); setRuta([])
@@ -159,6 +173,12 @@ export function RouteWaterPage() {
     return [...r.entries()].sort((a, b) => b[1] - a[1])
   }, [enRuta])
 
+  const seco = useMemo(
+    () => tramoMasSeco(enRuta.map((x) => x.kmRuta), largoKm(ruta)),
+    [enRuta, ruta],
+  )
+  const alturas = useMemo(() => perfil(ruta), [ruta])
+
   function descargar() {
     const puntos: PuntoGPX[] = enRuta.map((x) => ({
       lat: x.fuente.latitude,
@@ -231,6 +251,19 @@ export function RouteWaterPage() {
               {t('gpxIn.summary', { km: largoKm(ruta).toFixed(1), n: String(enRuta.length) })}
             </Typography>
 
+            {/* El tramo más seco, antes que el reparto de fiabilidad. Es la frase que
+                de verdad decide dónde llenas el bidón, y en la lista está enterrada:
+                habría que leer diez líneas y restar kilómetros de cabeza. */}
+            <Typography variant="body2" sx={{ fontWeight: 700, mt: 1 }}>
+              {enRuta.length === 0
+                ? t('gpxIn.driestAll')
+                : t('gpxIn.driest', {
+                    km: seco.largoKm.toFixed(1),
+                    a: seco.desdeKm.toFixed(1),
+                    b: seco.hastaKm.toFixed(1),
+                  })}
+            </Typography>
+
             {reparto.length > 0 && (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5 }}>
                 {reparto.map(([nivel, n]) => (
@@ -255,6 +288,28 @@ export function RouteWaterPage() {
               </Button>
             </Box>
           </Paper>
+
+          <RouteProfile puntos={alturas} fuentesKm={enRuta.map((x) => x.kmRuta)} largoKm={largoKm(ruta)} />
+
+          {/* El mapa contesta dos cosas que ni la lista ni el perfil pueden: si has subido
+              el fichero correcto, y de qué lado del camino cae cada fuente. */}
+          <Box sx={{ mt: 2 }}>
+            {mapaAbierto ? (
+              <Suspense fallback={<Box sx={{ height: 320, display: 'grid', placeItems: 'center' }}><CircularProgress /></Box>}>
+                <RouteMap
+                  ruta={ruta}
+                  fuentes={enRuta.map((x) => ({
+                    lat: x.fuente.latitude, lon: x.fuente.longitude,
+                    nombre: nombreFuente(x.fuente, t), kmRuta: x.kmRuta,
+                  }))}
+                />
+              </Suspense>
+            ) : (
+              <Button startIcon={<MapIcon />} onClick={() => setMapaAbierto(true)} sx={{ textTransform: 'none' }}>
+                {t('gpxIn.showMap')}
+              </Button>
+            )}
+          </Box>
 
           {enRuta.length === 0 ? (
             <Alert severity="info" sx={{ mt: 2 }}>{t('gpxIn.none')}</Alert>

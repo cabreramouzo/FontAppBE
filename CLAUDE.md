@@ -720,6 +720,37 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   el coseno quitado. Los dos se arreglaron y **se verificaron rompiendo el código**. Un test
   que no falla al romper lo que dice cubrir no cubre nada.
 
+## Lo que de verdad decide dónde llenas el bidón
+
+- **El tramo más largo sin agua**, en una frase: «el más seco: 4,8 km, del km 3,5 al 8,3».
+  No es cuántas fuentes hay ni dónde caen en el plano — es **dónde está el hueco**, y en la
+  lista eso está enterrado: habría que leer diez líneas y restar kilómetros de cabeza.
+- **Los dos extremos cuentan** (`tramoMasSeco`): el hueco de la salida a la primera fuente y
+  el de la última al final son tramos secos como cualquiera, y el del final es el peor
+  porque llegas cansado. Medir solo los huecos *entre* fuentes es el error fácil y deja
+  fuera el caso que más importa. Hay test.
+  Ojo con el arranque del bucle: empezar con «la ruta entera» como mejor candidato hace que
+  nada pueda superarla, y la función devuelve siempre eso — que con cero fuentes es
+  casualmente correcto y con fuentes es falso. Lo cazó el test a la primera.
+- **Un perfil de altitud con las fuentes marcadas** (`RouteProfile`), no un mapa. Un
+  ciclista lee un perfil de forma nativa y ahí se ve de un vistazo que «la subida de 8 km no
+  tiene ninguna». En un plano eso se esconde: una ruta con lazos es un garabato y dos
+  fuentes pegadas pueden estar a 20 km la una de la otra **sobre el recorrido**, que es la
+  distancia que se pedalea. La altitud ya la leíamos del GPX y solo se usaba para una línea.
+- **Sin `<ele>` no se dibuja una línea plana**: llano y desconocido no son lo mismo, y una
+  recta diría «esto no tiene desnivel» sobre un puerto. `perfil()` devuelve vacío.
+- Dos detalles del SVG: hay un **desnivel mínimo de 50 m** o una ruta casi llana sale como
+  una sierra; y las gotas de las fuentes van **fuera del SVG**, posicionadas en porcentaje,
+  porque con `preserveAspectRatio="none"` el lienzo se estira en horizontal y un `<circle>`
+  saldría ovalado. Comprobado: 13×13 px, redondas.
+- **El mapa existe, y se carga a demanda** (`RouteMap` tras un `lazy()` y un botón).
+  Contesta dos cosas que ni la lista ni el perfil pueden —si has subido el fichero correcto,
+  y de qué lado del camino cae cada fuente— y no contesta bien la del tramo seco, por eso va
+  el último. Leaflet ronda los 300 KB, treinta veces la página: esto se abre casi siempre en
+  casa, así que el peso no es un veto, pero tampoco hay razón para que lo pague quien solo
+  quiere la lista. Medido: la página se queda en 13,8 KB y Leaflet solo se descarga al
+  pulsar el botón.
+
 ## Cerrar el círculo: contar cómo estaban al volver (`lib/routeMemory.ts`)
 
 - La parte que convierte «Agua en mi ruta» en **datos** y no en una consulta. Quien más

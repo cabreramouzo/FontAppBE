@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  cajaDe, fuentesEnRuta, largoKm, leeGPX, simplifica, CORREDOR_M,
+  cajaDe, fuentesEnRuta, largoKm, leeGPX, perfil, simplifica, tramoMasSeco, CORREDOR_M,
 } from '../src/lib/gpxImport.ts'
 
 /** Un GPX minimo pero realista: dos puntos de track con altitud. */
@@ -138,4 +138,48 @@ test('la altitud que se da es la del RECORRIDO, no la de la fuente', () => {
 test('una ruta de un solo punto no rompe nada', () => {
   assert.deepEqual(fuentesEnRuta([{ latitude: 41.75, longitude: 2.15, id: 'a' }],
                                  [{ lat: 41.75, lon: 2.15, ele: null }]), [])
+})
+
+test('el tramo mas seco cuenta tambien la salida y la llegada', () => {
+  // El error facil aqui es medir solo los huecos ENTRE fuentes. El del final es el peor:
+  // llegas cansado y sin reservas.
+  assert.deepEqual(tramoMasSeco([2, 4], 30), { desdeKm: 4, hastaKm: 30, largoKm: 26 })
+  assert.deepEqual(tramoMasSeco([26, 28], 30), { desdeKm: 0, hastaKm: 26, largoKm: 26 })
+})
+
+test('con fuentes repartidas gana el hueco de en medio', () => {
+  assert.deepEqual(tramoMasSeco([1, 21], 22), { desdeKm: 1, hastaKm: 21, largoKm: 20 })
+})
+
+test('sin ninguna fuente el tramo seco es la ruta entera', () => {
+  assert.deepEqual(tramoMasSeco([], 42), { desdeKm: 0, hastaKm: 42, largoKm: 42 })
+})
+
+test('no se cuela una fuente con un kilometro imposible', () => {
+  assert.deepEqual(tramoMasSeco([-5, 100], 10), { desdeKm: 0, hastaKm: 10, largoKm: 10 })
+})
+
+test('el orden de entrada no importa', () => {
+  assert.deepEqual(tramoMasSeco([21, 1], 22), tramoMasSeco([1, 21], 22))
+})
+
+test('el perfil sale en km y metros, con el primer punto en el km 0', () => {
+  const p = perfil(leeGPX(GPX))
+  assert.equal(p.length, 2)
+  assert.equal(p[0].km, 0)
+  assert.equal(p[0].ele, 720.4)
+  assert.ok(p[1].km > 0.7 && p[1].km < 0.9)
+})
+
+test('sin altitudes NO se inventa un perfil llano', () => {
+  // Devolver ceros seria dibujar un dato que no existe: llano y desconocido no son lo
+  // mismo. Muchos planificadores exportan sin <ele>.
+  assert.deepEqual(perfil(leeGPX('<gpx><trkpt lat="41" lon="2"/><trkpt lat="41.1" lon="2"/></gpx>')), [])
+})
+
+test('un hueco suelto sin altitud no parte la linea', () => {
+  const p = perfil(leeGPX('<gpx><trkpt lat="41" lon="2"><ele>700</ele></trkpt><trkpt lat="41.01" lon="2"/><trkpt lat="41.02" lon="2"><ele>720</ele></trkpt></gpx>'))
+  assert.equal(p.length, 3)
+  assert.equal(p[1].ele, 700, 'se arrastra la ultima conocida')
+  assert.equal(p[2].ele, 720)
 })

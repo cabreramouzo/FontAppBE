@@ -209,3 +209,71 @@ export function fuentesEnRuta<T extends { latitude: number; longitude: number }>
   }
   return out.sort((x, y) => x.kmRuta - y.kmRuta)
 }
+
+/** El tramo más largo del recorrido sin ninguna fuente. */
+export interface TramoSeco {
+  desdeKm: number
+  hastaKm: number
+  largoKm: number
+}
+
+/**
+ * El tramo más largo sin agua, en kilómetros de recorrido.
+ *
+ * ## Por qué esto y no un mapa
+ *
+ * Lo que decide dónde llenas el bidón no es cuántas fuentes hay ni dónde caen en el plano:
+ * es **dónde está el hueco largo**. La lista lo entierra —hay que leer diez líneas y restar
+ * kilómetros de cabeza— y un mapa lo esconde todavía más, porque una ruta con lazos es un
+ * garabato y dos fuentes pegadas en el papel pueden estar a 20 km la una de la otra
+ * **sobre el recorrido**, que es la distancia que se pedalea.
+ *
+ * ## Los dos extremos cuentan
+ *
+ * El hueco entre la salida y la primera fuente, y el de la última hasta el final, son
+ * tramos secos como cualquier otro — y el del final es el peor, porque llegas cansado y
+ * sin reservas. Contar solo los huecos *entre* fuentes es el error fácil aquí, y deja
+ * fuera justo el caso que más importa.
+ */
+export function tramoMasSeco(kmFuentes: number[], largoTotalKm: number): TramoSeco {
+  // Los extremos entran como si fueran fuentes: así el hueco inicial y el final se miden
+  // con la misma regla que los de en medio, sin casos aparte.
+  const hitos = [0, ...kmFuentes.filter((k) => k >= 0 && k <= largoTotalKm).sort((a, b) => a - b), largoTotalKm]
+  // Arranca en -1 y **no** en «la ruta entera»: con la ruta entera como punto de partida
+  // nada puede superarla y la función devuelve siempre eso, que con cero fuentes es
+  // casualmente correcto y con fuentes es falso. Lo cazó el test a la primera.
+  let mejor: TramoSeco = { desdeKm: 0, hastaKm: largoTotalKm, largoKm: -1 }
+  for (let i = 1; i < hitos.length; i += 1) {
+    const largo = hitos[i] - hitos[i - 1]
+    if (largo > mejor.largoKm) mejor = { desdeKm: hitos[i - 1], hastaKm: hitos[i], largoKm: largo }
+  }
+  return mejor
+}
+
+/** Un punto del perfil: en qué kilómetro va y a qué altura. */
+export interface PuntoPerfil {
+  km: number
+  ele: number
+}
+
+/**
+ * El perfil de altitud del recorrido, o `[]` si el fichero no trae altitudes.
+ *
+ * Devolver `[]` y no ceros es la diferencia entre «no lo sabemos» y «es llano». Muchos
+ * planificadores exportan sin `<ele>`, y pintar una línea plana ahí sería dibujar un dato
+ * que no existe — el mismo criterio que con la altitud de las fuentes.
+ */
+export function perfil(ruta: PuntoRuta[]): PuntoPerfil[] {
+  if (ruta.length < 2 || !ruta.some((p) => p.ele !== null)) return []
+  const out: PuntoPerfil[] = []
+  let acumulado = 0
+  let ultima = ruta.find((p) => p.ele !== null)!.ele!
+  for (let i = 0; i < ruta.length; i += 1) {
+    if (i > 0) acumulado += metros(ruta[i - 1].lat, ruta[i - 1].lon, ruta[i].lat, ruta[i].lon)
+    // Un hueco suelto sin altitud se rellena con la última conocida en vez de partir la
+    // línea: el perfil es para leerlo de un vistazo, no para medir con él.
+    if (ruta[i].ele !== null) ultima = ruta[i].ele!
+    out.push({ km: acumulado / 1000, ele: ultima })
+  }
+  return out
+}
