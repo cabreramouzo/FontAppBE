@@ -5,6 +5,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import CircularProgress from '@mui/material/CircularProgress'
 import Link from '@mui/material/Link'
@@ -29,7 +30,8 @@ import { nombreFuente } from '../lib/fontName'
 import { confidenceOf, CONFIDENCE_EMOJI, confidenceLabelKey, type ConfidenceLevel } from '../lib/confidence'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
-import { construyeGPX, nombreFichero, type PuntoGPX } from '../lib/gpx'
+import { construyeGPX, MAX_WAYPOINTS, nombreFichero, type PuntoGPX } from '../lib/gpx'
+import { alterna, claveDe, soloDesde } from '../lib/routeSelection'
 import {
   cajaDe, fuentesEnRuta, largoKm, leeGPX, perfil, simplifica, tramoMasSeco,
   CORREDOR_M, type EnRuta,
@@ -89,6 +91,10 @@ export function RouteWaterPage() {
   const [error, setError] = useState('')
   const [nombreRuta, setNombreRuta] = useState('')
   const [mapaAbierto, setMapaAbierto] = useState(false)
+  // Las que NO se llevan al GPS. Vacío = todas, que es lo que hacía esta pantalla antes de
+  // que se pudiera elegir, así que quien no toque nada no nota ningún cambio. Ver
+  // `lib/routeSelection.ts` para por qué se guardan las excluidas y no las elegidas.
+  const [excluidas, setExcluidas] = useState<ReadonlySet<string>>(new Set())
   // El mismo corte que usa toda la app: la forma cambia de verdad, no solo el tamaño.
   const movil = useMediaQuery((tema: Theme) => tema.breakpoints.down('sm'))
 
@@ -105,6 +111,10 @@ export function RouteWaterPage() {
       const nombre = file.name.replace(/\.gpx$/i, '')
       setNombreRuta(nombre)
       setContadas({})
+      // La selección es de este recorrido: con otro fichero delante, las claves del
+      // anterior no se refieren a nada y dejarían fuentes fuera sin que se viera por qué.
+      // No se toca al cambiar el corredor, que es cuando sí interesa conservarla.
+      setExcluidas(new Set())
       // Se recuerda al importar, no al salir: quien sube el GPX lo hace antes de la ruta,
       // y es al volver cuando hace falta tenerla puesta sin buscar el fichero otra vez.
       recuerdaRuta({ nombre, cuando: new Date().toISOString(), puntos }, scope)
@@ -177,6 +187,24 @@ export function RouteWaterPage() {
     return [...r.entries()].sort((a, b) => b[1] - a[1])
   }, [enRuta])
 
+  // Las claves se calculan **una vez** y de aquí en adelante todo son cadenas. Es el
+  // único punto que mira dentro de una parada, y no es manía: la primera versión le pasaba
+  // `enRuta` tal cual a la selección, cuyo id no está arriba sino en `.fuente.id`, así que
+  // marcabas casillas y el contador no se movía. Compilaba.
+  const claves = useMemo(
+    () => enRuta.map((x) => claveDe({ id: x.fuente.id, kmRuta: x.kmRuta })),
+    [enRuta],
+  )
+
+  // Elegir afecta **solo a la exportación**: la lista, el perfil, el mapa y el tramo seco
+  // siguen enseñando el recorrido entero. El tramo seco es un hecho de la ruta y no de lo
+  // que hayas marcado, y por una fuente que descartes para el GPS sigues pasando, así que
+  // tienes que poder contar cómo estaba al volver.
+  const paraGPS = useMemo(
+    () => enRuta.filter((_, i) => !excluidas.has(claves[i])),
+    [enRuta, claves, excluidas],
+  )
+
   const seco = useMemo(
     () => tramoMasSeco(enRuta.map((x) => x.kmRuta), largoKm(ruta)),
     [enRuta, ruta],
@@ -184,7 +212,7 @@ export function RouteWaterPage() {
   const alturas = useMemo(() => perfil(ruta), [ruta])
 
   function descargar() {
-    const puntos: PuntoGPX[] = enRuta.map((x) => ({
+    const puntos: PuntoGPX[] = paraGPS.map((x) => ({
       lat: x.fuente.latitude,
       lon: x.fuente.longitude,
       nombre: nombreFuente(x.fuente, t),
@@ -277,6 +305,9 @@ export function RouteWaterPage() {
               </Box>
             )}
 
+            {/* El orden es el de la decisión: cuánto me desvío → cuáles me llevo →
+                descargar. Con el botón arriba se leía «Descargar 127» antes de saber qué
+                hacen las casillas, o sea la cifra antes que su explicación. */}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 2, flexWrap: 'wrap' }}>
               <TextField
                 select size="small" label={t('gpxIn.corridor')} value={corredor}
@@ -286,11 +317,52 @@ export function RouteWaterPage() {
                   <MenuItem key={m} value={m}>{m < 1000 ? `${m} m` : `${m / 1000} km`}</MenuItem>
                 ))}
               </TextField>
-              <Button variant="outlined" startIcon={<DownloadIcon />} disabled={enRuta.length === 0}
-                      onClick={descargar} sx={{ textTransform: 'none' }}>
-                {t('gpxIn.export')}
-              </Button>
             </Box>
+
+            {/* Elegir qué se lleva al GPS. Lo pidió quien lo usa: sales de casa con el
+                bidón lleno, así que las primeras del recorrido sobran, y en una ruta larga
+                treinta waypoints son una pantalla ilegible en un aparato de manillar.
+                Solo se pinta cuando hay algo que elegir: con una fuente no hay decisión. */}
+            {enRuta.length > 1 && (
+              <Box sx={{ mt: 1.5 }}>
+                {/* Qué hacen las casillas hay que **decirlo**, igual que con los chips de
+                    reseñar: una casilla sin rótulo al lado de un kilómetro no dice si
+                    marca «ya he pasado» o «llévatela». Va una vez aquí, no en cada fila. */}
+                <Typography variant="body2" color="text.secondary">{t('gpxIn.selectHint')}</Typography>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                    {t('gpxIn.selected', { n: String(paraGPS.length), m: String(enRuta.length) })}
+                  </Typography>
+                  <Button size="small" disabled={excluidas.size === 0}
+                          onClick={() => setExcluidas(new Set())} sx={{ textTransform: 'none' }}>
+                    {t('gpxIn.selectAll')}
+                  </Button>
+                  <Button size="small" disabled={paraGPS.length === 0}
+                          onClick={() => setExcluidas(new Set(claves))}
+                          sx={{ textTransform: 'none' }}>
+                    {t('gpxIn.selectNone')}
+                  </Button>
+                </Box>
+              </Box>
+            )}
+
+            {/* El tope no es nuestro, es de los aparatos, y `construyeGPX` recorta en
+                silencio: sin avisar, te vas al monte creyendo que llevas las 700. Ahora que
+                se puede elegir, además hay algo que hacer al respecto. */}
+            {paraGPS.length > MAX_WAYPOINTS && (
+              <Alert severity="warning" sx={{ mt: 1.5 }}>
+                {t('gpxIn.tooMany', { n: String(MAX_WAYPOINTS), total: String(paraGPS.length) })}
+              </Alert>
+            )}
+
+            <Button variant="outlined" startIcon={<DownloadIcon />} disabled={paraGPS.length === 0}
+                    onClick={descargar}
+                    sx={{ textTransform: 'none', mt: 1.5, minHeight: movil ? 48 : undefined }}>
+              {/* El botón dice CUÁNTAS se lleva. Sin la cifra, marcar casillas es un gesto
+                  a ciegas: no hay forma de comprobar que lo elegido es lo que se descarga
+                  hasta abrir el fichero en el aparato. */}
+              {t('gpxIn.exportN', { n: String(paraGPS.length) })}
+            </Button>
           </Paper>
 
           <RouteProfile
@@ -344,13 +416,21 @@ export function RouteWaterPage() {
             <Alert severity="info" sx={{ mt: 2 }}>{t('gpxIn.none')}</Alert>
           ) : (
             <List sx={{ mt: 1 }}>
-              {enRuta.map((x) => (
+              {enRuta.map((x, i) => (
                 <Fila
-                  key={x.fuente.id ?? `${x.kmRuta}`}
+                  key={claves[i]}
                   x={x}
                   contado={x.fuente.id ? contadas[x.fuente.id] : undefined}
                   onCuenta={user && x.fuente.id ? (estado) => void cuenta(x.fuente.id!, estado) : undefined}
                   movil={movil}
+                  // Con una sola fuente no hay nada que elegir, así que no se pinta la
+                  // casilla: sería un control que solo puede dejarte sin fichero.
+                  elegible={enRuta.length > 1}
+                  llevar={!excluidas.has(claves[i])}
+                  onLlevar={() => setExcluidas((e) => alterna(e, claves[i]))}
+                  // En la primera no hay nada que descartar antes: sería un botón que no
+                  // hace nada, y eso enseña a no fiarse del resto.
+                  onDesdeAqui={i === 0 ? undefined : () => setExcluidas(soloDesde(claves, claves[i]))}
                 />
               ))}
             </List>
@@ -361,26 +441,44 @@ export function RouteWaterPage() {
   )
 }
 
-function Fila({ x, contado, onCuenta, movil }: {
+function Fila({ x, contado, onCuenta, movil, elegible, llevar, onLlevar, onDesdeAqui }: {
   x: EnRuta<FontSummary>
   contado?: string
   /** `undefined` sin sesión: sin ella no hay a quién atribuir la reseña. */
   onCuenta?: (estado: string) => void
   movil: boolean
+  elegible: boolean
+  llevar: boolean
+  onLlevar: () => void
+  /** `undefined` en la primera parada, donde no hay nada anterior que descartar. */
+  onDesdeAqui?: () => void
 }) {
   const { t } = useI18n()
   const ws = waterStatusInfo(x.fuente.lastWaterStatus ?? null)
   const nivel = confidenceOf(x.fuente)
+  const nombre = nombreFuente(x.fuente, t)
   return (
     <ListItem divider alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
+        {elegible && (
+          // A la izquierda del kilómetro y no al final de la fila: es lo primero que se
+          // recorre con la vista al decidir cuáles llevarse, y al final quedaría por
+          // debajo de los chips de reseña, que son otra cosa distinta.
+          <Checkbox
+            checked={llevar}
+            onChange={onLlevar}
+            size={movil ? 'medium' : 'small'}
+            slotProps={{ input: { 'aria-label': t('gpxIn.takeAria', { name: nombre }) } }}
+            sx={{ p: movil ? 1.5 : 0.5, ml: movil ? -1.5 : -0.5, alignSelf: 'center' }}
+          />
+        )}
         {/* El kilómetro primero y en negrita: es por lo que se lee esta lista. */}
         <Typography sx={{ fontWeight: 800, minWidth: 62 }}>{t('gpxIn.km', { km: x.kmRuta.toFixed(1) })}</Typography>
         <Link component={RouterLink} to={`/fonts/${x.fuente.id}`} sx={{ fontWeight: 600 }}>
-          {nombreFuente(x.fuente, t)}
+          {nombre}
         </Link>
       </Box>
-      <Typography variant="body2" color="text.secondary" sx={{ ml: '62px' }}>
+      <Typography variant="body2" color="text.secondary" sx={{ ml: movil ? 0 : '62px' }}>
         {[
           t('gpxIn.detour', { m: String(x.desvioM) }),
           x.eleRutaM !== null ? t('gpxIn.routeEle', { m: String(Math.round(x.eleRutaM)) }) : null,
@@ -399,6 +497,18 @@ function Fila({ x, contado, onCuenta, movil }: {
               : `${CONFIDENCE_EMOJI[nivel]} ${t(confidenceLabelKey(nivel))}`,
         ].filter(Boolean).join(' · ')}
       </Typography>
+
+      {/* «Desde aquí» es el caso que se contó tal cual —sales de casa con el bidón lleno—
+          y en una lista de treinta es UN toque en vez de veintinueve. Pisa la selección
+          entera en vez de superponerse a las casillas: con dos reglas a la vez habría que
+          explicar cuál gana, y aquí lo que se ve marcado es siempre lo que se descarga. */}
+      {elegible && onDesdeAqui && (
+        <Button size="small" onClick={onDesdeAqui}
+                sx={{ textTransform: 'none', ml: movil ? 0 : '54px', mt: 0.25,
+                      minHeight: movil ? 48 : undefined }}>
+          {t('gpxIn.fromHere')}
+        </Button>
+      )}
 
       {/* Contar el estado desde aquí es lo que convierte esta pantalla en datos. Va con la
           misma regla que el atajo de la ficha: reseña **solo con el estado**, sin texto ni

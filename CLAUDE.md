@@ -710,6 +710,33 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   que el desnivel hasta la fuente no se puede saber. Prometerlo habría sido inventar un dato.
 - Cierra el círculo con la exportación: desde la misma pantalla se bajan **solo las de la
   ruta**, con su kilómetro y su desvío en la descripción del waypoint.
+- **Y se elige cuáles se lleva uno** (`lib/routeSelection.ts` + casillas en la lista). Lo
+  pidió quien la usa, después de probarla: *«al principio ya llevas agua de casa»*, así que
+  las primeras del recorrido sobran, y *«en una ruta larga quizá hay demasiadas»*. Son la
+  misma queja — 167 waypoints (medido con un recorrido de 14 km por Barcelona) es una
+  pantalla ilegible en un aparato de manillar, y los que estorban son los que ya sabes que
+  no vas a usar. «Solo a partir de aquí» resuelve el caso contado en **un** toque en vez de
+  en 166.
+- **Se guardan las EXCLUIDAS, no las elegidas.** Parece lo mismo y no lo es: al ensanchar el
+  corredor aparecen fuentes nuevas, y guardando las elegidas nacerían fuera. Comprobado en
+  el navegador: de 250 m a 1 km la lista pasó de 167 a 712 y las 80 descartadas siguieron
+  descartadas, con las 545 nuevas dentro. Y «todas» es el conjunto vacío, así que quien no
+  toque nada exporta lo de siempre.
+- **Elegir no esconde nada**: la lista, el perfil, el mapa y el tramo seco siguen siendo el
+  recorrido entero. El tramo seco es un hecho de la ruta y no de lo que hayas marcado, y por
+  una fuente que descartes para el GPS sigues pasando, así que tienes que poder contar cómo
+  estaba al volver.
+- El corte de «solo a partir de aquí» va por **posición y no por kilómetro**: dos fuentes
+  caen en el mismo km con un decimal —pasó de verdad, las filas 79 y 80 en el km 5,2— y
+  comparar por número dejaría fuera la que has tocado.
+- **Todo lo que no sea `claveDe` trabaja con `string[]`, no con objetos.** La primera versión
+  le pasaba la lista de la pantalla tal cual, cuyo id no está arriba sino en `.fuente.id`:
+  las casillas se marcaban y el contador seguía diciendo «167 de 167». Compilaba y parecía
+  bien; se vio ejecutándolo. Con `string[]` en la firma ese error ya no compila, que es
+  mejor que un test.
+- El botón dice **cuántas** se lleva («Descargar 87 en GPX»), y si pasan de `MAX_WAYPOINTS`
+  se avisa: `construyeGPX` recortaba en silencio y te ibas al monte creyendo que llevabas
+  las 700.
 - Ruta `/gpx` y no `/route`: en esta app «rutas» ya son las propuestas de gamificación, y
   dos cosas con el mismo nombre en la misma pantalla es confusión garantizada. El rótulo
   visible sí es «Agua en mi ruta».
