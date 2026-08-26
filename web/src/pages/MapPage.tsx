@@ -80,6 +80,7 @@ import { ConfidenceChip } from '../components/ConfidenceChip'
 import { ExportGpxButton } from '../components/ExportGpxButton'
 import UploadIcon from '@mui/icons-material/UploadFileOutlined'
 import { NuevoBadge } from '../components/NuevoBadge'
+import { parseSavedMapView, type SavedMapView } from '../lib/mapView'
 
 // Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
 // península aproximadamente centrada y el zoom 5 permite verla entera también en móvil.
@@ -90,16 +91,14 @@ const DEFAULT_ZOOM = 5
 // En sessionStorage: persiste durante la navegación y recargas de la sesión, y se
 // limpia al cerrar la pestaña (una apertura nueva vuelve al centro por defecto).
 const VIEW_KEY = 'fontapp_map_view'
-type SavedView = { lat: number; lng: number; zoom: number }
-function loadView(): SavedView | null {
+function loadView(): SavedMapView | null {
   try {
-    const s = sessionStorage.getItem(VIEW_KEY)
-    return s ? (JSON.parse(s) as SavedView) : null
+    return parseSavedMapView(sessionStorage.getItem(VIEW_KEY))
   } catch {
     return null
   }
 }
-function saveView(v: SavedView) {
+function saveView(v: SavedMapView) {
   try {
     sessionStorage.setItem(VIEW_KEY, JSON.stringify(v))
   } catch {
