@@ -1229,10 +1229,20 @@ de una fuente la hizo alguien que pasó por allí.
 Medido el 26/08/2026: **91 ficheros, 43,5 MB**, media de 489 KB. O sea que hoy el backup
 cabe en un correo; el motivo de hacerlo no es el tamaño, es que no hay segunda copia.
 
-**1. Credenciales** en `~/.config/fontapp/r2.env` (`chmod 600`), con `R2_ACCOUNT_ID`,
-`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` y `R2_BUCKET`. Se sacan del panel de Cloudflare
-→ R2 → *Manage API tokens*. **No se pueden recuperar de Fly**: allí los secretos solo se
-escriben.
+**1. Credenciales** en `~/.config/fontapp/r2.env` (`chmod 600`), con **las cuatro mismas
+variables que usa el backend**: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
+y `R2_BUCKET`. Se sacan del panel de Cloudflare → R2 (el endpoint está en la página del
+bucket) y de *Manage API tokens*. **No se pueden recuperar de Fly**: allí los secretos solo
+se escriben.
+
+> **`R2_ENDPOINT` se copia, nunca se construye.** La primera versión del script lo componía
+> como `https://<account_id>.r2.cloudflarestorage.com`, que es lo que sale en todos los
+> ejemplos, y daba **403 en absolutamente todo** — listar, y hasta leer un objeto suelto.
+> El bucket de FontApp tiene **jurisdicción europea**, así que su endpoint lleva un `.eu.`
+> en medio: `https://<account>.eu.r2.cloudflarestorage.com`. Sin él es otra cuenta a
+> efectos prácticos. Las credenciales eran correctas todo el rato (comprobado comparando
+> huellas con las de producción); lo que fallaba era deducir un valor que ya estaba
+> configurado.
 
 **2. `brew install rclone`** y lánzalo:
 
@@ -1249,6 +1259,20 @@ Destino por defecto `~/Backups/fontapp-fotos`, configurable con `FONTAPP_FOTOS_D
 > esté en R2, así que un borrado accidental en producción se propagaría al backup a la
 > siguiente pasada. Con `copy` el destino solo crece. El precio es que se acumulan fotos
 > retiradas por moderación; con 43 MB eso todavía no es un problema.
+
+**Qué caza cada paso, medido corrompiendo un fichero a propósito:**
+
+- `copy` compara **tamaño y fecha**. Si un fichero cambia conservando las dos cosas —que es
+  exactamente la podredumbre de bits en un disco— **no se entera**: comprobado alterando
+  diez bytes y restaurando el `mtime` al nanosegundo, `copy` lo dejó corrupto.
+- `check` compara **checksums**, y ese sí lo caza. Por eso el script termina con él y sale
+  con código **1** si encuentra diferencias, en vez de decir «OK» sobre un backup roto.
+  Verificado: con el fichero corrompido sale 1, tras reponerlo sale 0.
+
+Primera ejecución real (27/08/2026): **101 ficheros, 47 MB, 12 segundos**. Son 10 más que
+los 91 que referencia la base de datos — huérfanos en R2 de reseñas borradas y portadas
+sustituidas. Es justo lo que se pierde si se respalda recorriendo las URL de la base en vez
+del bucket entero.
 
 **Cuota de R2:** el plan gratuito cubre 10 GB de almacenamiento y la salida de datos no se
 cobra nunca (es lo que distingue a R2 de S3). A 489 KB por foto son unas **20.000 fotos**
