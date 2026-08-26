@@ -279,6 +279,8 @@ function FontMarkers({
   })
   // Una respuesta lenta de la vista anterior no puede borrar la vista nueva.
   const requestNumber = useRef(0)
+  // Tampoco debe seguir consumiendo recursos: en el mapa solo importa la última caja.
+  const activeRequest = useRef<AbortController | null>(null)
 
   const loadBounds = useCallback(async (map: LeafletMap) => {
     const b = map.getBounds()
@@ -292,14 +294,20 @@ function FontMarkers({
       height: String(Math.max(1, Math.round(size.y))),
     })
     const mine = ++requestNumber.current
+    activeRequest.current?.abort()
+    const controller = new AbortController()
+    activeRequest.current = controller
     try {
       let nuevas: MapResponse
       try {
-        nuevas = await apiFetch<MapResponse>(`/fonts/map?${params}`)
-      } catch {
+        nuevas = await apiFetch<MapResponse>(`/fonts/map?${params}`, { signal: controller.signal })
+      } catch (error) {
         // Permite desplegar web y API en cualquier orden (y hacer rollback): un backend
-        // anterior todavía expone el endpoint limitado, aunque no tenga clusters de servidor.
-        const fonts = await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`)
+        // anterior responde 404 y todavía expone el endpoint limitado. Un timeout, 5xx
+        // o cancelación NO debe lanzar además esa consulta cara: duplicaría la carga
+        // precisamente cuando el servidor ya está sufriendo.
+        if (!(error instanceof ApiError) || error.status !== 404) throw error
+        const fonts = await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`, { signal: controller.signal })
         nuevas = { total: fonts.length, fonts, clusters: [] }
       }
       if (mine !== requestNumber.current) return
@@ -315,6 +323,8 @@ function FontMarkers({
       ))
     } catch {
       // silencioso: mapa vacío si falla
+    } finally {
+      if (activeRequest.current === controller) activeRequest.current = null
     }
   }, [])
 
@@ -327,7 +337,10 @@ function FontMarkers({
       map.invalidateSize()
       loadBounds(map)
     }, 100)
-    return () => clearTimeout(t)
+    return () => {
+      clearTimeout(t)
+      activeRequest.current?.abort()
+    }
   }, [map, loadBounds, nonce])
 
   // Memorizado a propósito, no por rendimiento: `.filter()` suelto devolvía un array

@@ -961,9 +961,12 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   Hasta zoom 6 se representan como un mapa de calor Canvas (sin etiquetas que tapen el
   territorio); desde zoom 7 reaparecen como clusters compactos verde/amarillo/naranja y,
   cuando caben las fuentes reales, entra el `markercluster` de siempre.
-  Las respuestas llevan un número de secuencia en el cliente para que una petición vieja
-  no reemplace una vista nueva. `/fonts/in-bounds` queda solo como compatibilidad durante
-  despliegues o rollback; la web recurre a él si un backend anterior aún no tiene `/map`.
+  Las respuestas llevan un número de secuencia y un `AbortController`: una petición vieja
+  no reemplaza una vista nueva **ni sigue consumiendo memoria en el servidor**. Esto no es
+  una microoptimización: dejar vivas las cajas de cada zoom y lanzar además el fallback
+  agotó los 512 MB de una máquina de producción. `/fonts/in-bounds` queda solo como
+  compatibilidad durante despliegues o rollback; la web recurre a él exclusivamente si
+  `/map` responde 404. Un timeout, cancelación o 5xx no puede duplicar la carga.
 
 ## El popup del mapa
 

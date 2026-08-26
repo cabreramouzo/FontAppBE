@@ -51,6 +51,13 @@ const UPLOAD_TIMEOUT_MS = 45_000
 async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
   const isUpload = init?.body instanceof FormData
   const controller = new AbortController()
+  // El mapa invalida una petición al cambiar de vista. Enlazamos esa cancelación con
+  // nuestro timeout; si la ignorásemos, cada zoom dejaría una consulta vieja trabajando
+  // en el servidor aunque su respuesta ya no vaya a pintarse.
+  const externalSignal = init?.signal
+  const abortFromCaller = () => controller.abort()
+  if (externalSignal?.aborted) controller.abort()
+  else externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
   const timer = setTimeout(() => controller.abort(), isUpload ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS)
   try {
     return await fetch(input, { ...init, signal: controller.signal })
@@ -58,6 +65,7 @@ async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
     throw new ApiError(0, 'network')
   } finally {
     clearTimeout(timer)
+    externalSignal?.removeEventListener('abort', abortFromCaller)
   }
 }
 
