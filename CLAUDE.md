@@ -743,6 +743,13 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   una sierra; y las gotas de las fuentes van **fuera del SVG**, posicionadas en porcentaje,
   porque con `preserveAspectRatio="none"` el lienzo se estira en horizontal y un `<circle>`
   saldría ovalado. Comprobado: 13×13 px, redondas.
+- **Cada fila de la lista empieza por un emoji**: la gota si mana, el grifo tachado si está
+  seca, el reloj de arena si hace mucho que nadie pasa. En veinte filas es lo único que se
+  lee de un vistazo, y la pregunta que trae quien la mira es «¿en cuál lleno el bidón?».
+- Y **«datos contradictorios» gana al último estado**. Antes la fila enseñaba el último
+  parte y se callaba el conflicto, así que una fuente con partes recientes que se
+  contradicen decía «sale agua» a secas — que es peor que no decir nada. Es la misma regla
+  que ya aplica `confidenceOf`, que aquí no se estaba respetando.
 - **Al recorrer el perfil con el dedo o el cursor** sale la altitud en ese punto, y sobre
   una fuente el **nombre** en vez de la altitud: es lo que se ha venido a mirar, y meter las
   tres cosas hace una etiqueta que no cabe en un móvil. El kilómetro se queda siempre,

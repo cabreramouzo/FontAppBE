@@ -357,8 +357,19 @@ function Fila({ x, contado, onCuenta }: {
         {[
           t('gpxIn.detour', { m: String(x.desvioM) }),
           x.eleRutaM !== null ? t('gpxIn.routeEle', { m: String(Math.round(x.eleRutaM)) }) : null,
-          ws && x.fuente.lastUpdate ? `${t(`status.${ws.key}`)} · ${timeAgo(x.fuente.lastUpdate, t)}`
-            : `${CONFIDENCE_EMOJI[nivel]} ${t(confidenceLabelKey(nivel))}`,
+          // Siempre con emoji delante: en una lista de veinte filas es lo único que se lee
+          // de un vistazo, y la pregunta que se trae quien la mira es «¿en cuál lleno el
+          // bidón?». La gota dice que mana; el reloj de arena, que hace mucho que nadie
+          // pasa.
+          //
+          // `disputed` gana al último estado: cuando hay partes recientes que se
+          // contradicen, decir «sale agua» a secas es peor que no decir nada — es la misma
+          // regla que ya aplica `confidenceOf`, aquí llevada a la fila.
+          nivel === 'disputed'
+            ? `${CONFIDENCE_EMOJI.disputed} ${t(confidenceLabelKey('disputed'))}`
+            : ws && x.fuente.lastUpdate
+              ? `${ws.emoji} ${t(`status.${ws.key}`)} · ${timeAgo(x.fuente.lastUpdate, t)}`
+              : `${CONFIDENCE_EMOJI[nivel]} ${t(confidenceLabelKey(nivel))}`,
         ].filter(Boolean).join(' · ')}
       </Typography>
 
