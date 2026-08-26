@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  cajaDe, fuentesEnRuta, largoKm, leeGPX, perfil, simplifica, tramoMasSeco, CORREDOR_M,
+  cajaDe, fuentesEnRuta, largoKm, leeGPX, perfil, puntoEnKm, simplifica, tramoMasSeco, CORREDOR_M,
 } from '../src/lib/gpxImport.ts'
 
 /** Un GPX minimo pero realista: dos puntos de track con altitud. */
@@ -182,4 +182,36 @@ test('un hueco suelto sin altitud no parte la linea', () => {
   assert.equal(p.length, 3)
   assert.equal(p[1].ele, 700, 'se arrastra la ultima conocida')
   assert.equal(p[2].ele, 720)
+})
+
+test('el punto del perfil mas cercano a un kilometro', () => {
+  const p = [{ km: 0, ele: 700 }, { km: 1, ele: 750 }, { km: 2, ele: 800 }, { km: 3, ele: 780 }]
+  assert.equal(puntoEnKm(p, 0)?.ele, 700)
+  assert.equal(puntoEnKm(p, 1.4)?.ele, 750, 'gana el vecino de la izquierda')
+  assert.equal(puntoEnKm(p, 1.6)?.ele, 800, 'gana el de la derecha')
+  assert.equal(puntoEnKm(p, 3)?.ele, 780)
+})
+
+test('fuera de rango devuelve el extremo, no null ni un salto', () => {
+  const p = [{ km: 0, ele: 700 }, { km: 2, ele: 800 }]
+  assert.equal(puntoEnKm(p, -5)?.ele, 700)
+  assert.equal(puntoEnKm(p, 99)?.ele, 800)
+})
+
+test('un perfil vacio no rompe el arrastre', () => {
+  assert.equal(puntoEnKm([], 3), null)
+})
+
+test('con un solo punto devuelve ese', () => {
+  assert.equal(puntoEnKm([{ km: 0, ele: 700 }], 5)?.ele, 700)
+})
+
+test('la biseccion da lo mismo que buscar a lo bruto', () => {
+  // La biseccion es correcta solo porque los puntos vienen ordenados. Si alguna vez
+  // dejaran de estarlo, esto lo dice.
+  const p = Array.from({ length: 500 }, (_, i) => ({ km: i * 0.025, ele: 700 + Math.sin(i / 20) * 50 }))
+  for (const km of [0, 0.013, 1.7, 6.2, 12.475]) {
+    const bruto = p.reduce((a, b) => (Math.abs(b.km - km) < Math.abs(a.km - km) ? b : a))
+    assert.equal(puntoEnKm(p, km)?.km, bruto.km, `en el km ${km}`)
+  }
 })

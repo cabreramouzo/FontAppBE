@@ -277,3 +277,25 @@ export function perfil(ruta: PuntoRuta[]): PuntoPerfil[] {
   }
   return out
 }
+
+/**
+ * El punto del perfil más cercano a un kilómetro dado.
+ *
+ * Busca por **bisección** y no recorriendo la lista: el dedo se mueve muchas veces por
+ * segundo sobre un perfil que puede tener miles de puntos, y una búsqueda lineal en cada
+ * `pointermove` se nota en un móvil. Los puntos vienen ordenados por definición —son el
+ * recorrido— así que la bisección es correcta sin ordenar nada.
+ */
+export function puntoEnKm(puntos: PuntoPerfil[], km: number): PuntoPerfil | null {
+  if (puntos.length === 0) return null
+  let lo = 0
+  let hi = puntos.length - 1
+  while (hi - lo > 1) {
+    const medio = (lo + hi) >> 1
+    if (puntos[medio].km < km) lo = medio
+    else hi = medio
+  }
+  // Entre los dos vecinos, el que de verdad esté más cerca: con puntos cada 25 m la
+  // diferencia se ve al arrastrar despacio.
+  return Math.abs(puntos[lo].km - km) <= Math.abs(puntos[hi].km - km) ? puntos[lo] : puntos[hi]
+}

@@ -743,6 +743,28 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   una sierra; y las gotas de las fuentes van **fuera del SVG**, posicionadas en porcentaje,
   porque con `preserveAspectRatio="none"` el lienzo se estira en horizontal y un `<circle>`
   saldría ovalado. Comprobado: 13×13 px, redondas.
+- **Al recorrer el perfil con el dedo o el cursor** sale la altitud en ese punto, y sobre
+  una fuente el **nombre** en vez de la altitud: es lo que se ha venido a mirar, y meter las
+  tres cosas hace una etiqueta que no cabe en un móvil. El kilómetro se queda siempre,
+  porque es lo que ordena la lista de abajo y permite encontrarla allí.
+- **La marca se imanta a la fuente** cuando pasas cerca (un 1,5 % del largo, unos diez
+  píxeles, lo que abarca un dedo). Es un porcentaje y no una distancia fija porque el perfil
+  ocupa el mismo ancho siempre: en 100 km, 500 m son dos píxeles; en 5 km, taparían media
+  ruta.
+- Ese imán **sustituye a agrandar la gota de la fuente**, que fue lo primero que se probó y
+  se pintaba **con un render de retraso**: movías el dedo, el nombre acertaba y la que
+  crecía era la de la posición anterior; con un segundo movimiento de medio píxel se ponía
+  al día. No se llegó a explicar por qué —el `sx` condicional de MUI sobre una lista— y la
+  salida fue quitar la causa: **un solo elemento**, el de la marca, que siempre refleja el
+  estado actual. De paso queda mejor, porque se engancha a la fuente en vez de quedarse al
+  lado. Medido: con el dedo en el km 1,05 y en el 1,14 la marca se clava en el 1,11.
+- El arrastre va con `touch-action: pan-y` y no `none`: con `none` el perfil se tragaría el
+  desplazamiento vertical y la pantalla se quedaría enganchada en esa franja. Así el dedo a
+  los lados recorre el perfil y hacia arriba sigue moviendo la página.
+- La búsqueda del punto es por **bisección** (`puntoEnKm`): el dedo dispara muchos eventos
+  por segundo sobre un perfil de miles de puntos, y recorrer la lista en cada uno se nota en
+  un móvil. Hay test de que da lo mismo que buscar a lo bruto — que es lo que lo hace
+  seguro, porque la bisección solo vale si los puntos vienen ordenados.
 - **El mapa existe, y se carga a demanda** (`RouteMap` tras un `lazy()` y un botón).
   Contesta dos cosas que ni la lista ni el perfil pueden —si has subido el fichero correcto,
   y de qué lado del camino cae cada fuente— y no contesta bien la del tramo seco, por eso va

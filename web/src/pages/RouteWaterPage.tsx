@@ -289,7 +289,11 @@ export function RouteWaterPage() {
             </Box>
           </Paper>
 
-          <RouteProfile puntos={alturas} fuentesKm={enRuta.map((x) => x.kmRuta)} largoKm={largoKm(ruta)} />
+          <RouteProfile
+            puntos={alturas}
+            fuentes={enRuta.map((x) => ({ kmRuta: x.kmRuta, nombre: nombreFuente(x.fuente, t) }))}
+            largoKm={largoKm(ruta)}
+          />
 
           {/* El mapa contesta dos cosas que ni la lista ni el perfil pueden: si has subido
               el fichero correcto, y de qué lado del camino cae cada fuente. */}
