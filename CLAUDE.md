@@ -1778,6 +1778,9 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   fichas devolvían 404. La portada seguía bien, que es lo que hace que tarde en verse.
   Antes de eso, la misma regla con destino `/assets/:splat` se descartaba en silencio por
   bucle. Dos intentos, dos formas de fallar: el aviso está escrito en `_redirects`.
+- La vista recordada del mapa se valida con `parseSavedMapView` antes de entregarla a
+  Leaflet. Un JSON válido pero incompleto (`{}`), no finito o fuera de rango se descarta:
+  de lo contrario Leaflet lanza al montar y solo la portada cae en `ErrorBoundary`.
 - Lo que **sí** funciona es el lado del cliente, y es suficiente: reconoce el HTML servido
   como si fuera un módulo y recarga.
 - Y no se pinta como un error de la pantalla, porque **no lo es**: es una versión caducada.
