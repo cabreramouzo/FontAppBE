@@ -29,10 +29,26 @@ RUN [ -d /build/Resources ] && { mv /build/Resources ./Resources && chmod -R a-w
 # ================================
 FROM ubuntu:noble
 
+# `postgresql-client` (psql) va en la imagen de producción a propósito.
+#
+# Sin él, arreglar un destrozo en los datos exige **escribir un comando, compilarlo y
+# desplegar**, que es lo que pasó al importar Italia por duplicado: la base tenía 8.728
+# filas de más y no había forma de tocarlas desde la máquina. Media hora y un despliegue
+# para un DELETE.
+#
+# No amplía el acceso de nadie: quien puede hacer `fly ssh console` ya tiene el
+# `DATABASE_URL` en el entorno del proceso, así que la base ya estaba a su alcance con o
+# sin cliente. Lo que añade es la herramienta, no el permiso. El coste es unos megas de
+# imagen.
+#
+# Los arreglos repetibles siguen siendo comandos del binario (`dedupe-imported`,
+# `clear-placeholder-names`): quedan en el repo, se prueban y se explican. `psql` es para
+# lo irrepetible y lo urgente.
+
 RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
     && apt-get -q update \
     && apt-get -q dist-upgrade -y \
-    && apt-get -q install -y libjemalloc2 ca-certificates tzdata \
+    && apt-get -q install -y libjemalloc2 ca-certificates tzdata postgresql-client \
     && rm -r /var/lib/apt/lists/*
 
 RUN useradd --user-group --create-home --system --skel /dev/null --home-dir /app vapor

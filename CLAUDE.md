@@ -1440,6 +1440,33 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   de beber, `llindar` mide en qué metro poner el `--dedupe`, y `rescata` saca las vecinas
   que sí eran fuentes distintas. Sirve para cualquier dataset nuevo, no solo el de la ACA.
 
+## Importar por partes, y el resbalón que lo justifica
+
+- **Un lote grande se importa por trozos**, cada uno con su **nombre de fichero propio** en
+  la máquina. Importando Italia (69.782) se encadenó `sftp put` y `import-fonts` en una
+  línea reutilizando el mismo nombre: el `put` falló («remote file already exists», que no
+  sobreescribe por seguridad) y **el import se ejecutó igual sobre el fichero anterior**.
+  8.728 fuentes entraron dos veces. Son dos órdenes distintas y la segunda no se entera del
+  fallo de la primera; encadenarlas con `&&` o comprobar la salida es lo mínimo.
+- `dedupe-imported` limpia eso, y está acotado a lo único que es seguro borrar: **sin
+  creador**, **coordenadas idénticas hasta el último decimal** (no un radio: dos fuentes a
+  3 m son dos fuentes, y eso lo decide el `--dedupe` del importador), se queda **la más
+  antigua**, y solo si **no tiene nada colgando** — ni reseñas, ni incidencias, ni fotos, ni
+  favoritos, ni ediciones. Si alguien ya aportó algo sobre una copia, deja de ser un
+  duplicado inerte y pasa a ser trabajo de una persona.
+- **`psql` está en la imagen de producción** (`Dockerfile`). Sin él, arreglar un destrozo en
+  los datos exige escribir un comando, compilarlo y desplegar — media hora y un despliegue
+  para un `DELETE`. No amplía el acceso de nadie: quien puede hacer `fly ssh console` ya
+  tiene el `DATABASE_URL` en el entorno del proceso. Los arreglos **repetibles** siguen
+  siendo comandos del binario, que quedan en el repo y se prueban; `psql` es para lo
+  irrepetible y lo urgente.
+- Italia: **69.701 clasificadas** en 102 provincias. Natural Earth da **provincias y no las
+  20 regiones** —el mismo desajuste que en España— y con las erratas de siempre («Crotene»
+  por Crotone, «Oristrano» por Oristano) más nombres en otro idioma («Turin», «Bozen»,
+  «Aoste»). El rescate por cercanía aquí **no necesita 10 km como en los nórdicos**: 894 se
+  salvan en el primer kilómetro y después ya casi nada, porque no hay archipiélagos que
+  cubrir, solo precisión de costa.
+
 ## Carteles / campañas
 - Cartel A5 en catalán en `flyer/` (HTML editable + PDF). `flyer/genera-cartells.py <codis>`
   genera una copia por pueblo con su QR y su código (`fontapp.net/?p=castellcir`).
