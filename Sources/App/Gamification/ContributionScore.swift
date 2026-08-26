@@ -250,11 +250,42 @@ enum ContributionScore {
 
     static func compute(on db: any Database) async throws -> Report {
         let users = try await User.query(on: db).all()
-        let fonts = try await Font.query(on: db).all()
         let comments = try await FontComment.query(on: db).sort(\.$createdAt, .ascending).all()
         let confirmations = try await FontConfirmation.query(on: db).all()
         let reports = try await FontReport.query(on: db).sort(\.$createdAt, .ascending).all()
         let edits = try await FontEdit.query(on: db).sort(\.$createdAt, .ascending).all()
+
+        // **Solo las fuentes que participan en algo, no la base entera.**
+        //
+        // Esto era `Font.query(on: db).all()`, y con el trabajador encendido tumbaba la
+        // máquina: medido en producción con `gamification-sync --dry-run`, **698 MB de
+        // pico** para puntuar 115 reseñas y 97 ediciones, porque cargaba las **160.738**
+        // fuentes como modelos de Fluent. En una máquina de 512 MB eso es OOM seguro, y
+        // como el trabajador arranca a los 30 s de cada arranque, el proceso entraba en un
+        // bucle que se alimentaba solo: arranca, barre, muere, reinicia. Se vio en los
+        // logs de Fly, no razonándolo.
+        //
+        // La lista de abajo es exactamente lo que se consulta después por `fontsByID`.
+        // Cuidado al tocarla: `add(...)` **descarta en silencio** la aportación cuya
+        // fuente no esté cargada, así que quedarse corto aquí no da ningún error — deja
+        // de pagar gotas y nadie se entera.
+        var referidas = Set<UUID>()
+        for c in comments { referidas.insert(c.$font.id) }
+        for r in reports { referidas.insert(r.$font.id) }
+        for e in edits { referidas.insert(e.$font.id) }
+        let idsReferidas = Array(referidas)
+
+        let fonts = try await Font.query(on: db)
+            .group(.or) { q in
+                // Las que puso una persona: son las que cobran `fontCreated`.
+                q.filter(\.$creator.$id != nil)
+                // Las que tienen portada: hace falta para reconstruir de quién es la foto
+                // y para el aviso de las importadas con foto y sin autor.
+                q.filter(\.$image != nil)
+                // Y las que aparecen en una reseña, una incidencia o una edición.
+                if !idsReferidas.isEmpty { q.filter(\.$id ~~ idsReferidas) }
+            }
+            .all()
 
         let fontsByID = Dictionary(uniqueKeysWithValues: fonts.compactMap { f in f.id.map { ($0, f) } })
         let commentsByID = Dictionary(uniqueKeysWithValues: comments.compactMap { c in c.id.map { ($0, c) } })

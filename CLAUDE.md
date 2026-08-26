@@ -1555,6 +1555,24 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   Hay que cubrir token caducado/usado, cambio de email (vuelve a quedar sin verificar),
   reenvío, enumeración de cuentas y el caso de dos altas simultáneas. No confundirlo con el
   correo de bienvenida actual: ese envío no prueba que el buzón pertenezca al usuario.
+- **La gamificación NO carga la base de fuentes entera.** `ContributionScore.compute`
+  hacía `Font.query(on: db).all()`: medido en producción con `gamification-sync
+  --dry-run`, **698 MB de pico** para puntuar 115 reseñas y 97 ediciones, porque cargaba
+  las **160.738** fuentes como modelos de Fluent. Con el trabajador encendido eso es un
+  temporizador **dentro del proceso que sirve el HTTP**, así que a los 30 s de cada
+  arranque la máquina se quedaba sin memoria: arranca → barre → OOM → reinicia, un bucle
+  que se alimenta solo y deja `/fonts/in-bounds` devolviendo 500. Ahora se cargan **solo
+  las que participan** —las que tienen creador (55), las que tienen foto (69) y las
+  referidas por reseñas, incidencias o ediciones—: medido en local, **357 MB → 32 MB**, y
+  ya no crece con el tamaño de la base.
+  Cuidado al tocar esa lista: `add(...)` **descarta en silencio** la aportación cuya
+  fuente no esté cargada, así que quedarse corto no da ningún error, solo deja de pagar
+  gotas. La forma de comprobarlo es `score-contributions --json` antes y después y
+  comparar byte a byte; está verificado que la comparación caza quitar cualquiera de las
+  tres cláusulas.
+  Queda el mismo patrón en `ImportGeoJSONCommand`, que carga todas las fuentes para
+  deduplicar. Ahí es un comando manual y ocasional, pero lanzarlo contra producción tiene
+  el mismo coste de memoria.
 - **La memoria de las máquinas vive en `fly.toml`, no en `fly scale memory`.** Ese comando
   cambia las máquinas en marcha pero **no escribe el fichero**, así que el siguiente
   despliegue lo deshace — lo avisa el propio flyctl al ejecutarlo, y es fácil no leerlo.
