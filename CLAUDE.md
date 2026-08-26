@@ -1387,7 +1387,9 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   promover como al devolver a `user`, pero no si se guarda el mismo rol. Es un aviso
   transaccional y no lleva baja: comunica un cambio de permisos de la cuenta. Se manda en
   segundo plano después de guardar; un fallo de Resend se registra, pero nunca revierte el
-  rol ni hace que el panel afirme que el cambio falló cuando ya está aplicado.
+  rol ni hace que el panel afirme que el cambio falló cuando ya está aplicado. El correo
+  enumera los permisos efectivos del rol; al cambiar el modelo de permisos hay que mantener
+  sincronizada la lista localizada de `RoleChangedEmail`.
 - **Campana** (`Notification` + `NotificationController` → `GET /notifications`,
   `POST /notifications/read`, `NotificationBell.tsx`): avisos dentro de la app, privados y
   sin caché. Guarda **el texto ya resuelto** y no una referencia a la reseña: un aviso es

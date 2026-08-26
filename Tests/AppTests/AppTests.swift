@@ -8,6 +8,8 @@ final class AppTests: XCTestCase {
             webOrigin: "https://fontapp.net/")
         XCTAssertTrue(spanish.subject.contains("rol"))
         XCTAssertTrue(spanish.text.contains("Nuevo rol: Moderador"))
+        XCTAssertTrue(spanish.text.contains("Revisar la cola de moderación"))
+        XCTAssertTrue(spanish.text.contains("Moderar reseñas, incidencias y fotos"))
         XCTAssertTrue(spanish.text.contains("https://fontapp.net"))
         XCTAssertTrue(spanish.html.contains("Ana &lt;script&gt;"))
         XCTAssertFalse(spanish.html.contains("Ana <script>"))
@@ -16,6 +18,8 @@ final class AppTests: XCTestCase {
             lang: "pt", name: "Rui", role: .admin,
             webOrigin: "https://fontapp.net")
         XCTAssertTrue(portuguese.text.contains("Nova função: Administrador"))
+        XCTAssertTrue(portuguese.text.contains("Inclui todas as permissões de moderador"))
+        XCTAssertTrue(portuguese.html.contains("Resolver pedidos administrativos"))
     }
 
     func testRateLimitRejectsWithoutExtendingTheBlock() async {
