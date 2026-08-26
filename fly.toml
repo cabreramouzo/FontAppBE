@@ -48,9 +48,18 @@ primary_region = 'fra'
   # **Y tiene que estar AQUÍ, no en un `fly scale memory`.** Ese comando cambia las
   # máquinas en marcha pero no escribe este fichero, así que el siguiente despliegue lo
   # deshace — lo avisa el propio flyctl al ejecutarlo. Ya había estado en 1 GB y se perdió
-  # así: hoy hubo diez despliegues en ocho horas, y como `deploy-backend` no filtraba por
+  # así: hubo diez despliegues en ocho horas, y como `deploy-backend` no filtraba por
   # rutas, hasta un commit que solo tocaba `web/` bajaba la memoria otra vez a 512.
-  memory = '1gb'
+  #
+  # **Y de vuelta a 512 MB**, porque 1 GB era el parche y no la cura. Lo que se comía la
+  # máquina era `ContributionScore.compute` cargando las 160.738 fuentes en cada barrido;
+  # arreglado eso, lo medido en producción es: 48 MB de pico del servidor tras varios
+  # barridos, 78 MB con veinte peticiones de mapa concurrentes encima, y 51 MB el barrido
+  # entero. 512 MB son seis veces el peor caso medido.
+  #
+  # Si vuelve a hacer falta subirla, el sitio es este y la pregunta a hacerse antes es qué
+  # ha empezado a cargar de más — no cuánta RAM comprar.
+  memory = '512mb'
   cpus = 1
   # `memory_mb` es la clave antigua y quedaba duplicando a `memory`. Dos sitios para el
   # mismo número es la forma de que un día digan cosas distintas.

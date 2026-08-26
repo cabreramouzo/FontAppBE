@@ -1570,9 +1570,29 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   gotas. La forma de comprobarlo es `score-contributions --json` antes y después y
   comparar byte a byte; está verificado que la comparación caza quitar cualquiera de las
   tres cláusulas.
-  Queda el mismo patrón en `ImportGeoJSONCommand`, que carga todas las fuentes para
-  deduplicar. Ahí es un comando manual y ocasional, pero lanzarlo contra producción tiene
-  el mismo coste de memoria.
+  **El techo que le queda, dicho en voz alta:** una fuente entra en ese conjunto en cuanto
+  alguien la reseña, la edita o le pone foto, así que si esto crece mucho el `select`
+  acabará trayendo casi toda la base otra vez. Lo que pasa es que para entonces el
+  problema ya no será el `select` sino el diseño: `compute` **recalcula el historial
+  entero en cada barrido**, y con decenas de miles de reseñas eso no se sostiene ni
+  cargando cero fuentes de más.
+  La salida no es «traer solo las tocadas hoy» a secas — eso hoy **anularía las gotas de
+  todo el mundo**, porque `ContributionLedger.sync` da por desaparecido (y anula) todo lo
+  registrado que el cálculo no devuelve, y `compute` no sabe devolver un resultado
+  parcial. Para hacerlo incremental hay que tocar las dos piezas a la vez: que `compute`
+  diga **qué ámbito ha mirado** y que `sync` limite su comprobación de desaparecidas a ese
+  mismo ámbito. La señal para plantearlo es el volumen de reseñas y ediciones, no el de
+  fuentes.
+- `ImportGeoJSONCommand` tenía el mismo problema y **está arreglado**: cargaba todas las
+  fuentes como modelos y comparaba con un barrido lineal por cada punto del fichero. Ahora
+  pide cuatro columnas por SQL y las indexa en una rejilla de ~1,1 km. Medido sobre 80.139
+  fuentes y 2.792 puntos: **351 MB y 52 s → 61 MB y 5 s**, con la salida idéntica.
+  Ojo con la rejilla: el número de celdas que hay que mirar a los lados **se corrige por el
+  coseno de la latitud**, porque un grado de longitud mide menos según subes. Sin eso, a 68°
+  y con `--dedupe 2000` los 200 duplicados de una prueba entraban **todos** como fuentes
+  nuevas. Está verificado rompiéndolo. Y `cercana` devuelve la vecina de **menor índice**
+  a propósito: reproduce el `first(where:)` que había y mantiene la importación
+  determinista.
 - **La memoria de las máquinas vive en `fly.toml`, no en `fly scale memory`.** Ese comando
   cambia las máquinas en marcha pero **no escribe el fichero**, así que el siguiente
   despliegue lo deshace — lo avisa el propio flyctl al ejecutarlo, y es fácil no leerlo.

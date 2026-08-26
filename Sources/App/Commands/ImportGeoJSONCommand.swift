@@ -1,5 +1,6 @@
 import Fluent
 import Foundation
+import SQLKit
 import Vapor
 
 /// Importa fuentes desde un **GeoJSON** (FeatureCollection de puntos) en WGS84
@@ -75,12 +76,66 @@ struct ImportGeoJSONCommand: AsyncCommand {
             context.console.info("Fuentes existentes borradas (--replace).")
         }
 
-        // Dedupe opcional: carga las fuentes existentes para comparar por proximidad.
-        // Guardamos el modelo para poder mejorar su nombre si es genérico (ver abajo).
-        var existing: [(lat: Double, lon: Double, font: Font?)] = []
+        // Dedupe opcional. Dos cosas que aquí se pagan caras y antes se hacían mal:
+        //
+        // 1. **No se cargan los modelos de Fluent.** Esto era `Font.query(on: db).all()`,
+        //    o sea las 160.738 fuentes de producción como objetos completos — el mismo
+        //    error que tumbó al trabajador de gamificación, medido allí en 698 MB. De cada
+        //    fuente aquí solo hacen falta cuatro columnas, así que se piden esas cuatro y
+        //    se guardan en un struct. El modelo se carga **solo** cuando de verdad hay que
+        //    renombrar una, que son unas pocas decenas.
+        // 2. **Se indexan en una rejilla.** La comparación era `existing.first(where:)`,
+        //    o sea un barrido lineal por cada punto del fichero: importar 70.000 puntos
+        //    contra 160.000 existentes son miles de millones de haversines. Con celdas de
+        //    ~1,1 km solo se miran las vecinas.
+        var vecinas: [Vecina] = []
+        var rejilla: [Celda: [Int]] = [:]
+        func indexa(_ v: Vecina) {
+            vecinas.append(v)
+            rejilla[Self.celdaDe(v.lat, v.lon), default: []].append(vecinas.count - 1)
+        }
+        /// El índice de la vecina más cercana dentro del radio, **la primera insertada** si
+        /// hay varias. Devolver la de menor índice no es un capricho: reproduce
+        /// exactamente lo que hacía `first(where:)` sobre el array, y así una importación
+        /// repetida sigue dando el mismo resultado.
+        func cercana(_ lat: Double, _ lon: Double, _ radioKm: Double) -> Int? {
+            let pasoLat = max(1, Int((radioKm / (Self.celdaGrados * 111.0)).rounded(.up)))
+            // En longitud un grado mide menos según subes en latitud, así que hay que
+            // mirar más celdas a los lados. Sin esto, en el norte se escapan vecinas que
+            // sí están dentro del radio y se duplican fuentes.
+            let cosLat = max(cos(lat * .pi / 180), 0.01)
+            let pasoLon = max(1, Int((radioKm / (Self.celdaGrados * 111.0 * cosLat)).rounded(.up)))
+            let c = Self.celdaDe(lat, lon)
+            var mejor: Int?
+            for dx in -pasoLon...pasoLon {
+                for dy in -pasoLat...pasoLat {
+                    for i in rejilla[Celda(x: c.x + dx, y: c.y + dy)] ?? [] {
+                        guard haversineKm(vecinas[i].lat, vecinas[i].lon, lat, lon) < radioKm else { continue }
+                        if mejor == nil || i < mejor! { mejor = i }
+                    }
+                }
+            }
+            return mejor
+        }
+
         if let dedupeMeters = signature.dedupe {
-            existing = try await Font.query(on: db).all().map { ($0.latitude, $0.longitude, $0) }
-            context.console.info("Dedupe activado a \(Int(dedupeMeters)) m (fuentes existentes: \(existing.count)).")
+            if let sql = db as? any SQLDatabase {
+                struct Fila: Decodable {
+                    let id: UUID
+                    let latitude: Double
+                    let longitude: Double
+                    let name: String?
+                }
+                for f in try await sql.raw("SELECT id, latitude, longitude, name FROM fonts")
+                    .all(decoding: Fila.self) {
+                    indexa(Vecina(id: f.id, lat: f.latitude, lon: f.longitude, name: f.name))
+                }
+            } else {
+                for f in try await Font.query(on: db).all() {
+                    indexa(Vecina(id: f.id, lat: f.latitude, lon: f.longitude, name: f.name))
+                }
+            }
+            context.console.info("Dedupe activado a \(Int(dedupeMeters)) m (fuentes existentes: \(vecinas.count)).")
         }
         let dedupeKm = signature.dedupe.map { $0 / 1000.0 }
 
@@ -92,22 +147,28 @@ struct ImportGeoJSONCommand: AsyncCommand {
         for p in points {
             if let dedupeKm {
                 // ¿Hay ya una fuente a menos de N metros? Entonces NO insertamos otra.
-                if let hit = existing.first(where: { haversineKm($0.lat, $0.lon, p.lat, p.lon) < dedupeKm }) {
+                if let i = cercana(p.lat, p.lon, dedupeKm) {
                     // Si la existente tiene un nombre genérico (p. ej. "Font"/"Manantial"
                     // de OSM) y el topónimo del ICGC es más específico, lo mejoramos.
-                    if let font = hit.font, Self.isGeneric(font.name), !Self.isGeneric(p.name), font.name != p.name {
+                    if let id = vecinas[i].id, Self.isGeneric(vecinas[i].name),
+                       !Self.isGeneric(p.name), vecinas[i].name != p.name {
                         // El nombre se cambia SIEMPRE en memoria, también en el ensayo en
                         // seco: si no, un segundo punto del origen junto a la misma fuente
                         // la vería aún genérica y contaría otro renombrado que en la
                         // importación real no ocurre (el ensayo inflaba la cifra).
-                        font.name = p.name
-                        if !signature.dryRun { try await font.save(on: db) }
+                        vecinas[i].name = p.name
+                        // El modelo se carga aquí y no antes: es el único momento en que
+                        // hace falta, y son unas decenas de fuentes en toda la pasada.
+                        if !signature.dryRun, let font = try await Font.find(id, on: db) {
+                            font.name = p.name
+                            try await font.save(on: db)
+                        }
                         renamed += 1
                     } else {
                         skipped += 1
                     }
                     // Marca el punto como presente para no meter dos ICGC pegados.
-                    existing.append((p.lat, p.lon, nil))
+                    indexa(Vecina(id: nil, lat: p.lat, lon: p.lon, name: p.name))
                     continue
                 }
             }
@@ -120,7 +181,7 @@ struct ImportGeoJSONCommand: AsyncCommand {
                 source: source,
                 drinkable: nil
             ))
-            if dedupeKm != nil { existing.append((p.lat, p.lon, nil)) }
+            if dedupeKm != nil { indexa(Vecina(id: nil, lat: p.lat, lon: p.lon, name: p.name)) }
 
             if signature.dryRun {
                 inserted += 1
@@ -181,6 +242,29 @@ struct ImportGeoJSONCommand: AsyncCommand {
     /// Incluye los valores por defecto que pone el import de OSM a nodos sin nombre.
     /// Sin nombre (`nil`) cuenta como genérico: es el caso más claro de «adopta el
     /// topónimo del ICGC», no una excepción.
+    /// Una fuente ya presente, reducida a lo que el dedupe necesita. `id` nulo significa
+    /// «insertada en esta misma pasada», que no está en la base y no hay que renombrar.
+    private struct Vecina {
+        let id: UUID?
+        let lat: Double
+        let lon: Double
+        var name: String?
+    }
+
+    /// Celda de la rejilla espacial. ~1,1 km de lado en latitud: lo bastante fina para que
+    /// una celda tenga pocas fuentes incluso en el centro de Barcelona, y lo bastante
+    /// gruesa para que un `--dedupe` normal (25–50 m) se resuelva mirando 3×3.
+    private struct Celda: Hashable {
+        let x: Int
+        let y: Int
+    }
+
+    private static let celdaGrados = 0.01
+
+    private static func celdaDe(_ lat: Double, _ lon: Double) -> Celda {
+        Celda(x: Int((lon / celdaGrados).rounded(.down)), y: Int((lat / celdaGrados).rounded(.down)))
+    }
+
     private static func isGeneric(_ name: String?) -> Bool {
         guard let name else { return true }
         let limpio = name.trimmingCharacters(in: .whitespaces)
