@@ -928,8 +928,9 @@ struct FontController: RouteCollection {
                 """).all()
             let ids = try rows.map { try $0.decode(column: "id", as: UUID.self) }
             guard !ids.isEmpty else { return [] }
-            let fonts = try await Font.query(on: req.db).filter(\.$id ~~ ids).all()
-            return try await Font.summaries(for: fonts, on: req.db)
+            // Por ids y no cargando los `Font`: aquí sólo hacen falta para sacarles el id,
+            // y el resumen vuelve a leer esas mismas filas. Conserva el orden de md5.
+            return try await Font.summaries(forIDs: ids, on: req.db)
         }
 
         // Fallback (bases de datos sin SQL crudo): recorte simple por bbox.
@@ -983,8 +984,9 @@ struct FontController: RouteCollection {
                   AND longitude >= \(bind: q.minLong) AND longitude <= \(bind: q.maxLong)
                 """).all()
             let ids = try rows.map { try $0.decode(column: "id", as: UUID.self) }
-            let fonts = try await Font.query(on: req.db).filter(\.$id ~~ ids).all()
-            let summaries = try await Font.summaries(for: fonts, on: req.db)
+            // Igual que en `in-bounds`: los modelos de Fluent no se usan para nada más
+            // que el id, y son hasta 3.000 objetos vivos por petición.
+            let summaries = try await Font.summaries(forIDs: ids, on: req.db)
             return MapResponse(total: total, fonts: summaries)
         }
 

@@ -973,6 +973,24 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   todas las reseñas históricas de hasta 3.000 fuentes; bajo varias peticiones concurrentes
   esos arrays fueron la segunda mitad del OOM. `OptimizeMapSummaries` mantiene el índice
   parcial `(font_id, created_at DESC)` de los comentarios que sí llevan estado.
+- **Ojo con el orden: `WHERE id = ANY(...)` devuelve por índice —o sea por UUID— y NUNCA
+  en el orden del array.** El camino de Fluent hacía `fonts.map { ... }` y lo conservaba
+  sin decirlo; al pasar el resumen a SQL, `GET /fonts/near` empezó a devolver las fuentes
+  correctas en orden arbitrario (medido: 7 de 7 zonas desordenadas, y en Barcelona la más
+  cercana caía novena). No es cosmético — «Cerca de ti» pinta la distancia en cada fila y
+  no reordena, así que la lista se leía como un error. `summaries` rehace el orden de
+  quien llama; **no** se arregla con un `ORDER BY`, porque el criterio es de quien llama
+  (distancia en `near`, `md5(id)` en `in-bounds`) y no de la consulta.
+  El test que debía cubrirlo, `testNearSortsByDistance`, pedía **una sola fuente**: probaba
+  qué fuente sale y no en qué orden salen varias, así que esto llegó a producción en verde.
+- **Quien ya tiene los ids llama a `summaries(forIDs:)` y no carga los `Font`.** El mapa y
+  `in-bounds` sacan los ids con su propia consulta; cargar después los modelos leía **las
+  mismas filas por tercera vez** —ids, modelos, y otra vez dentro del resumen— para usar de
+  ellos únicamente el id, dejando hasta 3.000 objetos de Fluent vivos por petición. En un
+  cambio que existe para no quedarse sin RAM, eso contaba doble. Medido sobre 2.352
+  fuentes: **825 ms → 350 ms** (`/fonts/map` y `/fonts/in-bounds`, cinco pasadas cada uno).
+  `summaries(for:)` se queda para quien ya tiene los modelos (`near` los necesita para
+  ordenar por distancia) y para el respaldo sin SQL crudo.
 
 ## El popup del mapa
 

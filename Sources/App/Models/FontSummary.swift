@@ -74,6 +74,26 @@ struct FontSummary: Content {
 }
 
 extension Font {
+    /// Resumen de un conjunto de fuentes **a partir de sus ids**, en el orden pedido.
+    ///
+    /// Existe porque el mapa y `in-bounds` ya sacan los ids con su propia consulta y no
+    /// necesitan los modelos: cargarlos era leer las mismas filas por tercera vez —una
+    /// para los ids, otra para los `Font` de Fluent y otra dentro de este resumen— y
+    /// dejar 3.000 modelos vivos en memoria sólo para extraerles el id. En un cambio que
+    /// existe para no quedarse sin RAM, eso contaba doble.
+    ///
+    /// Una fuente sin fila (borrada entre las dos consultas) simplemente no sale: aquí no
+    /// hay modelo con el que reponerla, al contrario que en `summaries(for:)`.
+    static func summaries(forIDs ids: [UUID], on db: Database) async throws -> [FontSummary] {
+        guard !ids.isEmpty else { return [] }
+        guard let sql = db as? SQLDatabase else {
+            let fonts = try await Font.query(on: db).filter(\.$id ~~ ids).all()
+            return try await summaries(for: fonts, on: db)
+        }
+        let porID = try await sqlSummaries(ids: ids, on: sql)
+        return ids.compactMap { porID[$0] }
+    }
+
     /// Enriquece una lista de fuentes con el último estado del agua reportado.
     /// Una sola query de comentarios para todas (evita N+1).
     static func summaries(for fonts: [Font], on db: Database) async throws -> [FontSummary] {
@@ -82,73 +102,13 @@ extension Font {
             return fonts.map { FontSummary($0, lastWaterStatus: nil, lastUpdate: nil) }
         }
 
-        // PostgreSQL hace el trabajo de resumen y devuelve una fila por fuente. Antes se
-        // cargaban en Swift TODAS las reseñas históricas de hasta 3.000 fuentes, se
-        // agrupaban en diccionarios y después se cargaban sus confirmaciones. Con varias
-        // peticiones de mapa simultáneas esos arrays sobrevivían a la vez y agotaban los
-        // 512 MB de Fly. La consulta conserva exactamente las mismas reglas: último parte,
-        // confirmaciones independientes y conflicto/autores distintos en 30 días.
+        // Con SQL crudo no hace falta nada de los modelos que nos pasan salvo el id, así
+        // que se resuelve por la misma puerta que `summaries(forIDs:)` y sólo se usan los
+        // `Font` para reponer el orden y para las fuentes que la consulta no devuelva
+        // (borradas entre las dos consultas). Quien ya llega con ids debería llamar
+        // directamente a la otra y ahorrarse cargarlos.
         if let sql = db as? SQLDatabase {
-            let rows = try await sql.raw("""
-                WITH selected_fonts AS (
-                  SELECT id, name, latitude, longitude, image, description, source,
-                         drinkable, country, region, admin1, created_at
-                  FROM fonts
-                  WHERE id = ANY(\(bind: ids))
-                ), latest AS (
-                  SELECT DISTINCT ON (c.font_id)
-                         c.font_id, c.id AS comment_id, c.user_id, c.water_status, c.created_at
-                  FROM font_comments c
-                  JOIN selected_fonts f ON f.id = c.font_id
-                  WHERE c.water_status IS NOT NULL
-                  ORDER BY c.font_id, c.created_at DESC
-                ), confirmations AS (
-                  SELECT l.font_id,
-                         count(fc.id) FILTER (
-                           WHERE l.user_id IS NULL OR fc.user_id <> l.user_id
-                         )::bigint AS quantity,
-                         max(fc.created_at) FILTER (
-                           WHERE l.user_id IS NULL OR fc.user_id <> l.user_id
-                         ) AS last_at
-                  FROM latest l
-                  LEFT JOIN font_confirmations fc ON fc.comment_id = l.comment_id
-                  GROUP BY l.font_id
-                ), recent AS (
-                  SELECT c.font_id,
-                         count(DISTINCT c.user_id)::bigint AS reporters,
-                         (bool_or(c.water_status IN ('flowing', 'trickle')) AND
-                          bool_or(c.water_status IN ('dry', 'broken', 'gone'))) AS conflict
-                  FROM font_comments c
-                  JOIN selected_fonts f ON f.id = c.font_id
-                  WHERE c.created_at >= now() - interval '30 days'
-                    AND c.water_status IS NOT NULL
-                    AND c.water_status <> 'unknown'
-                  GROUP BY c.font_id
-                )
-                SELECT f.*,
-                       l.water_status AS last_water_status,
-                       greatest(l.created_at, cf.last_at) AS last_update,
-                       coalesce(cf.quantity, 0)::bigint AS latest_confirmations,
-                       coalesce(r.reporters, 0)::bigint AS recent_status_reporters,
-                       coalesce(r.conflict, false) AS recent_status_conflict
-                FROM selected_fonts f
-                LEFT JOIN latest l ON l.font_id = f.id
-                LEFT JOIN confirmations cf ON cf.font_id = f.id
-                LEFT JOIN recent r ON r.font_id = f.id
-                """).all()
-            // `WHERE id = ANY(...)` devuelve las filas en el orden del índice (o sea
-            // por UUID), NUNCA en el del array que se le pasa: comprobado pidiendo ocho
-            // ids barajados y recibiéndolos ordenados por id. El camino de Fluent hacía
-            // `fonts.map { ... }`, así que conservaba el orden de entrada, y `near`
-            // depende de él —ordena por distancia en Swift y recorta con `prefix`—, igual
-            // que el selector de duplicados de la ficha. Se rehace aquí el orden de
-            // `fonts` en vez de poner un ORDER BY: quien manda es quien llama, y así una
-            // fuente sin fila (borrada entre las dos consultas) sigue saliendo, como antes.
-            var porID = [UUID: FontSummary](minimumCapacity: rows.count)
-            for row in rows {
-                let summary = try FontSummary(row: row)
-                if let id = summary.id { porID[id] = summary }
-            }
+            let porID = try await sqlSummaries(ids: ids, on: sql)
             return fonts.compactMap { font in
                 guard let id = font.id else { return nil }
                 return porID[id] ?? FontSummary(font, lastWaterStatus: nil, lastUpdate: nil)
@@ -226,5 +186,68 @@ extension Font {
                                recentStatusReporters: reporters.count,
                                recentStatusConflict: families.count > 1)
         }
+    }
+
+    /// El resumen agregado en PostgreSQL, indexado por id. Sin orden: lo pone quien llama.
+    private static func sqlSummaries(ids: [UUID], on sql: SQLDatabase) async throws -> [UUID: FontSummary] {
+        // PostgreSQL hace el trabajo de resumen y devuelve una fila por fuente. Antes se
+        // cargaban en Swift TODAS las reseñas históricas de hasta 3.000 fuentes, se
+        // agrupaban en diccionarios y después se cargaban sus confirmaciones. Con varias
+        // peticiones de mapa simultáneas esos arrays sobrevivían a la vez y agotaban los
+        // 512 MB de Fly. La consulta conserva exactamente las mismas reglas: último parte,
+        // confirmaciones independientes y conflicto/autores distintos en 30 días.
+        let rows = try await sql.raw("""
+            WITH selected_fonts AS (
+              SELECT id, name, latitude, longitude, image, description, source,
+                     drinkable, country, region, admin1, created_at
+              FROM fonts
+              WHERE id = ANY(\(bind: ids))
+            ), latest AS (
+              SELECT DISTINCT ON (c.font_id)
+                     c.font_id, c.id AS comment_id, c.user_id, c.water_status, c.created_at
+              FROM font_comments c
+              JOIN selected_fonts f ON f.id = c.font_id
+              WHERE c.water_status IS NOT NULL
+              ORDER BY c.font_id, c.created_at DESC
+            ), confirmations AS (
+              SELECT l.font_id,
+                     count(fc.id) FILTER (
+                       WHERE l.user_id IS NULL OR fc.user_id <> l.user_id
+                     )::bigint AS quantity,
+                     max(fc.created_at) FILTER (
+                       WHERE l.user_id IS NULL OR fc.user_id <> l.user_id
+                     ) AS last_at
+              FROM latest l
+              LEFT JOIN font_confirmations fc ON fc.comment_id = l.comment_id
+              GROUP BY l.font_id
+            ), recent AS (
+              SELECT c.font_id,
+                     count(DISTINCT c.user_id)::bigint AS reporters,
+                     (bool_or(c.water_status IN ('flowing', 'trickle')) AND
+                      bool_or(c.water_status IN ('dry', 'broken', 'gone'))) AS conflict
+              FROM font_comments c
+              JOIN selected_fonts f ON f.id = c.font_id
+              WHERE c.created_at >= now() - interval '30 days'
+                AND c.water_status IS NOT NULL
+                AND c.water_status <> 'unknown'
+              GROUP BY c.font_id
+            )
+            SELECT f.*,
+                   l.water_status AS last_water_status,
+                   greatest(l.created_at, cf.last_at) AS last_update,
+                   coalesce(cf.quantity, 0)::bigint AS latest_confirmations,
+                   coalesce(r.reporters, 0)::bigint AS recent_status_reporters,
+                   coalesce(r.conflict, false) AS recent_status_conflict
+            FROM selected_fonts f
+            LEFT JOIN latest l ON l.font_id = f.id
+            LEFT JOIN confirmations cf ON cf.font_id = f.id
+            LEFT JOIN recent r ON r.font_id = f.id
+            """).all()
+        var porID = [UUID: FontSummary](minimumCapacity: rows.count)
+        for row in rows {
+        let summary = try FontSummary(row: row)
+        if let id = summary.id { porID[id] = summary }
+        }
+        return porID
     }
 }
