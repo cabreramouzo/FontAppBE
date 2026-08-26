@@ -89,6 +89,9 @@ export function RouteWaterPage() {
   const [corredor, setCorredor] = useState(CORREDOR_M)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
+  // Qué hacer para volver a intentarlo, cuando lo que falló fue la red y no el fichero.
+  // `null` = no hay nada que reintentar (el GPX está mal y hay que elegir otro).
+  const [reintenta, setReintenta] = useState<(() => void) | null>(null)
   const [nombreRuta, setNombreRuta] = useState('')
   const [mapaAbierto, setMapaAbierto] = useState(false)
   // Las que NO se llevan al GPS. Vacío = todas, que es lo que hacía esta pantalla antes de
@@ -119,14 +122,39 @@ export function RouteWaterPage() {
       // y es al volver cuando hace falta tenerla puesta sin buscar el fichero otra vez.
       recuerdaRuta({ nombre, cuando: new Date().toISOString(), puntos }, scope)
       setRecordada(rutaRecordada(scope))
-      const caja = cajaDe(puntos)
-      const params = new URLSearchParams({
-        minLat: String(caja.minLat), maxLat: String(caja.maxLat),
-        minLong: String(caja.minLong), maxLong: String(caja.maxLong),
-      })
-      setFuentes(await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`))
+      await pideFuentes(puntos)
     } catch {
+      // Aquí solo llega lo del FICHERO. Lo del servidor lo trata `pideFuentes`, y
+      // mezclarlos era un fallo con consecuencias: durante una caída del backend esta
+      // pantalla decía «no se ha podido leer el fichero», o sea acusaba al GPX del
+      // usuario. Se reportó literalmente como «falla la carga del archivo gpx» y mandó
+      // el diagnóstico al sitio equivocado durante una hora. Un mensaje de error que
+      // señala mal cuesta más que no dar ninguno.
       setError(t('gpxIn.failed'))
+      setReintenta(null)
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  /// Pide las fuentes de la caja del recorrido. Separado porque lo usan las dos entradas
+  /// —soltar un fichero y recuperar la ruta recordada— y porque su error es de red, no
+  /// del GPX: se puede reintentar sin volver a elegir el fichero.
+  async function pideFuentes(puntos: ReturnType<typeof leeGPX>) {
+    const caja = cajaDe(puntos)
+    const params = new URLSearchParams({
+      minLat: String(caja.minLat), maxLat: String(caja.maxLat),
+      minLong: String(caja.minLong), maxLong: String(caja.maxLong),
+    })
+    setCargando(true)
+    try {
+      setFuentes(await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`))
+      setError(''); setReintenta(null)
+    } catch (e) {
+      // `describeError` da el motivo de verdad —«Sin conexión con el servidor»— en el
+      // idioma de quien lee, en vez de una frase inventada por esta pantalla.
+      setError(describeError(e, t))
+      setReintenta(() => () => void pideFuentes(puntos))
     } finally {
       setCargando(false)
     }
@@ -139,16 +167,7 @@ export function RouteWaterPage() {
     if (!recordada || ruta.length > 1 || cargando) return
     setRuta(recordada.puntos)
     setNombreRuta(recordada.nombre)
-    const caja = cajaDe(recordada.puntos)
-    const params = new URLSearchParams({
-      minLat: String(caja.minLat), maxLat: String(caja.maxLat),
-      minLong: String(caja.minLong), maxLong: String(caja.maxLong),
-    })
-    setCargando(true)
-    apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`)
-      .then(setFuentes)
-      .catch(() => setError(t('gpxIn.failed')))
-      .finally(() => setCargando(false))
+    void pideFuentes(recordada.puntos)
     // Solo al montar: si dependiera de `ruta`, se volvería a pedir en cada cambio.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -253,6 +272,24 @@ export function RouteWaterPage() {
           «has pasado cerca de 8 fuentes»: la app no sabe si de verdad saliste, solo que
           importaste el recorrido. Afirmarlo sería inventarse un hecho sobre el usuario, y
           la primera vez que se equivoque deja de creerse lo demás. */}
+      {/* El error va con lo que se puede hacer al respecto. Si falló la red, reintentar
+          NO obliga a volver a elegir el fichero: el recorrido ya está leído y guardado. */}
+      {error && (
+        <Alert
+          severity="error" sx={{ mt: 2 }}
+          action={reintenta
+            ? <Button color="inherit" size="small" onClick={reintenta} sx={{ textTransform: 'none' }}>
+                {/* Se reutiliza la clave que ya existe en los ocho idiomas, como con
+                    `guard.showAll`: una clave nueva que diga «Reintentar» sería la misma
+                    palabra traducida dos veces. */}
+                {t('zones.retry')}
+              </Button>
+            : undefined}
+        >
+          {error}
+        </Alert>
+      )}
+
       {recordada && ruta.length > 1 && (
         <Alert
           severity="info" icon={false} sx={{ mt: 2 }}
@@ -273,7 +310,6 @@ export function RouteWaterPage() {
       )}
 
       {cargando && <Box sx={{ my: 3, textAlign: 'center' }}><CircularProgress /></Box>}
-      {error && <Alert severity="warning" sx={{ my: 2 }}>{error}</Alert>}
 
       {ruta.length > 1 && fuentes && (
         <>
