@@ -1088,6 +1088,7 @@ export function MapPage() {
   const [showNonPotable, setShowNonPotable] = useState(filtrosGuardados.showNonPotable)
   const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>(filtrosGuardados.source)
   const [controlsOpen, setControlsOpen] = useState(false)
+  const [gpxOpen, setGpxOpen] = useState(false)
   const { layer, setLayer } = useBaseLayer()
   // Instancia del mapa: hace falta fuera del lienzo para el botón de la brújula.
   const [map, setMap] = useState<LeafletMap | null>(null)
@@ -1436,15 +1437,26 @@ export function MapPage() {
         >
           <RouteOutlinedIcon />
         </Fab>
-        {/* En escritorio siguen desplegándose aquí mismo, junto al botón que las abre.
-            En móvil van a una hoja: una columna de chips flotando sobre el mapa tapa
-            justo lo que estás mirando, y son objetivos pequeños para el pulgar. */}
+        {/* GPX aparte, y no dentro de las herramientas donde estaba.
+            El motivo no es que la columna tuviera sitio: es que en móvil esa hoja se
+            titula **«Filtros»**, y meter ahí «descargar las fuentes» y «agua en mi ruta»
+            es guardarlas en un cajón cuyo rótulo dice que son otra cosa. Nadie las
+            encontraría, y quien las encontrara no sabría por qué estaban ahí.
+            El botón dice **GPX** con letras y no con un icono a propósito: quien lleva un
+            GPS en el manillar reconoce esas tres letras al instante, y quien no, con
+            cualquier icono tendría que adivinar igual. */}
+        <Fab
+          size="medium"
+          onClick={() => { trackInteraction('map_gpx'); setGpxOpen((v) => !v) }}
+          aria-label={t('gpx.group')}
+          title={t('gpx.group')}
+          sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 800, fontSize: 13,
+                letterSpacing: 0.5, '&:hover': { bgcolor: 'background.paper' } }}
+        >
+          GPX
+        </Fab>
         {!movil && (
-          <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
-            {filtros('escritorio')}
-            {/* Descargar no es un filtro, así que va separado y al final. Vive dentro de
-                las herramientas y no como un cuarto botón flotante: la columna ya tiene
-                tres y un mapa tapado por sus propios controles deja de ser un mapa. */}
+          <Collapse in={gpxOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
             <Box sx={{ width: 210, display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <ExportGpxButton map={map} sx={sobreElMapaSx} />
               <Button component={Link} to="/gpx" variant="outlined" startIcon={<UploadIcon />}
@@ -1454,14 +1466,26 @@ export function MapPage() {
             </Box>
           </Collapse>
         )}
+        {/* En escritorio siguen desplegándose aquí mismo, junto al botón que las abre.
+            En móvil van a una hoja: una columna de chips flotando sobre el mapa tapa
+            justo lo que estás mirando, y son objetivos pequeños para el pulgar. */}
+        {!movil && (
+          <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
+            {filtros('escritorio')}
+          </Collapse>
+        )}
       </div>
       {movil && (
         <BottomSheet open={controlsOpen} onClose={() => setControlsOpen(false)} titulo={t('map.filters')}>
+          <Stack spacing={1.25}>{filtros('movil')}</Stack>
+        </BottomSheet>
+      )}
+      {movil && (
+        <BottomSheet open={gpxOpen} onClose={() => setGpxOpen(false)} titulo={t('gpx.group')}>
           <Stack spacing={1.25}>
-            {filtros('movil')}
-            <Divider sx={{ my: 0.5 }} />
             <ExportGpxButton map={map} />
             <Button component={Link} to="/gpx" variant="outlined" startIcon={<UploadIcon />}
+                    onClick={() => setGpxOpen(false)}
                     sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48 }} fullWidth>
               {t('gpxIn.title')}
             </Button>

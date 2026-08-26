@@ -778,8 +778,15 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   llevas la caja de la última vez que se pintó, que en la primera carga es antes de que el
   mapa tenga tamaño. Medido: `minLat` igual a `maxLat`, caja de altura cero, fichero vacío
   y **ningún error**. Lo que se mira al pulsar se lee al pulsar.
-- Vive dentro del panel de herramientas y no como un cuarto botón flotante: la columna ya
-  tiene tres, y un mapa tapado por sus propios controles deja de ser un mapa.
+- **Lo del GPX vive en su propio botón** (el cuarto de la columna, con las letras `GPX`), y
+  no dentro de las herramientas donde estuvo primero. El argumento de entonces —«la columna
+  ya tiene tres y un mapa tapado por sus controles deja de ser un mapa»— era sobre el sitio,
+  y el problema era otro: en móvil esa hoja se titula **«Filtros»**, así que «descargar las
+  fuentes» y «agua en mi ruta» estaban guardadas en un cajón cuyo rótulo dice que son otra
+  cosa. Nadie las encontraría, y quien las encontrara no sabría por qué están ahí.
+- El botón dice **GPX con letras y no con un icono**: quien lleva un GPS en el manillar
+  reconoce esas tres letras al instante, y quien no, con cualquier icono tendría que
+  adivinar igual. La hoja se titula «Rutas y fuentes en GPX», que es lo que explica.
 - **Todo lo que flote sobre el mapa necesita fondo opaco** (`sobreElMapaSx`). Un
   `variant="outlined"` de MUI es transparente, así que el texto compite con las teselas:
   los dos botones de GPX salieron ilegibles sobre el mar y el bosque mientras los chips de
