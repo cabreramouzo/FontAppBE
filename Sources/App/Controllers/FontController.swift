@@ -9,6 +9,9 @@ struct FontController: RouteCollection {
     /// Tope de marcadores de `/fonts/in-bounds` (el mapa; markercluster agrupa el resto).
     static let maxInBoundsResults = 3000
 
+    /// Hasta qué página puede llegar el listado sin ser admin. Ver `index`.
+    static let maxPublicPage = 5
+
     func boot(routes: RoutesBuilder) throws {
         let fonts = routes.grouped("fonts")
 
@@ -27,7 +30,10 @@ struct FontController: RouteCollection {
         // lo parara. Medido sobre el mapa real, diez movimientos son unas veinte
         // peticiones, así que 600/h son unas tres horas seguidas de uso intenso.
         let lecturaMapa = fonts.grouped(RateLimitMiddleware(scope: "font-read", max: 600, window: 60 * 60))
-        lecturaMapa.get(use: index)
+        // `index` lleva además el autenticador **sin** `guardMiddleware`: la ruta sigue
+        // siendo pública, pero necesita poder mirar si quien llama es admin. Ver el porqué
+        // en la propia función.
+        lecturaMapa.grouped(UserToken.authenticator()).get(use: index)
         lecturaMapa.get("near", use: near)
         lecturaMapa.get("in-bounds", use: inBounds)
         lecturaMapa.get("map", use: mapItems)
@@ -522,13 +528,45 @@ struct FontController: RouteCollection {
     }
 
     /// GET /fonts?page=&per=&search= — listado paginado; `search` filtra por nombre (ILIKE, insensible a mayúsculas).
+    /// GET /fonts — el listado. **Buscar es público; barrer, no.**
+    ///
+    /// Esta ruta hace dos cosas muy distintas con la misma URL. Con `search` es el
+    /// buscador de la app, que llama cualquiera sin cuenta y devuelve seis resultados.
+    /// Sin `search` es un catálogo paginado ordenado por nombre, y ahí está la vía cómoda
+    /// para llevarse la base entera: 89.000 fuentes a 100 por página son 893 peticiones
+    /// ordenadas, sin repetir ni saltarse nada.
+    ///
+    /// Conviene ser honesto sobre lo que esto consigue y lo que no. **No impide copiar**:
+    /// `in-bounds` devuelve 3.000 por llamada y con unas treinta se lleva cualquiera todo,
+    /// y esa tiene que seguir abierta porque la usa el mapa. Lo que quita es el camino
+    /// más obvio y más cómodo, el que no exige pensar en cajas ni en solapes. Es cerrar
+    /// la puerta de la calle sabiendo que la verja del jardín sigue abierta: no es
+    /// seguridad, es no ponerlo fácil.
+    ///
+    /// Y por eso el corte va en «hay término de búsqueda» y no en la ruta entera:
+    /// cerrarla del todo habría roto el buscador para todo el que no tiene cuenta, que es
+    /// justo la gente que llega por un cartel.
     @Sendable func index(req: Request) async throws -> Page<Font> {
+        let patron = req.query[String.self, at: "search"].flatMap { SearchTerm.likePattern($0) }
+        let esAdmin = req.auth.get(User.self)?.isAdmin == true
+        if !esAdmin {
+            guard patron != nil else {
+                throw AppError(.forbidden, "font.searchRequired",
+                               "Este listado necesita un término de búsqueda.")
+            }
+            // Y además **poca profundidad**. Exigir un término sin esto no cierra nada:
+            // `search=a` casa con casi cualquier nombre, así que paginando se vuelve a
+            // barrer la base con una letra. Quien busca de verdad no pasa de la segunda
+            // página, refina el término; quien va por la página 40 está barriendo.
+            guard (try? req.query.decode(PageRequest.self))?.page ?? 1 <= Self.maxPublicPage else {
+                throw AppError(.forbidden, "font.tooDeep",
+                               "Afina la búsqueda en vez de pasar páginas.")
+            }
+        }
         let query = Font.visible(on: req.db).sort(\.$name)
         // El patrón se acota y se escapa: ver `SearchTerm` (un ILIKE con una cadena
         // enorme cuesta segundos de CPU por petición).
-        if let raw = req.query[String.self, at: "search"], let patron = SearchTerm.likePattern(raw) {
-            query.filter(\.$name, .custom("ILIKE"), patron)
-        }
+        if let patron { query.filter(\.$name, .custom("ILIKE"), patron) }
         return try await query.paginate(SafePage.from(req))
     }
 

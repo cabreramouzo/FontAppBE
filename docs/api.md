@@ -185,7 +185,7 @@ guarda en la BD y solo sirve para desactivar el resumen de ese usuario concreto.
 
 | Método | Ruta | 🔒 | Cuerpo / Query | Éxito | Errores |
 |--------|------|----|----------------|-------|---------|
-| GET | `/fonts?page=&per=` | — | query de paginación | 200 `Page<Font>` | — |
+| GET | `/fonts?search=&page=&per=` | — | `search` **obligatorio** salvo admin; página ≤5 salvo admin | 200 `Page<Font>` | 403 `font.searchRequired`, `font.tooDeep` |
 | GET | `/fonts/near?lat=&long=&quantity=` | — | `lat`,`long` req.; `quantity` opc. (máx 100, def 10) | 200 `[FontSummary]` (por distancia) | 400 |
 | GET | `/fonts/map?minLat=&maxLat=&minLong=&maxLong=&width=&height=` | — | bounding box y tamaño del viewport | 200 `{ total, fonts, clusters }` | 400 |
 | GET | `/fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=` | — | endpoint legado del mapa (máx. 3.000) | 200 `[FontSummary]` | 400 |

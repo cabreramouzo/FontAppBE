@@ -1279,6 +1279,33 @@ final class IntegrationTests: XCTestCase {
     /// moderación sobre el trabajo de una persona, y `creator` también es público: juntos
     /// publicarían «a fulano le marcaron esto como spam». Nadie lo usa — el aviso de la
     /// ficha solo distingue `pending`, y el botón del moderador solo mira si es `visible`.
+    /// `GET /fonts` sirve para **buscar**, no para barrer la base.
+    ///
+    /// Sin término era un catálogo paginado por nombre: 89.000 fuentes a 100 por página
+    /// son 893 peticiones ordenadas, sin repetir ni saltarse nada. Es el camino más cómodo
+    /// para llevárselo todo. No cierra la copia —`in-bounds` da 3.000 por llamada y tiene
+    /// que seguir abierta porque la usa el mapa— pero quita el camino fácil.
+    ///
+    /// El corte va en «hay término» y **no** en la ruta entera: cerrarla habría roto el
+    /// buscador para quien no tiene cuenta, que es justo quien llega por un cartel.
+    func testFontsListNeedsASearchTerm() async throws {
+        let app = try await Application.make(.testing)
+        defer { Task { try? await app.asyncShutdown() } }
+        try await configure(app)
+
+        try await app.test(.GET, "/fonts?per=100&page=2") { res in
+            XCTAssertEqual(res.status, .forbidden, "barrer sin término no")
+        }
+        try await app.test(.GET, "/fonts?search=font&per=6") { res in
+            XCTAssertEqual(res.status, .ok, "buscar sí, y sin sesión")
+        }
+        // Y la profundidad: exigir un término sin esto no cierra nada, porque `search=a`
+        // casa con casi cualquier nombre y paginando se vuelve a barrer con una letra.
+        try await app.test(.GET, "/fonts?search=a&page=\(FontController.maxPublicPage + 1)") { res in
+            XCTAssertEqual(res.status, .forbidden, "quien va por la página 40 está barriendo")
+        }
+    }
+
     func testFontJSONDoesNotPublishWhyItWasHidden() throws {
         XCTAssertEqual(Font.publicModerationState("visible"), "visible")
         XCTAssertEqual(Font.publicModerationState("pending"), "pending",

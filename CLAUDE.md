@@ -432,6 +432,20 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   nada. Está calibrado midiendo: diez movimientos de mapa son **20 peticiones**, así que
   600/h son unas tres horas seguidas de uso intenso. Comprobado que corta en la 601 con
   `Retry-After`.
+- **`GET /fonts` sirve para buscar, no para barrer.** Sin término era un catálogo paginado
+  por nombre: 89.000 fuentes a 100 por página son **893 peticiones ordenadas**, sin repetir
+  ni saltarse nada — el camino más cómodo para llevárselo todo. Ahora exige `search` y,
+  además, **página ≤ 5**: pedir solo el término no cierra nada, porque `search=a` casa con
+  casi cualquier nombre y paginando se vuelve a barrer la base con una letra. Quien busca
+  de verdad no pasa de la segunda página; quien va por la cuarenta está barriendo. Los
+  admins no tienen ninguno de los dos topes.
+  El corte va en «hay término» y **no** en la ruta entera: cerrarla habría roto el buscador
+  para quien no tiene cuenta, que es justo quien llega por un cartel. La ruta lleva el
+  autenticador **sin** `guardMiddleware` para poder mirar si quien llama es admin sin dejar
+  de ser pública. Hay test.
+  Y sigue sin impedir la copia —`in-bounds` da 3.000 por llamada y tiene que seguir abierta
+  porque la usa el mapa—: es cerrar la puerta de la calle sabiendo que la verja del jardín
+  sigue abierta. No es seguridad, es no ponerlo fácil.
 - Ojo: `RateLimitMiddleware` es **en memoria y por instancia**. Con más de una, el tope
   real se multiplica por el número de instancias.
 - **Lo que NO se hace: fuentes falsas de control** para detectar copias. Envenenaría el
