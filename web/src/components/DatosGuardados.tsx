@@ -9,7 +9,12 @@ import { formateaTamano } from '../lib/tamanos'
 import { borraZona, zonaGuardada, type Zona } from '../lib/zonaAlmacen'
 
 /**
- * Qué ocupa la app en el móvil, y un botón para vaciar cada cosa.
+ * Qué guarda la app en este aparato, y un botón para vaciar cada cosa.
+ *
+ * Se llamaba «Espacio en el móvil» y el nombre decía lo contrario de lo que hace: parecía
+ * que fueras a gestionar el almacenamiento del teléfono, cuando esto es **lo que FontApp
+ * guarda dentro de él**. Tampoco se llama «caché»: es la palabra exacta y no la entiende
+ * casi nadie fuera del oficio.
  *
  * Existe porque el caché **fijado** —las fotos y el mapa de una zona guardada— no lo
  * recorta el LRU ni lo caduca nada, a propósito: para eso se guarda. El precio es que era
@@ -22,7 +27,7 @@ import { borraZona, zonaGuardada, type Zona } from '../lib/zonaAlmacen'
  * con la siguiente visita.
  */
 /** `sinTitulo`: cuando ya lo pone la pantalla que la contiene, para no repetirlo. */
-export function EspacioEnElMovil({ sinTitulo = false }: { sinTitulo?: boolean }) {
+export function DatosGuardados({ sinTitulo = false }: { sinTitulo?: boolean }) {
   const { t, lang } = useI18n()
   const [n, setN] = useState<Recuento | null>(null)
   const [total, setTotal] = useState<{ usado: number; libre: number | null } | null>(null)
@@ -65,6 +70,10 @@ export function EspacioEnElMovil({ sinTitulo = false }: { sinTitulo?: boolean })
         </Typography>
       )}
 
+      {/* Sin service worker no se pueden leer los cachés, y decía «todavía no hay nada
+          guardado» — que es falso y encima contradecía la fila de justo debajo, donde la
+          zona guardada (que vive en IndexedDB y sí se lee) enseñaba sus 110 fuentes. Lo
+          que pasa es que los contadores no se pueden medir, no que no haya nada. */}
       {!haySW && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
           {t('storage.noSW')}
