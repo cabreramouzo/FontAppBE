@@ -30,7 +30,7 @@ function cargaSW(hrefDelSW: string) {
 
 test('el shell actual invalida el bundle persistente anterior', () => {
   const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
-  assert.match(codigo, /const SHELL_CACHE = 'fontapp-shell-v6'/)
+  assert.match(codigo, /const SHELL_CACHE = 'fontapp-shell-v7'/)
   // El remedio no debe borrar mapas ni respuestas offline. Este test ya ha cazado un
   // intento de subir `API_CACHE` sin que hubiera cambiado ningún formato: habría tirado
   // lo guardado de todo el mundo en el cambio que existía para conservarlo mejor.

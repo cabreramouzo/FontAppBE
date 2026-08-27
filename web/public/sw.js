@@ -3,7 +3,7 @@
 // - Teselas del mapa (OSM, otro dominio): cache-first con tope (LRU sencillo).
 // - API GET del mismo origen: stale-while-revalidate (sirve al instante, refresca si hay red).
 // - Navegación SPA: network-first con respaldo en el shell.
-const SHELL_CACHE = 'fontapp-shell-v6'
+const SHELL_CACHE = 'fontapp-shell-v7'
 const TILE_CACHE = 'fontapp-tiles-v2'
 const API_CACHE = 'fontapp-api-v3'
 // El nombre NO sube de versión al sacar las fotos: no ha cambiado el formato de nada, y
@@ -142,7 +142,14 @@ async function staleWhileRevalidate(req, cacheName) {
       return res
     })
     .catch(() => hit) // sin red: nos quedamos con lo cacheado
-  return hit || network
+  if (hit) return hit
+  // Sin nada guardado y sin red, `network` resuelve a `undefined` — y devolver eso desde
+  // `respondWith` es un fallo opaco del service worker, no un error de red limpio. El
+  // cliente necesita lo segundo: `isOffline` mira `ApiError.status === 0`, y de eso
+  // depende que la ficha caiga a la zona guardada en vez de enseñar un error.
+  const res = await network
+  if (res) return res
+  throw new TypeError('offline')
 }
 
 /**
@@ -196,7 +203,17 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   const keep = new Set([SHELL_CACHE, TILE_CACHE, API_CACHE, PHOTO_CACHE, PINNED_CACHE])
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)))),
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k))))
+      // Y se repone el shell si falta. `precargaShell` solo corre en `install`, así que
+      // una instalación con la red a medias dejaba la app SIN shell para siempre: todo
+      // funcionaba con cobertura y al perderla salía la pantalla de sin conexión, que es
+      // exactamente lo que se reportó. Aquí se comprueba en cada arranque del worker.
+      .then(async () => {
+        const c = await caches.open(SHELL_CACHE)
+        if (await c.match('/index.html')) return
+        await precargaShell().catch(() => {})
+      }),
   )
   self.clients.claim()
 })
@@ -213,6 +230,67 @@ self.addEventListener('message', (event) => {
     }),
   )
 })
+
+/**
+ * La pantalla de último recurso cuando no hay red **ni shell guardado**.
+ *
+ * Era un `<h1>Sense connexió</h1>` pelado: catalán a la fuerza, con la fuente serif del
+ * navegador y **sin una sola línea de JavaScript**, así que al volver la cobertura se
+ * quedaba ahí para siempre — no había nadie escuchando. Reportado desde el monte con una
+ * captura, y hasta entonces parecía un fallo de la app y no del service worker.
+ *
+ * Los ocho idiomas van escritos aquí dentro a la fuerza: el service worker es un fichero
+ * estático que Vite no procesa, así que no puede importar los diccionarios. Se elige con
+ * `navigator.language`, que es lo único que tiene a mano — `localStorage` no lo ve.
+ */
+const SIN_CONEXION = {
+  ca: ['Sense connexió', 'No hem pogut carregar aquesta pantalla i no en tenim cap còpia al mòbil. Es tornarà a provar sola quan torni la cobertura.', 'Tornar-ho a provar'],
+  es: ['Sin conexión', 'No hemos podido cargar esta pantalla y no tenemos ninguna copia en el móvil. Se reintentará sola cuando vuelva la cobertura.', 'Reintentar'],
+  gl: ['Sen conexión', 'Non puidemos cargar esta pantalla e non temos ningunha copia no móbil. Reintentarase soa cando volva a cobertura.', 'Reintentar'],
+  eu: ['Konexiorik gabe', 'Ezin izan dugu pantaila hau kargatu eta ez dugu kopiarik mugikorrean. Estaldura itzultzean bere kabuz saiatuko da berriro.', 'Saiatu berriro'],
+  en: ['No connection', 'We could not load this screen and there is no copy saved on your phone. It will retry by itself when the signal comes back.', 'Try again'],
+  fr: ['Hors connexion', 'Impossible de charger cet écran et aucune copie n’est enregistrée sur le téléphone. Nouvelle tentative automatique dès le retour du réseau.', 'Réessayer'],
+  pt: ['Sem ligação', 'Não conseguimos carregar este ecrã e não há nenhuma cópia guardada no telemóvel. Voltará a tentar sozinho quando a rede regressar.', 'Tentar de novo'],
+  it: ['Senza connessione', 'Non siamo riusciti a caricare questa schermata e non c’è nessuna copia salvata sul telefono. Riproverà da solo quando torna il segnale.', 'Riprova'],
+}
+
+function paginaSinConexion() {
+  const codigo = (self.navigator && self.navigator.language ? self.navigator.language : 'ca')
+    .slice(0, 2).toLowerCase()
+  const [titulo, texto, boton] = SIN_CONEXION[codigo] || SIN_CONEXION.ca
+  const html = `<!doctype html><html lang="${codigo}"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${titulo}</title><style>
+:root{--bg:#fff;--fg:#1a1a1a;--muted:#6b7280;--accent:#0ea5e9;--accent-fg:#fff}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1115;--fg:#e5e7eb;--muted:#9ca3af;--accent:#38bdf8;--accent-fg:#06202c}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+gap:14px;padding:32px;text-align:center;background:var(--bg);color:var(--fg);
+font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{margin:0;font-size:22px}
+p{margin:0;max-width:34ch;color:var(--muted);font-size:15px}
+button{min-height:48px;padding:0 22px;border:0;border-radius:24px;background:var(--accent);
+color:var(--accent-fg);font:inherit;font-weight:600;cursor:pointer}
+</style></head><body>
+<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+ stroke-linecap="round" aria-hidden="true" style="color:var(--muted)">
+<path d="M3 3l18 18M5.6 9.6A9 9 0 0 1 9 7.6M2 8.8a15 15 0 0 1 4-2.8M22 8.8a15 15 0 0 0-9.6-3.7M8.5 13a5 5 0 0 1 2-1.2M12 18h.01"/></svg>
+<h1>${titulo}</h1><p>${texto}</p>
+<button onclick="location.reload()">${boton}</button>
+<script>
+// Lo que faltaba: aquí no hay app, así que si nadie escucha, esta pantalla se queda para
+// siempre aunque el móvil ya tenga cobertura. Se recarga sola al volver la red y al
+// volver a primer plano — en un móvil, «online» a veces no llega hasta que miras.
+addEventListener('online', function () { location.reload() })
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden && navigator.onLine) location.reload()
+})
+<\/script></body></html>`
+  return new Response(html, {
+    status: 503,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  })
+}
 
 self.addEventListener('fetch', (event) => {
   const req = event.request
@@ -269,16 +347,13 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(async () => {
           const c = await caches.open(SHELL_CACHE)
-          const hit = await c.match('/index.html')
+          // Las DOS claves. `precargaShell` guarda el shell bajo `/` y `/index.html`,
+          // pero aquí solo se miraba la segunda: si por lo que sea solo había una, la
+          // app tenía su shell guardado y aun así salía la pantalla de sin conexión.
+          const hit = (await c.match('/index.html')) || (await c.match('/'))
           // Sin red y sin shell no hay nada que servir; una respuesta clara es mejor
           // que dejar la promesa en nada, que el navegador muestra como error de red.
-          return (
-            hit ||
-            new Response('<h1>Sense connexió</h1>', {
-              status: 503,
-              headers: { 'Content-Type': 'text/html; charset=utf-8' },
-            })
-          )
+          return hit || paginaSinConexion()
         }),
     )
     return

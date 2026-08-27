@@ -10,7 +10,16 @@ import { test } from 'node:test'
  * worker en un test, pero esto es lógica pura y es donde están los fallos que no dan la
  * cara.
  */
-function cargaSW(cachesFalsos: Record<string, Map<string, unknown>>) {
+class RespuestaFalsa {
+  body: string
+  init?: { status?: number; headers?: Record<string, string> }
+  constructor(body: string, init?: { status?: number; headers?: Record<string, string> }) {
+    this.body = body
+    this.init = init
+  }
+}
+
+function cargaSW(cachesFalsos: Record<string, Map<string, unknown>>, idioma = 'ca') {
   const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
   const abiertos = new Set<string>()
   const caches = {
@@ -30,11 +39,12 @@ function cargaSW(cachesFalsos: Record<string, Map<string, unknown>>) {
   }
   const self = {
     location: { href: 'https://fontapp.net/sw.js', origin: 'https://fontapp.net' },
+    navigator: { language: idioma },
     addEventListener: () => {}, skipWaiting: () => {}, clients: { claim: () => {} }, registration: {},
   }
   const fn = new Function('self', 'caches', 'fetch', 'Response', 'clients',
-    `${codigo}\n;return { buscaFijadoPrimero, trimCache, fija, PINNED_CACHE, API_CACHE, PHOTO_CACHE, API_LIMIT };`)
-  return { sw: fn(self, caches, async () => ({ ok: true, clone: () => 'nueva' }), class {}, {}), abiertos }
+    `${codigo}\n;return { buscaFijadoPrimero, trimCache, fija, paginaSinConexion, SIN_CONEXION, PINNED_CACHE, API_CACHE, PHOTO_CACHE, API_LIMIT };`)
+  return { sw: fn(self, caches, async () => ({ ok: true, clone: () => 'nueva' }), RespuestaFalsa, {}), abiertos }
 }
 
 test('lo fijado gana a lo normal, aunque los dos estén guardados', () => {
@@ -85,4 +95,75 @@ test('las fotos y los datos ya no comparten hueco', () => {
   assert.match(codigo, /const PHOTO_CACHE = 'fontapp-photos-v1'/)
   assert.match(codigo, /cacheFirst\(req, PHOTO_CACHE/)
   assert.doesNotMatch(codigo, /cacheFirst\(req, API_CACHE/)
+})
+
+test('la pantalla de sin conexión está en los ocho idiomas y trae reintento', () => {
+  // Era un `<h1>Sense connexió</h1>` pelado: catalán a la fuerza, sin estilos y **sin
+  // JavaScript**, así que al volver la cobertura se quedaba ahí para siempre. Se reportó
+  // desde el monte con una captura, y parecía un fallo de la app.
+  const { sw } = cargaSW({})
+  const idiomas = Object.keys(sw.SIN_CONEXION as Record<string, string[]>)
+  assert.deepEqual(idiomas.sort(), ['ca', 'en', 'es', 'eu', 'fr', 'gl', 'it', 'pt'])
+  for (const [k, v] of Object.entries(sw.SIN_CONEXION as Record<string, string[]>)) {
+    assert.equal(v.length, 3, `${k}: título, texto y botón`)
+    for (const t of v) assert.ok(t.trim().length > 0, `${k}: hay una cadena vacía`)
+  }
+})
+
+test('la pantalla de sin conexión se recarga sola al volver la red', () => {
+  const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+  // Sin esto no hay app que escuche: la pantalla se queda para siempre aunque el móvil
+  // ya tenga cobertura, que es la mitad del fallo que se reportó.
+  assert.match(codigo, /addEventListener\('online'/)
+  assert.match(codigo, /visibilitychange/)
+})
+
+test('el respaldo de navegación mira las DOS claves del shell', () => {
+  // `precargaShell` guarda bajo `/` y `/index.html`. Mirando solo la segunda, una app con
+  // su shell guardado podía acabar enseñando la pantalla de sin conexión igualmente.
+  const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+  assert.match(codigo, /c\.match\('\/index\.html'\)\) \|\| \(await c\.match\('\/'\)/)
+})
+
+test('el shell se repone al activar si falta', () => {
+  // `precargaShell` solo corría en `install`: una instalación con la red a medias dejaba
+  // la app sin shell PARA SIEMPRE — todo bien con cobertura, y al perderla, pantalla
+  // pelada. Ahora se comprueba en cada arranque del worker.
+  const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+  const activate = codigo.slice(codigo.indexOf("addEventListener('activate'"))
+  assert.match(activate.slice(0, 900), /precargaShell\(\)/)
+})
+
+test('la pantalla sale en el idioma del móvil, no siempre en catalán', () => {
+  for (const [idioma, esperado] of [['es', 'Sin conexión'], ['en', 'No connection'], ['it', 'Senza connessione']] as const) {
+    const { sw } = cargaSW({}, idioma)
+    const res = sw.paginaSinConexion() as { body: string; init?: { status?: number } }
+    assert.ok(res.body.includes(`<h1>${esperado}</h1>`), `${idioma}: esperaba «${esperado}»`)
+    assert.equal(res.init?.status, 503)
+  }
+})
+
+test('un idioma que no tenemos cae en catalán en vez de quedarse en blanco', () => {
+  const { sw } = cargaSW({}, 'de-DE')
+  const res = sw.paginaSinConexion() as { body: string }
+  assert.ok(res.body.includes('<h1>Sense connexió</h1>'))
+})
+
+test('la pantalla trae estilos y botón, no un <h1> pelado', () => {
+  // Lo que se reportó desde el monte era literalmente `<h1>Sense connexió</h1>`: fuente
+  // serif del navegador, sin nada más.
+  const { sw } = cargaSW({}, 'es')
+  const res = sw.paginaSinConexion() as { body: string }
+  assert.match(res.body, /<style>/)
+  assert.match(res.body, /prefers-color-scheme:\s*dark/, 'tiene que seguir el tema del móvil')
+  assert.match(res.body, /<button[^>]*>Reintentar<\/button>/)
+  assert.match(res.body, /viewport/, 'sin viewport, en un móvil sale diminuta')
+})
+
+test('el respaldo de navegación USA esa pantalla y no un <h1> pelado', () => {
+  // Los tests de arriba llaman a la función directamente: sin éste, volver al `<h1>`
+  // dentro del manejador pasaría desapercibido. Comprobado rompiéndolo.
+  const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+  assert.match(codigo, /return hit \|\| paginaSinConexion\(\)/)
+  assert.doesNotMatch(codigo, /new Response\('<h1>/)
 })

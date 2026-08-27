@@ -1923,6 +1923,23 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - **Lo que sigue sin cumplirse del cartel:** las **teselas**. Los datos ya se pueden guardar
   a mano; el mapa no, así que sin cobertura en una zona nueva las casillas salen en blanco
   aunque la lista funcione.
+- **La pantalla de «sin conexión» del service worker es una página de verdad, no un
+  `<h1>`.** Era literalmente `new Response('<h1>Sense connexió</h1>')`: catalán a la
+  fuerza, fuente serif del navegador y **sin una línea de JavaScript**, así que al volver
+  la cobertura se quedaba ahí para siempre — no había nadie escuchando. Se reportó desde el
+  monte con una captura y parecía un fallo de la app. Ahora va traducida a los ocho idiomas
+  (elegidos con `navigator.language`, que es lo único que el SW tiene a mano: no ve
+  `localStorage`), con estilos que siguen el tema, botón de reintentar y recarga sola con
+  `online` y `visibilitychange`.
+  Sale **al navegar**, y por eso aparecía al entrar en una fuente: el popup del mapa es un
+  `<a href>` de verdad, así que tocarlo es una navegación completa y no un cambio de ruta
+  de React.
+  Tres causas de que faltara el shell, arregladas: solo se miraba la clave `/index.html` y
+  no también `/`; `precargaShell` corría **únicamente en `install`**, así que una
+  instalación con la red a medias dejaba la app sin shell para siempre (ahora se repone en
+  `activate`); y `staleWhileRevalidate` devolvía `undefined` sin red ni caché, que desde
+  `respondWith` es un fallo opaco y no un error de red limpio — y de eso depende que
+  `isOffline` acierte y la ficha caiga a la zona guardada.
 - **Service worker y redirecciones:** un SW no puede devolver una respuesta marcada como
   redirigida (WebKit: «Response served by service worker has redirections») y la marca
   sobrevive a la Cache API. `/index.html` responde **308 hacia `/`** en Cloudflare Pages,
