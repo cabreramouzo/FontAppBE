@@ -594,6 +594,16 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   una hoja que termina justo en el indicador del iPhone se toca mal en la última fila.
   Está en `BottomSheet` y no en cada uso, para que la tercera hoja que se añada no tenga
   que acordarse.
+- **Los controles del mapa van arriba del todo también en móvil**, a la altura del
+  buscador y no debajo. Bajaban 90 px para esquivar la barra de búsqueda a lo ancho, y esa
+  barra ya no existe: desde que buscar es una pantalla entera, en móvil solo queda un
+  círculo de 48 px a la izquierda. Los dos comparten la franja sin tocarse — medido a
+  375 px: el buscador ocupa 12–60 y los botones 315–363, y la columna arranca **78 px más
+  arriba**. En escritorio no cambia nada (píldora a la izquierda, controles a la derecha).
+  Ojo al medirlo en el navegador: al cambiar el tamaño de la ventana **`useMediaQuery` no
+  se reevalúa** en el panel de vista previa, así que el buscador se queda en su forma de
+  escritorio y parece que los dos se solapan. Hay que **recargar** después de cambiar el
+  tamaño; sin eso la medida dice lo contrario de lo que pasa en un móvil de verdad.
 - **Buscar en móvil es una pantalla entera** (`Dialog fullScreen` en `SearchBox`), como en
   Maps. El campo flotante con su lista en una tarjeta se quedaba en dos filas visibles: al
   teclear sube el teclado y se come media pantalla. A pantalla completa el teclado tapa lo

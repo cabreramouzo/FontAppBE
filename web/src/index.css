@@ -717,8 +717,13 @@ select:not([class*="Mui"]) {
   }
   /* Plegado: solo la lupa. El resto de la franja superior vuelve a ser mapa. */
   .search.search--collapsed { right: auto; width: 48px; }
-  /* Con el buscador ocupando arriba, los controles bajan bajo él. */
-  .map-controls { top: calc(90px + var(--alto-avisos)); right: max(12px, env(safe-area-inset-right)); gap: 10px; }
+  /* Arriba del todo, a la altura del buscador y no debajo.
+     Bajaban 90 px porque el buscador era una barra a lo ancho de la pantalla. Desde que
+     en móvil es un círculo de 48 px a la izquierda —y buscar abre una pantalla entera—,
+     la mitad derecha de esa franja es mapa vacío, y los controles se quedaban 78 px más
+     abajo esquivando algo que ya no está. Los dos ocupan la misma franja sin tocarse:
+     el buscador a la izquierda, esto a la derecha. */
+  .map-controls { top: calc(12px + var(--alto-avisos)); right: max(12px, env(safe-area-inset-right)); gap: 10px; }
   .fab { font-size: 15px; padding: 12px 16px; min-height: 48px; border-radius: 999px; }
   .nearby {
     top: auto;
