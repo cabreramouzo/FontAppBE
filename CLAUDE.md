@@ -1820,6 +1820,26 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - `scripts/sw-routing.test.ts` carga el `sw.js` con un `self` de mentira y le pregunta por
   sus decisiones. No registra nada —eso no se puede en un test— pero cubre justo donde
   estaba el fallo, que era lógica pura y nunca dio la cara.
+- **`Cerca de ti` se pide con las coordenadas REDONDEADAS** (`lib/casilla.ts`), no con las
+  del GPS. El service worker cachea por URL exacta, así que mandando las crudas cada
+  petición tenía una URL nueva y sin cobertura **no acertaba nunca** — no era «si has
+  mirado la zona antes», era que no funcionaba. El mapa ya decidía *cuándo* repedir por
+  casilla de tres decimales (~111 m) pero pedía con las crudas: la clave y las coordenadas
+  salen ahora de la misma función, que es donde estaba el fallo. Misma regla que
+  `/activity`, y de paso dos personas en el mismo sitio comparten respuesta.
+  El precio, medido: de las 25 más cercanas, **24 coinciden** con las de la posición exacta
+  y baila la última, que es la del borde de la lista. Y la lista **se reordena en el
+  cliente** por la distancia de verdad, porque cada fila pinta la suya y con hasta 100 m de
+  desfase podrían salir 210 m encima de 205 m.
+  **No se aplica dentro de `nearbyFonts`**: esa misma ruta la usa el aviso de «ya hay una
+  fuente a menos de 25 m» al crear una, y ahí redondear a 100 m lo dejaría inservible.
+- **El mapa tiene el mismo problema y sigue sin arreglar.** `/fonts/map` lleva la caja en
+  flotantes completos **y el tamaño en píxeles del viewport** (`width`/`height`), así que
+  basta un píxel de diferencia —y nuestra propia franja de avisos cambia la altura— para
+  que sea otra URL y el caché falle. Es la explicación del «maté la app y el mapa salía en
+  blanco». Arreglarlo pide redondear la caja **hacia fuera** a una rejilla proporcional al
+  zoom (para no dejar de cubrir el viewport) y cuantizar el tamaño; se deja apuntado y no
+  hecho porque ese camino es el que tuvo el OOM y merece medirse aparte.
 - **Lo que sigue sin cumplirse del cartel:** un caché no descarga lo que no has mirado, así
   que «funciona sin cobertura» depende de haber pasado antes por la zona. Para prometerlo
   de verdad haría falta una **descarga de zona** explícita.

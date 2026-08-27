@@ -54,6 +54,7 @@ import 'leaflet-rotate'
 
 import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, WaterSource } from '../api/types'
 import { ApiError, apiFetch, createComment, createFont, describeError, nearbyFonts, requestSourceLimitExemption, trackInteraction, uploadImage } from '../api/client'
+import { casillaDe } from '../lib/casilla'
 import { nombreFuente } from '../lib/fontName'
 import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
 import { clearRecentHistory, recentFountains, recentSearches, rememberFountain, rememberSearch, type RecentFountain } from '../lib/recentHistory'
@@ -944,24 +945,41 @@ function NearbyPanel({
   const { t } = useI18n()
   const movil = useMediaQuery((tema: Theme) => tema.breakpoints.down('sm'))
   const [items, setItems] = useState<FontSummary[] | null>(null)
-  const posRef = useRef(pos)
-  posRef.current = pos
 
   // Con la ubicación en seguimiento continuo, `pos` cambia cada pocos segundos. Si la
   // lista se recargara con cada cambio sería una petición por latido del GPS, así que
-  // solo la refrescamos al cambiar de "casilla" de ~100 m (3 decimales de grado).
-  const casilla = `${pos[0].toFixed(3)},${pos[1].toFixed(3)}`
+  // solo la refrescamos al cambiar de "casilla" de ~100 m.
+  //
+  // **Y se pide con las coordenadas de la casilla, no con las tuyas.** Antes se decidía
+  // cuándo pedir por casilla pero se pedía con el GPS crudo, así que cada petición tenía
+  // una URL nueva — y el service worker cachea por URL exacta. Resultado: sin cobertura
+  // esta lista no acertaba **nunca**. Misma regla que `/activity`, y de paso dos personas
+  // en el mismo sitio comparten la respuesta.
+  const casilla = casillaDe(pos[0], pos[1])
   useEffect(() => {
-    const [lat, long] = posRef.current
-    apiFetch<FontSummary[]>(`/fonts/near?lat=${lat}&long=${long}&quantity=25`)
+    apiFetch<FontSummary[]>(`/fonts/near?lat=${casilla.lat}&long=${casilla.long}&quantity=25`)
       .then(setItems)
       .catch(() => setItems([]))
-  }, [casilla])
+    // Solo la clave: dentro de la misma casilla no hay nada que volver a pedir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [casilla.clave])
+
+  // El servidor ordena por distancia al centro de la casilla y cada fila pinta la
+  // distancia a **ti**, así que sin reordenar aquí podrían salir 210 m encima de 205 m.
+  // Es el mismo fallo que ya se arregló en el servidor hace unas horas, y con hasta 100 m
+  // de desfase basta para que se vea. Son 25 elementos: ordenar es gratis.
+  const ordenados = useMemo(
+    () => (items ?? []).slice().sort(
+      (a, b) => haversineKm(pos[0], pos[1], a.latitude, a.longitude)
+             - haversineKm(pos[0], pos[1], b.latitude, b.longitude),
+    ),
+    [items, pos],
+  )
 
   const lista = (enHoja: boolean) => (
     <List dense={!enHoja} sx={{ overflowY: 'auto', py: 0 }}>
         {items === null && <ListItem><Typography color="text.secondary">{t('map.loading')}</Typography></ListItem>}
-        {items?.map((f) => {
+        {ordenados.map((f) => {
           const ws = waterStatusInfo(f.lastWaterStatus)
           const dist = haversineKm(pos[0], pos[1], f.latitude, f.longitude)
           return (
