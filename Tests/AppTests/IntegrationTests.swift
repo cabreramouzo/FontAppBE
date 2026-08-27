@@ -524,6 +524,8 @@ final class IntegrationTests: XCTestCase {
             try await comment.save(on: app.db)
             let commentID = try comment.requireID()
 
+            // Recién publicada: todavía no. Ya no es «nunca» sino «no el mismo día» —ver
+            // `SelfConfirmTests`—, y este caso sigue dando 403 por la espera de 24 h.
             try await app.test(.POST, "fonts/\(fontID)/comments/\(commentID)/confirm",
                                headers: bearer(authorToken)) { res in
                 XCTAssertEqual(res.status, .forbidden)
@@ -539,31 +541,44 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
-    func testHistoricalSelfConfirmationDoesNotCountForConfidence() async throws {
+    /// Confirmar tu propia reseña **no es respaldo, pero sí es fecha**.
+    ///
+    /// Antes este test fijaba la regla vieja —la propia se ignoraba también para la
+    /// frescura— y se cambió a propósito: lo que se separa son dos cosas distintas.
+    /// **Corroboración**: ¿alguien más lo dice? La propia no cuenta y no debe contar
+    /// nunca, o una fuente llegaría a «confirmada» a base de que su autor se repita.
+    /// **Actualidad**: ¿de cuándo es el dato? Que quien la reseñó haya vuelto a pasar y
+    /// siga igual es información nueva y verdadera, y es la que evita el desvío.
+    func testSelfConfirmationIsFreshnessNotSupport() async throws {
         try await withApp { app in
             let authorID = try await register(app, username: "old-self-confirm")
             let token = try await login(app, username: "old-self-confirm")
             let fontID = try await createFont(app, token: token, name: "Històrica", lat: 40.4, long: -3.7)
             let comment = FontComment(fontID: fontID, userID: authorID, body: "raja", waterStatus: "flowing")
             try await comment.save(on: app.db)
-            try await FontConfirmation(commentID: try comment.requireID(), userID: authorID).save(on: app.db)
+            let confirmation = FontConfirmation(commentID: try comment.requireID(), userID: authorID)
+            try await confirmation.save(on: app.db)
 
             let response = try await FontCommentController.response(for: comment, viewer: authorID, on: app.db)
+            // La mitad que protege: sigue sin ser respaldo de nadie.
             XCTAssertEqual(response.confirmations, 0)
-            XCTAssertFalse(response.confirmedByMe)
-            XCTAssertNil(response.lastConfirmedAt)
+            // La mitad nueva: dice cuándo se miró por última vez.
+            XCTAssertNotNil(response.lastConfirmedAt)
+            // Y como es de hace un momento, el botón queda marcado: vuelve a estar
+            // disponible al pasar el día.
+            XCTAssertTrue(response.confirmedByMe)
 
             let found = try await Font.find(fontID, on: app.db)
             let font = try XCTUnwrap(found)
             let summaries = try await Font.summaries(for: [font], on: app.db)
             let summary = try XCTUnwrap(summaries.first)
             XCTAssertEqual(summary.latestConfirmations, 0)
-            // Compara dos valores leídos de PostgreSQL. `comment.createdAt` conserva la
-            // precisión del reloj de Swift al guardar y el driver puede normalizarla al
-            // releerla; en Linux eso hacía el test inestable aunque ambas fechas fueran
-            // el mismo instante visible.
-            let storedComment = try await FontComment.find(comment.requireID(), on: app.db)
-            XCTAssertEqual(summary.lastUpdate, try XCTUnwrap(storedComment?.createdAt))
+            // El resumen del mapa dice lo mismo que la ficha: la fecha es la de la
+            // confirmación, no la de la reseña. Se comparan dos valores leídos de
+            // PostgreSQL —el reloj de Swift conserva más precisión al guardar y el driver
+            // puede normalizarla al releer, y en Linux eso hacía el test inestable.
+            let stored = try await FontConfirmation.find(confirmation.requireID(), on: app.db)
+            XCTAssertEqual(summary.lastUpdate, try XCTUnwrap(stored?.createdAt))
         }
     }
 
