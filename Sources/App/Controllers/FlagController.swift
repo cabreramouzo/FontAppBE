@@ -127,15 +127,34 @@ struct FlagController: RouteCollection {
         }
     }
 
-    /// Concede siete días de exención al cupo de cuentas nuevas y consume la
-    /// solicitud. Es una decisión administrativa, no una acción de moderador.
+    /// Concede la exención al cupo de cuentas nuevas y consume la solicitud. Es una
+    /// decisión administrativa, no una acción de moderador.
+    ///
+    /// ## Un día o siete, y por qué no «hasta medianoche»
+    ///
+    /// Lo que casi siempre hace falta es terminar lo que se está haciendo hoy: alguien
+    /// delante de un pueblo con quince fuentes por apuntar. Siete días para eso es dar
+    /// mucho más de lo que se pidió, y lo caro de esta decisión es justo lo que dura.
+    ///
+    /// Se mide en **horas desde ahora** y no hasta el final del día natural porque el
+    /// servidor va en UTC y la gente va de Chile a Italia: la medianoche de aquí son las
+    /// ocho de la tarde en Santiago —cortaría la tarde a la mitad— y las dos de la
+    /// madrugada en Roma. Un día es un día en cualquier huso, y además es exactamente la
+    /// ventana del cupo que levanta, que ya es de 24 horas móviles.
     @Sendable func approveSourceLimitExemption(req: Request) async throws -> HTTPStatus {
         let admin = try req.auth.require(User.self)
         guard admin.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
+        // Por defecto, siete: es lo que hacía antes, y así un cliente sin actualizar sigue
+        // funcionando en vez de conceder algo distinto de lo que su botón promete.
+        let dias = (try? req.query.get(Int.self, at: "days")) ?? 7
+        guard dias == 1 || dias == 7 else {
+            throw AppError(.badRequest, "flag.badExemptionDays", "La excepción es de 1 o 7 días.")
+        }
         guard let flag = try await ContentFlag.find(req.parameters.get("flagID"), on: req.db),
               flag.targetType == "source_limit_exemption",
               let user = try await User.find(flag.targetID, on: req.db) else { throw Abort(.notFound) }
-        user.sourceLimitExemptUntil = Date().addingTimeInterval(7 * 86_400)
+        let hasta = Date().addingTimeInterval(Double(dias) * 86_400)
+        user.sourceLimitExemptUntil = hasta
         try await req.db.transaction { database in
             try await user.save(on: database)
             try await flag.delete(on: database)
@@ -144,8 +163,15 @@ struct FlagController: RouteCollection {
             try await sql.raw("""
                 INSERT INTO moderation_actions (id, subject_user_id, actor_id, action, reason, created_at)
                 VALUES (\(bind: UUID()), \(bind: user.id), \(bind: admin.id),
-                        'source_limit_exemption_granted', '7d', CURRENT_TIMESTAMP)
+                        'source_limit_exemption_granted', \(bind: "\(dias)d"), CURRENT_TIMESTAMP)
                 """).run()
+        }
+        // Y se le dice. Sin esto, quien lo pidió no ve NADA cambiar por su lado: o lo
+        // vuelve a pedir, o deja de intentarlo creyendo que le han dicho que no.
+        if let userID = user.id {
+            let push = PushEnvio(req.application)
+            let db = req.db
+            Task.detached { await SourceLimitNotifier.granted(userID: userID, until: hasta, on: db, push: push) }
         }
         return .noContent
     }

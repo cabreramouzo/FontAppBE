@@ -73,14 +73,14 @@ export function AdminModerationPage() {
     await Promise.all(group.flags.map((flag) => dismissFlag(flag.id)))
   }
 
-  function approve(group: FlagGroup) {
+  function approve(group: FlagGroup, dias: 1 | 7 = 7) {
     void run(group.key, async () => {
       if (group.first.targetType === 'cover_photo_removal') {
         await approvePhotoRemoval(group.first.id)
         return
       }
       if (group.first.targetType === 'source_limit_exemption') {
-        await approveSourceLimitExemption(group.first.id)
+        await approveSourceLimitExemption(group.first.id, dias)
         return
       }
       if (group.first.targetType === 'font' && group.first.fontModerationState !== 'visible') {
@@ -164,7 +164,8 @@ export function AdminModerationPage() {
               ...[...new Set(group.flags.map((f) => f.reason).filter(Boolean) as string[])],
             ]}
             busy={busy === group.key}
-            onApprove={() => approve(group)}
+            onApprove={() => approve(group, 1)}
+            onApprove7={() => approve(group, 7)}
             onRemove={(reason) => remove(group, reason)}
             removalRequest={group.first.targetType === 'cover_photo_removal'}
             sourceLimitRequest={group.first.targetType === 'source_limit_exemption'}
@@ -207,7 +208,7 @@ function ModerationCard(props: {
   strikes: number; restrictedUntil: string | null; createdAt: string | null
   chips: string[]; busy: boolean; onApprove: () => void
   onRemove: (reason: Reason) => void; onRestrict?: () => void
-  removalRequest?: boolean; sourceLimitRequest?: boolean
+  removalRequest?: boolean; sourceLimitRequest?: boolean; onApprove7?: () => void
   t: (key: string, params?: Record<string, string | number>) => string
 }) {
   const { t } = props
@@ -234,7 +235,19 @@ function ModerationCard(props: {
           )}
           <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1.5, flexWrap: 'wrap' }}>
             {props.fontID && <Button size="small" component={RouterLink} to={`/fonts/${props.fontID}`}>{t('admin.viewTarget')}</Button>}
-            <Button size="small" variant="contained" color="success" disableElevation disabled={props.busy} onClick={props.onApprove}>{props.removalRequest ? t('moderation.removePhoto') : props.sourceLimitRequest ? t('moderation.grant7') : t('moderation.approve')}</Button>
+            {/* Para el cupo, dos botones y no uno: lo que casi siempre hace falta es
+                terminar lo de hoy —alguien delante de un pueblo con quince fuentes por
+                apuntar—, y siete días para eso es dar mucho más de lo que se pidió. Lo
+                caro de esta decisión es cuánto dura. «Un día» va primero y relleno porque
+                es el caso normal; siete se queda a un clic para cuando de verdad toca. */}
+            {props.sourceLimitRequest ? (
+              <>
+                <Button size="small" variant="contained" color="success" disableElevation disabled={props.busy} onClick={props.onApprove}>{t('moderation.grant1')}</Button>
+                <Button size="small" variant="outlined" color="success" disabled={props.busy} onClick={props.onApprove7}>{t('moderation.grant7')}</Button>
+              </>
+            ) : (
+              <Button size="small" variant="contained" color="success" disableElevation disabled={props.busy} onClick={props.onApprove}>{props.removalRequest ? t('moderation.removePhoto') : t('moderation.approve')}</Button>
+            )}
             {props.removalRequest || props.sourceLimitRequest ? (
               <Button size="small" disabled={props.busy} onClick={() => props.onRemove('fake')}>{t('moderation.rejectRequest')}</Button>
             ) : <>

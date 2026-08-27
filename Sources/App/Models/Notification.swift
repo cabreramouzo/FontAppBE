@@ -31,6 +31,14 @@ final class Notification: Model, @unchecked Sendable {
         /// lleva un **código** (`review:dry`, `report`, `hidden:retired`), no una frase:
         /// las palabras las pone el navegador, que sí sabe en qué idioma lees.
         case fontUpdate
+        /// Se te ha ampliado el cupo de fuentes de cuenta nueva. Sin actor: es una
+        /// decisión de la casa y quién la firmó no es asunto público.
+        ///
+        /// El `excerpt` lleva **la fecha límite en ISO**, no una frase ni «7 días»: el
+        /// navegador sabe en qué zona horaria estás y la pinta en tu hora local. Mandar
+        /// «hasta las 22:00» desde un servidor en UTC sería mentirle a media base de
+        /// usuarios, que va de Chile a Italia.
+        case sourceLimit
     }
 
     @ID(key: .id) var id: UUID?

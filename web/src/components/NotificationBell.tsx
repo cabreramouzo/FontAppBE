@@ -61,13 +61,30 @@ function queHaPasado(excerpt: string, quien: string, t: (k: string, v?: Record<s
   return t('notif.fontUpdate.other')
 }
 
+/**
+ * La fecha límite del cupo, en la hora de quien lee.
+ *
+ * El servidor manda el instante en ISO y **no una frase ni «7 días»**: va en UTC y la
+ * gente de esta app va de Chile a Italia, seis husos. «Hasta las 22:00» sería falso para
+ * casi todo el mundo; el navegador sí sabe qué hora es aquí.
+ */
+function hasta(excerpt: string, lang: string): string {
+  const d = new Date(excerpt)
+  if (Number.isNaN(d.getTime())) return ''
+  try {
+    return new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }).format(d)
+  } catch {
+    return d.toLocaleString()
+  }
+}
+
 function cifras(excerpt: string): [number, number, number] {
   const [a, b, c] = excerpt.split('|').map((x) => Number(x) || 0)
   return [a ?? 0, b ?? 0, c ?? 0]
 }
 
 export function NotificationBell({ desktopLabel = false }: { desktopLabel?: boolean }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [items, setItems] = useState<NotificationItem[]>([])
   const [unread, setUnread] = useState(0)
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
@@ -144,18 +161,22 @@ export function NotificationBell({ desktopLabel = false }: { desktopLabel?: bool
             <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
               {n.kind === 'staleGuarded'
                 ? t('notif.staleGuarded', { n: String(cifras(n.excerpt)[0]) })
-                : n.kind === 'fontUpdate'
-                  ? t('notif.fontUpdate', { font: rotulo(n.fontName, t) })
-                  : t('notif.mentionedYou', { user: n.actorName, font: rotulo(n.fontName, t) })}
+                : n.kind === 'sourceLimit'
+                  ? t('notif.sourceLimit')
+                  : n.kind === 'fontUpdate'
+                    ? t('notif.fontUpdate', { font: rotulo(n.fontName, t) })
+                    : t('notif.mentionedYou', { user: n.actorName, font: rotulo(n.fontName, t) })}
             </Typography>
             {/* El texto que lo provocó. Sin él hay que abrir la ficha para saber si
                 corre prisa, y casi nunca corre. */}
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.35 }}>
               {n.kind === 'staleGuarded'
                 ? t('notif.staleGuardedBody', { font: rotulo(n.fontName, t), d: String(cifras(n.excerpt)[2]) })
-                : n.kind === 'fontUpdate'
-                  ? queHaPasado(n.excerpt, n.actorName, t)
-                  : n.excerpt}
+                : n.kind === 'sourceLimit'
+                  ? t('notif.sourceLimitBody', { hasta: hasta(n.excerpt, lang) })
+                  : n.kind === 'fontUpdate'
+                    ? queHaPasado(n.excerpt, n.actorName, t)
+                    : n.excerpt}
             </Typography>
             <Box component="span" sx={{ display: 'block', fontSize: 11, color: 'text.disabled', mt: 0.25 }}>
               {n.createdAt ? timeAgo(n.createdAt, t) : ''}

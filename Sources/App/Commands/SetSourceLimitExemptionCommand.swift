@@ -42,7 +42,11 @@ struct SetSourceLimitExemptionCommand: AsyncCommand {
                 VALUES (\(bind: UUID()), \(bind: userID), NULL, \(bind: action), \(bind: reason), \(bind: Date()))
                 """).run()
         }
+        // Se avisa por la campana, igual que desde el panel: da igual por dónde se
+        // conceda, quien lo pidió tiene que enterarse de que ya puede seguir.
         if let until = user.sourceLimitExemptUntil {
+            await SourceLimitNotifier.granted(userID: userID, until: until, on: db,
+                                              push: PushEnvio(context.application))
             context.console.info("Excepción para '\(signature.username)' activa hasta \(until).")
         } else {
             context.console.info("Excepción para '\(signature.username)' revocada.")

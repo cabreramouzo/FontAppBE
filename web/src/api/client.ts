@@ -468,7 +468,7 @@ export async function guardedFonts(): Promise<Guarded[]> {
 /** Un aviso de la campana. `fontID` nulo = la fuente ya no existe. */
 export interface NotificationItem {
   id: string
-  kind: 'mention' | 'staleGuarded' | 'fontUpdate'
+  kind: 'mention' | 'staleGuarded' | 'fontUpdate' | 'sourceLimit'
   actorName: string
   fontID: string | null
   fontName: string | null
@@ -685,8 +685,9 @@ export async function requestSourceLimitExemption(): Promise<void> {
   await apiFetch('/users/source-limit-exemption-request', { method: 'POST' })
 }
 
-export async function approveSourceLimitExemption(id: string): Promise<void> {
-  await apiFetch(`/flags/${id}/approve-source-limit-exemption`, { method: 'POST' })
+/** `dias` es 1 o 7. Sin él, el servidor sigue dando 7, que es lo que hacía siempre. */
+export async function approveSourceLimitExemption(id: string, dias: 1 | 7 = 7): Promise<void> {
+  await apiFetch(`/flags/${id}/approve-source-limit-exemption?days=${dias}`, { method: 'POST' })
 }
 
 export async function hideFontAbuse(id: string, reason: 'spam' | 'fake' | 'abuse'): Promise<Font> {

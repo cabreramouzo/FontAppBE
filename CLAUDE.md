@@ -363,6 +363,20 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - Roles: `swift run App set-role <username> <user|moderator|admin|owner>` (owner solo por CLI).
 - Excepción temporal al cupo de 5 fuentes de una cuenta nueva:
   `swift run App set-source-limit-exemption <username> --days <0...30>`; `0` revoca.
+  Desde el panel de moderación son **1 día o 7** (`?days=`), y 1 va primero y relleno
+  porque es el caso normal: alguien delante de un pueblo con quince fuentes por apuntar
+  necesita terminar hoy, y siete días es conceder mucho más de lo que se pidió. Sin el
+  parámetro siguen siendo 7, para que un cliente sin actualizar conceda lo que promete su
+  botón. Cualquier otra duración se rechaza — sin eso, un `?days=3650` daba diez años.
+  **No es «hasta medianoche»** aunque suene mejor: el servidor va en UTC y esta base va de
+  Chile a Italia, así que la medianoche de aquí corta la tarde en Santiago y regala dos
+  horas en Roma. Un día es un día en cualquier huso, y además es exactamente la ventana
+  del cupo que levanta, que ya son 24 h móviles.
+  **Y ahora se avisa a quien lo pidió** (`SourceLimitNotifier`, campana + push desde el
+  panel y desde la consola). Antes se concedía y por su lado **no cambiaba nada visible**:
+  o lo volvía a pedir, o dejaba de intentarlo creyendo que le habían dicho que no. El
+  aviso lleva **la fecha en ISO** y no una frase — el servidor no sabe qué hora es para ti,
+  y el navegador sí. Hay test de las dos mitades.
   Solo salta ese cupo, no el rate limit de 30/h ni concede permisos. Runbook local/Fly,
   ver `DEPLOY.md` → «Excepción temporal para una cuenta colaboradora».
 - Servidor: `swift run App serve` (`127.0.0.1:8080`). Cargar entorno: `export $(cat env.development | xargs)`.

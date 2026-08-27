@@ -40,6 +40,24 @@ enum PushCopy {
         }
     }
 
+    /// Se te ha ampliado el cupo de fuentes de cuenta nueva.
+    ///
+    /// **Sin fecha**: el push lo compone el servidor, que no sabe en qué huso estás. La
+    /// fecha exacta la pinta la campana, que sí lo sabe. Aquí lo que importa es «ya
+    /// puedes seguir».
+    static func sourceLimit(lang: String?) -> (String, String) {
+        switch (lang ?? "ca").prefix(2) {
+        case "es": return ("Ya puedes añadir más fuentes", "Te hemos ampliado el cupo temporalmente.")
+        case "gl": return ("Xa podes engadir máis fontes", "Ampliámosche o cupo temporalmente.")
+        case "eu": return ("Iturri gehiago gehi ditzakezu", "Kupoa aldi baterako handitu dizugu.")
+        case "en": return ("You can add more fountains now", "We have raised your limit for a while.")
+        case "fr": return ("Vous pouvez ajouter plus de points d’eau", "Nous avons relevé votre quota temporairement.")
+        case "pt": return ("Já podes adicionar mais fontes", "Aumentámos o teu limite temporariamente.")
+        case "it": return ("Ora puoi aggiungere più fontane", "Abbiamo alzato il tuo limite per un po’.")
+        default:   return ("Ja pots afegir més fonts", "T’hem ampliat el cupo temporalment.")
+        }
+    }
+
     /// Título y cuerpo para un cambio en una fuente que sigues.
     ///
     /// `code` es el mismo que guarda la campana (`review:dry`, `report`, `hidden:retired`).
