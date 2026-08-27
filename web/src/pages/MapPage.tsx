@@ -54,6 +54,7 @@ import 'leaflet-rotate'
 
 import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, WaterSource } from '../api/types'
 import { ApiError, apiFetch, createComment, createFont, describeError, nearbyFonts, requestSourceLimitExemption, trackInteraction, uploadImage } from '../api/client'
+import { cajaRedondeada, paramsDeCaja } from '../lib/cajaMapa'
 import { casillaDe } from '../lib/casilla'
 import { nombreFuente } from '../lib/fontName'
 import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
@@ -286,14 +287,21 @@ function FontMarkers({
   const loadBounds = useCallback(async (map: LeafletMap) => {
     const b = map.getBounds()
     const size = map.getSize()
-    const params = new URLSearchParams({
-      minLat: String(b.getSouth()),
-      maxLat: String(b.getNorth()),
-      minLong: String(b.getWest()),
-      maxLong: String(b.getEast()),
-      width: String(Math.max(1, Math.round(size.x))),
-      height: String(Math.max(1, Math.round(size.y))),
-    })
+    // La caja se redondea HACIA FUERA a una rejilla, y el tamaño se cuantiza.
+    //
+    // Antes iba en flotantes completos más el alto exacto en píxeles, y el service worker
+    // cachea por URL exacta: un píxel de diferencia —la franja de avisos que aparece, la
+    // barra del navegador que se pliega— era otra URL. Reabrir la app sin cobertura en la
+    // misma vista fallaba el caché y **el mapa salía en blanco**. Pasó de verdad.
+    //
+    // Hacia fuera y no al más cercano: la caja pedida tiene que cubrir lo que se ve, o
+    // aparecería una franja sin fuentes sin que fallara ninguna petición.
+    const caja = cajaRedondeada(
+      { minLat: b.getSouth(), maxLat: b.getNorth(), minLong: b.getWest(), maxLong: b.getEast() },
+      { width: size.x, height: size.y },
+      map.getZoom(),
+    )
+    const params = paramsDeCaja(caja)
     const mine = ++requestNumber.current
     activeRequest.current?.abort()
     const controller = new AbortController()

@@ -1833,13 +1833,24 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   desfase podrían salir 210 m encima de 205 m.
   **No se aplica dentro de `nearbyFonts`**: esa misma ruta la usa el aviso de «ya hay una
   fuente a menos de 25 m» al crear una, y ahí redondear a 100 m lo dejaría inservible.
-- **El mapa tiene el mismo problema y sigue sin arreglar.** `/fonts/map` lleva la caja en
-  flotantes completos **y el tamaño en píxeles del viewport** (`width`/`height`), así que
-  basta un píxel de diferencia —y nuestra propia franja de avisos cambia la altura— para
-  que sea otra URL y el caché falle. Es la explicación del «maté la app y el mapa salía en
-  blanco». Arreglarlo pide redondear la caja **hacia fuera** a una rejilla proporcional al
-  zoom (para no dejar de cubrir el viewport) y cuantizar el tamaño; se deja apuntado y no
-  hecho porque ese camino es el que tuvo el OOM y merece medirse aparte.
+- **La caja del mapa se redondea HACIA FUERA a una rejilla** (`lib/cajaMapa.ts`). Iba en
+  flotantes completos y con el tamaño exacto en píxeles, así que un solo píxel de
+  diferencia era otra URL — y la altura cambia sola: la franja de avisos que aparece, la
+  barra del navegador que se pliega. Ésa era la explicación del «maté la app y el mapa
+  salía en blanco». Visto en el log de red: dos vistas casi iguales daban
+  `minLat=41.74528497321025` y `minLat=41.74533300268318`; ahora las dos dan
+  `minLat=41.745300&…&width=1120&height=770`, idénticas.
+  **Hacia fuera y no al más cercano**: la caja pedida tiene que **cubrir** lo que se ve, o
+  aparecería una franja del mapa sin fuentes sin que fallara ninguna petición — un fallo
+  silencioso. El precio es pedir de más, acotado a un paso por lado y con test que lo fija.
+  **La rejilla se mide en píxeles y no en grados** (`PASO_PX` = 128, media tesela): un paso
+  fijo en grados sería enorme de cerca y ridículo de lejos, y derivándolo del zoom la celda
+  mide siempre lo mismo en pantalla, así que la proporción que se pide de más no depende ni
+  del zoom ni del tamaño de la ventana.
+  Y `width`/`height` se cuantizan a múltiplos de **70**, que es la celda con la que
+  `mapItems` calcula sus columnas (`ceil(width / 70)`): así el servidor obtiene exactamente
+  las mismas columnas que con el ancho real y la respuesta no cambia. Si allí cambia ese
+  número esto no se rompe, solo deja de ser una equivalencia exacta.
 - **Lo que sigue sin cumplirse del cartel:** un caché no descarga lo que no has mirado, así
   que «funciona sin cobertura» depende de haber pasado antes por la zona. Para prometerlo
   de verdad haría falta una **descarga de zona** explícita.
