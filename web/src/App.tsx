@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
+import { precargaRutasOffline } from './lib/precargaRutas'
 import { I18nProvider } from './i18n/I18nContext'
 import { ThemeModeProvider } from './theme/ThemeModeContext'
 import { MuiProvider } from './theme/MuiProvider'
@@ -46,6 +47,11 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ de
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
 export default function App() {
+  // Las pantallas que tienen que funcionar sin cobertura se bajan de antemano: un trozo
+  // `lazy()` solo entra en el caché la primera vez que se abre esa pantalla, y en el monte
+  // ya no hay de dónde bajarlo. Ver `lib/precargaRutas.ts`.
+  useEffect(precargaRutasOffline, [])
+
   return (
     <BrowserRouter>
       <ThemeModeProvider>
@@ -122,6 +128,8 @@ function BarreraDePantalla({ children }: { children: React.ReactNode }) {
       key={pathname}
       mensaje={t('error.screen')}
       mensajeCaducado={t('error.stale')}
+      mensajeSinRed={t('error.offlineChunk')}
+      volver={t('detail.backMap')}
       reintentar={t('error.retry')}
     >
       {children}

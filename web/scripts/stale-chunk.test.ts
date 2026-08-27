@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { esTrozoCaducado, recargaSiEsTrozoCaducado } from '../src/lib/staleChunk.ts'
+import { esFalloPorFaltaDeRed, esTrozoCaducado, recargaSiEsTrozoCaducado } from '../src/lib/staleChunk.ts'
+import { readFileSync } from 'node:fs'
 
 function conSession() {
   const datos = new Map<string, string>()
@@ -72,4 +73,57 @@ test('sin almacenamiento no se recarga, para no dejar la pantalla parpadeando', 
   let veces = 0
   assert.equal(recargaSiEsTrozoCaducado(new Error('Failed to fetch dynamically imported module'), Date.now(), () => { veces += 1 }), false)
   assert.equal(veces, 0)
+})
+
+/**
+ * Sin cobertura y con un despliegue nuevo, el error es **el mismo**: en los dos casos el
+ * trozo no llega. Pero la salida es la contraria — con un despliegue hay que recargar, y
+ * sin red recargar deja a la persona sin ni siquiera lo que tenía en pantalla.
+ *
+ * Se reportó con una captura desde el monte: en modo avión, al entrar en una fuente salía
+ * «la aplicación se ha actualizado, recarga para seguir».
+ */
+function conRed<T>(hayRed: boolean | null, f: () => T): T {
+  // `defineProperty` y no una asignación: en Node 24 `globalThis.navigator` es un getter
+  // y asignarle algo lanza «Cannot set property navigator of #<Object> which has only a
+  // getter». Se restaura el descriptor original, sea cual sea.
+  const previo = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  if (hayRed === null) delete (globalThis as { navigator?: unknown }).navigator
+  else Object.defineProperty(globalThis, 'navigator', { value: { onLine: hayRed }, configurable: true })
+  try {
+    return f()
+  } finally {
+    if (previo) Object.defineProperty(globalThis, 'navigator', previo)
+    else delete (globalThis as { navigator?: unknown }).navigator
+  }
+}
+
+const falloDeTrozo = new TypeError('Failed to fetch dynamically imported module: /assets/x.js')
+
+test('sin cobertura, un trozo que no llega NO es «la app se ha actualizado»', () => {
+  assert.equal(conRed(false, () => esFalloPorFaltaDeRed(falloDeTrozo)), true)
+})
+
+test('con cobertura, el mismo error sigue siendo un despliegue nuevo', () => {
+  assert.equal(conRed(true, () => esFalloPorFaltaDeRed(falloDeTrozo)), false)
+  assert.equal(conRed(true, () => esTrozoCaducado(falloDeTrozo)), true)
+})
+
+test('un error normal no se confunde con falta de red aunque no haya cobertura', () => {
+  // Si se confundiera, un fallo de verdad se disfrazaría de «no hay señal» y nadie lo
+  // buscaría nunca.
+  assert.equal(conRed(false, () => esFalloPorFaltaDeRed(new TypeError('undefined is not an object'))), false)
+})
+
+test('las pantallas que precargamos son las que sirven sin red', () => {
+  // Precargar las demás sería gastar los datos de alguien para que le salga un error más
+  // bonito: zonas, novedades y perfil no funcionan sin servidor.
+  const codigo = readFileSync(new URL('../src/lib/precargaRutas.ts', import.meta.url), 'utf8')
+  assert.match(codigo, /pages\/FontDetailPage/)
+  assert.match(codigo, /pages\/RouteWaterPage/)
+  assert.doesNotMatch(codigo, /pages\/(ZonesPage|NewsPage|ProfilePage|AdminPage)/)
+})
+
+test('sin `navigator` no se da por sin red, se sigue como siempre', () => {
+  assert.equal(conRed(null, () => esFalloPorFaltaDeRed(falloDeTrozo)), false)
 })

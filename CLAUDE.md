@@ -1940,6 +1940,25 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   `activate`); y `staleWhileRevalidate` devolvía `undefined` sin red ni caché, que desde
   `respondWith` es un fallo opaco y no un error de red limpio — y de eso depende que
   `isOffline` acierte y la ficha caiga a la zona guardada.
+- **Las pantallas que sirven sin red se bajan de antemano** (`lib/precargaRutas.ts`). Un
+  trozo `lazy()` solo entra en el caché **la primera vez que se abre esa pantalla**, así
+  que quien guardaba una zona, se iba al monte y tocaba una fuente se encontraba con que el
+  trozo de la ficha nunca se había pedido. Se precargan la **ficha** (sale de la zona
+  guardada y lleva la flecha de los últimos metros) y **Agua en mi ruta** (recorrido en
+  `localStorage`, fuentes fijadas), 4 s después del arranque y solo con red. El mapa no
+  hace falta —es la pantalla de inicio—, y las demás no funcionan sin servidor: precargarlas
+  sería gastar los datos de alguien para que le salga un error más bonito.
+  Ojo al comprobarlo: **en desarrollo no se ve**, porque Vite ya tiene esos módulos en su
+  grafo y el `import()` no pide nada. Hay que medirlo sobre el build (`vite preview`), donde
+  se ve el trozo con su huella bajándose a los 4,5 s.
+- **«Sin cobertura» y «la app se ha actualizado» dan el MISMO error**, porque en los dos
+  casos el trozo no llega — «failed to fetch dynamically imported module». Y piden lo
+  contrario: con un despliegue nuevo hay que recargar, y sin red recargar te deja sin ni
+  siquiera lo que tenías en pantalla. `esFalloPorFaltaDeRed` los separa mirando
+  `navigator.onLine`, que miente en un sentido inofensivo (puede decir «sí» con una wifi sin
+  salida, y entonces se trata como despliegue, que es lo de antes) pero nunca dice «no»
+  teniendo red. Sin esto, la app decía «se ha actualizado, recarga para seguir» en pleno
+  modo avión: reportado con una captura.
 - **Service worker y redirecciones:** un SW no puede devolver una respuesta marcada como
   redirigida (WebKit: «Response served by service worker has redirections») y la marca
   sobrevive a la Cache API. `/index.html` responde **308 hacia `/`** en Cloudflare Pages,

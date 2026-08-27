@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { esTrozoCaducado, recargaSiEsTrozoCaducado } from '../lib/staleChunk'
+import { esFalloPorFaltaDeRed, esTrozoCaducado, recargaSiEsTrozoCaducado } from '../lib/staleChunk'
 import { recoverAppShell } from '../lib/recoverApp'
 import type { ErrorInfo, ReactNode } from 'react'
 
@@ -26,6 +26,14 @@ interface Props {
   /** Se pinta cuando algo revienta. Es texto plano y ya traducido. */
   mensaje: string
   /**
+   * Para cuando el trozo no llega **porque no hay red**, que da el mismo error que un
+   * despliegue nuevo y pide lo contrario: aquí recargar deja a la persona sin ni siquiera
+   * lo que tenía en pantalla.
+   */
+  mensajeSinRed: string
+  /** Rótulo del botón cuando lo único útil es volver atrás. */
+  volver: string
+  /**
    * Para cuando lo que ha fallado es **cargar la aplicación**, no la pantalla.
    *
    * Se intenta recargar solo, pero si ya se recargó hace nada no se insiste —sería un
@@ -41,13 +49,19 @@ interface State {
   roto: boolean
   /** Si lo que falló fue cargar un trozo de la app y no la pantalla en sí. */
   caducado: boolean
+  /** Ese mismo fallo, pero por estar sin cobertura. La salida es la contraria. */
+  sinRed: boolean
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { roto: false, caducado: false }
+  state: State = { roto: false, caducado: false, sinRed: false }
 
   static getDerivedStateFromError(error: Error): State {
-    return { roto: true, caducado: esTrozoCaducado(error) }
+    // Sin red va primero: los dos fallos dan el mismo error, pero decir «se ha
+    // actualizado, recarga» en pleno modo avión manda a la persona a hacer justo lo que
+    // la dejaría sin nada. Reportado con una captura desde el monte.
+    if (esFalloPorFaltaDeRed(error)) return { roto: true, caducado: false, sinRed: true }
+    return { roto: true, caducado: esTrozoCaducado(error), sinRed: false }
   }
 
   private recuperarYRecargar = async () => {
@@ -61,6 +75,8 @@ export class ErrorBoundary extends Component<Props, State> {
     // esta pestaña sigue pidiendo ficheros que ya no existen. Se recarga una vez y ya.
     // Decirle a la persona «esta pantalla ha fallado» le echa la culpa a la página que
     // acaba de abrir y le ofrece justo lo que no toca.
+    // Sin red no se recarga: recargar es lo único que puede dejarla peor.
+    if (esFalloPorFaltaDeRed(error)) return
     if (recargaSiEsTrozoCaducado(error, Date.now(), () => { void this.recuperarYRecargar() })) return
     // A la consola y nada más: no hay servicio de errores en este proyecto y mandar
     // trazas a un tercero sería añadir una dependencia y un asunto de privacidad para
@@ -72,9 +88,15 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.roto) return this.props.children
     return (
       <div className="pad" style={{ maxWidth: 640, margin: '0 auto' }}>
-        <p>{this.state.caducado ? this.props.mensajeCaducado : this.props.mensaje}</p>
-        <button type="button" onClick={this.recuperarYRecargar}>
-          {this.props.reintentar}
+        <p>{
+          this.state.sinRed ? this.props.mensajeSinRed
+            : this.state.caducado ? this.props.mensajeCaducado
+              : this.props.mensaje
+        }</p>
+        {/* Sin red, recargar borra lo que hay en pantalla y no trae nada. El botón vuelve
+            atrás, que es lo único útil: el mapa y la lista sí funcionan con lo guardado. */}
+        <button type="button" onClick={this.state.sinRed ? () => window.history.back() : this.recuperarYRecargar}>
+          {this.state.sinRed ? this.props.volver : this.props.reintentar}
         </button>
       </div>
     )

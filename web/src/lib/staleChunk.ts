@@ -83,3 +83,24 @@ export function recargaSiEsTrozoCaducado(
   recargar()
   return true
 }
+
+/**
+ * ¿Este fallo de carga es por falta de red y no por un despliegue nuevo?
+ *
+ * Los dos producen **el mismo error** —«failed to fetch dynamically imported module»—
+ * porque en los dos casos el fichero no llega. Distinguirlos importa porque la salida es
+ * la contraria: con un despliegue nuevo hay que recargar, y sin cobertura recargar es lo
+ * peor que puedes hacer, porque te quedas sin ni siquiera lo que tenías en pantalla.
+ *
+ * Se mira `navigator.onLine`, que miente en un sentido inofensivo: puede decir «sí» con
+ * una wifi sin salida, y entonces se trata como despliegue —que es lo de antes—. Lo que
+ * no hace nunca es decir «no» teniendo red, que es el caso que aquí hay que acertar.
+ */
+export function esFalloPorFaltaDeRed(error: unknown): boolean {
+  if (!esTrozoCaducado(error)) return false
+  // Sin los tipos del DOM: este módulo lo cargan los tests con el runner de Node, y basta
+  // un `navigator` tipado para que deje de compilar allí. Misma pega que ya obligó a
+  // partir `zonaOffline`, y aquí se resuelve como el `location.reload` de más arriba.
+  const nav = (globalThis as { navigator?: { onLine?: boolean } }).navigator
+  return nav?.onLine === false
+}
