@@ -98,11 +98,11 @@ def aplica_marketing(plantilla: str) -> str:
     height: 31mm;
     display: block;
     border-radius: 50%;
-    box-shadow: inset 0 0 0 1.2mm #fff;
+    box-shadow: inset 0 0 0 .4mm #fff;
     /* Un vel blanc és més fiable que `mask-image` en imprimir: Chrome dibuixa una
        ratlla d'un píxel al voltant d'algunes imatges emmascarades. */
     background:
-      radial-gradient(ellipse 50% 47% at center, transparent 38%, rgba(255, 255, 255, .74) 70%, #fff 100%),
+      radial-gradient(ellipse 50% 47% at center, transparent 62%, rgba(255, 255, 255, .32) 78%, #fff 100%),
       url("{{IMATGE_FONTAPP}}") center 38% / cover no-repeat;
   }
   .variant-marketing ul.punts { margin-top: 4.5mm; }
