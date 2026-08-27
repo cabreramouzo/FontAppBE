@@ -107,8 +107,23 @@ fastlane/test_output
 iOSInjectionProject/
 
 # Datos descargados de OSM / ACA (no versionar: son grandes y se regeneran)
+#
+# El patrón va por ORIGEN y no por nombre: `suiza-osm-crudo.json` se coló por llamarse de
+# otra manera. Además de pesar, estas descargas CADUCAN —llevan dentro su
+# `timestamp_osm_base`—, así que meses después son una foto vieja de OSM con aspecto de
+# dato bueno. Se regeneran con la consulta de DEPLOY.md.
+#
+# Las fronteras (`fronteras-*.geojson`) SÍ van al repo: son pequeñas, estables, salen de
+# recortar Natural Earth a mano y DEPLOY.md las nombra por su fichero.
 fonts-*.json
 fonts_*.geojson
+*-osm-crudo.json
+*-limpio.json
+
+# Estado local de la CLI de Cloudflare (`wrangler dev` / `pages dev`).
+# `cache/cf.json` guarda la GEOLOCALIZACIÓN de tu conexión —ciudad, latitud, longitud,
+# código postal y operador—, y este repo es público.
+.wrangler/
 
 # Volcados de la base de datos: contienen correos y hashes de contraseñas.
 # El repo es PÚBLICO: que no se cuelen ni por accidente.
