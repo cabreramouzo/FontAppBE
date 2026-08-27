@@ -14,26 +14,39 @@
  */
 const ESPERA_MS = 15_000
 
-export async function fijaParaOffline(urls: string[]): Promise<number> {
-  if (urls.length === 0) return 0
+export interface Fijado {
+  /** Cuántas se han guardado de verdad. Cero si no hay service worker o falló la red. */
+  guardadas: number
+  /** Lo que ocupan, medido del cuerpo. Es lo que se le enseña a la persona. */
+  bytes: number
+}
+
+export async function fijaParaOffline(urls: string[], msPorFichero = 3_000): Promise<Fijado> {
+  const vacio: Fijado = { guardadas: 0, bytes: 0 }
+  if (urls.length === 0) return vacio
   const sw = navigator.serviceWorker?.controller
   // Sin service worker —pestaña normal en desarrollo, primera visita antes de que tome el
   // control, navegador sin soporte— no hay caché que gestionar y no es un error.
-  if (!sw) return 0
-  return new Promise<number>((resolve) => {
+  if (!sw) return vacio
+  return new Promise<Fijado>((resolve) => {
     const canal = new MessageChannel()
-    // Si el service worker no contesta no se puede dejar la promesa colgada para siempre:
-    // quien llama probablemente esté enseñando un indicador de progreso.
-    const reloj = setTimeout(() => resolve(0), ESPERA_MS)
+    // El plazo crece con lo que se pide: guardar 200 fotos por una red de montaña no cabe
+    // en los 15 s que bastaban para una respuesta de la API. Con un plazo fijo, una zona
+    // grande daría siempre «0 guardadas» aunque estuviera bajándose bien.
+    const reloj = setTimeout(() => resolve(vacio), Math.max(ESPERA_MS, urls.length * msPorFichero))
     canal.port1.onmessage = (e) => {
       clearTimeout(reloj)
-      resolve(typeof e.data?.guardadas === 'number' ? e.data.guardadas : 0)
+      const d = e.data as Partial<Fijado> | undefined
+      resolve({
+        guardadas: typeof d?.guardadas === 'number' ? d.guardadas : 0,
+        bytes: typeof d?.bytes === 'number' ? d.bytes : 0,
+      })
     }
     try {
       sw.postMessage({ tipo: 'fijar', urls }, [canal.port2])
     } catch {
       clearTimeout(reloj)
-      resolve(0)
+      resolve(vacio)
     }
   })
 }

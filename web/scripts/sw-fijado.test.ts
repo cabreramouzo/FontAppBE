@@ -80,12 +80,15 @@ test('el recorte NUNCA toca el caché fijado', async () => {
   assert.equal(datos[sw.API_CACHE].size, 1)
 })
 
-test('fijar guarda en el caché fijado y dice cuántas', async () => {
+test('fijar guarda en el caché fijado y dice cuántas y cuánto ocupan', async () => {
   const datos: Record<string, Map<string, unknown>> = {}
   const { sw } = cargaSW(datos)
-  const n = await sw.fija(['/fonts/in-bounds?a', '/fonts/in-bounds?b'])
-  assert.equal(n, 2)
+  const r = await sw.fija(['/fonts/in-bounds?a', '/fonts/in-bounds?b']) as { guardadas: number; bytes: number }
+  assert.equal(r.guardadas, 2)
   assert.equal(datos[sw.PINNED_CACHE].size, 2)
+  // Los bytes son informativos: si no se pueden medir se queda en 0, nunca en `undefined`,
+  // porque esa cifra acaba pintada en una pantalla.
+  assert.equal(typeof r.bytes, 'number')
 })
 
 test('las fotos y los datos ya no comparten hueco', () => {

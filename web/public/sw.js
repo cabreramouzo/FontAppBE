@@ -165,18 +165,23 @@ async function staleWhileRevalidate(req, cacheName) {
 async function fija(urls) {
   const cache = await caches.open(PINNED_CACHE)
   let guardadas = 0
+  let bytes = 0
   for (const url of urls) {
     try {
       const res = await sinRedirecciones(await fetch(url, { cache: 'reload' }))
       if (res && res.ok) {
+        // El tamaño se mide del cuerpo y no de `Content-Length`: R2 no siempre lo manda y
+        // la cifra que se le enseña a alguien no puede ser a veces cero.
+        const copia = res.clone()
         await cache.put(url, res.clone())
         guardadas += 1
+        try { bytes += (await copia.blob()).size } catch { /* da igual, es informativo */ }
       }
     } catch {
       // Una que falle no puede tumbar las demás: sin red no se fija nada y ya está.
     }
   }
-  return guardadas
+  return { guardadas, bytes }
 }
 
 async function precargaShell() {
@@ -225,8 +230,8 @@ self.addEventListener('message', (event) => {
   if (!datos || datos.tipo !== 'fijar' || !Array.isArray(datos.urls)) return
   const puerto = event.ports && event.ports[0]
   event.waitUntil(
-    fija(datos.urls).then((guardadas) => {
-      if (puerto) puerto.postMessage({ guardadas })
+    fija(datos.urls).then((r) => {
+      if (puerto) puerto.postMessage(r)
     }),
   )
 })

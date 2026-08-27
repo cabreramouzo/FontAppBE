@@ -109,3 +109,20 @@ export function fuenteDe<F extends ConCoordenadas & { id?: string | null }>(
 ): F | null {
   return zona.fuentes.find((f) => f.id === id) ?? null
 }
+
+/**
+ * Lo que se estima que pesan `n` fotos, en MB con un decimal.
+ *
+ * 489 KB es la media **medida en producción** (91 ficheros, 43,5 MB) y no un número a
+ * ojo. Es una estimación y se dice que lo es: el tamaño real se enseña después de bajarlas.
+ */
+const KB_POR_FOTO = 489
+
+export function estimaMB(n: number): string {
+  return ((n * KB_POR_FOTO) / 1024).toFixed(1)
+}
+
+/** Bytes a MB con un decimal, para decir lo que de verdad ha ocupado. */
+export function megas(bytes: number): string {
+  return (bytes / 1024 / 1024).toFixed(1)
+}

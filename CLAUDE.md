@@ -1913,6 +1913,15 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   km: parece que funciona, y eso es peor que no enseñar nada. Hay test.
   Y guardar una zona **sin ninguna fuente avisa en vez de decir «0 guardadas» en verde** —
   pasa con el mapa muy cerca, y te irías al monte creyendo que la llevas. Salió probándolo.
+  **Las fotos son un SEGUNDO paso, con la cifra delante.** Se guardan aparte porque son dos
+  órdenes de magnitud distintos —110 fuentes son 42 KB y sus fotos pueden ser megas— y sobre
+  todo porque el número **no se puede saber antes** de pedir la lista: hay que traer las
+  fuentes para contar cuántas tienen foto, así que preguntar antes sería preguntar a ciegas.
+  El orden importa: los datos se guardan siempre y al momento, que es lo que hace falta en
+  el monte; las fotos se ofrecen después («Guardar también las 30 fotos, unos 14,3 MB») y si
+  dice que no, no se ha perdido nada. La estimación sale de los **489 KB de media medidos en
+  producción** y se dice que es estimación; al terminar se enseña el tamaño real. Van al
+  caché **fijado**, así que además dejan de pedirse al servidor: son backup y caché a la vez.
   El botón es un **quinto FAB** en una columna que ya iba justa, y se paga a sabiendas: en
   la hoja «Filtros» sería repetir el error del GPX —un cajón cuyo rótulo dice otra cosa— y
   en la de GPX tampoco, porque ese botón dice «GPX» con letras y esto no lo es.
