@@ -26,6 +26,20 @@ enum PushCopy {
         }
     }
 
+    /// El aviso de prueba que uno se manda a sí mismo desde los ajustes.
+    static func prueba(lang: String?) -> (String, String) {
+        switch (lang ?? "ca").prefix(2) {
+        case "es": return ("FontApp", "Los avisos funcionan en este aparato.")
+        case "gl": return ("FontApp", "Os avisos funcionan neste aparello.")
+        case "eu": return ("FontApp", "Abisuak gailu honetan dabiltza.")
+        case "en": return ("FontApp", "Notifications work on this device.")
+        case "fr": return ("FontApp", "Les notifications fonctionnent sur cet appareil.")
+        case "pt": return ("FontApp", "Os avisos funcionam neste aparelho.")
+        case "it": return ("FontApp", "Le notifiche funzionano su questo dispositivo.")
+        default:   return ("FontApp", "Els avisos funcionen en aquest aparell.")
+        }
+    }
+
     /// Título y cuerpo para un cambio en una fuente que sigues.
     ///
     /// `code` es el mismo que guarda la campana (`review:dry`, `report`, `hidden:retired`).

@@ -2390,6 +2390,15 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   único) y al resuscribirse se **actualiza** en vez de insertar — un navegador puede rotar
   sus claves conservando el endpoint, y con dos filas una ya no descifraría. Un **404 o
   410** del servicio significa que esa suscripción ya no existe y se borra en el momento.
+- **El permiso se pide dentro del gesto y sin nada de red por delante.** Safari exige que
+  `requestPermission()` salga de la pulsación, y un `await` a `/push/key` por delante puede
+  consumir esa activación y hacer que el diálogo **se rechace solo, sin llegar a verse**.
+  Por eso la clave pública se pide **al montar** la pantalla. En iOS no es un detalle: el
+  permiso se pide una vez en la vida y, denegado, no hay forma de volver a preguntar.
+- **`POST /push/test` se manda un aviso a uno mismo** (botón en ajustes, solo con los
+  avisos ya encendidos). Sin él, probar esto exige una segunda cuenta y una reseña real, y
+  cuando no llega nada no se puede separar «no funciona el push» de «nadie ha reseñado».
+  El destinatario es la propia sesión, así que no sirve para molestar a nadie.
 - El interruptor de ajustes (`AvisosDelSistema`) es **del aparato y no de la cuenta**: el
   permiso lo concede el navegador, y quien los quiere en el móvil no ha dicho nada de su
   portátil. Por eso no pasa por `savePrivacy`.

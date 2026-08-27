@@ -9,11 +9,18 @@
  * un interruptor que no hará nada — que es lo que convierte una función en «esta app está
  * rota».
  *
- * ## El permiso se pide desde un GESTO
+ * ## El permiso se pide desde un GESTO, y sin nada de red por delante
  *
  * No al arrancar. Un permiso pedido a bocajarro se deniega, y **denegado se queda para
  * siempre**: no hay forma de volver a preguntar desde la web. Es la misma regla que el
  * mapa sigue con la ubicación.
+ *
+ * Y hay una segunda mitad que costó un intento: Safari exige que `requestPermission()`
+ * salga **del gesto**, y un `await` de red por delante puede consumir esa activación y
+ * hacer que el diálogo se rechace solo, sin llegar a verse. Por eso la clave pública del
+ * servidor se pide **al montar la pantalla** (`claveDelServidor`) y al pulsar ya no hay
+ * nada que esperar: se pide el permiso lo primero. En iOS eso no es un detalle, porque el
+ * intento fallido se gasta igual.
  */
 import { apiFetch } from '../api/client'
 
@@ -54,18 +61,34 @@ function aBase64URL(buf: ArrayBuffer | null): string {
 }
 
 /**
- * Enciende los avisos. Devuelve `false` si no se pudo (permiso denegado, sin claves en el
- * servidor, navegador sin soporte) — nunca lanza: esto cuelga de un interruptor y no puede
- * tumbar la pantalla de ajustes.
+ * La clave pública del servidor, o `null` si no tiene push configurado.
+ *
+ * Se pide **al montar la pantalla** y no al pulsar: ver arriba. Sin ella no se ofrece el
+ * interruptor siquiera — gastarle a alguien su único «permitir» para nada es lo peor que
+ * se puede hacer aquí, y en iOS no hay segunda oportunidad.
  */
-export async function enciende(): Promise<boolean> {
-  if (!sePuede()) return false
+export async function claveDelServidor(): Promise<string | null> {
   try {
     const { key } = await apiFetch<{ key: string | null }>('/push/key')
-    // Sin claves configuradas en el servidor no se pide ningún permiso: gastarle a alguien
-    // su único «permitir» para nada es lo peor que se puede hacer aquí.
-    if (!key) return false
+    return key ?? null
+  } catch {
+    return null
+  }
+}
 
+/**
+ * Enciende los avisos. Devuelve `false` si no se pudo (permiso denegado, navegador sin
+ * soporte) — nunca lanza: esto cuelga de un interruptor y no puede tumbar la pantalla de
+ * ajustes.
+ *
+ * Recibe la clave ya pedida: al pulsar no puede haber ni una espera de red antes del
+ * permiso.
+ */
+export async function enciende(key: string): Promise<boolean> {
+  if (!sePuede() || !key) return false
+  try {
+    // Lo PRIMERO, y sin ningún `await` por delante: es lo que conserva la activación del
+    // gesto en Safari.
     const permiso = await Notification.requestPermission()
     if (permiso !== 'granted') return false
 
@@ -118,5 +141,20 @@ export async function apaga(): Promise<void> {
     await sub.unsubscribe()
   } catch {
     /* nada que hacer: el interruptor volverá a su sitio al releer el estado */
+  }
+}
+
+/**
+ * Se manda un aviso a uno mismo, para comprobar que llega de verdad.
+ *
+ * Sin esto, probar el push exige una segunda cuenta y una reseña real — y cuando no llega
+ * nada, no hay forma de saber si falla la suscripción, las claves o el aviso.
+ */
+export async function prueba(): Promise<boolean> {
+  try {
+    await apiFetch('/push/test', { method: 'POST' })
+    return true
+  } catch {
+    return false
   }
 }

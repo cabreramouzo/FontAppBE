@@ -13,6 +13,7 @@ struct PushController: RouteCollection {
         let auth = push.grouped(User.authenticator(), User.guardMiddleware())
         auth.post("subscribe", use: subscribe)
         auth.post("unsubscribe", use: unsubscribe)
+        auth.post("test", use: test)
     }
 
     struct KeyResponse: Content {
@@ -58,6 +59,34 @@ struct PushController: RouteCollection {
         }
         try await candidata.save(on: req.db)
         return .created
+    }
+
+    /// Manda un aviso de prueba **a uno mismo**.
+    ///
+    /// Existe porque sin esto probar el push exige una segunda cuenta y una reseña de
+    /// verdad, y cuando no llega nada no se puede saber qué falla: la suscripción, las
+    /// claves VAPID o el aviso. Esto deja fuera de la ecuación todo lo demás.
+    ///
+    /// Solo se manda a quien lo pide —el destinatario es la propia sesión—, así que no
+    /// hay forma de usarlo para molestar a nadie.
+    func test(_ req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        guard let push = PushEnvio(req.application) else {
+            throw AppError(.serviceUnavailable, "push.notConfigured",
+                           "El servidor no tiene claves VAPID configuradas.")
+        }
+        let n = try await PushSubscription.query(on: req.db)
+            .filter(\.$user.$id == user.requireID()).count()
+        guard n > 0 else {
+            throw AppError(.badRequest, "push.noSubscription",
+                           "Esta cuenta no tiene ningún aparato suscrito.")
+        }
+        let (titulo, cuerpo) = PushCopy.prueba(lang: user.lang)
+        await PushSender.send(.init(title: titulo, body: cuerpo, url: "/me/settings",
+                                    tag: "fontapp-prueba"),
+                              to: try user.requireID(), on: req.db,
+                              client: push.client, vapid: push.vapid, logger: push.logger)
+        return .accepted
     }
 
     struct UnsubscribeDTO: Content { let endpoint: String }
