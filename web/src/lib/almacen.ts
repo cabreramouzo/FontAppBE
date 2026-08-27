@@ -57,7 +57,7 @@ export function vaciaParte(cual: Parte): Promise<boolean> {
 }
 
 /**
- * Lo que ocupa la app en total, en MB.
+ * Lo que ocupa la app, en bytes crudos.
  *
  * Sale de `navigator.storage.estimate()` y **no de sumar los cuerpos de los cachés**: eso
  * obligaría a leer hasta 3.000 teselas para pintar una cifra, y en un móvil se nota. El
@@ -65,17 +65,19 @@ export function vaciaParte(cual: Parte): Promise<boolean> {
  * juntos— y aproximada, así que se enseña como total y nunca repartida por partes: decir
  * «las fotos ocupan 14 MB» con este dato sería inventárselo.
  *
+ * `libre` es lo que el **navegador** le deja guardar a esta app, no el espacio libre del
+ * teléfono. Son cosas distintas y por eso se dice «disponibles» y no «libres».
+ *
  * Devuelve `null` cuando el navegador no lo dice (Safari lo ha ocultado en algunas
  * versiones), y entonces no se pinta la línea en vez de enseñar un cero que es mentira.
  */
-export async function ocupadoMB(): Promise<{ usado: string; libre: string } | null> {
+export async function ocupado(): Promise<{ usado: number; libre: number | null } | null> {
   try {
     const e = await navigator.storage?.estimate?.()
     if (!e || typeof e.usage !== 'number') return null
-    const mb = (b: number) => (b / 1024 / 1024).toFixed(1)
     return {
-      usado: mb(e.usage),
-      libre: typeof e.quota === 'number' ? mb(Math.max(0, e.quota - e.usage)) : '',
+      usado: e.usage,
+      libre: typeof e.quota === 'number' ? Math.max(0, e.quota - e.usage) : null,
     }
   } catch {
     return null

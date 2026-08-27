@@ -4,7 +4,8 @@ import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useI18n } from '../i18n/I18nContext'
-import { mideAlmacen, ocupadoMB, vaciaParte, type Parte, type Recuento } from '../lib/almacen'
+import { mideAlmacen, ocupado, vaciaParte, type Parte, type Recuento } from '../lib/almacen'
+import { formateaTamano } from '../lib/tamanos'
 import { borraZona, zonaGuardada, type Zona } from '../lib/zonaAlmacen'
 
 /**
@@ -21,16 +22,16 @@ import { borraZona, zonaGuardada, type Zona } from '../lib/zonaAlmacen'
  * con la siguiente visita.
  */
 export function EspacioEnElMovil() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [n, setN] = useState<Recuento | null>(null)
-  const [total, setTotal] = useState<{ usado: string; libre: string } | null>(null)
+  const [total, setTotal] = useState<{ usado: number; libre: number | null } | null>(null)
   const [zona, setZona] = useState<Zona | null>(null)
   const [haySW, setHaySW] = useState(true)
 
   const mide = useCallback(async () => {
     setHaySW(Boolean(navigator.serviceWorker?.controller))
     setN(await mideAlmacen())
-    setTotal(await ocupadoMB())
+    setTotal(await ocupado())
     setZona(await zonaGuardada())
   }, [])
 
@@ -57,9 +58,9 @@ export function EspacioEnElMovil() {
           inventarse cuánto ocupa cada cosa. Si el navegador no la da, no se pinta. */}
       {total && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-          {total.libre
-            ? t('storage.used', { mb: total.usado, libre: total.libre })
-            : t('storage.usedOnly', { mb: total.usado })}
+          {total.libre !== null
+            ? t('storage.used', { mb: formateaTamano(total.usado, lang), libre: formateaTamano(total.libre, lang) })
+            : t('storage.usedOnly', { mb: formateaTamano(total.usado, lang) })}
         </Typography>
       )}
 

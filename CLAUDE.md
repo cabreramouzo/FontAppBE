@@ -1990,6 +1990,20 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
     **bandeja de salida**, que ni siquiera es un caché: son aportaciones **sin enviar**, lo
     único aquí que no se puede recuperar de ninguna manera. Hay test de que ningún nombre
     (`shell`, el nombre real del caché, `../shell`) se cuela.
+  · **Los tamaños los formatea `Intl`** (`lib/tamanos.ts`, `formateaTamano`), no los
+    diccionarios. Salía todo en MB, así que la cuota se leía «39186.8 MB libres», que no
+    significa nada; y el punto decimal tampoco era el nuestro. `style: 'unit'` pone el
+    separador **y** el nombre de la unidad, y de paso acierta con el francés, donde son
+    «Mo» y «Go» — escribirla en los ocho diccionarios habría sido una lista paralela que se
+    separa del corte de unidad a la primera. El corte va en **1.024** y baja a **kB** por
+    debajo del mega, o una instalación recién hecha diría «0,0 MB» y parecería rota. Vive
+    en un fichero aparte de `almacen.ts` por lo mismo que `lib/apiError.ts` se separó de
+    `api/client.ts`: aquel toca `navigator` y no se puede importar desde un test de Node.
+    Ojo al escribir los tests: `Intl` separa cifra y unidad con un **espacio fino no
+    separable** (U+202F en francés) y escribe «kB» en minúscula. Las dos cosas son
+    correctas y lo que se ajusta es el esperado, no el código.
+  · «Libres» era falso y ahora dice **«disponibles»**: `quota - usage` es lo que el
+    navegador le deja guardar a esta app, no el espacio libre del teléfono.
   · **El total sale de `navigator.storage.estimate()` y NO de sumar los cuerpos**: sumarlos
     obligaría a leer hasta 3.000 teselas para pintar una cifra. El precio es que es del
     origen entero y aproximado, así que se enseña **una sola cifra** y nunca repartida por
