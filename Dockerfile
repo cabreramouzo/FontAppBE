@@ -14,6 +14,30 @@ WORKDIR /build
 COPY ./Package.* ./
 RUN swift package resolve --skip-update
 
+# Y COMPILARLAS, que es lo que de verdad cuesta.
+#
+# Resolver solo descarga; el `swift build` de abajo va después de `COPY . .`, así que
+# cualquier commit invalidaba esa capa y se recompilaba el árbol entero —Vapor, Fluent, el
+# driver de Postgres, Soto, JWTKit, WebAuthn— aunque no hubieras tocado una dependencia en
+# meses. Ahí estaba la mayor parte de los ~11 minutos del despliegue.
+#
+# SwiftPM no sabe compilar «solo las dependencias», así que se le da un fuente de relleno
+# para que tenga algo que enlazar. Los artefactos quedan en `.build` y el build de verdad
+# los reutiliza; el relleno se borra en la MISMA capa, o `Sources/App/main.swift` seguiría
+# ahí después del `COPY . .` y habría dos puntos de entrada.
+#
+# Va con `|| true` a propósito: esto es una optimización, no un paso necesario. Si algún
+# día el truco deja de funcionar —otra versión de SwiftPM, un target nuevo— el despliegue
+# tiene que seguir saliendo, más lento, en vez de romperse.
+#
+# Medido con SwiftPM fuera de Docker: en frío con el relleno son **3.338 tareas y 126 s**;
+# poniendo después el código de verdad, **151 tareas y 22 s**. O sea que lo que se reutiliza
+# son las dependencias enteras.
+RUN mkdir -p Sources/App \
+    && printf 'print("relleno para precompilar dependencias")\n' > Sources/App/main.swift \
+    && (swift build -c release --product App --static-swift-stdlib -Xlinker -ljemalloc || true) \
+    && rm -rf Sources
+
 # Compilar en release.
 COPY . .
 RUN swift build -c release --product App --static-swift-stdlib -Xlinker -ljemalloc

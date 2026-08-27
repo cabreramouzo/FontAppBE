@@ -68,6 +68,20 @@ jobs:
       DATABASE_NAME: fontapp_test
     steps:
       - uses: actions/checkout@v4
+      # El runner arranca limpio cada vez, así que sin esto se recompila el árbol entero
+      # de dependencias en cada ejecución. Medido antes de ponerlo: el paso «Run tests»
+      # tardaba 9:24, de los que ~3:30 eran compilar y ~6:00 ejecutar los 181 tests contra
+      # Postgres. Lo segundo es el suelo y no se toca; lo primero es lo que ahorra esto.
+      #
+      # La clave lleva `Package.resolved`: al cambiar una dependencia se compila de nuevo,
+      # que es lo correcto. `restore-keys` permite partir de la caché anterior aunque la
+      # clave no case exacta, que es el caso normal al subir una versión.
+      - name: Caché de compilación
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: swift-build-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: swift-build-${{ runner.os }}-
       - name: Run tests
         run: swift test
 
