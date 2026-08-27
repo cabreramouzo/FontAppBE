@@ -14,6 +14,7 @@ struct InteractionAnalyticsController: RouteCollection {
         "page_profile", "page_support", "page_install", "page_login", "page_register",
         "nav_map", "nav_activity", "nav_zones", "nav_profile", "nav_login",
         "map_filters", "map_missions", "map_locate", "map_add_font", "map_export_gpx", "map_gpx",
+        "map_offline",
         "map_cluster_click", "map_heatmap_click",
         "font_favorite", "font_directions", "font_share", "font_update",
         "auth_google", "auth_passkey", "auth_password", "auth_register", "install_start",

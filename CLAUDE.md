@@ -1870,9 +1870,34 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   Al sacarlas **no se sube la versión de `fontapp-api-v3`**: no ha cambiado ningún formato
   y subirla tiraría lo guardado de todo el mundo justo en el cambio que existe para
   conservarlo mejor. Lo cazó `sw-routing.test.ts`, que está escrito para eso.
-- **Lo que sigue sin cumplirse del cartel:** un caché no descarga lo que no has mirado, así
-  que «funciona sin cobertura» depende de haber pasado antes por la zona. Para prometerlo
-  de verdad haría falta una **descarga de zona** explícita.
+- **Guardar una zona para andar sin cobertura** (`lib/zonaOffline.ts` puro +
+  `lib/zonaAlmacen.ts` en IndexedDB + `ZonaOfflineSheet`). Es para el excursionista: sale
+  el sábado a un valle que no conoce, no tiene GPX que subir y pierde la cobertura al
+  meterse. El ciclista ya lo tenía por otro lado —al importar su recorrido se le fijan sus
+  fuentes— porque él sí sabe el viernes por dónde va a ir.
+  **No basta con el caché del service worker**, y por eso esto es otra cosa: aquel va por
+  URL exacta y `Cerca de ti` se pide con tu casilla de ~111 m, así que cubrir 10 km serían
+  miles de peticiones para trocear la misma lista. Aquí se guarda **el dato una vez** y la
+  lista de cercanas se calcula en el móvil, que es lo mismo que hace el servidor: ordenar
+  por distancia. Cuando `/fonts/near` falla, `MapPage` cae a la zona guardada.
+  **Solo los datos, no el mapa**, y se dice en pantalla. Medido: 110 fuentes de 10×10 km
+  ocupan **42 KB**. Y no es una carencia disimulada — la lista de cercanas y la flecha de
+  los últimos metros no pintan una sola tesela, o sea que lo que la app viene a contestar
+  se contesta sin mapa. Las teselas son servidores ajenos y gratuitos y merecen su propia
+  conversación.
+  **En IndexedDB y no en `localStorage`**, por lo mismo que la ruta recordada: ahí está la
+  bandeja de salida con aportaciones sin enviar, que es lo único que no se puede perder.
+  `cercanasEn` devuelve **vacío si estás fuera de la caja guardada**. Con la zona de Girona
+  guardada y el móvil en Cádiz saldrían las de Girona ordenadas por distancia, todas a 900
+  km: parece que funciona, y eso es peor que no enseñar nada. Hay test.
+  Y guardar una zona **sin ninguna fuente avisa en vez de decir «0 guardadas» en verde** —
+  pasa con el mapa muy cerca, y te irías al monte creyendo que la llevas. Salió probándolo.
+  El botón es un **quinto FAB** en una columna que ya iba justa, y se paga a sabiendas: en
+  la hoja «Filtros» sería repetir el error del GPX —un cajón cuyo rótulo dice otra cosa— y
+  en la de GPX tampoco, porque ese botón dice «GPX» con letras y esto no lo es.
+- **Lo que sigue sin cumplirse del cartel:** las **teselas**. Los datos ya se pueden guardar
+  a mano; el mapa no, así que sin cobertura en una zona nueva las casillas salen en blanco
+  aunque la lista funcione.
 - **Service worker y redirecciones:** un SW no puede devolver una respuesta marcada como
   redirigida (WebKit: «Response served by service worker has redirections») y la marca
   sobrevive a la Cache API. `/index.html` responde **308 hacia `/`** en Cloudflare Pages,

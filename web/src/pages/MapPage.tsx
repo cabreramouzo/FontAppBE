@@ -56,6 +56,8 @@ import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, Water
 import { ApiError, apiFetch, createComment, createFont, describeError, nearbyFonts, requestSourceLimitExemption, trackInteraction, uploadImage } from '../api/client'
 import { cajaRedondeada, paramsDeCaja } from '../lib/cajaMapa'
 import { casillaDe } from '../lib/casilla'
+import { cercanasEn } from '../lib/zonaOffline'
+import { zonaGuardada } from '../lib/zonaAlmacen'
 import { nombreFuente } from '../lib/fontName'
 import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
 import { clearRecentHistory, recentFountains, recentSearches, rememberFountain, rememberSearch, type RecentFountain } from '../lib/recentHistory'
@@ -65,6 +67,7 @@ import { useToast } from '../components/ToastContext'
 import { ClusteredMarkers } from '../components/ClusteredMarkers'
 import { BaseLayerTile, LayerPicker, useBaseLayer } from '../components/BaseLayers'
 import { BottomSheet } from '../components/BottomSheet'
+import { ZonaOfflineSheet } from '../components/ZonaOfflineSheet'
 import { MissionsPanel } from '../components/MissionsPanel'
 import { WaterTypeHelpButton, DrinkableHelpButton } from '../components/WaterHelp'
 import { enqueue, isOffline } from '../lib/outbox'
@@ -81,6 +84,7 @@ import { isReliable } from '../lib/confidence'
 import { ConfidenceChip } from '../components/ConfidenceChip'
 import { ExportGpxButton } from '../components/ExportGpxButton'
 import UploadIcon from '@mui/icons-material/UploadFileOutlined'
+import CloudDownloadIcon from '@mui/icons-material/CloudDownloadOutlined'
 import { NuevoBadge } from '../components/NuevoBadge'
 import { parseSavedMapView, type SavedMapView } from '../lib/mapView'
 
@@ -953,6 +957,8 @@ function NearbyPanel({
   const { t } = useI18n()
   const movil = useMediaQuery((tema: Theme) => tema.breakpoints.down('sm'))
   const [items, setItems] = useState<FontSummary[] | null>(null)
+  const posRef = useRef(pos)
+  posRef.current = pos
 
   // Con la ubicación en seguimiento continuo, `pos` cambia cada pocos segundos. Si la
   // lista se recargara con cada cambio sería una petición por latido del GPS, así que
@@ -965,9 +971,16 @@ function NearbyPanel({
   // en el mismo sitio comparten la respuesta.
   const casilla = casillaDe(pos[0], pos[1])
   useEffect(() => {
+    const [lat, long] = posRef.current
     apiFetch<FontSummary[]>(`/fonts/near?lat=${casilla.lat}&long=${casilla.long}&quantity=25`)
       .then(setItems)
-      .catch(() => setItems([]))
+      // Sin red, la zona guardada. Se calcula aquí lo mismo que calcula el servidor —
+      // ordenar por distancia— porque guardar una respuesta por casilla de 111 m serían
+      // miles de peticiones para trocear la misma lista de fuentes.
+      .catch(async () => {
+        const zona = await zonaGuardada()
+        setItems(zona ? cercanasEn(zona, lat, long, 25) : [])
+      })
     // Solo la clave: dentro de la misma casilla no hay nada que volver a pedir.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [casilla.clave])
@@ -1128,6 +1141,7 @@ export function MapPage() {
   const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>(filtrosGuardados.source)
   const [controlsOpen, setControlsOpen] = useState(false)
   const [gpxOpen, setGpxOpen] = useState(false)
+  const [zonaOpen, setZonaOpen] = useState(false)
   const { layer, setLayer } = useBaseLayer()
   // Instancia del mapa: hace falta fuera del lienzo para el botón de la brújula.
   const [map, setMap] = useState<LeafletMap | null>(null)
@@ -1496,6 +1510,27 @@ export function MapPage() {
             GPX
           </Fab>
         </NuevoBadge>
+        {/* Guardar la zona para andar sin cobertura.
+            Es un quinto botón en una columna que ya iba justa, y se paga a sabiendas: no
+            cabía en ninguna de las hojas que hay. En «Filtros» sería el mismo error que ya
+            se cometió metiendo el GPX ahí —un cajón cuyo rótulo dice que son otra cosa— y
+            en la de GPX tampoco, porque el botón dice «GPX» con letras y esto no lo es. */}
+        <Fab
+          size="medium"
+          onClick={() => { trackInteraction('map_offline'); setZonaOpen((v) => !v) }}
+          aria-label={t('zonaOff.title')}
+          title={t('zonaOff.title')}
+          sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
+        >
+          <CloudDownloadIcon />
+        </Fab>
+        {!movil && (
+          <Collapse in={zonaOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
+            <Box sx={{ width: 260, ...sobreElMapaSx, borderRadius: 2, p: 1.5 }}>
+              {map && <ZonaOfflineSheet map={map} />}
+            </Box>
+          </Collapse>
+        )}
         {!movil && (
           <Collapse in={gpxOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
             <Box sx={{ width: 210, display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1519,6 +1554,11 @@ export function MapPage() {
       {movil && (
         <BottomSheet open={controlsOpen} onClose={() => setControlsOpen(false)} titulo={t('map.filters')}>
           <Stack spacing={1.25}>{filtros('movil')}</Stack>
+        </BottomSheet>
+      )}
+      {movil && map && (
+        <BottomSheet open={zonaOpen} onClose={() => setZonaOpen(false)} titulo={t('zonaOff.title')}>
+          <ZonaOfflineSheet map={map} onClose={() => setZonaOpen(false)} />
         </BottomSheet>
       )}
       {movil && (
