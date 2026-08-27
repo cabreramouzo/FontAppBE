@@ -1609,9 +1609,9 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 ## Carteles / campañas
 - Cartel A5 en catalán en `flyer/` (HTML editable + PDF). `flyer/genera-cartells.py <codis>`
   genera una copia por pueblo con su QR y su código (`fontapp.net/?p=castellcir`).
-- `flyer/genera-cartells.py --marketing <codis>` genera una variante A5 del mismo diseño
-  con la ilustración de `web/public/welcome.jpg` integrada en la cabecera. Conserva el
-  titular, los textos, la lista y el bloque QR originales. Sale en
+- `flyer/genera-cartells.py --marketing <codis>` genera una variante A5 independiente,
+  rehecha desde cero, con `web/public/welcome.jpg` a sangre en la parte superior y el
+  contenido sobre blanco debajo. Sale en
   `flyer/pobles-marketing/`, separada del cartel original: el modo
   sin opción sigue siendo siempre el de bajo consumo de tinta y nunca se sobrescribe.
   La imagen se incrusta como data URI para que el HTML siga siendo un único archivo.

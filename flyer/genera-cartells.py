@@ -46,6 +46,7 @@ except ImportError:
 BASE = "https://fontapp.net"
 ARREL = pathlib.Path(__file__).parent
 PLANTILLA = ARREL / "cartell-a5.html"
+PLANTILLA_MARKETING = ARREL / "cartell-a5-marketing.html"
 IMATGE_MARKETING = ARREL.parent / "web" / "public" / "welcome.jpg"
 SORTIDA = ARREL / "pobles"
 SORTIDA_MARKETING = ARREL / "pobles-marketing"
@@ -81,51 +82,9 @@ def imatge_data_uri(ruta: pathlib.Path) -> str:
     return "data:image/jpeg;base64," + base64.b64encode(ruta.read_bytes()).decode("ascii")
 
 
-def aplica_marketing(plantilla: str) -> str:
-    """Afegeix la il·lustració sense duplicar ni allunyar-nos del cartell original."""
-    estils = """
-  /* Variant de màrqueting: mateix cartell, amb una petita peça de marca a la capçalera. */
-  .capcalera-marketing {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 27mm;
-    align-items: end;
-    gap: 6mm;
-    margin-top: 3.5mm;
-  }
-  .capcalera-marketing .titular { margin: 0; }
-  .imatge-marketing {
-    width: 27mm;
-    height: 31mm;
-    object-fit: cover;
-    object-position: center 38%;
-    display: block;
-    border: 0.7mm solid #bae6fd;
-    border-radius: 5mm;
-    box-shadow: 0 2mm 5mm rgba(15, 23, 42, 0.16);
-  }
-  .variant-marketing ul.punts { margin-top: 4.5mm; }
-  .variant-marketing ul.punts li { margin-bottom: 2.2mm; }
-"""
-    plantilla = plantilla.replace("</style>", estils + "</style>", 1)
-    plantilla = plantilla.replace('<div class="full">', '<div class="full variant-marketing">', 1)
-    titular = '<h1 class="titular">Aquesta font,<br><em>raja?</em></h1>'
-    capcalera = (
-        '<div class="capcalera-marketing">\n'
-        f'      {titular}\n'
-        '      <img class="imatge-marketing" src="{{IMATGE_FONTAPP}}" '
-        'alt="Il·lustració de FontApp">\n'
-        '    </div>'
-    )
-    if titular not in plantilla:
-        sys.exit("No trobo el titular dins la plantilla original del cartell.")
-    return plantilla.replace(titular, capcalera, 1)
-
-
 def genera(codi: str, marketing: bool = False) -> pathlib.Path:
     url = f"{BASE}/?p={codi}"
-    plantilla = PLANTILLA.read_text(encoding="utf-8")
-    if marketing:
-        plantilla = aplica_marketing(plantilla)
+    plantilla = (PLANTILLA_MARKETING if marketing else PLANTILLA).read_text(encoding="utf-8")
 
     # 1) Substitueix el QR (l'únic <svg> amb aquest viewBox dins del bloc del codi).
     nou_qr = qr_svg(url)

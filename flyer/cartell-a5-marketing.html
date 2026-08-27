@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>FontApp — cartell A5 il·lustrat</title>
+<style>
+  @page { size: A5; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #0f172a;
+    background: #fff;
+  }
+  .full {
+    width: 148mm;
+    min-height: 210mm;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .hero {
+    position: relative;
+    height: 90mm;
+    flex: 0 0 90mm;
+    overflow: hidden;
+    background: #fff;
+  }
+  .hero img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center 49%;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(3, 18, 30, .13), rgba(3, 18, 30, 0) 42%, rgba(3, 18, 30, .82));
+  }
+  .marca {
+    position: absolute;
+    z-index: 1;
+    top: 7mm;
+    left: 9mm;
+    padding: 2mm 4mm 2.2mm;
+    border-radius: 99mm;
+    color: #fff;
+    background: #0284c7;
+    font-size: 17pt;
+    line-height: 1;
+    font-weight: 850;
+  }
+  .titular {
+    position: absolute;
+    z-index: 1;
+    left: 9mm;
+    right: 9mm;
+    bottom: 7mm;
+    margin: 0;
+    color: #fff;
+    font-size: 28pt;
+    line-height: 1.02;
+    letter-spacing: -1px;
+  }
+  .cos {
+    flex: 1;
+    padding: 7mm 9mm 7mm;
+    display: flex;
+    flex-direction: column;
+  }
+  .entrada {
+    margin: 0;
+    color: #334155;
+    font-size: 12pt;
+    line-height: 1.42;
+  }
+  .punts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3mm;
+    margin: 5mm 0;
+  }
+  .punt {
+    padding: 3mm 2.5mm;
+    border: .35mm solid #bae6fd;
+    border-radius: 3.5mm;
+    text-align: center;
+    font-size: 8.6pt;
+    line-height: 1.25;
+    font-weight: 700;
+  }
+  .punt span { display: block; margin-bottom: 1.4mm; font-size: 16pt; line-height: 1; }
+  .qr-bloc {
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: 31mm 1fr;
+    align-items: center;
+    gap: 6mm;
+    padding: 5mm;
+    border-radius: 5mm;
+    color: #fff;
+    background: #0284c7;
+  }
+  .qr-fons { padding: 1.5mm; border-radius: 2mm; background: #fff; }
+  .qr-fons svg { width: 28mm; height: 28mm; display: block; }
+  .accio { font-size: 13pt; line-height: 1.2; font-weight: 800; }
+  .web { margin-top: 1.5mm; font-size: 17pt; line-height: 1; font-weight: 900; }
+  .gratis { margin-top: 2mm; color: #e0f2fe; font-size: 8.5pt; line-height: 1.25; }
+  .peu { margin-top: 2.5mm; text-align: center; color: #64748b; font-size: 8pt; }
+  @media print {
+    body { padding: 0; }
+    .full { width: 100%; height: 100vh; }
+  }
+</style>
+</head>
+<body>
+  <main class="full">
+    <header class="hero">
+      <img src="{{IMATGE_FONTAPP}}" alt="Il·lustració de la font de FontApp">
+      <div class="marca">💧 FontApp</div>
+      <h1 class="titular">Aquesta font, raja?</h1>
+    </header>
+
+    <section class="cos">
+      <p class="entrada">
+        Mira abans de desviar-te si en surt aigua i quan ho va comprovar
+        l'última persona que hi va passar.
+      </p>
+
+      <div class="punts">
+        <div class="punt"><span>💧</span>Estat recent de cada font</div>
+        <div class="punt"><span>🗺️</span>Fonts a prop i al costat de la ruta</div>
+        <div class="punt"><span>🛰️</span>Funciona sense cobertura</div>
+      </div>
+
+      <div class="qr-bloc">
+        <div class="qr-fons">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 290 290"></svg>
+        </div>
+        <div>
+          <div class="accio">Escaneja el codi<br>i mira les fonts del teu poble</div>
+          <div class="web">fontapp.net</div>
+          <div class="gratis">Gratuïta · sense anuncis · no cal registrar-se per mirar</div>
+        </div>
+      </div>
+
+      <div class="peu">Dades obertes d'OpenStreetMap i informació de la comunitat 💧</div>
+    </section>
+  </main>
+</body>
+</html>
