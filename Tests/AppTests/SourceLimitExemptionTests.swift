@@ -114,6 +114,66 @@ final class SourceLimitExemptionTests: XCTestCase {
         }
     }
 
+    /// Suscribirse con el token de sesión, que es lo único que hace la app.
+    ///
+    /// Existe porque esto llegó a producción roto: la ruta usaba `User.authenticator()`,
+    /// que es autenticación **básica**, así que ignoraba el `Bearer` y contestaba **401 a
+    /// todo el mundo**. Compila, se lee bien y solo se ve intentando suscribirse de
+    /// verdad — los tests que había eran del cifrado y de los textos, y ninguno tocaba la
+    /// ruta.
+    func testSuscribirseConElTokenDeSesion() async throws {
+        try await withApp { app in
+            let token = try await admin(app)
+            let cuerpo = """
+            {"endpoint":"https://web.push.apple.com/abc","p256dh":"\(Data(repeating: 4, count: 65).base64URL)","auth":"\(Data(repeating: 7, count: 16).base64URL)"}
+            """
+            try await app.test(.POST, "push/subscribe", headers: bearer(token), beforeRequest: { req in
+                req.headers.contentType = .json
+                req.body = .init(string: cuerpo)
+            }) { res in
+                XCTAssertEqual(res.status, .created, "el Bearer tiene que valer aquí")
+            }
+            let n = try await PushSubscription.query(on: app.db).count()
+            XCTAssertEqual(n, 1)
+
+            // Y sin token, 401: la ruta sigue siendo privada.
+            try await app.test(.POST, "push/subscribe", beforeRequest: { req in
+                req.headers.contentType = .json
+                req.body = .init(string: cuerpo)
+            }) { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            }
+        }
+    }
+
+    /// Volver a suscribir el mismo aparato ACTUALIZA en vez de duplicar: un navegador
+    /// puede rotar sus claves conservando el endpoint, y con dos filas una ya no
+    /// descifraría — un aviso duplicado del que uno llega en blanco.
+    func testResuscribirseNoDuplica() async throws {
+        try await withApp { app in
+            let token = try await admin(app)
+            func suscribe(_ p256dh: Data) async throws -> HTTPStatus {
+                var status = HTTPStatus.internalServerError
+                try await app.test(.POST, "push/subscribe", headers: bearer(token), beforeRequest: { req in
+                    req.headers.contentType = .json
+                    req.body = .init(string: """
+                    {"endpoint":"https://web.push.apple.com/abc","p256dh":"\(p256dh.base64URL)","auth":"\(Data(repeating: 7, count: 16).base64URL)"}
+                    """)
+                }) { status = $0.status }
+                return status
+            }
+            _ = try await suscribe(Data(repeating: 4, count: 65))
+            _ = try await suscribe(Data(repeating: 5, count: 65))
+            let filas = try await PushSubscription.query(on: app.db).all()
+            XCTAssertEqual(filas.count, 1)
+            // `filas.first` y no `filas[0]`: con la lista vacía —que es lo que pasaba con
+            // el autenticador equivocado— el índice revienta el proceso entero y el
+            // informe no dice qué falló, solo «signal code 5».
+            let fila = try XCTUnwrap(filas.first)
+            XCTAssertEqual(Data.fromBase64URL(fila.p256dh), Data(repeating: 5, count: 65))
+        }
+    }
+
     /// El aviso es la mitad de esto: sin él, quien lo pidió no ve nada cambiar.
     func testQuienLoPidioRecibeUnAviso() async throws {
         try await withApp { app in

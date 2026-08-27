@@ -10,7 +10,11 @@ struct PushController: RouteCollection {
         // y no revela nada.
         push.get("key", use: key)
 
-        let auth = push.grouped(User.authenticator(), User.guardMiddleware())
+        // `UserToken.authenticator()` y NO `User.authenticator()`: el segundo es
+        // autenticación **básica** (usuario y contraseña), así que ignora el `Bearer` que
+        // manda la app y `guardMiddleware` contesta 401 a todo. Compila igual, se lee
+        // igual de bien y no falla hasta que alguien intenta suscribirse desde un móvil.
+        let auth = push.grouped(UserToken.authenticator(), User.guardMiddleware())
         auth.post("subscribe", use: subscribe)
         auth.post("unsubscribe", use: unsubscribe)
         auth.post("test", use: test)

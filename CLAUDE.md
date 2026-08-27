@@ -2414,6 +2414,12 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   único) y al resuscribirse se **actualiza** en vez de insertar — un navegador puede rotar
   sus claves conservando el endpoint, y con dos filas una ya no descifraría. Un **404 o
   410** del servicio significa que esa suscripción ya no existe y se borra en el momento.
+- **La ruta va con `UserToken.authenticator()`, no con `User.authenticator()`.** El
+  segundo es autenticación **básica** (usuario y contraseña), así que ignora el `Bearer`
+  que manda la app y `guardMiddleware` contesta **401 a todo el mundo**. Compila, se lee
+  igual de bien que el correcto y llegó a producción: los tests que había eran del cifrado
+  y de los textos, y **ninguno tocaba la ruta**. Ahora hay uno que se suscribe con el token
+  de sesión de verdad. Todas las demás rutas del proyecto ya usaban el bueno.
 - **El permiso se pide dentro del gesto y sin nada de red por delante.** Safari exige que
   `requestPermission()` salga de la pulsación, y un `await` a `/push/key` por delante puede
   consumir esa activación y hacer que el diálogo **se rechace solo, sin llegar a verse**.
