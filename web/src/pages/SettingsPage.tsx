@@ -18,6 +18,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { esNombreValido, pareceCorreo } from '../lib/username'
 import { capabilitiesEnabled } from '../lib/capabilities'
+import { EspacioEnElMovil } from '../components/EspacioEnElMovil'
 
 /**
  * Ajustes: privacidad, avisos, compartir el nivel y la cuenta.
@@ -285,6 +286,9 @@ export function SettingsPage() {
           )}
         </Box>
       </Box>
+
+      <Divider sx={{ my: 3 }} />
+      <EspacioEnElMovil />
 
       <Divider sx={{ my: 3 }} />
       <Box component="section" sx={{ mb: 2, border: 1, borderColor: 'error.main', borderRadius: 2, overflow: 'hidden' }}>

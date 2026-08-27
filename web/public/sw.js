@@ -269,17 +269,57 @@ self.addEventListener('activate', (event) => {
   self.clients.claim()
 })
 
-// La página pide fijar cosas por aquí. Se contesta por el puerto del propio mensaje y no
-// a todos los clientes: quien pregunta es quien espera la respuesta.
+/**
+ * Los cachés que la persona puede mirar y vaciar desde los ajustes, con el nombre por el
+ * que se piden desde la página.
+ *
+ * Es una lista blanca **a propósito**: el shell NO está, y por eso un mensaje con un
+ * nombre cualquiera no puede borrarlo. Vaciar el shell dejaría la app sin arrancar sin
+ * cobertura, que es justo lo contrario de lo que viene a hacer esta pantalla.
+ *
+ * Y lo que no es un caché tampoco está: la **bandeja de salida** vive en IndexedDB y son
+ * aportaciones SIN ENVIAR, lo único aquí que no se puede recuperar de ninguna manera. No
+ * se toca ni existe forma de pedirlo.
+ */
+const VACIABLES = {
+  fijado: PINNED_CACHE,
+  teselas: TILE_CACHE,
+  fotos: PHOTO_CACHE,
+  api: API_CACHE,
+}
+
+/** Cuántas entradas hay en cada caché. Solo cuenta claves: no lee ni un cuerpo. */
+async function mide() {
+  const r = {}
+  for (const [nombre, cache] of Object.entries(VACIABLES)) {
+    try {
+      const keys = await (await caches.open(cache)).keys()
+      // La marca de fecha de las teselas no es una tesela y no se le enseña a nadie.
+      r[nombre] = keys.filter((k) => !k.url.endsWith(TILE_STAMP)).length
+    } catch {
+      r[nombre] = 0
+    }
+  }
+  return r
+}
+
+async function vacia(nombre) {
+  const cache = VACIABLES[nombre]
+  if (!cache) return { vaciado: false }
+  await caches.delete(cache)
+  return { vaciado: true }
+}
+
+// La página pide cosas por aquí. Se contesta por el puerto del propio mensaje y no a todos
+// los clientes: quien pregunta es quien espera la respuesta.
 self.addEventListener('message', (event) => {
   const datos = event.data
-  if (!datos || datos.tipo !== 'fijar' || !Array.isArray(datos.urls)) return
   const puerto = event.ports && event.ports[0]
-  event.waitUntil(
-    fija(datos.urls).then((r) => {
-      if (puerto) puerto.postMessage(r)
-    }),
-  )
+  const responde = (p) => event.waitUntil(p.then((r) => { if (puerto) puerto.postMessage(r) }))
+  if (!datos) return
+  if (datos.tipo === 'fijar' && Array.isArray(datos.urls)) return responde(fija(datos.urls))
+  if (datos.tipo === 'medir') return responde(mide())
+  if (datos.tipo === 'vaciar' && typeof datos.cual === 'string') return responde(vacia(datos.cual))
 })
 
 /**

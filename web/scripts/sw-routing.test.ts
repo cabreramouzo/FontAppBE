@@ -140,7 +140,7 @@ function cargaTeselas(c: ReturnType<typeof cachesFalsos>) {
   }
   class R { _cuerpo: string; constructor(cuerpo = '') { this._cuerpo = String(cuerpo) } }
   const fn = new Function('self', 'caches', 'fetch', 'Response', 'clients',
-    `${codigo}\n;return { caducaTeselas, trimCache, TILE_CACHE, TILE_STAMP, TILE_LIMIT, TILE_MAX_DIAS };`)
+    `${codigo}\n;return { caducaTeselas, trimCache, mide, vacia, VACIABLES, TILE_CACHE, TILE_STAMP, TILE_LIMIT, TILE_MAX_DIAS };`)
   return fn(self, c.api, () => {}, R, {})
 }
 
@@ -201,4 +201,41 @@ test('lo fijado no caduca con las teselas', async () => {
   c.almacen.set(sw.TILE_CACHE, new Map([[sw.TILE_STAMP, String(Date.now() - 99 * 86400e3)]]))
   await sw.caducaTeselas()
   assert.ok(c.almacen.get('fontapp-pinned-v1')!.has('https://tile/fijada.png'))
+})
+
+// --- Vaciar el almacenamiento desde los ajustes ------------------------------------
+
+test('el recuento cuenta claves y NO la marca de fecha', async () => {
+  const c = cachesFalsos()
+  const sw = cargaTeselas(c)
+  c.almacen.set(sw.TILE_CACHE, new Map([[sw.TILE_STAMP, '1'], ['https://tile/1.png', '']]))
+  c.almacen.set('fontapp-pinned-v1', new Map([['https://foto/1.jpg', '']]))
+  const n = await sw.mide()
+  assert.equal(n.teselas, 1, 'la marca no es una tesela y no se le enseña a nadie')
+  assert.equal(n.fijado, 1)
+  assert.equal(n.fotos, 0)
+})
+
+test('NO se puede vaciar el shell ni nada fuera de la lista blanca', async () => {
+  // Vaciar el shell dejaría la app sin arrancar sin cobertura, que es justo lo contrario
+  // de lo que hace esta pantalla. Y la bandeja de salida (aportaciones SIN ENVIAR) ni
+  // siquiera es un caché: no hay forma de nombrarla desde aquí.
+  const c = cachesFalsos()
+  const sw = cargaTeselas(c)
+  c.almacen.set('fontapp-shell-v7', new Map([['/index.html', '']]))
+  for (const intento of ['shell', 'fontapp-shell-v7', '', 'outbox', '../shell']) {
+    assert.deepEqual(await sw.vacia(intento), { vaciado: false }, `ha aceptado «${intento}»`)
+  }
+  assert.ok(c.almacen.has('fontapp-shell-v7'), 'se ha llevado el shell por delante')
+  assert.deepEqual(Object.keys(sw.VACIABLES).sort(), ['api', 'fijado', 'fotos', 'teselas'])
+})
+
+test('vaciar una parte se lleva esa y solo esa', async () => {
+  const c = cachesFalsos()
+  const sw = cargaTeselas(c)
+  c.almacen.set('fontapp-pinned-v1', new Map([['https://foto/1.jpg', '']]))
+  c.almacen.set(sw.TILE_CACHE, new Map([['https://tile/1.png', '']]))
+  assert.deepEqual(await sw.vacia('fijado'), { vaciado: true })
+  assert.ok(!c.almacen.has('fontapp-pinned-v1'))
+  assert.ok(c.almacen.has(sw.TILE_CACHE), 'no tenía que tocar las teselas')
 })

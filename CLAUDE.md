@@ -1978,6 +1978,29 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
     fórmula de la fila es Mercator y **no** es simétrica con la de la columna: copiar la de
     la longitud es el error clásico y da un mapa desplazado que solo se nota lejos del
     ecuador. Hay test de las dos, verificados rompiéndolos.
+- **Vaciar lo guardado, desde los ajustes** (`lib/almacen.ts` + `EspacioEnElMovil.tsx` en
+  `/me/settings`, mensajes `medir`/`vaciar` del service worker). El caché **fijado** no lo
+  recorta el LRU ni lo caduca la marca —a propósito, para eso existe—, así que era lo único
+  de la app que crecía **sin techo y sin puerta de salida**: quien guardara varias zonas con
+  sus fotos y su mapa no podía recuperar ese espacio salvo desinstalando. Antes de fijar
+  teselas y fotos eran kilobytes y no se notaba; ahora son decenas de MB por zona.
+  · La lista de lo vaciable es una **lista blanca en el service worker** (`VACIABLES`), no
+    el nombre que llegue en el mensaje. Fuera quedan el **shell** —vaciarlo dejaría la app
+    sin arrancar sin cobertura, justo lo contrario de lo que hace esta pantalla— y la
+    **bandeja de salida**, que ni siquiera es un caché: son aportaciones **sin enviar**, lo
+    único aquí que no se puede recuperar de ninguna manera. Hay test de que ningún nombre
+    (`shell`, el nombre real del caché, `../shell`) se cuela.
+  · **El total sale de `navigator.storage.estimate()` y NO de sumar los cuerpos**: sumarlos
+    obligaría a leer hasta 3.000 teselas para pintar una cifra. El precio es que es del
+    origen entero y aproximado, así que se enseña **una sola cifra** y nunca repartida por
+    filas — decir «las fotos ocupan 14 MB» con este dato sería inventárselo. Si el navegador
+    no lo da (Safari lo ha ocultado en algunas versiones), la línea no se pinta.
+  · Las filas van de más a menos deliberado: primero lo que la persona guardó a propósito
+    (la zona, que vive en IndexedDB y se borra por su camino, y lo fijado) y después lo que
+    se llenó solo (mapa navegado, fotos vistas, respuestas). Lo segundo se vacía sin
+    ceremonia porque se repone con la siguiente visita.
+  · La marca de fecha de las teselas **no se cuenta** como tesela: no es una y no se le
+    enseña a nadie. Hay test.
 - **Lo que sigue sin cumplirse del cartel:** el mapa **fuera de la zona guardada y de sus
   dos niveles de zoom**. Alejarse mucho o acercarse demasiado sigue dando casillas en
   blanco, y se dice en pantalla en vez de dejar que se descubra en el monte.
