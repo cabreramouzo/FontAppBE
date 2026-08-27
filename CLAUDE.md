@@ -1869,6 +1869,20 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   fuentes de ese recorrido. Quien sube una ruta lo hace en casa con red y la necesita en el
   monte sin ella, es **una** respuesta y son sus datos, así que se hace solo. No promete
   nada nuevo — deja de ser una lotería.
+- **Una foto que no carga NO deja el icono roto del navegador** (`ZoomableImage`). Sin
+  cobertura pasa constantemente: una foto solo queda guardada si alguien la vio antes, así
+  que en una zona guardada casi ninguna lo está — y el icono roto parece que la app esté
+  estropeada. Ahora sale un hueco que dice **por qué**, distinguiendo «no la tienes
+  guardada» (sin red) de «no se ha podido cargar» (con red), y se reintenta sola con el
+  evento `online` — con una `key` que cambia, porque el navegador no reintenta una imagen
+  que ya falló.
+  El hueco **no se parece al de «esta fuente no tiene foto»** a propósito: ese invita a
+  poner una, y aquí la fuente sí tiene — solo que no en este móvil. Confundirlos llevaría a
+  subir una foto repetida creyendo que falta.
+  Va en `ZoomableImage`, por donde pasan las tres: portada, reseñas y galería.
+  Aviso al probarlo: las imágenes llevan `loading="lazy"`, así que **si el panel del
+  navegador está colapsado no se piden nunca** y parece que el arreglo no funciona. Hay que
+  forzar `loading='eager'` o tener la ventana con alto de verdad.
 - **Las fotos tienen su propio caché** (`fontapp-photos-v1`). Compartían los 300 huecos con
   las respuestas de la API, o sea que mover el mapa unas decenas de veces echaba todas las
   fotos guardadas y mirar fotos echaba las respuestas del mapa: dos cosas con ritmos
