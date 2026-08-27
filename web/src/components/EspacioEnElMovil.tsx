@@ -21,7 +21,8 @@ import { borraZona, zonaGuardada, type Zona } from '../lib/zonaAlmacen'
  * Lo primero avisa de qué se pierde; lo segundo se vacía sin ceremonia porque se repone
  * con la siguiente visita.
  */
-export function EspacioEnElMovil() {
+/** `sinTitulo`: cuando ya lo pone la pantalla que la contiene, para no repetirlo. */
+export function EspacioEnElMovil({ sinTitulo = false }: { sinTitulo?: boolean }) {
   const { t, lang } = useI18n()
   const [n, setN] = useState<Recuento | null>(null)
   const [total, setTotal] = useState<{ usado: number; libre: number | null } | null>(null)
@@ -51,7 +52,7 @@ export function EspacioEnElMovil() {
 
   return (
     <Box component="section" sx={{ mb: 2 }}>
-      <Typography variant="h6" gutterBottom>{t('storage.title')}</Typography>
+      {!sinTitulo && <Typography variant="h6" gutterBottom>{t('storage.title')}</Typography>}
 
       {/* La cifra total sale de `navigator.storage.estimate()`, que es del origen entero y
           aproximada. Por eso va sola y NUNCA repartida por filas: repartirla sería

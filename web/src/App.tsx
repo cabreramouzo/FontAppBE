@@ -43,7 +43,14 @@ const NewsPage = lazy(() => import('./pages/NewsPage').then((m) => ({ default: m
 const ZonesPage = lazy(() => import('./pages/ZonesPage').then((m) => ({ default: m.ZonesPage })))
 const GamificationPage = lazy(() => import('./pages/GamificationPage').then((m) => ({ default: m.GamificationPage })))
 const BadgesPage = lazy(() => import('./pages/BadgesPage').then((m) => ({ default: m.BadgesPage })))
-const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+// Los ajustes son una pantalla por tema, como los del teléfono. Cada una en su trozo:
+// son pantallas que se abren de una en una y casi nunca.
+const SettingsIndexPage = lazy(() => import('./pages/settings/SettingsIndexPage').then((m) => ({ default: m.SettingsIndexPage })))
+const AccountSettingsPage = lazy(() => import('./pages/settings/AccountSettingsPage').then((m) => ({ default: m.AccountSettingsPage })))
+const PrivacySettingsPage = lazy(() => import('./pages/settings/PrivacySettingsPage').then((m) => ({ default: m.PrivacySettingsPage })))
+const NotificationsSettingsPage = lazy(() => import('./pages/settings/NotificationsSettingsPage').then((m) => ({ default: m.NotificationsSettingsPage })))
+const ContributionSettingsPage = lazy(() => import('./pages/settings/ContributionSettingsPage').then((m) => ({ default: m.ContributionSettingsPage })))
+const StorageSettingsPage = lazy(() => import('./pages/settings/StorageSettingsPage').then((m) => ({ default: m.StorageSettingsPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
 
 export default function App() {
@@ -71,7 +78,12 @@ export default function App() {
                   <Route path="/zones" element={<ZonesPage />} />
                   <Route path="/gamification" element={<GamificationPage />} />
                   <Route path="/me/badges" element={<BadgesPage />} />
-                  <Route path="/me/settings" element={<SettingsPage />} />
+                  <Route path="/me/settings" element={<SettingsIndexPage />} />
+                  <Route path="/me/settings/account" element={<AccountSettingsPage />} />
+                  <Route path="/me/settings/privacy" element={<PrivacySettingsPage />} />
+                  <Route path="/me/settings/notifications" element={<NotificationsSettingsPage />} />
+                  <Route path="/me/settings/contribution" element={<ContributionSettingsPage />} />
+                  <Route path="/me/settings/storage" element={<StorageSettingsPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />

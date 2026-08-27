@@ -1352,6 +1352,36 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   suya y no debería poder borrar el análisis que aportó otro. Denunciables desde el día
   uno (`content_flags` acepta `photo`).
 
+## Los ajustes son una pantalla por tema
+
+- `/me/settings` es un **índice** y cada tema tiene su pantalla (`/me/settings/account`,
+  `privacy`, `notifications`, `contribution`, `storage`), como los ajustes de un teléfono.
+  Medido antes y después en un móvil de 375×812: la página única eran **2.139 px (2,6
+  pantallas)**; el índice son **846 px (1,04)** y ninguna subpantalla pasa de una.
+- **La causa no era el número de interruptores sino su texto.** Son unos diez, pero cada
+  uno arrastra dos o tres líneas de explicación —y ese texto es bueno, dice lo que cuesta
+  cada decisión—; todo seguido convertía una lista de seis cosas en un muro. Partido, cada
+  pantalla tiene sitio para explicarse.
+- **Cada fila del índice enseña su estado** («@usuario», «Nombre visible», «Resumen
+  semanal», «32,2 kB»), y eso no es adorno: un índice que solo son seis enlaces es **peor**
+  que la página larga, porque añade un toque y no contesta nada. Con el estado se responde
+  de un vistazo y solo entras a lo que vas a cambiar. El resumen de privacidad nombra **lo
+  que se ve**, no cuántos interruptores hay encendidos: la pregunta que se trae ahí es «¿qué
+  ven los demás de mí?».
+- **La zona de peligro se queda en el índice**, no dentro de ninguna subpantalla: no es un
+  tema sino una acción, y borrar la cuenta tiene que poder encontrarse sin explorar.
+- **Las passkeys van dentro de «Tu cuenta»**: son lo mismo que el nombre de usuario —cómo
+  entras— y solas no daban para una pantalla.
+- **El guardado vive en `useAjustes` y no en cada pantalla** (`pages/settings/comun.tsx`).
+  `PUT /users/:id` manda el perfil **entero**, así que guardar un interruptor obliga a
+  reenviar todos los demás campos; con una copia de esa lista en cada pantalla, el día que
+  se añada una preferencia habría que acordarse en cinco sitios — y el que se olvide **no
+  falla**: pisa el valor guardado con el que llevaba por defecto. Es el mismo fallo
+  silencioso que ya evitaba `savePrivacy` cuando todo estaba junto.
+- En escritorio es el mismo índice de momento. Si algún día queda vacío, la salida es
+  columna de secciones a la izquierda y contenido a la derecha, como los Ajustes del Mac —
+  y eso es trabajo aparte, no un `if` más.
+
 ## `/me` son dos páginas: lo tuyo y lo que se toca
 
 - **Los ajustes viven en `/me/settings`** (`SettingsPage.tsx`), fuera del perfil. Antes
