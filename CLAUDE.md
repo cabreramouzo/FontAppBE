@@ -1004,7 +1004,19 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   etiquetas en móvil; sigue siendo bastante menor que un pin de fuente para no confundirlos.
 - Al abrir la app se ubica sola **si el permiso ya estaba concedido** (nunca lanza el
   diálogo del navegador a bocajarro) y **si no venías de una vista guardada** ni de un
-  enlace a una fuente concreta. El mapa te sigue hasta que tocas el mapa: arrastrar o
+  enlace a una fuente concreta.
+- **La última vista se guarda en los DOS almacenes, y significan cosas distintas**
+  (`vistaAlAbrir` en `lib/mapView.ts`, con tests). `sessionStorage` es **estado de
+  navegación**: existe porque venías del detalle o de una búsqueda, y por eso desactiva la
+  ubicación automática. `localStorage` es solo el **respaldo al abrir en frío** y no dice
+  nada de tu intención. Antes solo estaba el primero, que muere al cerrar la app, así que
+  cada apertura caía en `DEFAULT_CENTER` — **Madrid a zoom 5**. Lo tapaba la ubicación
+  automática, pero en iOS el permiso de ubicación de una web **caduca cada 24 h**, así que
+  ahí ese respaldo no existe y el mapa aparecía en Madrid todas las mañanas; reportado por
+  alguien con la PWA instalada. Confundir los dos es el error fácil y es **silencioso**: si
+  el respaldo contara como «venías de otro sitio», la ubicación automática no volvería a
+  ejecutarse nunca más tras la primera visita. Hay test de las dos mitades, verificado
+  rompiéndolo. El mapa te sigue hasta que tocas el mapa: arrastrar o
   hacer zoom desengancha el seguimiento; el botón «centrar en mí» lo vuelve a activar.
 - **Añadir respeta la intención del mapa.** Si el centro visible está a 250 m o menos
   del GPS, el pin nace en la persona: estar delante de la fuente sigue siendo el camino

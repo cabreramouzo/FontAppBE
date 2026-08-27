@@ -86,29 +86,58 @@ import { ExportGpxButton } from '../components/ExportGpxButton'
 import UploadIcon from '@mui/icons-material/UploadFileOutlined'
 import CloudDownloadIcon from '@mui/icons-material/CloudDownloadOutlined'
 import { NuevoBadge } from '../components/NuevoBadge'
-import { parseSavedMapView, type SavedMapView } from '../lib/mapView'
+import { parseSavedMapView, vistaAlAbrir, type SavedMapView } from '../lib/mapView'
 
 // Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
 // península aproximadamente centrada y el zoom 5 permite verla entera también en móvil.
 const DEFAULT_CENTER: [number, number] = [40.4168, -3.7038]
 const DEFAULT_ZOOM = 5
 
-// Última vista del mapa (centro + zoom), para restaurarla al volver del detalle.
-// En sessionStorage: persiste durante la navegación y recargas de la sesión, y se
-// limpia al cerrar la pestaña (una apertura nueva vuelve al centro por defecto).
+// Última vista del mapa (centro + zoom). Se guarda en DOS sitios, y la diferencia
+// importa:
+//
+//  · `sessionStorage` es **estado de navegación**: dónde estabas dentro de esta sesión.
+//    Que exista significa «venías de otro sitio» (del detalle de una fuente, de una
+//    búsqueda), y por eso **desactiva la ubicación automática** al montar: ya dijiste
+//    dónde querías mirar y moverte el mapa a tu posición sería deshacerlo.
+//
+//  · `localStorage` es el **respaldo al abrir en frío**, y no significa nada sobre tu
+//    intención de ahora. Antes no existía y al abrir la app se caía en el centro por
+//    defecto, que es Madrid a zoom 5. Estaba tapado porque al abrir nos ubicábamos solos
+//    si el permiso ya estaba dado; pero en iOS el permiso de ubicación de una web
+//    **caduca cada 24 horas**, así que ese respaldo no está y el mapa aparecía en Madrid
+//    todos los días. Reportado por alguien con la PWA instalada.
+//
+// Confundir los dos es el error fácil: si el respaldo también contara como «venías de
+// otro sitio», la ubicación automática no volvería a ejecutarse JAMÁS después de la
+// primera vez.
 const VIEW_KEY = 'fontapp_map_view'
-function loadView(): SavedMapView | null {
-  try {
-    return parseSavedMapView(sessionStorage.getItem(VIEW_KEY))
-  } catch {
-    return null
+
+/** Lo guardado en los dos sitios, en crudo. La decisión la toma `vistaAlAbrir`. */
+function guardado(): { sesion: string | null; ultima: string | null } {
+  const lee = (a: Storage) => { try { return a.getItem(VIEW_KEY) } catch { return null } }
+  return {
+    sesion: typeof sessionStorage === 'undefined' ? null : lee(sessionStorage),
+    ultima: typeof localStorage === 'undefined' ? null : lee(localStorage),
   }
 }
+
+/** Dónde estabas en ESTA sesión. Su presencia desactiva la ubicación automática. */
+function loadView(): SavedMapView | null {
+  return parseSavedMapView(guardado().sesion)
+}
+
 function saveView(v: SavedMapView) {
+  const json = JSON.stringify(v)
   try {
-    sessionStorage.setItem(VIEW_KEY, JSON.stringify(v))
+    sessionStorage.setItem(VIEW_KEY, json)
   } catch {
     /* almacenamiento no disponible: no pasa nada, solo no recordaremos la vista */
+  }
+  try {
+    localStorage.setItem(VIEW_KEY, json)
+  } catch {
+    /* idem */
   }
 }
 
@@ -1169,7 +1198,12 @@ export function MapPage() {
   const [place, setPlace] = useState<Place | null>(null)
   const [params, setParams] = useSearchParams()
   // Vista inicial: la última guardada (al volver del detalle) o la península por defecto.
-  const [initialView] = useState(loadView)
+  // Al montar: la vista de esta sesión si la hay y, si no, la última conocida. Solo la
+  // primera desactiva la ubicación automática (ver el comentario de VIEW_KEY).
+  const [initialView] = useState(() => {
+    const { sesion, ultima } = guardado()
+    return vistaAlAbrir(sesion, ultima).vista
+  })
 
   // Llegada desde el detalle (?lat&lng&sel): centra el mapa en esa fuente y la selecciona.
   useEffect(() => {
