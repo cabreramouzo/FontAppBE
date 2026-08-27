@@ -81,3 +81,31 @@ export function cercanasEn<F extends ConCoordenadas>(
     .slice(0, n)
     .map((x) => x.f)
 }
+
+/**
+ * Las fuentes de la zona que caen dentro de una caja.
+ *
+ * Para pintar el mapa sin cobertura. Devuelve `[]` si la caja pedida se sale de lo
+ * guardado en más de lo razonable — mejor un mapa vacío que uno que enseña las fuentes de
+ * otro valle porque son las únicas que hay.
+ */
+export function enCaja<F extends ConCoordenadas>(
+  zona: ZonaOffline<F>,
+  caja: { minLat: number; maxLat: number; minLong: number; maxLong: number },
+): F[] {
+  // Si no se solapan, no hay nada honesto que enseñar.
+  if (caja.maxLat < zona.minLat || caja.minLat > zona.maxLat
+      || caja.maxLong < zona.minLong || caja.minLong > zona.maxLong) return []
+  return zona.fuentes.filter(
+    (f) => f.latitude >= caja.minLat && f.latitude <= caja.maxLat
+        && f.longitude >= caja.minLong && f.longitude <= caja.maxLong,
+  )
+}
+
+/** Una fuente concreta de la zona guardada, o `null`. Para la ficha sin cobertura. */
+export function fuenteDe<F extends ConCoordenadas & { id?: string | null }>(
+  zona: ZonaOffline<F>,
+  id: string,
+): F | null {
+  return zona.fuentes.find((f) => f.id === id) ?? null
+}

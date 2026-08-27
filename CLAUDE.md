@@ -1902,6 +1902,24 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   El botón es un **quinto FAB** en una columna que ya iba justa, y se paga a sabiendas: en
   la hoja «Filtros» sería repetir el error del GPX —un cajón cuyo rótulo dice otra cosa— y
   en la de GPX tampoco, porque ese botón dice «GPX» con letras y esto no lo es.
+- **La zona guardada la usan las TRES pantallas, no solo la lista.** Al probarlo en el
+  monte salió que funcionaba a medias: las cercanas sí caían a la zona, pero el mapa se
+  quedaba vacío y entrar en una fuente daba «sin conexión» y una pantalla en blanco —con
+  la fuente guardada en el móvil, que es justo la situación para la que se guarda—. Ahora
+  `loadBounds` cae a `enCaja` y la ficha a `fuenteDe`.
+  La ficha dice que viene del móvil (`offline.fromZone`): sin ese aviso, una ficha sin
+  reseñas parece una fuente que **nadie ha comprobado nunca**, que es lo contrario de lo
+  que pasa — no se sabe, porque las reseñas no se guardan.
+  Y **se reintenta al volver la red** (`window.addEventListener('online')`): antes la
+  pantalla se quedaba en «sin conexión» para siempre aunque el móvil ya tuviera cobertura,
+  y no había forma de recargar sin salir y volver a entrar.
+- **El aviso de sin cobertura se encoge a un chip a los 10 segundos** (`PendingUploads`).
+  La tarjeta grande está bien la primera vez, pero en el monte se pasa la excursión entera
+  sin cobertura y colgada del borde de arriba deja de informar y pasa a estorbar. Se encoge
+  en vez de desaparecer porque el estado sigue siendo cierto y explica por qué el mapa va
+  raro, y el temporizador **se rearma en cada corte**, no solo el primero. Solo cuando no
+  hay nada pendiente: «tienes 3 aportaciones sin enviar» no es un detalle de contexto y no
+  se encoge nunca.
 - **Lo que sigue sin cumplirse del cartel:** las **teselas**. Los datos ya se pueden guardar
   a mano; el mapa no, así que sin cobertura en una zona nueva las casillas salen en blanco
   aunque la lista funcione.

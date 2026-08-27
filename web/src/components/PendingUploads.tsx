@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
+import Chip from '@mui/material/Chip'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Typography from '@mui/material/Typography'
@@ -19,6 +20,8 @@ export function PendingUploads() {
   const [sending, setSending] = useState(isOutboxSyncing)
   const [online, setOnline] = useState(() => navigator.onLine)
   const [recentlySynced, setRecentlySynced] = useState(false)
+  /** El aviso de «sin conexión» ya se ha leído: pasa a chip. Ver más abajo. */
+  const [encogido, setEncogido] = useState(false)
   const [syncTried, setSyncTried] = useState(false)
 
   const refresh = useCallback(() => {
@@ -61,7 +64,27 @@ export function PendingUploads() {
     }
   }
 
+  // Diez segundos: lo que se tarda en leerlo. Se rearma cada vez que se pierde la red, o
+  // sea que el aviso grande vuelve a salir en cada corte y no solo el primero.
+  useEffect(() => {
+    if (online) { setEncogido(false); return }
+    const reloj = setTimeout(() => setEncogido(true), 10_000)
+    return () => clearTimeout(reloj)
+  }, [online])
+
   if (count === 0 && !recentlySynced && online) return null
+
+  // Sin cobertura y sin nada pendiente, el aviso se encoge a un chip a los 10 segundos.
+  //
+  // El aviso grande está bien la primera vez —hay que enterarse— pero en el monte se pasa
+  // toda la excursión sin cobertura, y una tarjeta de tres líneas colgada del borde de
+  // arriba deja de informar y pasa a estorbar: es lo que se reportó probándolo. Se encoge
+  // en vez de desaparecer porque el estado sigue siendo cierto y explica por qué el mapa
+  // va raro.
+  //
+  // Solo cuando NO hay nada pendiente: «tienes 3 aportaciones sin enviar» es lo contrario
+  // de un detalle de contexto y no debe encogerse nunca.
+  const soloSinCobertura = !online && count === 0
 
   const title = !online
     ? (count > 0 ? t('offline.offlinePending', { n: count }) : t('offline.banner'))
@@ -86,6 +109,18 @@ export function PendingUploads() {
       : count === 0
         ? <CloudDoneIcon color="success" fontSize="small" />
         : <SyncProblemIcon color="warning" fontSize="small" />
+
+  if (soloSinCobertura && encogido) {
+    return (
+      <Chip
+        size="small"
+        icon={<CloudOffIcon fontSize="small" />}
+        label={t('offline.banner')}
+        onClick={() => setEncogido(false)}
+        sx={{ alignSelf: 'flex-start', bgcolor: 'background.paper', boxShadow: 2 }}
+      />
+    )
+  }
 
   return (
     <TarjetaDeAviso>

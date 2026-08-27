@@ -56,7 +56,7 @@ import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, Water
 import { ApiError, apiFetch, createComment, createFont, describeError, nearbyFonts, requestSourceLimitExemption, trackInteraction, uploadImage } from '../api/client'
 import { cajaRedondeada, paramsDeCaja } from '../lib/cajaMapa'
 import { casillaDe } from '../lib/casilla'
-import { cercanasEn } from '../lib/zonaOffline'
+import { cercanasEn, enCaja } from '../lib/zonaOffline'
 import { zonaGuardada } from '../lib/zonaAlmacen'
 import { nombreFuente } from '../lib/fontName'
 import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
@@ -335,7 +335,15 @@ function FontMarkers({
           : { fonts: nuevas.fonts, clusters: nuevas.clusters }
       ))
     } catch {
-      // silencioso: mapa vacío si falla
+      // Sin red, la zona guardada. Antes esto dejaba el mapa vacío: la lista de cercanas
+      // sí caía a la zona pero el mapa no, así que el excursionista veía sus fuentes en
+      // una lista y ninguna en el mapa. Se reportó probándolo en el monte.
+      if (mine !== requestNumber.current) return
+      const zona = await zonaGuardada()
+      const fonts = zona ? enCaja(zona, caja) : []
+      setMapData((prev) => (
+        firmaDeFuentes(prev.fonts) === firmaDeFuentes(fonts) ? prev : { fonts, clusters: [] }
+      ))
     } finally {
       if (activeRequest.current === controller) activeRequest.current = null
     }

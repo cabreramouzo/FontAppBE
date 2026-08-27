@@ -81,6 +81,8 @@ import { TIER_COLOR } from '../lib/tierColors'
 import { BadgeArt } from '../components/BadgeArt'
 import { BADGE_ART } from '../lib/levelBadges'
 import { enqueue, isOffline } from '../lib/outbox'
+import { fuenteDe } from '../lib/zonaOffline'
+import { zonaGuardada } from '../lib/zonaAlmacen'
 import { PhotoExifNote } from '../components/PhotoExifNote'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { nombreFuente } from '../lib/fontName'
@@ -597,6 +599,8 @@ export function FontDetailPage() {
   const [reports, setReports] = useState<ReportResponse[]>([])
   const [comments, setComments] = useState<CommentResponse[]>([])
   const [error, setError] = useState('')
+  /** La ficha viene de la zona guardada: sin reseñas ni incidencias, y hay que decirlo. */
+  const [desdeZona, setDesdeZona] = useState(false)
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [updating, setUpdating] = useState(false) // formulario de nueva actualización desplegado
@@ -701,11 +705,31 @@ export function FontDetailPage() {
 
   const load = useCallback(async () => {
     if (!id) return
-    const [f, r, c] = await Promise.all([
-      apiFetch<Font>(`/fonts/${id}`),
-      apiFetch<ReportResponse[]>(`/fonts/${id}/report`),
-      apiFetch<CommentResponse[]>(`/fonts/${id}/comments`),
-    ])
+    let f: Font
+    let r: ReportResponse[]
+    let c: CommentResponse[]
+    try {
+      ;[f, r, c] = await Promise.all([
+        apiFetch<Font>(`/fonts/${id}`),
+        apiFetch<ReportResponse[]>(`/fonts/${id}/report`),
+        apiFetch<CommentResponse[]>(`/fonts/${id}/comments`),
+      ])
+      setDesdeZona(false)
+    } catch (e) {
+      // Sin cobertura, lo que haya en la zona guardada. Antes esto daba «sin conexión» y
+      // una pantalla en blanco — con la fuente guardada en el móvil, que es la situación
+      // exacta para la que se guarda. Y es justo la ficha la que lleva la flecha de los
+      // últimos metros, o sea lo único que sirve estando delante.
+      const zona = isOffline(e) ? await zonaGuardada() : null
+      const guardada = zona ? fuenteDe(zona, id) : null
+      if (!guardada) throw e
+      f = guardada
+      // Reseñas e incidencias no se guardan: la zona son las fuentes. Se dice en pantalla
+      // en vez de enseñar una ficha que parece completa y está vacía de lo que importa.
+      r = []
+      c = []
+      setDesdeZona(true)
+    }
     setFont(f)
     rememberFountain(f, user?.id ?? 'anonymous')
     setReports(r)
@@ -729,6 +753,15 @@ export function FontDetailPage() {
   useEffect(() => {
     load().catch((e) => setError(describeError(e, t)))
   }, [load, t])
+
+  // Al volver la red, se reintenta solo. Sin esto la pantalla se quedaba en «sin conexión»
+  // para siempre aunque el móvil ya tuviera cobertura, y no había forma de recargar sin
+  // salir y volver a entrar. Se reportó probándolo en el monte.
+  useEffect(() => {
+    const vuelve = () => { load().then(() => setError('')).catch(() => { /* seguimos sin red */ }) }
+    window.addEventListener('online', vuelve)
+    return () => window.removeEventListener('online', vuelve)
+  }, [load])
 
   async function removeFont() {
     if (!id || !confirm(t('detail.confirmDeleteFont'))) return
@@ -1252,6 +1285,10 @@ export function FontDetailPage() {
       <Box>
 
         <Box component="section" sx={{ mt: { xs: 3, md: 0 } }}>
+          {/* Se dice que esto viene del móvil y no del servidor: sin el aviso, una ficha
+              sin reseñas parece una fuente que nadie ha comprobado nunca, que es lo
+              contrario de lo que pasa — no se sabe. */}
+          {desdeZona && <Alert severity="info" sx={{ mb: 1 }}>{t('offline.fromZone')}</Alert>}
           <Typography variant="h6" gutterBottom>{t('detail.statusReviews')}</Typography>
           {latest ? (
             <>
