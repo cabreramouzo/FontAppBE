@@ -68,23 +68,26 @@ struct FontReportController: RouteCollection {
     ///
     /// Sin `resolver`: nadie la cerró. La ficha lo dice como «resuelta automáticamente»
     /// en vez de atribuírsela a quien pasó por allí, que no ha decidido nada.
-    /// - Returns: si de verdad ha cerrado alguna. Quien llama lo necesita para avisar a
-    ///   los seguidores solo cuando ha pasado algo: «la incidencia se ha resuelto» dicho
-    ///   sobre una fuente que no tenía ninguna no es una noticia, es ruido.
+    /// - Returns: **quiénes** habían abierto las incidencias cerradas. Vacío significa
+    ///   que no había ninguna abierta, y quien llama lo necesita para avisar solo cuando
+    ///   ha pasado algo: «la incidencia se ha resuelto» sobre una fuente que no tenía
+    ///   ninguna no es una noticia, es ruido. Y sirve además para decidir a quién le llega
+    ///   una notificación del sistema: para el que pasaba por ahí es una buena noticia sin
+    ///   nada que hacer, pero para quien se molestó en avisar cierra su propio bucle.
     @discardableResult
-    static func autoResolve(fontID: UUID, on db: any Database) async throws -> Bool {
+    static func autoResolve(fontID: UUID, on db: any Database) async throws -> Set<UUID> {
         let abiertas = try await FontReport.query(on: db)
             .filter(\.$font.$id == fontID)
             .filter(\.$resolvedAt == nil)
             .all()
-        guard !abiertas.isEmpty else { return false }
+        guard !abiertas.isEmpty else { return [] }
         let ahora = Date()
         for r in abiertas {
             r.resolvedAt = ahora
             r.$resolver.id = nil
             try await r.save(on: db)
         }
-        return true
+        return Set(abiertas.compactMap { $0.$user.id })
     }
 
     private func cambiaEstado(_ req: Request, resolviendo: Bool) async throws -> ReportResponse {

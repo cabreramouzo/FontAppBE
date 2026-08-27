@@ -66,9 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const stored = getToken()
       if (stored) {
-        void saveSessionForSync(stored)
+        void saveSessionForSync(stored)   // el id llega abajo, al recuperar la sesión
         try {
-          setUser(await recuperaSesion())
+          const yo = await recuperaSesion()
+          setUser(yo)
+          // Con el id, para que la cola sepa de quién es cada cosa que guarda.
+          void saveSessionForSync(stored, yo.id)
         } catch (e) {
           // La sesión SOLO se cierra si el servidor dice que el token no vale. Un fallo
           // de red no dice nada del token: antes se borraba ante cualquier error, así
@@ -109,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     forgetCapabilities()
     // El service worker necesita el token en IndexedDB para poder enviar la cola
     // en segundo plano (Android); no puede leer localStorage.
-    void saveSessionForSync(res.token)
+    void saveSessionForSync(res.token, res.user.id)
     storeCredential(username, password)
   }
 
@@ -118,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(res.token)
     setUser(res.user)
     forgetCapabilities()
-    void saveSessionForSync(res.token)
+    void saveSessionForSync(res.token, res.user.id)
     // Google también puede CREAR la cuenta. El servidor lo distingue para que esa
     // persona no se pierda la bienvenida ni el onboarding contextual.
     if (res.isNewUser) setJustRegistered(true)
@@ -129,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(res.token)
     setUser(res.user)
     forgetCapabilities()
-    void saveSessionForSync(res.token)
+    void saveSessionForSync(res.token, res.user.id)
   }
 
   async function register(name: string, username: string, email: string, password: string) {

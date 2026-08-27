@@ -48,6 +48,28 @@ enum FontWatchNotifier {
         /// La fuente se ha escondido del mapa (duplicada o retirada).
         case hidden(reason: String)
 
+        /// ¿Esto merece una **notificación del sistema**, o basta con la campana?
+        ///
+        /// El criterio es uno solo: **¿cambia lo que voy a hacer?** Que una fuente que ya
+        /// funcionaba siga funcionando no cambia nada —y `flowing` es, con diferencia, la
+        /// reseña más común—, así que empujarla al bolsillo de alguien gasta su atención
+        /// para nada. Que se haya secado sí: es literalmente el desvío de tres kilómetros
+        /// que esta app existe para evitar.
+        ///
+        /// No es una preferencia de volumen sino de utilidad. Una app se silencia **una
+        /// vez** y no se vuelve, así que cada aviso que llega tiene que haber valido la
+        /// pena; los demás siguen en la campana, que no molesta a nadie.
+        var urgente: Bool {
+            switch self {
+            case .review(let s):
+                // Sin estado no se sabe nada; con agua, no hay nada que decidir.
+                return s == "dry" || s == "broken" || s == "gone"
+            case .report: return true
+            case .resolved: return false   // salvo para quien la abrió: ver `tambienPushA`
+            case .hidden: return true      // la fuente desaparece del mapa
+            }
+        }
+
         var code: String {
             switch self {
             case .review(let s): return s.map { "review:\($0)" } ?? "review"
@@ -66,8 +88,12 @@ enum FontWatchNotifier {
     /// `push` es opcional a propósito: sin él esto sigue haciendo lo de siempre. Así los
     /// tests y los comandos de consola no tienen que montar un cliente HTTP para guardar
     /// un aviso en la campana.
+    /// `tambienPushA` son personas para las que este cambio **sí** es urgente aunque no
+    /// lo sea en general. Hoy solo se usa para «incidencia resuelta»: para el resto es una
+    /// buena noticia sin nada que hacer, pero para quien la abrió cierra su propio bucle —
+    /// se molestó en avisar y merece saber que sirvió de algo.
     static func notify(fontID: UUID, change: Change, actorID: UUID?, on db: any Database,
-                       push: PushEnvio? = nil) async {
+                       push: PushEnvio? = nil, tambienPushA: Set<UUID> = []) async {
         do {
             // La fuente, para poder guardar su nombre: el aviso es una foto de lo que pasó
             // y tiene que seguir leyéndose aunque después se renombre o se borre.
@@ -96,6 +122,9 @@ enum FontWatchNotifier {
             // que es el que no se pierde.
             if let push {
                 for s in seguidores {
+                    // La campana la recibe todo el mundo; el push, solo cuando de verdad
+                    // cambia algo para quien lo recibe.
+                    guard change.urgente || tambienPushA.contains(s.$user.id) else { continue }
                     guard let quien = try? await User.find(s.$user.id, on: db) else { continue }
                     let (titulo, cuerpo) = PushCopy.fontUpdate(
                         code: change.code, fontName: font.name, lang: quien.lang)

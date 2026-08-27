@@ -112,3 +112,40 @@ final class PushSubscriptionTests: XCTestCase {
         XCTAssertNil(sinAuth.suscriptor, "el secreto de autenticación son 16 bytes")
     }
 }
+
+/// Qué merece una notificación del sistema y qué se queda en la campana.
+///
+/// El criterio es «¿cambia lo que voy a hacer?», y equivocarse aquí no rompe nada visible:
+/// simplemente se gasta la atención de la gente hasta que silencia la app, que se hace una
+/// vez y no se deshace.
+extension PushSubscriptionTests {
+    func testSoloSePushaLoQueCambiaAlgo() {
+        // Que una fuente que ya funcionaba siga funcionando no exige nada de ti, y es la
+        // reseña MÁS común: pushearla sería casi todo el volumen, y todo inútil.
+        XCTAssertFalse(FontWatchNotifier.Change.review(status: "flowing").urgente)
+        XCTAssertFalse(FontWatchNotifier.Change.review(status: "trickle").urgente)
+        XCTAssertFalse(FontWatchNotifier.Change.review(status: nil).urgente)
+
+        // Esto es el desvío de tres kilómetros que la app existe para evitar.
+        XCTAssertTrue(FontWatchNotifier.Change.review(status: "dry").urgente)
+        XCTAssertTrue(FontWatchNotifier.Change.review(status: "broken").urgente)
+        XCTAssertTrue(FontWatchNotifier.Change.review(status: "gone").urgente)
+        XCTAssertTrue(FontWatchNotifier.Change.report.urgente)
+        // La fuente desaparece del mapa: quien la tenía apuntada para el domingo debe
+        // enterarse sin abrir nada.
+        XCTAssertTrue(FontWatchNotifier.Change.hidden(reason: "retired").urgente)
+
+        // Buena noticia sin nada que hacer... salvo para quien la abrió, y eso se resuelve
+        // con `tambienPushA`, no cambiando esto.
+        XCTAssertFalse(FontWatchNotifier.Change.resolved.urgente)
+    }
+
+    /// La campana la recibe todo el mundo pase lo que pase: es gratis y no molesta. Lo que
+    /// se acota es el push. Si esto se cruzara, media bandeja se quedaría vacía.
+    func testLaCampanaNoDependeDeSiEsUrgente() {
+        for c: FontWatchNotifier.Change in [.review(status: "flowing"), .resolved, .report,
+                                            .hidden(reason: "duplicate")] {
+            XCTAssertFalse(c.code.isEmpty)
+        }
+    }
+}

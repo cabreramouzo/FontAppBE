@@ -131,9 +131,11 @@ struct FontCommentController: RouteCollection {
         // cierran solas. Va aquí y no en el barrido de gamificación a propósito: esto es
         // información sobre el agua, no sobre puntos, y ningún controlador debe depender
         // de que la gamificación esté encendida para decir la verdad sobre una fuente.
-        var seHaResuelto = false
+        // Quiénes habían avisado, no solo si se cerró algo: son los únicos para los que
+        // «resuelta» es una noticia que merezca una notificación del sistema.
+        var avisaron: Set<UUID> = []
         if dto.waterStatus == "flowing" {
-            seHaResuelto = try await FontReportController.autoResolve(fontID: fontID, on: req.db)
+            avisaron = try await FontReportController.autoResolve(fontID: fontID, on: req.db)
         }
 
         // A quien sigue la fuente. Después de guardar y sin esperar, como las menciones:
@@ -147,9 +149,10 @@ struct FontCommentController: RouteCollection {
                                            actorID: userID, on: db, push: push)
             // Que una incidencia se cierre sola es la mejor noticia que puede dar una
             // fuente, y no se deduce de «alguien dijo que raja»: va aparte.
-            if seHaResuelto {
+            if !avisaron.isEmpty {
                 await FontWatchNotifier.notify(fontID: fontID, change: .resolved,
-                                               actorID: userID, on: db, push: push)
+                                               actorID: userID, on: db, push: push,
+                                               tambienPushA: avisaron)
             }
         }
 

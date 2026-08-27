@@ -42,6 +42,19 @@ type StoredItem = OutboxItem & {
   id: number; queuedAt: number; attempts: number; claimedAt?: number
   /** La sesión caducó al intentar enviarlo: hace falta volver a entrar. */
   needsAuth?: boolean
+  /**
+   * Quién lo encoló.
+   *
+   * Sin esto, una aportación guardada con una cuenta **se publicaba con la que estuviera
+   * puesta al enviarla**. Suena raro y le pasó al autor de la app: reseñó una fuente sin
+   * cobertura con la cuenta de administrador, se dio cuenta, entró con la suya... y la de
+   * antes seguía en la cola esperando a salir firmada por quien no era. Nadie pretende
+   * eso, y desde fuera no se ve: la reseña aparece con el nombre equivocado y ya está.
+   *
+   * Las guardadas antes de esto no lo llevan; se envían como siempre, que es lo único
+   * que se puede hacer sin saber de quién eran.
+   */
+  userID?: string
 }
 
 function openDB(): Promise<IDBDatabase> {
@@ -76,9 +89,9 @@ function tx<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequ
  * Guarda el token y el origen de la API donde el service worker pueda leerlos.
  * Llamar en cada cambio de sesión (entrar, salir, restaurar al arrancar).
  */
-export async function saveSessionForSync(token: string | null): Promise<void> {
+export async function saveSessionForSync(token: string | null, userID?: string): Promise<void> {
   try {
-    await tx('readwrite', (s) => s.put({ key: 'session', token, apiBase: import.meta.env.VITE_API_URL || '/api' }), META)
+    await tx('readwrite', (s) => s.put({ key: 'session', token, userID: token ? userID : undefined, apiBase: import.meta.env.VITE_API_URL || '/api' }), META)
     // Sesión nueva: lo que estaba esperando a que volvieras a entrar ya puede salir.
     if (token) {
       for (const item of await allItems()) {
@@ -130,11 +143,36 @@ export function onOutboxSyncState(listener: (event: OutboxSyncEvent) => void): (
 
 /** Guarda una aportación para enviarla cuando haya red. */
 export async function enqueue(item: OutboxItem): Promise<void> {
-  await tx('readwrite', (s) => s.add({ ...item, queuedAt: Date.now(), attempts: 0 } as unknown as StoredItem))
+  // Se apunta de quién es AL ENCOLAR y no al enviar, que es justo el fallo que esto
+  // arregla: entre las dos cosas puede pasar un cambio de cuenta.
+  const userID = await quienSoy()
+  await tx('readwrite', (s) => s.add({ ...item, userID, queuedAt: Date.now(), attempts: 0 } as unknown as StoredItem))
   notifyChanged()
   // En Android esto permite enviarlo aunque el usuario cierre la app.
   void requestBackgroundSync()
   trackInteraction('outbox_queued')
+}
+
+/** Quién tiene la sesión abierta, según lo que guardó `saveSessionForSync`. */
+async function quienSoy(): Promise<string | undefined> {
+  try {
+    const s = await tx<{ userID?: string } | undefined>(
+      'readonly', (st) => st.get('session') as IDBRequest<{ userID?: string } | undefined>, META)
+    return s?.userID
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * ¿Puede enviarse esto con la sesión que hay puesta?
+ *
+ * Las de otra cuenta **se quedan esperando**, no se descartan: son aportaciones sin
+ * enviar, y volverán a salir solas cuando esa persona entre otra vez. Es el mismo trato
+ * que el historial de búsquedas y la ruta recordada.
+ */
+function esMia(item: StoredItem, yo: string | undefined): boolean {
+  return !item.userID || item.userID === yo
 }
 
 export async function pendingCount(): Promise<number> {
@@ -146,12 +184,47 @@ export async function pendingCount(): Promise<number> {
 }
 
 /** Cuántas cosas quedan y si alguna está esperando a que vuelvas a iniciar sesión. */
-export async function pendingStatus(): Promise<{ count: number; needsAuth: boolean }> {
+export async function pendingStatus(): Promise<{ count: number; needsAuth: boolean; ajenas: number }> {
   try {
     const items = await allItems()
-    return { count: items.length, needsAuth: items.some((i) => i.needsAuth) }
+    const yo = await quienSoy()
+    return {
+      count: items.length,
+      needsAuth: items.some((i) => i.needsAuth),
+      // Las que se guardaron con otra cuenta. Se cuentan aparte porque su aviso es
+      // distinto: no es «no hay cobertura», es «esto no es tuyo y no va a salir así».
+      ajenas: items.filter((i) => !esMia(i, yo)).length,
+    }
   } catch {
-    return { count: 0, needsAuth: false }
+    return { count: 0, needsAuth: false, ajenas: 0 }
+  }
+}
+
+/**
+ * Tirar lo que hay en la cola. Devuelve cuántas se han tirado.
+ *
+ * Existe porque **no había ninguna salida**: una aportación que no puede salir —porque es
+ * de otra cuenta, porque ya la publicaste a mano, porque el servidor la rechaza de una
+ * forma que la cola toma por transitoria— se quedaba reintentándose para siempre, con su
+ * aviso permanente arriba y un botón de «enviar ahora» que no terminaba nunca. Le pasó al
+ * autor de la app.
+ *
+ * Es destructivo de verdad: son datos que solo existen en este móvil. Quien llama tiene
+ * que preguntar antes.
+ */
+export async function descartaPendientes(soloAjenas = false): Promise<number> {
+  try {
+    const yo = await quienSoy()
+    let n = 0
+    for (const item of await allItems()) {
+      if (soloAjenas && esMia(item, yo)) continue
+      await tx('readwrite', (s) => s.delete(item.id))
+      n++
+    }
+    notifyChanged()
+    return n
+  } catch {
+    return 0
   }
 }
 
@@ -187,9 +260,13 @@ export async function flushOutbox(): Promise<number> {
   let sent = 0
   try {
     const now = Date.now()
+    const yo = await quienSoy()
     for (const item of await allItems()) {
       // ¿Lo está enviando ya el service worker (Android, en segundo plano)? Lo saltamos.
       if (item.claimedAt && now - item.claimedAt < CLAIM_TTL_MS) continue
+      // De otra cuenta: no se envía firmado por quien está ahora. Se queda esperando a
+      // que vuelva su dueño, o se descarta a mano desde el aviso.
+      if (!esMia(item, yo)) continue
       await tx('readwrite', (s) => s.put({ ...item, claimedAt: Date.now() }))
       try {
         // El EXIF se guardó al encolar, no ahora: lo que hay en la cola ya está

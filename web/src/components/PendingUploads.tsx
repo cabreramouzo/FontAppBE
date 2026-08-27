@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography'
 import CloudOffIcon from '@mui/icons-material/CloudOff'
 import CloudDoneIcon from '@mui/icons-material/CloudDone'
 import SyncProblemIcon from '@mui/icons-material/SyncProblem'
-import { flushOutbox, isOutboxSyncing, onOutboxChanged, onOutboxSyncState, pendingStatus } from '../lib/outbox'
+import { descartaPendientes, flushOutbox, isOutboxSyncing, onOutboxChanged, onOutboxSyncState, pendingStatus } from '../lib/outbox'
 import { useI18n } from '../i18n/I18nContext'
 import { TarjetaDeAviso } from './Avisos'
 
@@ -17,6 +17,8 @@ export function PendingUploads() {
   const { t } = useI18n()
   const [count, setCount] = useState(0)
   const [needsAuth, setNeedsAuth] = useState(false)
+  /** Guardadas con OTRA cuenta: no pueden salir firmadas por quien está ahora. */
+  const [ajenas, setAjenas] = useState(0)
   const [sending, setSending] = useState(isOutboxSyncing)
   const [online, setOnline] = useState(() => navigator.onLine)
   const [recentlySynced, setRecentlySynced] = useState(false)
@@ -25,7 +27,9 @@ export function PendingUploads() {
   const [syncTried, setSyncTried] = useState(false)
 
   const refresh = useCallback(() => {
-    void pendingStatus().then(({ count, needsAuth }) => { setCount(count); setNeedsAuth(needsAuth) })
+    void pendingStatus().then(({ count, needsAuth, ajenas }) => {
+      setCount(count); setNeedsAuth(needsAuth); setAjenas(ajenas)
+    })
   }, [])
 
   useEffect(() => {
@@ -97,8 +101,10 @@ export function PendingUploads() {
     ? (count > 0 ? t('offline.savedSafe') : t('offline.connectionHint'))
     : count === 0
       ? t('offline.syncedHint')
-      : needsAuth
-        ? t('offline.needsLogin')
+      : ajenas > 0
+        ? t('offline.otherAccount', { n: ajenas })
+        : needsAuth
+          ? t('offline.needsLogin')
         : syncTried
           ? t('offline.retryHint')
           : t('offline.pendingHint')
@@ -129,6 +135,32 @@ export function PendingUploads() {
         <Typography variant="body2" sx={{ fontWeight: 600 }}>{title}</Typography>
         <Typography variant="caption" color="text.secondary">{detail}</Typography>
       </Box>
+      {/* La salida que no había.
+          Una aportación que no puede salir —de otra cuenta, ya publicada a mano, o
+          rechazada de una forma que la cola toma por transitoria— se quedaba
+          reintentándose para siempre, con este aviso clavado arriba y un «enviar ahora»
+          que no terminaba nunca. Pasó de verdad.
+          Se pregunta antes porque esto SÍ borra: son datos que solo existen en este
+          móvil. Y va en texto pequeño, no como botón principal: la salida tiene que
+          existir, no invitar. */}
+      {count > 0 && (ajenas > 0 || !sending) && (
+        <Button
+          size="small" color="inherit"
+          sx={{ textTransform: 'none', minWidth: 0, opacity: 0.75 }}
+          onClick={() => {
+            const soloAjenas = ajenas > 0 && ajenas < count
+            const n = soloAjenas ? ajenas : count
+            if (!confirm(t('offline.discardConfirm', { n: String(n) }))) return
+            void descartaPendientes(soloAjenas).then(() => {
+              void pendingStatus().then(({ count, needsAuth, ajenas }) => {
+                setCount(count); setNeedsAuth(needsAuth); setAjenas(ajenas)
+              })
+            })
+          }}
+        >
+          {t('offline.discard')}
+        </Button>
+      )}
       {count > 0 && online && needsAuth ? (
         // Reintentar no sirve hasta que vuelva a haber sesión: le llevamos al acceso.
         <Button size="small" variant="contained" disableElevation component="a" href="/login">

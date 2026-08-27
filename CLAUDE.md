@@ -2361,6 +2361,15 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   elegir entre dos palabras para lo mismo. GitHub distingue *star* de *watch* porque un
   repo se mueve cada día — aquí una fuente cambia unas pocas veces al año. Si el volumen
   molesta algún día, la salida es un interruptor sobre la relación que ya hay, no una nueva.
+- **No todo se pusha, y ese es el diseño** (`Change.urgente`). El criterio es uno: *¿cambia
+  lo que voy a hacer?* Se seca, se rompe, ya no está, la esconden o alguien abre una
+  incidencia → notificación del sistema, que es el desvío de tres kilómetros que esta app
+  existe para evitar. **Sale agua → solo campana**, y ahí está el grueso del volumen:
+  `flowing` es con diferencia la reseña más común y que una fuente que ya funcionaba siga
+  funcionando no exige nada de ti. «Resuelta» tampoco… **salvo para quien la abrió**
+  (`tambienPushA`, con los autores que devuelve ahora `autoResolve`): se molestó en avisar
+  y eso cierra su propio bucle. Una app se silencia **una vez** y no se vuelve, así que
+  cada aviso que llega tiene que haber valido la pena.
 - Avisa de: **reseña** (con el estado del agua si lo trae), **incidencia**, **incidencia
   resuelta** y **escondida** (duplicada o retirada). Esa última es la más importante: la
   fuente desaparece del mapa y quien la tenía apuntada para el domingo debe enterarse.
@@ -2443,6 +2452,28 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`, generadas con
   `swift run App vapid-keys`. **Cambiar la pública invalida todas las suscripciones a la
   vez y sin error visible.** Runbook en DEPLOY.md.
+
+## La cola de salida tiene dueño, y tiene salida
+
+- **Cada aportación encolada se apunta con QUIÉN la guardó** (`userID` en `outbox.ts`), y
+  solo se envía si la sesión puesta es la misma. Sin eso se publicaba **con la cuenta que
+  hubiera al enviar**, no con la que la escribió: reseñar una fuente sin cobertura con la
+  cuenta de administrador, darse cuenta, entrar con la propia… y la de antes seguía en la
+  cola esperando a salir firmada por quien no era. Le pasó al autor de la app. Desde fuera
+  no se ve nada raro: la reseña aparece con el nombre equivocado y ya está.
+- Las de otra cuenta **se quedan esperando, no se descartan**: son aportaciones sin enviar
+  y volverán a salir solas cuando esa persona entre otra vez. Mismo trato que el historial
+  de búsquedas y la ruta recordada. Las guardadas **antes** de esto no llevan dueño y se
+  envían como siempre — bloquearlas sería tirar aportaciones reales de gente que no ha
+  hecho nada raro, y no hay forma de saber de quién eran.
+- **Y ahora se pueden tirar** (`descartaPendientes`, enlace en `PendingUploads`). No había
+  ninguna salida: lo que no puede salir —de otra cuenta, ya publicado a mano, o rechazado
+  de una forma que la cola toma por transitoria— se reintentaba **para siempre**, con el
+  aviso clavado arriba y un «enviar ahora» que no terminaba nunca. Se pregunta antes,
+  porque esto sí borra de verdad: son datos que solo existen en ese móvil. Va en texto
+  pequeño y no como botón principal — la salida tiene que existir, no invitar.
+- El aviso **dice cuál de los tres problemas es**. «No se han podido sincronizar» sobre una
+  cola que es de otra cuenta manda a mirar la cobertura, que no tiene nada que ver.
 
 ## Interrupciones (`lib/asks.ts`)
 
