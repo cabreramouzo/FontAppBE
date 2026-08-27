@@ -35,27 +35,14 @@ jobs:
           else
             antes="${{ github.event.before }}"
           fi
-          # Ante la duda, TODO. Una rama nueva trae `before` a ceros y un force-push puede
-          # dejar un sha que ya no existe; en los dos casos no hay comparación posible, y
-          # equivocarse hacia «no despliegues» es justo el error que no se ve.
-          if [ -z "$antes" ] || [ "$antes" = "0000000000000000000000000000000000000000" ] \
-             || ! git cat-file -e "$antes^{commit}" 2>/dev/null; then
-            echo "Sin punto de comparación ($antes): se asume que toca al backend."
-            echo "backend=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          ficheros=$(git diff --name-only "$antes" "${{ github.sha }}")
-          echo "Ficheros tocados:"; echo "$ficheros" | sed 's/^/  /'
-          # `|| true` porque grep sale con 1 cuando no casa nada, y aquí eso es un
-          # resultado válido (todo era de front), no un error del paso.
-          relevantes=$(printf '%s\n' "$ficheros" | grep -Ev '^(web/|flyer/|docs/)|\.md$' || true)
-          if [ -z "$relevantes" ]; then
-            echo "Solo front y documentación: no se toca el backend."
-            echo "backend=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Toca al backend:"; echo "$relevantes" | sed 's/^/  /'
-            echo "backend=true" >> "$GITHUB_OUTPUT"
-          fi
+          # La regla vive en `scripts/toca-backend.sh` y NO aquí: dentro del YAML no hay
+          # forma de probarla, y equivocarse hacia «no despliegues» es un fallo que no se
+          # ve — todo en verde y producción vieja. `scripts/toca-backend.test.sh` la
+          # comprueba contra los commits reales del repo.
+          backend=$(./scripts/toca-backend.sh "$antes" "${{ github.sha }}")
+          echo "Toca al backend: $backend"
+          git diff --name-only "$antes" "${{ github.sha }}" 2>/dev/null | sed 's/^/  /' || true
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
 
   backend:
     needs: cambios

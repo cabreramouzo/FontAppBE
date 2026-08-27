@@ -88,34 +88,10 @@ struct ImportGeoJSONCommand: AsyncCommand {
         //    o sea un barrido lineal por cada punto del fichero: importar 70.000 puntos
         //    contra 160.000 existentes son miles de millones de haversines. Con celdas de
         //    ~1,1 km solo se miran las vecinas.
-        var vecinas: [Vecina] = []
-        var rejilla: [Celda: [Int]] = [:]
-        func indexa(_ v: Vecina) {
-            vecinas.append(v)
-            rejilla[Self.celdaDe(v.lat, v.lon), default: []].append(vecinas.count - 1)
-        }
-        /// El índice de la vecina más cercana dentro del radio, **la primera insertada** si
-        /// hay varias. Devolver la de menor índice no es un capricho: reproduce
-        /// exactamente lo que hacía `first(where:)` sobre el array, y así una importación
-        /// repetida sigue dando el mismo resultado.
+        var rejilla = RejillaCercania()
+        func indexa(_ v: RejillaCercania.Vecina) { rejilla.añade(v) }
         func cercana(_ lat: Double, _ lon: Double, _ radioKm: Double) -> Int? {
-            let pasoLat = max(1, Int((radioKm / (Self.celdaGrados * 111.0)).rounded(.up)))
-            // En longitud un grado mide menos según subes en latitud, así que hay que
-            // mirar más celdas a los lados. Sin esto, en el norte se escapan vecinas que
-            // sí están dentro del radio y se duplican fuentes.
-            let cosLat = max(cos(lat * .pi / 180), 0.01)
-            let pasoLon = max(1, Int((radioKm / (Self.celdaGrados * 111.0 * cosLat)).rounded(.up)))
-            let c = Self.celdaDe(lat, lon)
-            var mejor: Int?
-            for dx in -pasoLon...pasoLon {
-                for dy in -pasoLat...pasoLat {
-                    for i in rejilla[Celda(x: c.x + dx, y: c.y + dy)] ?? [] {
-                        guard haversineKm(vecinas[i].lat, vecinas[i].lon, lat, lon) < radioKm else { continue }
-                        if mejor == nil || i < mejor! { mejor = i }
-                    }
-                }
-            }
-            return mejor
+            rejilla.cercana(lat, lon, radioKm)
         }
 
         if let dedupeMeters = signature.dedupe {
@@ -128,14 +104,14 @@ struct ImportGeoJSONCommand: AsyncCommand {
                 }
                 for f in try await sql.raw("SELECT id, latitude, longitude, name FROM fonts")
                     .all(decoding: Fila.self) {
-                    indexa(Vecina(id: f.id, lat: f.latitude, lon: f.longitude, name: f.name))
+                    indexa(RejillaCercania.Vecina(id: f.id, lat: f.latitude, lon: f.longitude, name: f.name))
                 }
             } else {
                 for f in try await Font.query(on: db).all() {
-                    indexa(Vecina(id: f.id, lat: f.latitude, lon: f.longitude, name: f.name))
+                    indexa(RejillaCercania.Vecina(id: f.id, lat: f.latitude, lon: f.longitude, name: f.name))
                 }
             }
-            context.console.info("Dedupe activado a \(Int(dedupeMeters)) m (fuentes existentes: \(vecinas.count)).")
+            context.console.info("Dedupe activado a \(Int(dedupeMeters)) m (fuentes existentes: \(rejilla.count)).")
         }
         let dedupeKm = signature.dedupe.map { $0 / 1000.0 }
 
@@ -150,13 +126,13 @@ struct ImportGeoJSONCommand: AsyncCommand {
                 if let i = cercana(p.lat, p.lon, dedupeKm) {
                     // Si la existente tiene un nombre genérico (p. ej. "Font"/"Manantial"
                     // de OSM) y el topónimo del ICGC es más específico, lo mejoramos.
-                    if let id = vecinas[i].id, Self.isGeneric(vecinas[i].name),
-                       !Self.isGeneric(p.name), vecinas[i].name != p.name {
+                    if let id = rejilla.vecinas[i].id, Self.isGeneric(rejilla.vecinas[i].name),
+                       !Self.isGeneric(p.name), rejilla.vecinas[i].name != p.name {
                         // El nombre se cambia SIEMPRE en memoria, también en el ensayo en
                         // seco: si no, un segundo punto del origen junto a la misma fuente
                         // la vería aún genérica y contaría otro renombrado que en la
                         // importación real no ocurre (el ensayo inflaba la cifra).
-                        vecinas[i].name = p.name
+                        rejilla.renombra(i, p.name)
                         // El modelo se carga aquí y no antes: es el único momento en que
                         // hace falta, y son unas decenas de fuentes en toda la pasada.
                         if !signature.dryRun, let font = try await Font.find(id, on: db) {
@@ -168,7 +144,7 @@ struct ImportGeoJSONCommand: AsyncCommand {
                         skipped += 1
                     }
                     // Marca el punto como presente para no meter dos ICGC pegados.
-                    indexa(Vecina(id: nil, lat: p.lat, lon: p.lon, name: p.name))
+                    indexa(RejillaCercania.Vecina(id: nil, lat: p.lat, lon: p.lon, name: p.name))
                     continue
                 }
             }
@@ -181,7 +157,7 @@ struct ImportGeoJSONCommand: AsyncCommand {
                 source: source,
                 drinkable: nil
             ))
-            if dedupeKm != nil { indexa(Vecina(id: nil, lat: p.lat, lon: p.lon, name: p.name)) }
+            if dedupeKm != nil { indexa(RejillaCercania.Vecina(id: nil, lat: p.lat, lon: p.lon, name: p.name)) }
 
             if signature.dryRun {
                 inserted += 1
@@ -242,29 +218,6 @@ struct ImportGeoJSONCommand: AsyncCommand {
     /// Incluye los valores por defecto que pone el import de OSM a nodos sin nombre.
     /// Sin nombre (`nil`) cuenta como genérico: es el caso más claro de «adopta el
     /// topónimo del ICGC», no una excepción.
-    /// Una fuente ya presente, reducida a lo que el dedupe necesita. `id` nulo significa
-    /// «insertada en esta misma pasada», que no está en la base y no hay que renombrar.
-    private struct Vecina {
-        let id: UUID?
-        let lat: Double
-        let lon: Double
-        var name: String?
-    }
-
-    /// Celda de la rejilla espacial. ~1,1 km de lado en latitud: lo bastante fina para que
-    /// una celda tenga pocas fuentes incluso en el centro de Barcelona, y lo bastante
-    /// gruesa para que un `--dedupe` normal (25–50 m) se resuelva mirando 3×3.
-    private struct Celda: Hashable {
-        let x: Int
-        let y: Int
-    }
-
-    private static let celdaGrados = 0.01
-
-    private static func celdaDe(_ lat: Double, _ lon: Double) -> Celda {
-        Celda(x: Int((lon / celdaGrados).rounded(.down)), y: Int((lat / celdaGrados).rounded(.down)))
-    }
-
     private static func isGeneric(_ name: String?) -> Bool {
         guard let name else { return true }
         let limpio = name.trimmingCharacters(in: .whitespaces)
@@ -342,3 +295,78 @@ private enum GeoJSONValue: Decodable {
         }
     }
 }
+
+/// Rejilla espacial para el dedupe del importador.
+///
+/// Vive fuera del comando y **no es privada** para poder probarla: la regla del coseno de
+/// abajo es de las que fallan en silencio —duplica fuentes sin dar ningún error— y meterla
+/// en un cierre dentro de `run()` la dejaba sin forma de comprobar.
+///
+/// Sustituye a un `existing.first(where:)`, que era un barrido lineal por cada punto del
+/// fichero: importar 70.000 puntos contra 160.000 existentes son miles de millones de
+/// haversines.
+struct RejillaCercania {
+    /// Una fuente ya presente, reducida a lo que el dedupe necesita. `id` nulo significa
+    /// «insertada en esta misma pasada»: no está en la base y no hay que renombrarla.
+    struct Vecina {
+        let id: UUID?
+        let lat: Double
+        let lon: Double
+        var name: String?
+    }
+
+    private struct Celda: Hashable {
+        let x: Int
+        let y: Int
+    }
+
+    /// ~1,1 km de lado en latitud: lo bastante fina para que una celda tenga pocas fuentes
+    /// incluso en el centro de Barcelona, y lo bastante gruesa para que un `--dedupe`
+    /// normal (25–50 m) se resuelva mirando 3×3.
+    static let celdaGrados = 0.01
+
+    private(set) var vecinas: [Vecina] = []
+    private var celdas: [Celda: [Int]] = [:]
+
+    var count: Int { vecinas.count }
+
+    private static func celdaDe(_ lat: Double, _ lon: Double) -> Celda {
+        Celda(x: Int((lon / celdaGrados).rounded(.down)), y: Int((lat / celdaGrados).rounded(.down)))
+    }
+
+    mutating func añade(_ v: Vecina) {
+        vecinas.append(v)
+        celdas[Self.celdaDe(v.lat, v.lon), default: []].append(vecinas.count - 1)
+    }
+
+    mutating func renombra(_ i: Int, _ nombre: String) {
+        vecinas[i].name = nombre
+    }
+
+    /// El índice de la vecina dentro del radio, **la primera insertada** si hay varias.
+    ///
+    /// Devolver la de menor índice no es un capricho: reproduce exactamente lo que hacía
+    /// `first(where:)` sobre el array, así que una importación repetida sigue dando el
+    /// mismo resultado.
+    func cercana(_ lat: Double, _ lon: Double, _ radioKm: Double) -> Int? {
+        let pasoLat = max(1, Int((radioKm / (Self.celdaGrados * 111.0)).rounded(.up)))
+        // En longitud un grado mide menos según subes en latitud, así que hay que mirar
+        // más celdas a los lados. **Sin esto se escapan vecinas que sí están dentro del
+        // radio y se duplican fuentes**, y no lo dice nadie: comprobado a 68° con
+        // `--dedupe 2000`, los 200 duplicados de la prueba entraban todos como nuevos.
+        let cosLat = max(cos(lat * .pi / 180), 0.01)
+        let pasoLon = max(1, Int((radioKm / (Self.celdaGrados * 111.0 * cosLat)).rounded(.up)))
+        let c = Self.celdaDe(lat, lon)
+        var mejor: Int?
+        for dx in -pasoLon...pasoLon {
+            for dy in -pasoLat...pasoLat {
+                for i in celdas[Celda(x: c.x + dx, y: c.y + dy)] ?? [] {
+                    guard haversineKm(vecinas[i].lat, vecinas[i].lon, lat, lon) < radioKm else { continue }
+                    if mejor == nil || i < mejor! { mejor = i }
+                }
+            }
+        }
+        return mejor
+    }
+}
+

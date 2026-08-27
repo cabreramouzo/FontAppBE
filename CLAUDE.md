@@ -24,6 +24,13 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - Build / tests backend: `swift build` · `swift test` (los tests de integración usan la DB `fontapp_test`).
 - ¿Toca ya generar miniaturas? `node web/scripts/peso-fotos.mjs` (mide producción).
   Ver «Peso de las fotos» más abajo: la respuesta hoy es que no, y el script dice por qué.
+- Tests de los scripts de shell: `./scripts/toca-backend.test.sh` (a quién despliega CI) y
+  `./scripts/backup-fotos.test.sh` (las dos defensas del backup). No hay runner de bash en
+  el repo y no hace falta: son dos ficheros que se ejecutan y salen con código ≠ 0.
+  El de CI se prueba **contra los commits reales del historial** y no con casos inventados,
+  porque el fallo que evita es de clasificación —qué cuenta como «solo front»— y los
+  commits de verdad traen las mezclas que a nadie se le ocurren al inventar (front más
+  CLAUDE.md, backend más traducciones, un push con varios encima).
 - Traducciones: `npm --prefix web run check:i18n` comprueba que los ocho diccionarios
   llevan **las mismas claves**. Va dentro de `npm run build`, así que también corre en CI.
   Existe porque un diccionario incompleto **no rompe nada visible**: `t()` devuelve la
