@@ -134,39 +134,50 @@ export function PendingUploads() {
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography variant="body2" sx={{ fontWeight: 600 }}>{title}</Typography>
         <Typography variant="caption" color="text.secondary">{detail}</Typography>
-      </Box>
-      {/* La salida que no había.
-          Una aportación que no puede salir —de otra cuenta, ya publicada a mano, o
-          rechazada de una forma que la cola toma por transitoria— se quedaba
-          reintentándose para siempre, con este aviso clavado arriba y un «enviar ahora»
-          que no terminaba nunca. Pasó de verdad.
-          Se pregunta antes porque esto SÍ borra: son datos que solo existen en este
-          móvil. Y va en texto pequeño, no como botón principal: la salida tiene que
-          existir, no invitar. */}
-      {count > 0 && (ajenas > 0 || !sending) && (
-        <Button
-          size="small" color="inherit"
-          sx={{ textTransform: 'none', minWidth: 0, opacity: 0.75 }}
-          onClick={() => {
-            const soloAjenas = ajenas > 0 && ajenas < count
-            const n = soloAjenas ? ajenas : count
-            if (!confirm(t('offline.discardConfirm', { n: String(n) }))) return
-            void descartaPendientes(soloAjenas).then(() => {
-              void pendingStatus().then(({ count, needsAuth, ajenas }) => {
-                setCount(count); setNeedsAuth(needsAuth); setAjenas(ajenas)
+
+        {/* La salida que no había.
+            Una aportación que no puede salir —de otra cuenta, ya publicada a mano, o
+            rechazada de una forma que la cola toma por transitoria— se quedaba
+            reintentándose para siempre, con este aviso clavado arriba y un «enviar ahora»
+            que no terminaba nunca. Pasó de verdad.
+
+            Va DEBAJO del texto y no entre el texto y el botón de la derecha: ahí quedaba
+            embutido entre dos cosas y encogía la columna del mensaje, que es lo que hay
+            que leer. La tarjeta crece un poco y se acepta.
+
+            Se pregunta antes porque esto SÍ borra: son datos que solo existen en este
+            móvil. Y en texto pequeño, no como botón: la salida tiene que existir, no
+            invitar. */}
+        {count > 0 && (ajenas > 0 || !sending) && (
+          <Button
+            size="small" color="inherit"
+            // `ml: -1` compensa el acolchado del botón para que su texto quede alineado
+            // con el de arriba; sin eso se lee como una tercera columna.
+            sx={{ textTransform: 'none', minWidth: 0, opacity: 0.75, ml: -1, mt: 0.25, display: 'flex' }}
+            onClick={() => {
+              const soloAjenas = ajenas > 0 && ajenas < count
+              const n = soloAjenas ? ajenas : count
+              if (!confirm(t('offline.discardConfirm', { n: String(n) }))) return
+              void descartaPendientes(soloAjenas).then(() => {
+                void pendingStatus().then(({ count, needsAuth, ajenas }) => {
+                  setCount(count); setNeedsAuth(needsAuth); setAjenas(ajenas)
+                })
               })
-            })
-          }}
-        >
-          {t('offline.discard')}
-        </Button>
-      )}
+            }}
+          >
+            {t('offline.discard')}
+          </Button>
+        )}
+      </Box>
       {count > 0 && online && needsAuth ? (
         // Reintentar no sirve hasta que vuelva a haber sesión: le llevamos al acceso.
         <Button size="small" variant="contained" disableElevation component="a" href="/login">
           {t('nav.enter')}
         </Button>
-      ) : count > 0 && online ? (
+      ) : count > 0 && online && ajenas < count ? (
+        // Si TODAS son de otra cuenta, «enviar ahora» no puede hacer nada: el vaciado las
+        // salta a propósito. Ofrecerlo sería el mismo pecado que el bucle que esto vino a
+        // arreglar — un botón que se pulsa y no pasa nada.
         <Button size="small" variant="contained" disableElevation onClick={sendNow} disabled={sending}>
           {sending ? t('offline.sending') : t('offline.sendNow')}
         </Button>

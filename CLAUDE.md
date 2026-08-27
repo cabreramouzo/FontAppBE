@@ -2493,7 +2493,13 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   de una forma que la cola toma por transitoria— se reintentaba **para siempre**, con el
   aviso clavado arriba y un «enviar ahora» que no terminaba nunca. Se pregunta antes,
   porque esto sí borra de verdad: son datos que solo existen en ese móvil. Va en texto
-  pequeño y no como botón principal — la salida tiene que existir, no invitar.
+  pequeño y no como botón principal —la salida tiene que existir, no invitar— y **debajo
+  del texto**, no entre el texto y el botón de la derecha: ahí quedaba embutido entre dos
+  cosas y encogía la columna del mensaje, que es lo que hay que leer. La tarjeta crece un
+  poco y se acepta.
+- Y si **todas** las pendientes son de otra cuenta, **no se ofrece «enviar ahora»**: el
+  vaciado las salta a propósito, así que sería otro botón que se pulsa y no pasa nada —
+  exactamente el pecado que esto vino a arreglar.
 - El aviso **dice cuál de los tres problemas es**. «No se han podido sincronizar» sobre una
   cola que es de otra cuenta manda a mirar la cobertura, que no tiene nada que ver.
 
