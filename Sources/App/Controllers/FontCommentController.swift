@@ -141,14 +141,15 @@ struct FontCommentController: RouteCollection {
         let userID = try user.requireID()
         let estado = dto.waterStatus
         let db = req.db
+        let push = PushEnvio(req.application)
         Task.detached {
             await FontWatchNotifier.notify(fontID: fontID, change: .review(status: estado),
-                                           actorID: userID, on: db)
+                                           actorID: userID, on: db, push: push)
             // Que una incidencia se cierre sola es la mejor noticia que puede dar una
             // fuente, y no se deduce de «alguien dijo que raja»: va aparte.
             if seHaResuelto {
                 await FontWatchNotifier.notify(fontID: fontID, change: .resolved,
-                                               actorID: userID, on: db)
+                                               actorID: userID, on: db, push: push)
             }
         }
 

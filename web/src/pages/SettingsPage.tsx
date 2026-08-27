@@ -19,6 +19,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { esNombreValido, pareceCorreo } from '../lib/username'
 import { capabilitiesEnabled } from '../lib/capabilities'
 import { EspacioEnElMovil } from '../components/EspacioEnElMovil'
+import { AvisosDelSistema } from '../components/AvisosDelSistema'
 
 /**
  * Ajustes: privacidad, avisos, compartir el nivel y la cuenta.
@@ -248,6 +249,12 @@ export function SettingsPage() {
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
           {t('notif.mentionsHint')}
         </Typography>
+
+        {/* Los avisos del sistema. Este interruptor NO es una preferencia de la cuenta
+            sino de **este aparato**: quien los quiere en el móvil no está diciendo nada
+            sobre su portátil, y el permiso lo concede el navegador, no nosotros. Por eso
+            no pasa por `savePrivacy` y vive en su propio componente. */}
+        <AvisosDelSistema />
       </Box>
 
       {/* Se enuncia en positivo —«compartir», encendido— y no como «ocultar», apagado.

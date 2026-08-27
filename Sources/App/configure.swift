@@ -89,6 +89,16 @@ public func configure(_ app: Application) async throws {
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
     // Almacenamiento de imágenes: Cloudflare R2 si hay credenciales; si no, disco local.
+    // Notificaciones push. Sin claves no hay push y no es un error: en desarrollo no se
+    // configuran, igual que el correo. `GET /push/key` devuelve `null` y el cliente ni
+    // ofrece el interruptor, en lugar de pedirle permiso a alguien para nada.
+    app.vapid = Vapid(publicKey: Environment.get("VAPID_PUBLIC_KEY"),
+                      privateKey: Environment.get("VAPID_PRIVATE_KEY"),
+                      subject: Environment.get("VAPID_SUBJECT"))
+    if app.vapid == nil, app.environment == .production {
+        app.logger.notice("Sin claves VAPID: las notificaciones push están apagadas.")
+    }
+
     if let endpoint = Environment.get("R2_ENDPOINT"),
        let accessKey = Environment.get("R2_ACCESS_KEY_ID"),
        let secret = Environment.get("R2_SECRET_ACCESS_KEY"),
@@ -147,6 +157,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateBadgeAward())      // insignias especiales: se conceden, no se calculan
     app.migrations.add(AddMentionEmailsToUser()) // aviso por correo al mencionar a alguien
     app.migrations.add(CreateNotification())    // la campana dentro de la app
+    app.migrations.add(CreatePushSubscription())  // avisos del sistema (Web Push)
     app.migrations.add(AddLastSeenAtToUser())   // para no mandar correo a quien ya está dentro
     app.migrations.add(AddHiddenToFont())       // duplicadas y retiradas: se esconden, no se borran
     app.migrations.add(CreatePhotoExif())       // EXIF de cada foto: solo para moderar
@@ -183,6 +194,7 @@ public func configure(_ app: Application) async throws {
     }
 
     // Comandos CLI.
+    app.asyncCommands.use(VapidKeysCommand(), as: "vapid-keys")
     app.asyncCommands.use(SeedCommand(), as: "seed")
     app.asyncCommands.use(ImportCommand(), as: "import-fonts")
     app.asyncCommands.use(ImportGeoJSONCommand(), as: "import-geojson")

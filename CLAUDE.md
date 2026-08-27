@@ -2354,6 +2354,57 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   con `?k=watch` en `UnsubscribeToken`, y agrupar: cinco reseñas en una tarde son un correo
   y no cinco).
 
+## Notificaciones push (`Push/` + `lib/push.ts`)
+
+- Los mismos cuatro avisos de `FontWatchNotifier` salen además como **notificación del
+  sistema**. Es lo que le faltaba a la campana para servir de algo: la campana solo la ve
+  quien ya ha abierto la app, y de una fuente que se seca hay que enterarse **sin** abrir
+  nada. No cuesta dinero por envío, así que no lleva la regla de `isAround` de las
+  menciones por correo.
+- **El protocolo va escrito a mano y sin dependencias nuevas** (`Push/WebPush.swift`,
+  RFC 8291 + 8188; `Push/Vapid.swift` para el JWT ES256). `swift-crypto` ya trae P-256,
+  HKDF y AES-GCM. Son ~120 líneas de criptografía estándar y meter una dependencia sin
+  mantenimiento para eso era peor negocio.
+- **Por qué hay que cifrar, y no vale un push vacío:** lo simple sería mandar un aviso sin
+  cuerpo y que el service worker pidiera los avisos al servidor. No puede: el token de
+  sesión vive en `localStorage` y un service worker no lo ve, y con la app cerrada no hay
+  ninguna pestaña a la que preguntárselo. O el texto viaja dentro del push, o no hay texto.
+- **El texto lo pone el SERVIDOR** (`PushCopy`, ocho idiomas), al revés que la campana. No
+  es una incoherencia: un push lo pinta el sistema en la pantalla de bloqueo, donde no hay
+  diccionarios ni forma de saber qué idioma elegiste. Se usa `users.lang`, el mismo trato
+  que ya tienen los correos. Las dos cosas se guardan: la campana con su código —que se
+  traduce al idioma que leas *ahora*— y el push con su frase congelada.
+- Tres trampas del cifrado que **fallan en silencio** y por eso tienen test:
+  · el delimitador **`0x02`** del último registro (sin él el navegador descifra bien y
+    **descarta** el mensaje: en el servidor todo parece correcto y no llega nada);
+  · el `info` del primer HKDF lleva **las dos claves públicas**, que es lo que ata el
+    mensaje a esa suscripción;
+  · la firma ES256 es **r||s en crudo** y no el DER de `derRepresentation` — con DER el
+    servicio responde 401 sin decir cuál de las dos cosas está mal.
+  Se prueba **descifrando lo que ciframos** con la clave privada del navegador de mentira,
+  que es justo lo que hace un móvil. Verificado rompiendo las tres.
+- El `aud` del JWT es **el origen del endpoint**, no el nuestro: es lo que impide que un
+  token capturado sirva para empujar avisos por otro servicio. Se firma uno por destino.
+- `push_subscriptions` **sí** es una tabla propia, al revés que seguir una fuente: no es
+  una relación con una fuente, es **un aparato**. El endpoint es la identidad (índice
+  único) y al resuscribirse se **actualiza** en vez de insertar — un navegador puede rotar
+  sus claves conservando el endpoint, y con dos filas una ya no descifraría. Un **404 o
+  410** del servicio significa que esa suscripción ya no existe y se borra en el momento.
+- El interruptor de ajustes (`AvisosDelSistema`) es **del aparato y no de la cuenta**: el
+  permiso lo concede el navegador, y quien los quiere en el móvil no ha dicho nada de su
+  portátil. Por eso no pasa por `savePrivacy`.
+- Los tres estados que no son «encendido» **se explican**: en **iOS solo existe con la app
+  instalada** en la pantalla de inicio (en una pestaña de Safari `PushManager` ni está);
+  **denegado no se puede volver a pedir nunca** desde la web, hay que ir a los ajustes del
+  navegador; y **sin claves en el servidor no se pide ningún permiso** — gastar el único
+  «permitir» de alguien para nada es lo peor que se puede hacer aquí.
+- Todos los avisos de una misma fuente comparten `tag`, así que el nuevo **sustituye** al
+  anterior. Volver de una excursión con nueve notificaciones de la misma font es la forma
+  más rápida de que te silencien. Agrupar por tiempo sigue pendiente.
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`, generadas con
+  `swift run App vapid-keys`. **Cambiar la pública invalida todas las suscripciones a la
+  vez y sin error visible.** Runbook en DEPLOY.md.
+
 ## Interrupciones (`lib/asks.ts`)
 
 - **Como mucho un aviso a la vez.** Cada uno se escribió por su cuenta y ninguno sabía de

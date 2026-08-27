@@ -851,9 +851,10 @@ struct FontController: RouteCollection {
         guard let fontID = font.id else { return }
         let actorID = try? req.auth.require(User.self).requireID()
         let db = req.db
+        let push = PushEnvio(req.application)
         Task.detached {
             await FontWatchNotifier.notify(fontID: fontID, change: .hidden(reason: razon),
-                                           actorID: actorID, on: db)
+                                           actorID: actorID, on: db, push: push)
         }
     }
 

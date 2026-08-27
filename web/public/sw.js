@@ -322,6 +322,58 @@ self.addEventListener('message', (event) => {
   if (datos.tipo === 'vaciar' && typeof datos.cual === 'string') return responde(vacia(datos.cual))
 })
 
+// MARK: - Notificaciones del sistema
+//
+// El texto llega YA ESCRITO desde el servidor, al revés que en la campana. No es una
+// incoherencia: un push lo pinta el sistema operativo en la pantalla de bloqueo, donde no
+// hay diccionarios cargados; y un service worker no ve `localStorage`, así que ni siquiera
+// puede saber en qué idioma lees. Por eso el servidor usa `users.lang`, igual que en los
+// correos. Ver `PushSender` para el razonamiento completo.
+self.addEventListener('push', (event) => {
+  let d = {}
+  try {
+    d = event.data ? event.data.json() : {}
+  } catch {
+    // Un push sin cuerpo legible no se tira: enseñar algo genérico es mejor que una
+    // notificación vacía, y en iOS el permiso se REVOCA si se recibe un push y no se
+    // muestra ninguna notificación.
+  }
+  const titulo = d.title || 'FontApp'
+  event.waitUntil(
+    self.registration.showNotification(titulo, {
+      body: d.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      // Mismo `tag` para la misma fuente: el aviso nuevo SUSTITUYE al viejo en vez de
+      // apilarse. Volver de una excursión con nueve avisos de la misma fuente es la forma
+      // más rápida de que te silencien.
+      tag: d.tag || 'fontapp',
+      data: { url: d.url || '/' },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const destino = new URL((event.notification.data && event.notification.data.url) || '/',
+                          self.location.origin).href
+  // Si la app ya está abierta se REUTILIZA esa ventana en vez de abrir otra: quien tiene
+  // la PWA abierta y toca un aviso no quiere una segunda copia de la app.
+  event.waitUntil((async () => {
+    const abiertas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    for (const c of abiertas) {
+      if (c.url === destino) return c.focus()
+    }
+    for (const c of abiertas) {
+      if ('navigate' in c) {
+        await c.navigate(destino)
+        return c.focus()
+      }
+    }
+    return self.clients.openWindow(destino)
+  })())
+})
+
 /**
  * La pantalla de último recurso cuando no hay red **ni shell guardado**.
  *

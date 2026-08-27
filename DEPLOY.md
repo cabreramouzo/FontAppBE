@@ -1361,6 +1361,56 @@ cobra nunca (es lo que distingue a R2 de S3). A 489 KB por foto son unas **20.00
 antes de pagar nada. El script avisa al pasar de 8 GB. Conviene confirmar los importes en
 el panel de Cloudflare antes de fiarse de esta línea: los precios cambian.
 
+## Notificaciones push (Web Push)
+
+Avisan de lo mismo que la campana —reseña, incidencia, incidencia resuelta y fuente
+escondida— pero **sin tener que abrir la app**, que es lo que las hace útiles: de una
+fuente que se seca te enteras cuando estás en casa, no cuando entras a mirar.
+
+No hay servicio de terceros ni coste por envío: el navegador da un endpoint (FCM, Mozilla,
+Apple) y el servidor le escribe directamente, cifrado.
+
+### Generar las claves (una sola vez en la vida del proyecto)
+
+```bash
+swift run App vapid-keys
+```
+
+**La pública viaja dentro de cada suscripción que crea un navegador.** Cambiarla invalida
+todas las suscripciones existentes a la vez y **sin ningún error visible**: la gente deja
+de recibir avisos y nadie se entera. Guárdalas donde guardas el resto de secretos.
+
+```bash
+fly secrets set -a fontapp \
+  VAPID_PUBLIC_KEY='...' \
+  VAPID_PRIVATE_KEY='...' \
+  VAPID_SUBJECT='mailto:tu@correo'
+```
+
+`VAPID_SUBJECT` es a quién se queja el servicio de push si algo va mal; tiene que ser un
+`mailto:` o un `https:` de verdad.
+
+Sin las tres variables **no hay push y no es un error**: `GET /push/key` devuelve `null`,
+el cliente ni ofrece el interruptor y todo lo demás funciona igual. En desarrollo se deja
+apagado a propósito, como el correo.
+
+### Comprobarlo
+
+1. Ajustes → «Avisos en el móvil». En **iPhone solo aparece con la app instalada** en la
+   pantalla de inicio: en una pestaña de Safari `PushManager` no existe.
+2. Que alguien reseñe una fuente que tengas en favoritas — o hazlo con otra cuenta.
+3. En los logs, un `push rechazado <código>` señala el problema: **401** casi siempre es
+   VAPID (claves cruzadas o reloj desviado) y **404/410** es una suscripción muerta, que se
+   borra sola.
+
+### Lo que NO hace
+
+- **No manda correos.** Ese enganche sigue pendiente y está documentado dentro de
+  `FontWatchNotifier`.
+- **No agrupa por tiempo.** Sí evita el apilado: todos los avisos de la misma fuente
+  comparten `tag`, así que el nuevo sustituye al anterior en la bandeja del sistema. Cinco
+  reseñas de cinco fuentes distintas siguen siendo cinco notificaciones.
+
 ## Checklist antes de abrir al público
 
 - [x] `WEB_ORIGIN` restringido al dominio real del web.

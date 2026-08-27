@@ -22,6 +22,14 @@ import Vapor
 /// manda el hecho y el navegador pone las palabras. Con siete idiomas, escribir la frase
 /// aquí sería congelar uno.
 ///
+/// ## El push sí, y el correo no
+///
+/// Desde que hay Web Push, el mismo aviso sale además como notificación del sistema —ver
+/// `PushSender`—. Es la diferencia que pedía esto para servir de algo: la campana solo la
+/// ve quien ya ha abierto la app, y de una fuente que se seca te tienes que enterar
+/// **sin** abrir nada. No cuesta dinero por envío, así que no lleva la regla de
+/// `isAround` que sí llevan las menciones por correo.
+///
 /// ## Y por qué no manda correos todavía
 ///
 /// A propósito: cada envío cuesta dinero y esto puede dispararse muchas veces. La campana
@@ -55,7 +63,11 @@ enum FontWatchNotifier {
     /// No lanza nunca: un aviso que falla no puede tumbar la reseña que lo provocó, que es
     /// lo que la persona venía a hacer. Se llama con `Task.detached` desde los
     /// controladores por el mismo motivo — ver `MentionNotifier`.
-    static func notify(fontID: UUID, change: Change, actorID: UUID?, on db: any Database) async {
+    /// `push` es opcional a propósito: sin él esto sigue haciendo lo de siempre. Así los
+    /// tests y los comandos de consola no tienen que montar un cliente HTTP para guardar
+    /// un aviso en la campana.
+    static func notify(fontID: UUID, change: Change, actorID: UUID?, on db: any Database,
+                       push: PushEnvio? = nil) async {
         do {
             // La fuente, para poder guardar su nombre: el aviso es una foto de lo que pasó
             // y tiene que seguir leyéndose aunque después se renombre o se borre.
@@ -75,6 +87,28 @@ enum FontWatchNotifier {
                                          fontID: fontID, fontName: font.name,
                                          excerpt: change.code)
                 try await aviso.save(on: db)
+            }
+
+            // Y la notificación del sistema, para quien no tenga la app abierta.
+            //
+            // Se manda DESPUÉS de guardar la campana y en un bucle aparte: un fallo de red
+            // contra el servicio de push no puede dejar a nadie sin su aviso en la bandeja,
+            // que es el que no se pierde.
+            if let push {
+                for s in seguidores {
+                    guard let quien = try? await User.find(s.$user.id, on: db) else { continue }
+                    let (titulo, cuerpo) = PushCopy.fontUpdate(
+                        code: change.code, fontName: font.name, lang: quien.lang)
+                    await PushSender.send(
+                        .init(title: titulo, body: cuerpo, url: "/fonts/\(fontID)",
+                              // Mismo `tag` para la misma fuente: dos avisos de la misma
+                              // fuente se sustituyen en vez de apilarse. Volver de una
+                              // excursión con nueve notificaciones de la misma font es la
+                              // forma más rápida de que te silencien.
+                              tag: "font-\(fontID)"),
+                        to: s.$user.id, on: db, client: push.client,
+                        vapid: push.vapid, logger: push.logger)
+                }
             }
 
             // MARK: - Correo (pendiente, a propósito)

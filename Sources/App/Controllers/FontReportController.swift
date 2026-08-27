@@ -145,8 +145,9 @@ struct FontReportController: RouteCollection {
         // mismo que ya se hace con los avisos.
         try? await FontFavorite.follow(fontID: fontID, userID: quienID, on: db)
 
+        let push = PushEnvio(req.application)
         Task.detached {
-            await FontWatchNotifier.notify(fontID: fontID, change: .report, actorID: quienID, on: db)
+            await FontWatchNotifier.notify(fontID: fontID, change: .report, actorID: quienID, on: db, push: push)
         }
 
         let response = Response(status: .created)
