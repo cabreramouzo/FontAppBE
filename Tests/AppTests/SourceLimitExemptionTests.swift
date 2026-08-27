@@ -174,6 +174,54 @@ final class SourceLimitExemptionTests: XCTestCase {
         }
     }
 
+    /// Pulsar «estoy on fire» avisa a los administradores.
+    ///
+    /// Es el aviso más perecedero de la app: quien lo pulsa está en la calle, ahora, con
+    /// fuentes por apuntar. Si nadie lo ve hasta la noche ya no hay nada que conceder.
+    /// Antes la solicitud caía en el panel y se quedaba ahí hasta que alguien miraba.
+    func testPedirCupoAvisaAlAdmin() async throws {
+        try await withApp { app in
+            _ = try await admin(app)   // hay alguien a quien avisar
+            let quien = try await solicitante(app)
+            var token = ""
+            try await app.test(.POST, "auth/login", beforeRequest: { req in
+                req.headers.basicAuthorization = .init(username: quien.username, password: "password123")
+            }, afterResponse: { res in token = try res.content.decode(LoginResponse.self).token })
+
+            try await app.test(.POST, "users/source-limit-exemption-request",
+                               headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .created)
+            }
+
+            var aviso: App.Notification?
+            for _ in 0..<40 {
+                aviso = try await App.Notification.query(on: app.db)
+                    .filter(\.$kind == .userOnFire).first()
+                if aviso != nil { break }
+                try await Task.sleep(nanoseconds: 100_000_000)
+            }
+            let n = try XCTUnwrap(aviso, "el administrador no se ha enterado")
+            XCTAssertEqual(n.actorName, quien.username)
+            // El cuerpo lleva cuántas lleva hoy: es el dato con el que se decide, y sin él
+            // el aviso obliga a ir a mirarlo.
+            XCTAssertNotNil(Int(n.excerpt))
+        }
+    }
+
+    /// Y NO se avisa a quien lo pide, aunque sea admin: no tiene ningún sentido.
+    func testNoSeAvisaASiMismo() async throws {
+        try await withApp { app in
+            // Un admin recién creado también está dentro de su primera semana, así que
+            // puede pedirlo — y no debe avisarse a sí mismo.
+            let token = try await admin(app)
+            try await app.test(.POST, "users/source-limit-exemption-request",
+                               headers: bearer(token))
+            try await Task.sleep(nanoseconds: 800_000_000)
+            let n = try await App.Notification.query(on: app.db).filter(\.$kind == .userOnFire).count()
+            XCTAssertEqual(n, 0)
+        }
+    }
+
     /// El aviso es la mitad de esto: sin él, quien lo pidió no ve nada cambiar.
     func testQuienLoPidioRecibeUnAviso() async throws {
         try await withApp { app in

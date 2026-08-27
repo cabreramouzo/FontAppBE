@@ -372,7 +372,16 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   Chile a Italia, así que la medianoche de aquí corta la tarde en Santiago y regala dos
   horas en Roma. Un día es un día en cualquier huso, y además es exactamente la ventana
   del cupo que levanta, que ya son 24 h móviles.
-  **Y ahora se avisa a quien lo pidió** (`SourceLimitNotifier`, campana + push desde el
+  **Y el aviso va en los dos sentidos.** Al pulsar «estoy on fire», los administradores
+  reciben campana y push (`OnFireNotifier`, enganchado en
+  `UserController.requestSourceLimitExemption`): es el aviso **más perecedero** de la app
+  —quien lo pulsa está en la calle, ahora, con fuentes por apuntar— y antes la solicitud
+  caía en el panel de moderación y se quedaba hasta que a alguien se le ocurría mirar. El
+  push lleva **cuántas fuentes lleva hoy**, que es el dato con el que se decide, y va
+  directo a `/admin/moderation`, que es donde se concede. No hace falta controlar
+  repeticiones: la ruta ya devuelve 204 sin guardar nada si esa persona tiene una solicitud
+  abierta. Nunca a quien lo pide, aunque sea admin.
+  **Y se avisa a quien lo pidió** (`SourceLimitNotifier`, campana + push desde el
   panel y desde la consola). Antes se concedía y por su lado **no cambiaba nada visible**:
   o lo volvía a pedir, o dejaba de intentarlo creyendo que le habían dicho que no. El
   aviso lleva **la fecha en ISO** y no una frase — el servidor no sabe qué hora es para ti,
@@ -1824,7 +1833,11 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   nombre parece un correo, y otro distinto si no es mencionable por otra razón (espacios).
   Solo lo ve a quien le toca.
 - **Menciones** (`Utils/Mentions.swift`): `@nombre` en una reseña o incidencia se pinta
-  como enlace al perfil (`AuthorLine.tsx`) y avisa por correo. La regla del servidor y la
+  como enlace al perfil (`AuthorLine.tsx`), avisa por correo y **por notificación del
+  sistema**. El push **no** lleva la regla de `isAround` que sí lleva el correo: aquélla
+  existe porque cada envío cuesta dinero, y un push no cuesta nada. Y una mención pasa el
+  filtro de «¿cambia lo que voy a hacer?» sin discusión — alguien te está hablando a ti, no
+  contando algo del mundo. La regla del servidor y la
   del cliente tienen que decir lo mismo o se subraya a quien no se avisa; las dos llevan
   `(?<![\w@.])` para que `hola@fontapp.net` **no** sea una mención (hay test). Tope de 3
   por mensaje —sin él es un envío masivo gratis—, nunca a ti mismo, solo a quien lo tenga

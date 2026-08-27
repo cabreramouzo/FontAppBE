@@ -58,6 +58,43 @@ enum PushCopy {
         }
     }
 
+    /// Alguien te ha nombrado con `@tunombre`.
+    ///
+    /// El título es **quién**: en la pantalla de bloqueo es lo único que se lee seguro, y
+    /// una mención es alguien hablándote a ti. El cuerpo lleva el extracto tal cual — ya
+    /// viene recortado de `MentionNotifier`.
+    static func mention(by autor: String, texto: String, lang: String?) -> (String, String) {
+        let quien: String
+        switch (lang ?? "ca").prefix(2) {
+        case "es": quien = "\(autor) te ha nombrado"
+        case "gl": quien = "\(autor) nomeoute"
+        case "eu": quien = "\(autor)(e)k aipatu zaitu"
+        case "en": quien = "\(autor) mentioned you"
+        case "fr": quien = "\(autor) vous a mentionné"
+        case "pt": quien = "\(autor) mencionou-te"
+        case "it": quien = "\(autor) ti ha menzionato"
+        default:   quien = "\(autor) t’ha esmentat"
+        }
+        return (quien, texto)
+    }
+
+    /// Alguien pide que le amplíen el cupo. Solo lo reciben administradores.
+    ///
+    /// El cuerpo lleva **cuántas lleva hoy**, que es el dato con el que se decide: sin él,
+    /// el aviso obliga a ir a mirarlo, y esto va de contestar rápido.
+    static func onFire(quien: String, hoy: Int, lang: String?) -> (String, String) {
+        switch (lang ?? "ca").prefix(2) {
+        case "es": return ("\(quien) pide más cupo", "Lleva \(hoy) fuentes hoy y ha topado.")
+        case "gl": return ("\(quien) pide máis cota", "Leva \(hoy) fontes hoxe e topou.")
+        case "eu": return ("\(quien)(e)k kupo gehiago eskatu du", "\(hoy) iturri gaur, eta mugara heldu da.")
+        case "en": return ("\(quien) is asking for more", "\(hoy) fountains today and hit the cap.")
+        case "fr": return ("\(quien) demande plus de quota", "\(hoy) points d’eau aujourd’hui, quota atteint.")
+        case "pt": return ("\(quien) pede mais quota", "Leva \(hoy) fontes hoje e chegou ao limite.")
+        case "it": return ("\(quien) chiede più quota", "\(hoy) fontane oggi, limite raggiunto.")
+        default:   return ("\(quien) demana més quota", "Porta \(hoy) fonts avui i ha topat.")
+        }
+    }
+
     /// Título y cuerpo para un cambio en una fuente que sigues.
     ///
     /// `code` es el mismo que guarda la campana (`review:dry`, `report`, `hidden:retired`).

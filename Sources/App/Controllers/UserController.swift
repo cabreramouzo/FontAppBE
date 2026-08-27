@@ -56,6 +56,18 @@ struct UserController: RouteCollection {
         guard existing == nil else { return .noContent }
         try await ContentFlag(flaggerID: userID, targetType: "source_limit_exemption",
                               targetID: userID).save(on: req.db)
+
+        // «Estoy on fire»: quien lo pulsa está en la calle AHORA, con el móvil en la mano
+        // y fuentes por apuntar. Es el aviso más perecedero de la app — si nadie lo ve
+        // hasta la noche, ya no hay nada que conceder. Antes caía en el panel y se quedaba
+        // ahí hasta que a alguien se le ocurría mirar.
+        //
+        // Sin esperar, como el resto de avisos: la solicitud ya está guardada, y perderla
+        // por no poder avisar sería absurdo. Y no hace falta controlar repeticiones: el
+        // `guard existing == nil` de arriba ya devuelve 204 sin guardar nada.
+        let db = req.db
+        let push = PushEnvio(req.application)
+        Task.detached { await OnFireNotifier.requested(by: user, on: db, push: push) }
         return .created
     }
 

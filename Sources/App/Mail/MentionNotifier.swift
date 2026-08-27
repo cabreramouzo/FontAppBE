@@ -91,6 +91,25 @@ enum MentionNotifier {
             try? await aviso.save(on: db)
         }
 
+        // Y la notificación del sistema.
+        //
+        // Aquí **no** se aplica la regla de `isAround` que sí lleva el correo: aquella
+        // existe porque cada envío cuesta dinero, y un push no cuesta nada. Y una mención
+        // pasa el filtro de «¿cambia lo que voy a hacer?» sin discusión — alguien te está
+        // hablando a ti, no contando algo del mundo.
+        if let push = PushEnvio(app) {
+            for u in destinatarios {
+                guard let uid = u.id else { continue }
+                let (titulo, cuerpo) = PushCopy.mention(by: autorNombre, texto: excerpt, lang: u.lang)
+                await PushSender.send(
+                    .init(title: titulo, body: cuerpo, url: "/fonts/\(fontID)",
+                          // Por autor y fuente: tres menciones seguidas en la misma
+                          // conversación son un aviso, no tres.
+                          tag: "mention-\(fontID)"),
+                    to: uid, on: db, client: push.client, vapid: push.vapid, logger: push.logger)
+            }
+        }
+
         for u in destinatarios {
             guard u.mentionEmails, let email = u.email, let uid = u.id else { continue }
             // Quien ha pasado por la app hace poco ya tiene el aviso en la campana; el

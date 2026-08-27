@@ -163,6 +163,8 @@ export function NotificationBell({ desktopLabel = false }: { desktopLabel?: bool
                 ? t('notif.staleGuarded', { n: String(cifras(n.excerpt)[0]) })
                 : n.kind === 'sourceLimit'
                   ? t('notif.sourceLimit')
+                : n.kind === 'userOnFire'
+                  ? t('notif.onFire', { user: n.actorName })
                   : n.kind === 'fontUpdate'
                     ? t('notif.fontUpdate', { font: rotulo(n.fontName, t) })
                     : t('notif.mentionedYou', { user: n.actorName, font: rotulo(n.fontName, t) })}
@@ -174,6 +176,8 @@ export function NotificationBell({ desktopLabel = false }: { desktopLabel?: bool
                 ? t('notif.staleGuardedBody', { font: rotulo(n.fontName, t), d: String(cifras(n.excerpt)[2]) })
                 : n.kind === 'sourceLimit'
                   ? t('notif.sourceLimitBody', { hasta: hasta(n.excerpt, lang) })
+                : n.kind === 'userOnFire'
+                  ? t('notif.onFireBody', { n: n.excerpt })
                   : n.kind === 'fontUpdate'
                     ? queHaPasado(n.excerpt, n.actorName, t)
                     : n.excerpt}

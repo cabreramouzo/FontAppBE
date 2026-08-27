@@ -31,6 +31,13 @@ final class Notification: Model, @unchecked Sendable {
         /// lleva un **código** (`review:dry`, `report`, `hidden:retired`), no una frase:
         /// las palabras las pone el navegador, que sí sabe en qué idioma lees.
         case fontUpdate
+        /// Alguien ha pulsado «estoy on fire»: pide que le amplíen el cupo de cuenta
+        /// nueva. **Solo para administradores.**
+        ///
+        /// El `actor` es quien lo pide y el `excerpt` lleva **cuántas fuentes lleva hoy**,
+        /// como cifra: las palabras las pone el navegador. Ese número es con lo que se
+        /// decide, así que va en el propio aviso y no hay que ir a buscarlo.
+        case userOnFire
         /// Se te ha ampliado el cupo de fuentes de cuenta nueva. Sin actor: es una
         /// decisión de la casa y quién la firmó no es asunto público.
         ///
