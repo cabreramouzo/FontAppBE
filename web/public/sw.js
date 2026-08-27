@@ -31,7 +31,20 @@ const PINNED_CACHE = 'fontapp-pinned-v1'
 // `/`, y `cache.addAll` guardaría la respuesta redirigida bajo esa misma clave — que es
 // justo la que sirve el respaldo sin conexión. Se pide `/` y se guarda bajo las dos.
 const SHELL_EXTRA = ['/manifest.webmanifest', '/icon.svg']
-const TILE_LIMIT = 700 // ~ suficiente para la zona de una ruta sin llenar el móvil
+// Las teselas son lo más barato de guardar y lo más caro de volver a pedir: son
+// servidores ajenos y gratuitos, y un mapa cambia unas pocas veces al año. 700 daban para
+// una ruta, así que mirar otra comarca un rato dejaba la tuya fuera — el mismo problema
+// que resolvió el caché fijado, pero para el mapa. 3.000 a ~6 KB de media son unos 18 MB,
+// que en un móvil de hoy no es nada.
+const TILE_LIMIT = 3000
+// Y por eso caducan a los 30 días: con el tope alto, una tesela podría quedarse años.
+//
+// Se caduca el caché ENTERO por una sola marca, no tesela a tesela: una respuesta de otro
+// dominio llega `opaque`, así que no se le pueden leer ni las cabeceras ni la fecha, y
+// guardar un índice aparte con la fecha de cada una sería una segunda verdad que se
+// desincroniza con el caché a la primera. Se mira al arrancar el worker.
+const TILE_MAX_DIAS = 30
+const TILE_STAMP = '/__fontapp_teselas_fecha'
 const PHOTO_LIMIT = 200
 // Antes el recorte solo se disparaba al pedir una foto, así que entre foto y foto las
 // respuestas de la API crecían sin tope. Ahora cada una recorta la suya.
@@ -96,7 +109,10 @@ async function sinRedirecciones(res) {
 // LRU básico: si el caché supera el máximo, borra las entradas más antiguas.
 async function trimCache(name, max) {
   const cache = await caches.open(name)
-  const keys = await cache.keys()
+  // La marca de fecha de las teselas NO cuenta y NO se descarta: es la entrada más
+  // antigua del caché, así que el recorte se la llevaría la primera y la caducidad no se
+  // dispararía nunca — un fallo perfectamente silencioso.
+  const keys = (await cache.keys()).filter((k) => !k.url.endsWith(TILE_STAMP))
   if (keys.length <= max) return
   for (const k of keys.slice(0, keys.length - max)) await cache.delete(k)
 }
@@ -205,10 +221,24 @@ self.addEventListener('install', (event) => {
   self.skipWaiting()
 })
 
+// Tira las teselas si la marca tiene más de `TILE_MAX_DIAS`, y repone la marca.
+//
+// Lo FIJADO no se toca: vive en otro caché a propósito, y quien guardó una zona para el
+// sábado no quiere que se le vacíe por el calendario.
+async function caducaTeselas() {
+  const c = await caches.open(TILE_CACHE)
+  const marca = await c.match(TILE_STAMP)
+  const desde = marca ? Number(await marca.text()) : 0
+  if (desde && Date.now() - desde < TILE_MAX_DIAS * 86400e3) return
+  if (desde) await caches.delete(TILE_CACHE)
+  const nuevo = await caches.open(TILE_CACHE)
+  await nuevo.put(TILE_STAMP, new Response(String(Date.now())))
+}
+
 self.addEventListener('activate', (event) => {
   const keep = new Set([SHELL_CACHE, TILE_CACHE, API_CACHE, PHOTO_CACHE, PINNED_CACHE])
   event.waitUntil(
-    caches.keys()
+    caducaTeselas().catch(() => {}).then(() => caches.keys())
       .then((keys) => Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k))))
       // Y se repone el shell si falta. `precargaShell` solo corre en `install`, así que
       // una instalación con la red a medias dejaba la app SIN shell para siempre: todo

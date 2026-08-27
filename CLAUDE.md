@@ -1943,9 +1943,39 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   raro, y el temporizador **se rearma en cada corte**, no solo el primero. Solo cuando no
   hay nada pendiente: «tienes 3 aportaciones sin enviar» no es un detalle de contexto y no
   se encoge nunca.
-- **Lo que sigue sin cumplirse del cartel:** las **teselas**. Los datos ya se pueden guardar
-  a mano; el mapa no, así que sin cobertura en una zona nueva las casillas salen en blanco
-  aunque la lista funcione.
+- **Las teselas del mapa también se guardan** (`lib/teselas.ts` + tope y caducidad en
+  `sw.js`), y son dos cosas distintas:
+  · **El caché normal pasó de 700 a 3.000 teselas, con caducidad de 30 días.** Guardar
+    mapa es lo más barato que hay —un mapa cambia unas pocas veces al año y pedirlo otra
+    vez cuesta una petición a un servidor de voluntarios—, y con 700 mirar otra comarca un
+    rato dejaba la tuya fuera. 3.000 a ~6 KB de media son unos 18 MB. La caducidad va por
+    **una sola marca** (`TILE_STAMP`) y vacía el caché entero: una respuesta de otro
+    dominio llega `opaque`, así que no se le puede leer la fecha, y un índice aparte sería
+    una segunda verdad que se desincroniza. Ojo con la trampa que ya estuvo puesta: la
+    marca es la entrada **más antigua**, así que el LRU se la llevaba la primera y la
+    caducidad no se disparaba nunca — `trimCache` la excluye y hay test.
+    Sin marca **no se borra nada**: el caché que ya tiene la gente no la lleva, y tirárselo
+    sería castigar justo a quien lleva la app instalada desde antes.
+  · **Al guardar una zona se ofrece guardar el mapa**, tercer paso tras los datos y las
+    fotos, con el número de teselas y los MB delante. Va al caché **fijado**, así que ni lo
+    descarta el LRU ni lo caduca la marca. Se guarda lo que estás viendo y **dos niveles de
+    zoom más** (`teselasDe`, `niveles = 2`): uno más cuesta cuatro veces y el tercero
+    dieciséis. Medido: una vista de móvil a z14 son **13 teselas**, Barcelona a z15 son 84.
+    De la capa **que estés usando** — guardar OSM a quien camina con el topográfico del IGN
+    es guardar un mapa que no va a mirar.
+  · **Lo que NO se hace: descargar corredores ni comarcas enteras.** Una comarca de z12 a
+    z16 son unas 15.000 peticiones a servidores ajenos y gratuitos, y la política de
+    teselas de OSM prohíbe expresamente la descarga masiva de áreas. Si algún día hace
+    falta de verdad, el camino honesto es pagar un proveedor (MapTiler, Protomaps), no
+    exprimir el de voluntarios.
+  · `urlDeTesela` fija el subdominio (`a`) **a propósito**: si bailara sería otra clave de
+    caché y no acertaría nunca, el mismo fallo que las coordenadas sin redondear. Y la
+    fórmula de la fila es Mercator y **no** es simétrica con la de la columna: copiar la de
+    la longitud es el error clásico y da un mapa desplazado que solo se nota lejos del
+    ecuador. Hay test de las dos, verificados rompiéndolos.
+- **Lo que sigue sin cumplirse del cartel:** el mapa **fuera de la zona guardada y de sus
+  dos niveles de zoom**. Alejarse mucho o acercarse demasiado sigue dando casillas en
+  blanco, y se dice en pantalla en vez de dejar que se descubra en el monte.
 - **La pantalla de «sin conexión» del service worker es una página de verdad, no un
   `<h1>`.** Era literalmente `new Response('<h1>Sense connexió</h1>')`: catalán a la
   fuerza, fuente serif del navegador y **sin una línea de JavaScript**, así que al volver

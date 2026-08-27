@@ -109,3 +109,96 @@ test('el alta y la reseña siguen yendo por donde iban', () => {
   const resenya = PROD.peticionDeSalida({ kind: 'comment', fontID: 'F2', data: { body: 'raja' } }, '/api', undefined)
   assert.deepEqual(resenya, { method: 'POST', url: '/api/fonts/F2/comments', body: { body: 'raja', image: undefined } })
 })
+
+// --- Teselas: tope alto y caducidad ------------------------------------------------
+
+/** Un Cache API de mentira, lo justo para preguntarle al SW qué borra y qué conserva. */
+function cachesFalsos() {
+  const almacen = new Map<string, Map<string, string>>()
+  const abre = (n: string) => {
+    if (!almacen.has(n)) almacen.set(n, new Map())
+    const m = almacen.get(n)!
+    return {
+      keys: async () => [...m.keys()].map((url) => ({ url })),
+      match: async (k: string) => (m.has(k) ? { text: async () => m.get(k) } : undefined),
+      put: async (k: string, v: { _cuerpo?: string }) => void m.set(k, v._cuerpo ?? ''),
+      delete: async (k: { url?: string } | string) =>
+        void m.delete(typeof k === 'string' ? k : (k.url ?? '')),
+    }
+  }
+  return {
+    almacen,
+    api: { open: async (n: string) => abre(n), delete: async (n: string) => void almacen.delete(n) },
+  }
+}
+
+function cargaTeselas(c: ReturnType<typeof cachesFalsos>) {
+  const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+  const self = {
+    location: { href: 'https://fontapp.net/sw.js', origin: 'https://fontapp.net' },
+    addEventListener: () => {}, skipWaiting: () => {}, clients: { claim: () => {} }, registration: {},
+  }
+  class R { _cuerpo: string; constructor(cuerpo = '') { this._cuerpo = String(cuerpo) } }
+  const fn = new Function('self', 'caches', 'fetch', 'Response', 'clients',
+    `${codigo}\n;return { caducaTeselas, trimCache, TILE_CACHE, TILE_STAMP, TILE_LIMIT, TILE_MAX_DIAS };`)
+  return fn(self, c.api, () => {}, R, {})
+}
+
+test('el tope de teselas es alto: guardar el mapa es lo barato', () => {
+  const sw = cargaTeselas(cachesFalsos())
+  assert.equal(sw.TILE_LIMIT, 3000)
+  assert.equal(sw.TILE_MAX_DIAS, 30)
+})
+
+test('la marca de fecha NO la borra el recorte', async () => {
+  // Es la entrada más antigua del caché, así que el LRU se la llevaría la primera y la
+  // caducidad no se dispararía jamás. Fallo perfectamente silencioso.
+  const c = cachesFalsos()
+  const sw = cargaTeselas(c)
+  const m = new Map<string, string>([[sw.TILE_STAMP, '123']])
+  for (let i = 0; i < 10; i++) m.set(`https://tile/${i}.png`, '')
+  c.almacen.set(sw.TILE_CACHE, m)
+  await sw.trimCache(sw.TILE_CACHE, 3)
+  const quedan = [...c.almacen.get(sw.TILE_CACHE)!.keys()]
+  assert.ok(quedan.includes(sw.TILE_STAMP), 'se ha borrado la marca')
+  assert.equal(quedan.filter((k) => k !== sw.TILE_STAMP).length, 3)
+})
+
+test('las teselas caducan a los 30 días, y no antes', async () => {
+  const c = cachesFalsos()
+  const sw = cargaTeselas(c)
+  const conFecha = (t: number) => {
+    c.almacen.set(sw.TILE_CACHE, new Map([[sw.TILE_STAMP, String(t)], ['https://tile/1.png', '']]))
+  }
+
+  conFecha(Date.now() - 29 * 86400e3)
+  await sw.caducaTeselas()
+  assert.ok(c.almacen.get(sw.TILE_CACHE)!.has('https://tile/1.png'), 'a los 29 días no se tira nada')
+
+  conFecha(Date.now() - 31 * 86400e3)
+  await sw.caducaTeselas()
+  const tras = c.almacen.get(sw.TILE_CACHE)!
+  assert.ok(!tras.has('https://tile/1.png'), 'a los 31 días había que vaciarlo')
+  assert.ok(tras.has(sw.TILE_STAMP), 'y reponer la marca, o caducaría en cada arranque')
+})
+
+test('sin marca se pone una y no se borra nada', async () => {
+  // El caché que ya tiene la gente no lleva marca: tirárselo por eso sería empezar
+  // castigando justo a quien lleva la app instalada desde antes.
+  const c = cachesFalsos()
+  const sw = cargaTeselas(c)
+  c.almacen.set(sw.TILE_CACHE, new Map([['https://tile/1.png', '']]))
+  await sw.caducaTeselas()
+  const tras = c.almacen.get(sw.TILE_CACHE)!
+  assert.ok(tras.has('https://tile/1.png'))
+  assert.ok(Number(tras.get(sw.TILE_STAMP)) > Date.now() - 5000)
+})
+
+test('lo fijado no caduca con las teselas', async () => {
+  const c = cachesFalsos()
+  const sw = cargaTeselas(c)
+  c.almacen.set('fontapp-pinned-v1', new Map([['https://tile/fijada.png', '']]))
+  c.almacen.set(sw.TILE_CACHE, new Map([[sw.TILE_STAMP, String(Date.now() - 99 * 86400e3)]]))
+  await sw.caducaTeselas()
+  assert.ok(c.almacen.get('fontapp-pinned-v1')!.has('https://tile/fijada.png'))
+})

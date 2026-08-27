@@ -31,7 +31,10 @@ function cargaSW(cachesFalsos: Record<string, Map<string, unknown>>, idioma = 'c
         match: async (req: unknown) => m.get(String(req)),
         put: async (req: unknown, res: unknown) => { m.set(String(req), res) },
         delete: async (req: unknown) => m.delete(String(req)),
-        keys: async () => [...m.keys()],
+        // El Cache API de verdad devuelve `Request`s, no cadenas: el recorte mira
+        // `k.url` para no borrar la marca de fecha de las teselas, y con cadenas pelás
+        // este doble mentiría sobre la forma del dato.
+        keys: async () => [...m.keys()].map((url) => ({ url, toString: () => url })),
       }
     },
     keys: async () => Object.keys(cachesFalsos),

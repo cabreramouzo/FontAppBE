@@ -15,6 +15,9 @@ import { estimaMB, megas } from '../lib/zonaOffline'
 import { timeAgo } from '../lib/time'
 import { fijaParaOffline } from '../lib/fijarOffline'
 import PhotoIcon from '@mui/icons-material/PhotoLibraryOutlined'
+import MapIcon from '@mui/icons-material/MapOutlined'
+import { savedLayer } from '../lib/mapLayers'
+import { estimaMBTeselas, teselasDe, urlDeTesela } from '../lib/teselas'
 
 /**
  * Guardar las fuentes de la zona que estás mirando, para andar sin cobertura.
@@ -24,11 +27,16 @@ import PhotoIcon from '@mui/icons-material/PhotoLibraryOutlined'
  * lado —al importar su recorrido se le fijan sus fuentes— porque él sí sabe el viernes por
  * dónde va a ir.
  *
- * **Solo los datos, no el mapa.** Y no es una limitación disimulada: la lista de cercanas
- * ordena por distancia y la flecha de los últimos metros lleva hasta la fuente sin pintar
- * una sola tesela. Lo que la app viene a contestar se contesta sin mapa. Guardar teselas
- * es otra conversación —son servidores ajenos y gratuitos— y se dice en pantalla en vez de
- * dejar que lo descubra en el monte.
+ * Los **datos** se guardan siempre; las **fotos** y el **mapa** se ofrecen después, con su
+ * número y su peso delante. El orden no es casual: lo que la app viene a contestar se
+ * contesta sin una sola tesela —la lista ordena por distancia y la flecha de los últimos
+ * metros apunta con el GPS—, así que los datos van solos y al momento y lo demás es un
+ * extra que se puede rechazar sin perder nada.
+ *
+ * Las teselas son de **servidores ajenos y gratuitos**, así que se guarda lo que estás
+ * mirando y dos niveles de zoom más, no una comarca entera: eso serían miles de peticiones
+ * a gente que nos deja usar su mapa. Si algún día hace falta de verdad una descarga de
+ * región, el camino honesto es pagar un proveedor, no exprimir el de voluntarios.
  */
 export function ZonaOfflineSheet({ map, onClose }: { map: LeafletMap; onClose?: () => void }) {
   const { t } = useI18n()
@@ -51,6 +59,9 @@ export function ZonaOfflineSheet({ map, onClose }: { map: LeafletMap; onClose?: 
   const [fotos, setFotos] = useState<string[]>([])
   const [bajandoFotos, setBajandoFotos] = useState(false)
   const [fotosGuardadas, setFotosGuardadas] = useState<{ n: number; bytes: number } | null>(null)
+  const [teselas, setTeselas] = useState<string[]>([])
+  const [bajandoMapa, setBajandoMapa] = useState(false)
+  const [mapaGuardado, setMapaGuardado] = useState<{ n: number; bytes: number } | null>(null)
 
   useEffect(() => { void zonaGuardada().then(setZona) }, [])
 
@@ -81,6 +92,15 @@ export function ZonaOfflineSheet({ map, onClose }: { map: LeafletMap; onClose?: 
       setZona(nueva)
       setFotosGuardadas(null)
       setFotos(fuentes.filter((f) => f.image).map((f) => assetUrl(f.image!)))
+      // Las teselas de la capa QUE ESTÁS USANDO. Guardar las de OSM a quien camina con el
+      // topográfico del IGN sería guardar un mapa que no va a mirar.
+      setMapaGuardado(null)
+      const capa = savedLayer()
+      const z = Math.min(map.getZoom(), capa.maxZoom ?? 19)
+      setTeselas(
+        teselasDe({ minLat: b.getSouth(), maxLat: b.getNorth(), minLong: b.getWest(), maxLong: b.getEast() }, z)
+          .map((t) => urlDeTesela(capa.url, t)),
+      )
     } catch {
       setError(t('zonaOff.failed'))
     } finally {
@@ -98,6 +118,17 @@ export function ZonaOfflineSheet({ map, onClose }: { map: LeafletMap; onClose?: 
       if (r.guardadas === 0) setError(t('zonaOff.photosFailed'))
     } finally {
       setBajandoFotos(false)
+    }
+  }
+
+  async function guardaMapa() {
+    setBajandoMapa(true); setError('')
+    try {
+      const r = await fijaParaOffline(teselas, 300)
+      setMapaGuardado({ n: r.guardadas, bytes: r.bytes })
+      if (r.guardadas === 0) setError(t('zonaOff.tilesFailed'))
+    } finally {
+      setBajandoMapa(false)
     }
   }
 
@@ -138,6 +169,28 @@ export function ZonaOfflineSheet({ map, onClose }: { map: LeafletMap; onClose?: 
         <Alert severity="success" icon={false} sx={{ py: 0.5 }}>
           <Typography variant="body2">
             {t('zonaOff.photosSaved', { n: String(fotosGuardadas.n), mb: megas(fotosGuardadas.bytes) })}
+          </Typography>
+        </Alert>
+      )}
+
+      {/* El mapa, tercero y también con la cifra delante. Va al caché fijado, así que el
+          descarte no se lo lleva; el normal caduca a los 30 días y éste no. */}
+      {teselas.length > 0 && !mapaGuardado && (
+        <Button
+          variant="outlined" startIcon={<MapIcon />} disabled={bajandoMapa}
+          onClick={() => void guardaMapa()}
+          sx={{ textTransform: 'none', minHeight: 48 }}
+        >
+          {bajandoMapa
+            ? t('zonaOff.savingTiles', { n: String(teselas.length) })
+            : t('zonaOff.saveTiles', { n: String(teselas.length), mb: estimaMBTeselas(teselas.length) })}
+        </Button>
+      )}
+
+      {mapaGuardado && (
+        <Alert severity="success" icon={false} sx={{ py: 0.5 }}>
+          <Typography variant="body2">
+            {t('zonaOff.tilesSaved', { n: String(mapaGuardado.n), mb: megas(mapaGuardado.bytes) })}
           </Typography>
         </Alert>
       )}
