@@ -2363,6 +2363,23 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   se consume al usarlo. Quien lo pida tiene que saber vivir sin él — cuando falta, quedan
   las instrucciones a mano, nunca las dos cosas a la vez.
 
+## Qué versión lleva cada uno (`MoreMenu`, al final)
+
+- Al final del menú de los tres puntos: `v0.1.0 · 27/08 11:59`. **Van las dos cosas a
+  propósito.** El número sale de `package.json` y lo subes tú: dice *qué release es*. La
+  fecha la pone el build y dice *si esta persona tiene el despliegue de hace un rato o el
+  de ayer*, que es la pregunta de verdad cuando alguien reporta algo — en una tarde de
+  quince commits el número solo no distingue nada.
+- **Al tocarlo copia el identificador completo** (`FontApp v0.1.0 · <commit>-<epoch>`).
+  Quien reporta un fallo por WhatsApp lo pega y se acabó el «¿tú qué versión tienes?».
+  Ese identificador es el `__BUILD_ID__` que ya existía para `AppUpdatePrompt`; aquí solo
+  se enseña.
+- Va al final y en `caption`: no es una acción, es un dato que solo se busca cuando algo
+  va mal.
+- Al subir la versión se toca **`package.json` y nada más**: `vite.config.ts` la lee de
+  ahí y la inyecta como `__APP_VERSION__`. Se lee con `readFileSync` y no con un `import`
+  de JSON porque con `module: NodeNext` eso pide un import attribute y no compila.
+
 ## Actualizar una PWA suspendida (`AppUpdatePrompt`)
 
 - Si una pantalla cae, `ErrorBoundary` limpia únicamente los cachés

@@ -2,6 +2,8 @@
 
 /** Identificador único del build, generado en vite.config.ts. */
 declare const __BUILD_ID__: string
+declare const __APP_VERSION__: string
+declare const __BUILD_TIME__: string
 
 interface ImportMetaEnv {
   /** Origen del backend en producción (p. ej. https://api.fontapp.com). Vacío en dev (proxy de Vite). */

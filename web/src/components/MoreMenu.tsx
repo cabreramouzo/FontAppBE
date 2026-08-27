@@ -8,11 +8,13 @@ import ListSubheader from '@mui/material/ListSubheader'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Tooltip from '@mui/material/Tooltip'
+import Typography from '@mui/material/Typography'
 import CheckIcon from '@mui/icons-material/Check'
 import LogoutIcon from '@mui/icons-material/Logout'
 import InstallMobileIcon from '@mui/icons-material/InstallMobile'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { useI18n } from '../i18n/I18nContext'
+import { useToast } from './ToastContext'
 import { LANGS, type Lang } from '../i18n/dictionaries'
 import { useThemeMode, type ThemePref } from '../theme/ThemeModeContext'
 import { estaInstalada } from '../lib/install'
@@ -51,6 +53,26 @@ export function MoreMenu({ onLogout }: { onLogout?: () => void }) {
   const { pref, setPref } = useThemeMode()
   const [ancla, setAncla] = useState<HTMLElement | null>(null)
   const cerrar = () => setAncla(null)
+
+  const toast = useToast()
+
+  // Solo el día y la hora: el ISO entero no lo lee nadie y aquí sobra el año.
+  const fechaDelBuild = (() => {
+    const d = new Date(__BUILD_TIME__)
+    return Number.isNaN(d.getTime())
+      ? '—'
+      : `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  })()
+
+  async function copiaVersion() {
+    try {
+      await navigator.clipboard.writeText(`FontApp v${__APP_VERSION__} · ${__BUILD_ID__}`)
+      toast.show(t('detail.copied'))
+    } catch {
+      // Sin permiso de portapapeles no pasa nada: el dato sigue a la vista.
+    }
+    cerrar()
+  }
 
   return (
     <>
@@ -104,6 +126,22 @@ export function MoreMenu({ onLogout }: { onLogout?: () => void }) {
             <ListItemText>{t('nav.logout')}</ListItemText>
           </MenuItem>,
         ]}
+        {/* La versión, al final y sin destacar: no es una acción, es un dato que solo se
+            busca cuando algo va mal.
+
+            Van **las dos cosas** a propósito. El número lo subes tú y dice qué release es;
+            la fecha la pone el build y dice si esta persona tiene el despliegue de hace un
+            rato o el de ayer — que es la pregunta de verdad cuando alguien reporta algo. En
+            una tarde de quince commits, el número solo no distingue nada.
+
+            Al tocarlo copia el identificador completo del build: quien reporta un fallo
+            por WhatsApp puede pegarlo y se acabó el «¿tú qué versión tienes?». */}
+        <Divider />
+        <MenuItem onClick={copiaVersion} sx={{ py: 0.75 }}>
+          <Typography variant="caption" color="text.secondary">
+            v{__APP_VERSION__} · {fechaDelBuild}
+          </Typography>
+        </MenuItem>
       </Menu>
     </>
   )
