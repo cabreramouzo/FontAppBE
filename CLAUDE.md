@@ -2466,6 +2466,15 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   de búsquedas y la ruta recordada. Las guardadas **antes** de esto no llevan dueño y se
   envían como siempre — bloquearlas sería tirar aportaciones reales de gente que no ha
   hecho nada raro, y no hay forma de saber de quién eran.
+- **La marca de «en vuelo» dura 2 minutos y no se soltaba al interrumpirse.** Existe para
+  que la página y el service worker no manden lo mismo dos veces, pero si el envío se corta
+  a media —un cierre de sesión, cerrar la app— el elemento se quedaba marcado y durante dos
+  minutos «enviar ahora» **lo saltaba en silencio** y contestaba «no se han podido
+  sincronizar». Se pulsa otra vez y lo mismo: ése era el bucle que se reportó, y desde
+  fuera no se distingue de un fallo de red. Ahora el envío manual (`flushOutbox(true)`)
+  ignora la marca, y cerrar sesión suelta las que hubiera. El riesgo aceptado es mandar dos
+  veces si el service worker estuviera enviando ese mismo elemento en ese instante, que es
+  mucho más raro que el callejón sin salida que evita.
 - **Y ahora se pueden tirar** (`descartaPendientes`, enlace en `PendingUploads`). No había
   ninguna salida: lo que no puede salir —de otra cuenta, ya publicado a mano, o rechazado
   de una forma que la cola toma por transitoria— se reintentaba **para siempre**, con el
@@ -2733,9 +2742,25 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   reciente**, **datos contradictorios**, **información antigua** o **sin comprobar**.
 - La ventana de actualidad es de 30 días. Una confirmación («sigue igual») refresca el
   último parte. Para quedar confirmada hace falta una confirmación independiente o dos
-  autores identificados distintos con partes recientes. El autor **no puede confirmar
-  su propia reseña**: la API devuelve 403, el cliente no ofrece el botón y cualquier
-  autoconfirmación histórica se ignora al contar apoyos y calcular frescura.
+  autores identificados distintos con partes recientes.
+- **El autor SÍ puede confirmar su propia reseña, pasado un día, y solo cuenta como
+  fecha.** Antes estaba prohibido del todo (403) y la regla estaba mal puesta por los dos
+  lados: **no frenaba la trampa** —publicar una reseña nueva cada día diciendo lo mismo
+  siempre se ha podido, así que el 403 no cerraba ninguna puerta— y **sí frenaba el caso
+  normal**: la fuente de tu pueblo, reseñada hace trece días, por la que vuelves a pasar.
+  Reportado por el autor de la app.
+  Lo que se separa son dos cosas que el código mezclaba: **corroboración** (¿alguien más lo
+  dice?) y **actualidad** (¿de cuándo es el dato?). La propia no suma respaldo —y sigue sin
+  sumarlo, así que una fuente no llega a «confirmada» a base de repetirse— pero sí refresca
+  la fecha, que es lo que hace falta saber antes de desviarse tres kilómetros.
+  Ojo: quitar solo el 403 **no habría hecho nada visible**. Las autoconfirmaciones se
+  ignoraban también para `last_at`, tanto en `FontSummary` como en
+  `FontCommentController.confirmations`, así que el botón habría existido sin efecto. El
+  cambio de verdad es ése: `quantity` sigue filtrando y `last_at` ya no.
+  La espera es de **24 h** desde la reseña *y* desde la última confirmación propia, y se
+  **refresca la fila** en vez de acumular. `confirmedByMe` caduca con ella, así que el
+  botón vuelve solo — el cliente no cambió. Las autoconfirmaciones siguen **sin puntuar**
+  (`ContributionScore` ya las descartaba y lo dice en sus avisos).
 - `flowing` y `trickle` forman la familia «hay agua»; `dry`, `broken` y `gone`, la familia
   incompatible «no disponible». Si ambas aparecen recientemente, prevalece
   **contradictoria**, incluso aunque el último parte tenga apoyos.

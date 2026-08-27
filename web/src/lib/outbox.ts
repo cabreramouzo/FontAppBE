@@ -92,6 +92,14 @@ function tx<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequ
 export async function saveSessionForSync(token: string | null, userID?: string): Promise<void> {
   try {
     await tx('readwrite', (s) => s.put({ key: 'session', token, userID: token ? userID : undefined, apiBase: import.meta.env.VITE_API_URL || '/api' }), META)
+    // Al cerrar sesión se sueltan las marcas de «en vuelo»: si había un envío a medias,
+    // era con la sesión que acaba de irse y no va a terminar nunca. Sin esto se quedaban
+    // dos minutos bloqueando la cola.
+    if (!token) {
+      for (const item of await allItems()) {
+        if (item.claimedAt) await tx('readwrite', (s) => s.put({ ...item, claimedAt: 0 }))
+      }
+    }
     // Sesión nueva: lo que estaba esperando a que volvieras a entrar ya puede salir.
     if (token) {
       for (const item of await allItems()) {
@@ -253,7 +261,20 @@ export function isOutboxSyncing(): boolean {
  * Intenta enviar todo lo pendiente. Devuelve cuántos se enviaron.
  * Se detiene en cuanto vuelve a fallar la red (para no gastar batería a lo tonto).
  */
-export async function flushOutbox(): Promise<number> {
+/**
+ * @param forzado Lo ha pedido la persona («enviar ahora»), no un temporizador.
+ *
+ * Con `forzado` se ignora la marca de «en vuelo». Existe porque esa marca dura dos minutos
+ * y **no se libera si el envío se interrumpe** —un cierre de sesión a media, cerrar la
+ * app—: durante esos dos minutos, «enviar ahora» saltaba el elemento **en silencio** y
+ * contestaba «no se han podido sincronizar». Se pulsa otra vez, lo mismo. Eso es el bucle
+ * que se reportó, y desde fuera no hay forma de distinguirlo de un fallo de red.
+ *
+ * El riesgo que se acepta es enviar dos veces si el service worker estuviera mandando ese
+ * mismo elemento **en ese preciso instante**, que es mucho más raro que el callejón sin
+ * salida que evita.
+ */
+export async function flushOutbox(forzado = false): Promise<number> {
   if (flushing || !navigator.onLine) return 0
   flushing = true
   notifySyncState({ syncing: true, sent: 0 })
@@ -263,7 +284,7 @@ export async function flushOutbox(): Promise<number> {
     const yo = await quienSoy()
     for (const item of await allItems()) {
       // ¿Lo está enviando ya el service worker (Android, en segundo plano)? Lo saltamos.
-      if (item.claimedAt && now - item.claimedAt < CLAIM_TTL_MS) continue
+      if (!forzado && item.claimedAt && now - item.claimedAt < CLAIM_TTL_MS) continue
       // De otra cuenta: no se envía firmado por quien está ahora. Se queda esperando a
       // que vuelva su dueño, o se descarta a mano desde el aviso.
       if (!esMia(item, yo)) continue

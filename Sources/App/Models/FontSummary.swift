@@ -210,13 +210,17 @@ extension Font {
               WHERE c.water_status IS NOT NULL
               ORDER BY c.font_id, c.created_at DESC
             ), confirmations AS (
+              -- Corroboración y actualidad son cosas distintas, y aquí se separan:
+              --  · `quantity` cuenta SOLO las ajenas. Nadie se da la razón a sí mismo, y
+              --    de esto depende que una fuente llegue a «confirmada».
+              --  · `last_at` las cuenta TODAS. Que quien la reseñó haya vuelto a pasar y
+              --    siga igual dice CUÁNDO se miró por última vez, que es justo lo que hace
+              --    falta saber antes de desviarse tres kilómetros.
               SELECT l.font_id,
                      count(fc.id) FILTER (
                        WHERE l.user_id IS NULL OR fc.user_id <> l.user_id
                      )::bigint AS quantity,
-                     max(fc.created_at) FILTER (
-                       WHERE l.user_id IS NULL OR fc.user_id <> l.user_id
-                     ) AS last_at
+                     max(fc.created_at) AS last_at
               FROM latest l
               LEFT JOIN font_confirmations fc ON fc.comment_id = l.comment_id
               GROUP BY l.font_id

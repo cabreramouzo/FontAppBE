@@ -47,22 +47,64 @@ struct FontCommentController: RouteCollection {
         }
     }
 
+    /// Cuánto hay que esperar para volver a decir «sigue igual» sobre tu propia reseña.
+    ///
+    /// Un día, que es lo que separa dos paseos. Más corto no aporta nada —la fuente no
+    /// cambia en una hora— y más largo deja fuera justo el caso que esto viene a resolver:
+    /// la fuente de tu pueblo, por la que pasas cada semana.
+    static let selfConfirmCooldown: TimeInterval = 24 * 3600
+
     /// POST /fonts/:fontID/comments/:commentID/confirm — 👍 "sigue igual".
-    /// Idempotente: si ya confirmaste, no duplica (constraint único). Refresca la frescura.
+    ///
+    /// ## Confirmar la tuya SÍ, pero solo cuenta como fecha
+    ///
+    /// Antes estaba prohibido del todo, para que nadie se diera la razón a sí mismo. La
+    /// intención era buena y la regla estaba mal puesta, por dos motivos:
+    ///
+    /// 1. **No frenaba al que quería hacer trampa.** Publicar una reseña nueva cada día
+    ///    diciendo lo mismo siempre se ha podido, así que el 403 no cerraba ninguna puerta.
+    ///    Lo que de verdad protege es que la confianza exige **autores distintos**, y eso
+    ///    se aplica más abajo, al contar.
+    /// 2. **Sí frenaba al que pasa por allí de verdad.** Es el caso normal en la fuente de
+    ///    tu pueblo: la reseñaste hace trece días, vuelves a pasar, sigue igual, y no
+    ///    tenías forma de decirlo.
+    ///
+    /// Lo que se separa aquí son dos cosas que estaban mezcladas: **corroboración**
+    /// (¿alguien más lo dice?) y **actualidad** (¿de cuándo es el dato?). Confirmar tu
+    /// propia reseña no añade lo primero —y sigue sin contar para ello— pero sí lo
+    /// segundo: has estado delante hoy. Por eso refresca la fecha y nada más.
     @Sendable func confirm(req: Request) async throws -> CommentResponse {
         let user = try req.auth.require(User.self)
         try user.requireCanContribute()
         let comment = try await requireComment(req)
         let userID = try user.requireID()
         let commentID = try comment.requireID()
-        guard comment.$user.id != userID else {
-            throw AppError(.forbidden, "confirm.ownReview", "No puedes confirmar tu propia reseña")
-        }
+        let esMia = comment.$user.id == userID
+
         let already = try await FontConfirmation.query(on: req.db)
             .filter(\.$comment.$id == commentID)
             .filter(\.$user.$id == userID)
             .first()
-        if already == nil {
+
+        if esMia {
+            // Desde la reseña y desde la última vez que dijiste que seguía igual: las dos,
+            // o el mismo día de publicarla podrías «refrescarla» y no habrías vuelto.
+            let desde = max(comment.createdAt ?? .distantPast, already?.createdAt ?? .distantPast)
+            guard Date().timeIntervalSince(desde) >= Self.selfConfirmCooldown else {
+                throw AppError(.forbidden, "confirm.tooSoon",
+                               "Podrás decir que sigue igual dentro de un día")
+            }
+        }
+
+        if let already {
+            // Solo se refresca la propia: para las ajenas, «ya lo confirmé» es un hecho de
+            // una vez y mover su fecha movería un evento que la gamificación ya puede
+            // haber liquidado.
+            if esMia {
+                already.createdAt = Date()
+                try await already.save(on: req.db)
+            }
+        } else {
             try await FontConfirmation(commentID: commentID, userID: userID).save(on: req.db)
         }
         return try await Self.response(for: comment, viewer: userID, on: req.db)
@@ -199,13 +241,22 @@ struct FontCommentController: RouteCollection {
         var out: [UUID: ConfirmAgg] = [:]
         for c in confs {
             let cid = c.$comment.id
-            // Las autoconfirmaciones históricas quedan inertes sin una migración
-            // destructiva: no cuentan ni refrescan la fecha aunque la fila siga ahí.
-            if authors[cid] == c.$user.id { continue }
+            let propia = authors[cid] == c.$user.id
             var agg = out[cid] ?? ConfirmAgg(count: 0, lastAt: nil, byViewer: false)
-            agg.count += 1
+            // **Corroboración**: solo las ajenas. Nadie se da la razón a sí mismo, y de eso
+            // depende que una fuente llegue a «confirmada».
+            if !propia { agg.count += 1 }
+            // **Actualidad**: todas. Que quien la reseñó haya vuelto a pasar y siga igual
+            // es información sobre CUÁNDO, no sobre quién tiene razón, y es exactamente lo
+            // que hace falta saber antes de desviarse.
             if let d = c.createdAt, agg.lastAt == nil || d > agg.lastAt! { agg.lastAt = d }
-            if let viewer, c.$user.id == viewer { agg.byViewer = true }
+            if let viewer, c.$user.id == viewer {
+                // La propia caduca: pasado el día, el botón vuelve a estar disponible, que
+                // es lo que permite decir «sigue igual» cada vez que pasas. La ajena no,
+                // porque confirmar lo de otro es un hecho de una vez.
+                agg.byViewer = !propia
+                    || Date().timeIntervalSince(c.createdAt ?? .distantPast) < selfConfirmCooldown
+            }
             out[cid] = agg
         }
         return out

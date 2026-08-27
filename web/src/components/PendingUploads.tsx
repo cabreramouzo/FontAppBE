@@ -61,7 +61,7 @@ export function PendingUploads() {
   async function sendNow() {
     setSending(true)
     try {
-      await flushOutbox()
+      await flushOutbox(true)   // lo ha pedido la persona: se ignora la marca de «en vuelo»
     } finally {
       setSending(false)
       refresh()
