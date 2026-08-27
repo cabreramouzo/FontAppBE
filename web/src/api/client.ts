@@ -337,7 +337,7 @@ export async function undoFontPhoto(fontID: string): Promise<Font> {
 }
 
 // Actualiza el perfil propio (self-only). Manda los campos actuales + los cambios.
-export async function updateProfile(id: string, data: { name: string; username: string; email: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean; mentionEmails?: boolean }): Promise<UserResponse> {
+export async function updateProfile(id: string, data: { name: string; username: string; email: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean; mentionEmails?: boolean; pushFontUpdates?: boolean; pushMentions?: boolean; pushAdmin?: boolean }): Promise<UserResponse> {
   return apiFetch<UserResponse>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 }
 

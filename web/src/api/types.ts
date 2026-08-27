@@ -43,6 +43,10 @@ export interface UserResponse {
   gamificationOptOut?: boolean | null
   /** Avisos por correo al ser mencionado (solo en respuestas propias). */
   mentionEmails?: boolean | null
+  /** Avisos del sistema, por grupos. Solo en la respuesta propia. */
+  pushFontUpdates?: boolean | null
+  pushMentions?: boolean | null
+  pushAdmin?: boolean | null
   anonymized?: boolean
   createdAt?: string | null
 }

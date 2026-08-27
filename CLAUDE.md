@@ -1609,6 +1609,12 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 ## Carteles / campañas
 - Cartel A5 en catalán en `flyer/` (HTML editable + PDF). `flyer/genera-cartells.py <codis>`
   genera una copia por pueblo con su QR y su código (`fontapp.net/?p=castellcir`).
+- `flyer/genera-cartells.py --marketing <codis>` genera una variante A5 a color con la
+  ilustración de `web/public/welcome.jpg`, un mensaje más corto y los reclamos de GPX y
+  uso offline. Sale en `flyer/pobles-marketing/`, separada del cartel original: el modo
+  sin opción sigue siendo siempre el de bajo consumo de tinta y nunca se sobrescribe.
+  La imagen se incrusta como data URI para que el HTML siga siendo un único archivo.
+  `flyer/a-pdf.py --marketing <codis>` la convierte y valida igual que la original.
 - El código va **solo dentro del QR**: la dirección impresa es `fontapp.net` a secas,
   porque `fontapp.net/?p=castelltercol` no lo teclea nadie bien. Como no hay red de
   seguridad, `flyer/llegeix-qr.swift` decodifica los PDF con **Vision** (framework del
@@ -2451,6 +2457,20 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   avisos ya encendidos). Sin él, probar esto exige una segunda cuenta y una reseña real, y
   cuando no llega nada no se puede separar «no funciona el push» de «nadie ha reseñado».
   El destinatario es la propia sesión, así que no sirve para molestar a nadie.
+- **Qué avisos, en tres grupos y no uno por evento** (`AddPushPrefsToUser`:
+  `push_font_updates`, `push_mentions`, `push_admin`). Un interruptor por cada cosa que
+  puede pasar serían nueve casillas que nadie lee y que hay que ampliar cada vez que se
+  añade un aviso. Se agrupan por **lo que significan para quien los recibe**: hechos de una
+  fuente que sigues, alguien que te habla, y lo de administración —este último solo se
+  pinta a quien de verdad lo recibe—. Nacen encendidos, como `mention_emails`: el permiso
+  del navegador ya es una puerta explícita, y esto es para afinar, no para volver a pedir
+  permiso. **Solo aparecen con el push ya encendido**: preguntar qué tipos quieres antes de
+  que hayas dicho que sí es pedir dos decisiones para nada.
+  **Apagar un grupo silencia la notificación del sistema, NUNCA la campana** — que es el
+  registro de lo que pasó y no interrumpe a nadie. Hay test, y cruzar las dos cosas es el
+  error fácil. Lo único que no pasa por aquí es que se te haya ampliado el cupo: es la
+  respuesta a algo que pediste tú, y silenciar la contestación a tu propia solicitud no es
+  una preferencia razonable.
 - El interruptor de ajustes (`AvisosDelSistema`) es **del aparato y no de la cuenta**: el
   permiso lo concede el navegador, y quien los quiere en el móvil no ha dicho nada de su
   portátil. Por eso no pasa por `savePrivacy`.

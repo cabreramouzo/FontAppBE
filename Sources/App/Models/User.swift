@@ -36,6 +36,12 @@ final class User: Model, @unchecked Sendable {
     @Field(key: "gamification_opt_out") var gamificationOptOut: Bool
     /// Avisar por correo cuando alguien te menciona con `@tunombre`. Nace encendido.
     @Field(key: "mention_emails") var mentionEmails: Bool
+    /// Avisos del sistema por grupos. Ver `AddPushPrefsToUser` para el porqué de estos
+    /// tres y no uno por evento. Nacen encendidos.
+    @Field(key: "push_font_updates") var pushFontUpdates: Bool
+    @Field(key: "push_mentions") var pushMentions: Bool
+    /// Solo lo reciben administradores; el interruptor solo se les pinta a ellos.
+    @Field(key: "push_admin") var pushAdmin: Bool
     /// Última vez que se le vio por la app. Solo sirve para no mandar un correo a quien
     /// ya tiene el aviso en la campana. Ver `AddLastSeenAtToUser`.
     @OptionalField(key: "last_seen_at") var lastSeenAt: Date?
@@ -57,7 +63,8 @@ final class User: Model, @unchecked Sendable {
          emailPublic: Bool = false, namePublic: Bool = true,
          signupCountry: String? = nil, signupRegion: String? = nil, signupCity: String? = nil,
          weeklyDigest: Bool = true, lang: String? = nil, signupSource: String? = nil,
-         gamificationOptOut: Bool = false, mentionEmails: Bool = true) {
+         gamificationOptOut: Bool = false, mentionEmails: Bool = true,
+         pushFontUpdates: Bool = true, pushMentions: Bool = true, pushAdmin: Bool = true) {
         self.id = id
         self.name = name
         self.username = username
@@ -72,6 +79,9 @@ final class User: Model, @unchecked Sendable {
         self.weeklyDigest = weeklyDigest
         self.gamificationOptOut = gamificationOptOut
         self.mentionEmails = mentionEmails
+        self.pushFontUpdates = pushFontUpdates
+        self.pushMentions = pushMentions
+        self.pushAdmin = pushAdmin
         self.lang = lang
         self.signupSource = signupSource
         self.moderationStrikes = 0
@@ -188,6 +198,10 @@ struct UserResponse: Content {
     let gamificationOptOut: Bool?
     /// Avisos de mención por correo (solo en respuestas propias).
     let mentionEmails: Bool?
+    /// Avisos del sistema, por grupos (solo en respuestas propias).
+    let pushFontUpdates: Bool?
+    let pushMentions: Bool?
+    let pushAdmin: Bool?
     let anonymized: Bool
     let createdAt: Date?
 
@@ -207,6 +221,9 @@ struct UserResponse: Content {
         self.weeklyDigest = includeEmail ? user.weeklyDigest : nil
         self.gamificationOptOut = includeEmail ? user.gamificationOptOut : nil
         self.mentionEmails = includeEmail ? user.mentionEmails : nil
+        self.pushFontUpdates = includeEmail ? user.pushFontUpdates : nil
+        self.pushMentions = includeEmail ? user.pushMentions : nil
+        self.pushAdmin = includeEmail ? user.pushAdmin : nil
         self.anonymized = user.anonymizedAt != nil
         self.createdAt = user.createdAt
     }

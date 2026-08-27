@@ -158,6 +158,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddMentionEmailsToUser()) // aviso por correo al mencionar a alguien
     app.migrations.add(CreateNotification())    // la campana dentro de la app
     app.migrations.add(CreatePushSubscription())  // avisos del sistema (Web Push)
+    app.migrations.add(AddPushPrefsToUser())      // qué avisos quiere cada uno
     app.migrations.add(AddLastSeenAtToUser())   // para no mandar correo a quien ya está dentro
     app.migrations.add(AddHiddenToFont())       // duplicadas y retiradas: se esconden, no se borran
     app.migrations.add(CreatePhotoExif())       // EXIF de cada foto: solo para moderar

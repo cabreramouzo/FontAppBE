@@ -75,7 +75,7 @@ export function SettingsPage() {
     await savePrivacy({ name: nombre.trim(), username: limpio })
   }
 
-  async function savePrivacy(patch: { name?: string; username?: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean; mentionEmails?: boolean }): Promise<boolean> {
+  async function savePrivacy(patch: { name?: string; username?: string; emailPublic?: boolean; namePublic?: boolean; weeklyDigest?: boolean; gamificationOptOut?: boolean; mentionEmails?: boolean; pushFontUpdates?: boolean; pushMentions?: boolean; pushAdmin?: boolean }): Promise<boolean> {
     if (!user) return false
     setSavingPrivacy(true)
     setError('')
@@ -89,6 +89,9 @@ export function SettingsPage() {
         weeklyDigest: user.weeklyDigest ?? true,
         gamificationOptOut: user.gamificationOptOut ?? false,
         mentionEmails: user.mentionEmails ?? true,
+        pushFontUpdates: user.pushFontUpdates ?? true,
+        pushMentions: user.pushMentions ?? true,
+        pushAdmin: user.pushAdmin ?? true,
         ...patch,
       })
       await refresh() // refresca el usuario para reflejar el nuevo estado
@@ -254,7 +257,7 @@ export function SettingsPage() {
             sino de **este aparato**: quien los quiere en el móvil no está diciendo nada
             sobre su portátil, y el permiso lo concede el navegador, no nosotros. Por eso
             no pasa por `savePrivacy` y vive en su propio componente. */}
-        <AvisosDelSistema />
+        <AvisosDelSistema guardar={savePrivacy} guardando={savingPrivacy} />
       </Box>
 
       {/* Se enuncia en positivo —«compartir», encendido— y no como «ocultar», apagado.

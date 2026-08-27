@@ -469,6 +469,9 @@ struct UserController: RouteCollection {
         if let weeklyDigest = dto.weeklyDigest { user.weeklyDigest = weeklyDigest }
         if let optOut = dto.gamificationOptOut { user.gamificationOptOut = optOut }
         if let avisos = dto.mentionEmails { user.mentionEmails = avisos }
+        if let v = dto.pushFontUpdates { user.pushFontUpdates = v }
+        if let v = dto.pushMentions { user.pushMentions = v }
+        if let v = dto.pushAdmin { user.pushAdmin = v }
         if let password = dto.password {
             user.passwordHash = try req.password.hash(password)
         }
@@ -679,6 +682,9 @@ struct UpdateUserDTO: Content {
     /// Apagar la gamificación. Opcional, igual que la anterior.
     var gamificationOptOut: Bool? = nil
     var mentionEmails: Bool? = nil
+    var pushFontUpdates: Bool? = nil
+    var pushMentions: Bool? = nil
+    var pushAdmin: Bool? = nil
 }
 
 extension UpdateUserDTO: Validatable {

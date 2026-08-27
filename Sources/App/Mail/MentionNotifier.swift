@@ -99,7 +99,7 @@ enum MentionNotifier {
         // hablando a ti, no contando algo del mundo.
         if let push = PushEnvio(app) {
             for u in destinatarios {
-                guard let uid = u.id else { continue }
+                guard let uid = u.id, u.pushMentions else { continue }
                 let (titulo, cuerpo) = PushCopy.mention(by: autorNombre, texto: excerpt, lang: u.lang)
                 await PushSender.send(
                     .init(title: titulo, body: cuerpo, url: "/fonts/\(fontID)",

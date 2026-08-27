@@ -5,6 +5,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 import Typography from '@mui/material/Typography'
 import { useI18n } from '../i18n/I18nContext'
+import { useAuth } from '../auth/AuthContext'
 import Button from '@mui/material/Button'
 import { apaga, claveDelServidor, enciende, estado, prueba, type EstadoPush } from '../lib/push'
 
@@ -26,8 +27,14 @@ import { apaga, claveDelServidor, enciende, estado, prueba, type EstadoPush } fr
  *   sobre todo porque Safari exige que el permiso salga del gesto — con un `await` de red
  *   por delante el diálogo se rechaza solo, y en iOS ese intento se gasta igual.
  */
-export function AvisosDelSistema() {
+type Prefs = { pushFontUpdates?: boolean; pushMentions?: boolean; pushAdmin?: boolean }
+
+export function AvisosDelSistema({ guardar, guardando }: {
+  guardar: (patch: Prefs) => Promise<boolean>
+  guardando: boolean
+}) {
   const { t } = useI18n()
+  const { user } = useAuth()
   const [est, setEst] = useState<EstadoPush | null>(null)
   const [clave, setClave] = useState<string | null | undefined>(undefined)
   const [ocupado, setOcupado] = useState(false)
@@ -76,6 +83,43 @@ export function AvisosDelSistema() {
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
         {t('notif.pushHint')}
       </Typography>
+
+      {/* Qué avisos, y solo cuando ya están encendidos: preguntarle a alguien qué tipos
+          quiere antes de que haya dicho que sí es pedirle dos decisiones para nada.
+          Van AGRUPADOS por lo que significan —hechos de una fuente que sigues, alguien
+          que te habla, y lo de administración— y no uno por evento: nueve casillas nadie
+          las lee, y habría que ampliarlas cada vez que se añade un aviso. */}
+      {est === 'encendido' && user && (
+        <Box sx={{ pl: 2, mt: 0.5, borderLeft: 2, borderColor: 'divider' }}>
+          <FormControlLabel
+            control={
+              <Switch size="small" disabled={guardando}
+                      checked={user.pushFontUpdates ?? true}
+                      onChange={(e) => void guardar({ pushFontUpdates: e.target.checked })} />
+            }
+            label={<Typography variant="body2">{t('notif.pushFonts')}</Typography>}
+          />
+          <FormControlLabel
+            control={
+              <Switch size="small" disabled={guardando}
+                      checked={user.pushMentions ?? true}
+                      onChange={(e) => void guardar({ pushMentions: e.target.checked })} />
+            }
+            label={<Typography variant="body2">{t('notif.pushMentions')}</Typography>}
+          />
+          {/* Solo a quien de verdad los recibe. */}
+          {user.isAdmin && (
+            <FormControlLabel
+              control={
+                <Switch size="small" disabled={guardando}
+                        checked={user.pushAdmin ?? true}
+                        onChange={(e) => void guardar({ pushAdmin: e.target.checked })} />
+              }
+              label={<Typography variant="body2">{t('notif.pushAdmin')}</Typography>}
+            />
+          )}
+        </Box>
+      )}
       {/* Probarlo en el propio aparato. Solo cuando ya están encendidos: es para
           comprobar que LLEGAN, que es la parte que no se puede ver desde el servidor —y
           la única forma de separar «no funciona el push» de «nadie ha reseñado». */}

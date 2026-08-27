@@ -147,3 +147,40 @@ final class SelfConfirmTests: XCTestCase {
         }
     }
 }
+
+/// Las preferencias de avisos del sistema.
+///
+/// La parte que hay que fijar es **qué apagan y qué no**: apagar los avisos del sistema no
+/// puede llevarse por delante la campana, que es el registro de lo que ha pasado y no
+/// interrumpe a nadie. Si se cruzara, alguien perdería avisos sin haberlo pedido.
+extension SelfConfirmTests {
+    func testLasPreferenciasNacenEncendidas() async throws {
+        try await withApp { app in
+            let (u, _) = try await usuario(app, "recien")
+            XCTAssertTrue(u.pushFontUpdates)
+            XCTAssertTrue(u.pushMentions)
+            XCTAssertTrue(u.pushAdmin)
+        }
+    }
+
+    /// Apagar el push NO apaga la campana. Es toda la regla.
+    func testApagarElPushNoApagaLaCampana() async throws {
+        try await withApp { app in
+            let (autora, _) = try await usuario(app, "autoraa")
+            let (seguidora, _) = try await usuario(app, "seguidora")
+            seguidora.pushFontUpdates = false
+            try await seguidora.save(on: app.db)
+
+            let (f, _) = try await fuenteConResena(app, de: autora, hace: 1)
+            let fontID = try f.requireID()
+            try await FontFavorite(fontID: fontID, userID: try seguidora.requireID()).save(on: app.db)
+
+            await FontWatchNotifier.notify(fontID: fontID, change: .review(status: "dry"),
+                                           actorID: try autora.requireID(), on: app.db)
+
+            let avisos = try await App.Notification.query(on: app.db)
+                .filter(\.$user.$id == seguidora.requireID()).count()
+            XCTAssertEqual(avisos, 1, "la campana no se apaga con el interruptor del push")
+        }
+    }
+}

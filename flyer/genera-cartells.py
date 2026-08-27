@@ -4,11 +4,17 @@ Genera un cartell per poble a partir de `cartell-a5.html`, cadascun amb el seu c
 (`fontapp.net/?p=castellcir`). Així saps quin cartell ha portat cada usuari: al panell
 d'administració, secció "D'on venen (cartells)".
 
+Per defecte genera el cartell original, que gasta poca tinta. `--marketing` genera una
+variant independent, a tot color i amb la il·lustració de FontApp. No sobreescriu mai
+els cartells originals.
+
 Ús:
     pip3 install segno
     python3 flyer/genera-cartells.py castellcir moia lestany calders
+    python3 flyer/genera-cartells.py --marketing castellcir moia
 
-Deixa els fitxers a `flyer/pobles/cartell-<codi>.html`. Per convertir-los a PDF, sense
+Deixa els originals a `flyer/pobles/cartell-<codi>.html` i els de màrqueting a
+`flyer/pobles-marketing/cartell-<codi>.html`. Per convertir-los a PDF, sense
 obrir el navegador ni tocar cap diàleg d'impressió:
 
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \\
@@ -26,6 +32,7 @@ Comprova SEMPRE el PDF resultant: el cartell té l'alçada fixada a 210 mm i Chr
 pagina, **retalla**. Si hi afegeixes una línia i el peu desapareix, el problema és aquest
 i es resol traient espai a `ul.punts` (margin) o a `ul.punts li` (margin-bottom).
 """
+import base64
 import pathlib
 import re
 import sys
@@ -38,7 +45,10 @@ except ImportError:
 BASE = "https://fontapp.net"
 ARREL = pathlib.Path(__file__).parent
 PLANTILLA = ARREL / "cartell-a5.html"
+PLANTILLA_MARKETING = ARREL / "cartell-a5-marketing.html"
+IMATGE_MARKETING = ARREL.parent / "web" / "public" / "welcome.jpg"
 SORTIDA = ARREL / "pobles"
+SORTIDA_MARKETING = ARREL / "pobles-marketing"
 
 
 def qr_svg(url: str) -> str:
@@ -64,9 +74,17 @@ def qr_svg(url: str) -> str:
     )
 
 
-def genera(codi: str) -> pathlib.Path:
+def imatge_data_uri(ruta: pathlib.Path) -> str:
+    """Incrusta la imatge perquè l'HTML es pugui enviar tot sol a la impremta."""
+    if not ruta.is_file():
+        sys.exit(f"No trobo la imatge de la variant de màrqueting: {ruta}")
+    return "data:image/jpeg;base64," + base64.b64encode(ruta.read_bytes()).decode("ascii")
+
+
+def genera(codi: str, marketing: bool = False) -> pathlib.Path:
     url = f"{BASE}/?p={codi}"
-    plantilla = PLANTILLA.read_text(encoding="utf-8")
+    ruta_plantilla = PLANTILLA_MARKETING if marketing else PLANTILLA
+    plantilla = ruta_plantilla.read_text(encoding="utf-8")
 
     # 1) Substitueix el QR (l'únic <svg> amb aquest viewBox dins del bloc del codi).
     nou_qr = qr_svg(url)
@@ -77,25 +95,37 @@ def genera(codi: str) -> pathlib.Path:
         count=1,
         flags=re.S,
     )
+    if marketing:
+        plantilla = plantilla.replace("{{IMATGE_FONTAPP}}", imatge_data_uri(IMATGE_MARKETING))
     # L'adreça escrita es queda en `fontapp.net`, SENSE el codi. El codi només viatja
     # dins del QR: `fontapp.net/?p=castelltercol` és massa llarg per teclejar-lo bé, i qui
     # el copia malament acaba a una pàgina que no existeix. Es perd l'atribució de qui
     # escriu l'adreça a mà — assumit: són molt pocs comparats amb els que escanegen.
 
-    SORTIDA.mkdir(exist_ok=True)
-    desti = SORTIDA / f"cartell-{codi}.html"
+    sortida = SORTIDA_MARKETING if marketing else SORTIDA
+    sortida.mkdir(exist_ok=True)
+    desti = sortida / f"cartell-{codi}.html"
     desti.write_text(plantilla, encoding="utf-8")
     return desti
 
 
 if __name__ == "__main__":
-    codis = [c.strip().lower() for c in sys.argv[1:] if c.strip()]
+    arguments = sys.argv[1:]
+    marketing = "--marketing" in arguments
+    desconegudes = [a for a in arguments if a.startswith("--") and a != "--marketing"]
+    if desconegudes:
+        sys.exit(f"Opció desconeguda: {desconegudes[0]}")
+    codis = [c.strip().lower() for c in arguments if not c.startswith("--") and c.strip()]
     if not codis:
-        sys.exit("Digues els codis dels pobles. Exemple:\n  python3 flyer/genera-cartells.py castellcir moia")
+        sys.exit(
+            "Digues els codis dels pobles. Exemple:\n"
+            "  python3 flyer/genera-cartells.py castellcir moia\n"
+            "  python3 flyer/genera-cartells.py --marketing castellcir moia"
+        )
     for codi in codis:
         # Mateixa neteja que fa el servidor: només lletres, números i guions.
         net = re.sub(r"[^a-z0-9_-]", "", codi)
         if not net:
             print(f"  ✗ «{codi}» no té cap caràcter vàlid, el salto")
             continue
-        print(f"  ✓ {genera(net).relative_to(ARREL.parent)}  →  {BASE}/?p={net}")
+        print(f"  ✓ {genera(net, marketing).relative_to(ARREL.parent)}  →  {BASE}/?p={net}")

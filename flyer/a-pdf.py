@@ -5,6 +5,7 @@ Converteix els cartells HTML a PDF llestos per a la impremta, i els comprova.
 Ús:
     python3 flyer/a-pdf.py                      # tots (la plantilla i tots els pobles)
     python3 flyer/a-pdf.py castelltercol moia   # només aquests
+    python3 flyer/a-pdf.py --marketing moia     # variant a color
 
 Deixa cada PDF al costat del seu HTML. No cal obrir el navegador ni tocar cap diàleg
 d'impressió: fa servir Chrome sense interfície.
@@ -40,6 +41,7 @@ import tempfile
 
 ARREL = pathlib.Path(__file__).parent
 POBLES = ARREL / "pobles"
+POBLES_MARKETING = ARREL / "pobles-marketing"
 DECODIFICADOR = ARREL / "llegeix-qr.swift"
 
 NAVEGADORS = [
@@ -97,16 +99,23 @@ def qr_de(pdf: pathlib.Path, eina: pathlib.Path) -> str | None:
 
 
 def main() -> int:
-    codis = [c.strip().lower() for c in sys.argv[1:] if c.strip()]
+    arguments = sys.argv[1:]
+    marketing = "--marketing" in arguments
+    desconegudes = [a for a in arguments if a.startswith("--") and a != "--marketing"]
+    if desconegudes:
+        sys.exit(f"Opció desconeguda: {desconegudes[0]}")
+    codis = [c.strip().lower() for c in arguments if not c.startswith("--") and c.strip()]
+    carpeta = POBLES_MARKETING if marketing else POBLES
     if codis:
-        htmls = [POBLES / f"cartell-{c}.html" for c in codis]
+        htmls = [carpeta / f"cartell-{c}.html" for c in codis]
         if falten := [h for h in htmls if not h.is_file()]:
             noms = ", ".join(h.stem.replace("cartell-", "") for h in falten)
             sys.exit(f"No hi ha cartell per: {noms}\nGenera'l amb:  python3 flyer/genera-cartells.py {noms}")
     else:
-        htmls = sorted(POBLES.glob("cartell-*.html"))
+        htmls = sorted(carpeta.glob("cartell-*.html"))
         if (base := ARREL / "cartell-a5.html").is_file():
-            htmls.insert(0, base)
+            if not marketing:
+                htmls.insert(0, base)
 
     chrome = navegador()
     eina = compila_decodificador()

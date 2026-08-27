@@ -50,7 +50,7 @@ enum OnFireNotifier {
                                          excerpt: String(hoy))
                 try await aviso.save(on: db)
 
-                if let push {
+                if let push, admin.pushAdmin {
                     let (titulo, cuerpo) = PushCopy.onFire(quien: user.username, hoy: hoy,
                                                            lang: admin.lang)
                     await PushSender.send(

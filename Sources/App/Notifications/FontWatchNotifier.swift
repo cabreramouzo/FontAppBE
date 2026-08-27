@@ -126,6 +126,9 @@ enum FontWatchNotifier {
                     // cambia algo para quien lo recibe.
                     guard change.urgente || tambienPushA.contains(s.$user.id) else { continue }
                     guard let quien = try? await User.find(s.$user.id, on: db) else { continue }
+                    // La campana ya está guardada arriba: apagar esto silencia la
+                    // notificación del sistema, no el aviso.
+                    guard quien.pushFontUpdates else { continue }
                     let (titulo, cuerpo) = PushCopy.fontUpdate(
                         code: change.code, fontName: font.name, lang: quien.lang)
                     await PushSender.send(
