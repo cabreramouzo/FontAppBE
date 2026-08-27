@@ -70,3 +70,21 @@ export const CONFIDENCE_EMOJI: Record<ConfidenceLevel, string> = {
   stale: '⌛',
   unverified: '○',
 }
+
+/**
+ * ¿Consta que de esta fuente sale agua, hoy y con respaldo?
+ *
+ * Pide las dos cosas, y las dos hacen falta:
+ *
+ * - **Que salga agua.** Una fuente seca sigue siendo un punto en el mapa, pero no es un
+ *   sitio donde llenar el bidón. El cálculo del tramo seco las contaba a todas por igual,
+ *   así que un hueco «con agua» podía estar hecho de fuentes que constan secas.
+ * - **Que sea creíble.** En esta base la mayoría de las fuentes no las ha comprobado nadie
+ *   nunca, así que contarlas como agua es prometer algo que no se sostiene el día que
+ *   estás sediento. Fuera lo antiguo, lo nunca comprobado y lo contradictorio.
+ */
+export function constaAgua(e: ConfidenceEvidence, now = Date.now()): boolean {
+  const nivel = confidenceOf(e, now)
+  if (nivel !== 'verified' && nivel !== 'recent') return false
+  return e.lastWaterStatus === 'flowing' || e.lastWaterStatus === 'trickle'
+}

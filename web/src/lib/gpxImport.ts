@@ -297,18 +297,72 @@ export interface TramoSeco {
  * fuera justo el caso que más importa.
  */
 export function tramoMasSeco(kmFuentes: number[], largoTotalKm: number): TramoSeco {
-  // Los extremos entran como si fueran fuentes: así el hueco inicial y el final se miden
-  // con la misma regla que los de en medio, sin casos aparte.
-  const hitos = [0, ...kmFuentes.filter((k) => k >= 0 && k <= largoTotalKm).sort((a, b) => a - b), largoTotalKm]
   // Arranca en -1 y **no** en «la ruta entera»: con la ruta entera como punto de partida
   // nada puede superarla y la función devuelve siempre eso, que con cero fuentes es
   // casualmente correcto y con fuentes es falso. Lo cazó el test a la primera.
   let mejor: TramoSeco = { desdeKm: 0, hastaKm: largoTotalKm, largoKm: -1 }
-  for (let i = 1; i < hitos.length; i += 1) {
-    const largo = hitos[i] - hitos[i - 1]
-    if (largo > mejor.largoKm) mejor = { desdeKm: hitos[i - 1], hastaKm: hitos[i], largoKm: largo }
+  for (const t of tramosSecos(kmFuentes, largoTotalKm)) {
+    if (t.largoKm > mejor.largoKm) mejor = t
   }
   return mejor
+}
+
+/**
+ * **Todos** los huecos sin agua, en orden.
+ *
+ * `tramoMasSeco` devuelve solo el más largo, y hay dos preguntas más que salen de la misma
+ * lista: cuál sube más —un hueco de 5 km en llano y otro de 5 km cuesta arriba no son lo
+ * mismo— y cómo queda el recorrido si solo cuentas las fuentes de las que consta agua.
+ */
+export function tramosSecos(kmFuentes: number[], largoTotalKm: number): TramoSeco[] {
+  // Los extremos entran como si fueran fuentes: así el hueco inicial y el final se miden
+  // con la misma regla que los de en medio, sin casos aparte.
+  const hitos = [0, ...kmFuentes.filter((k) => k >= 0 && k <= largoTotalKm).sort((a, b) => a - b), largoTotalKm]
+  const out: TramoSeco[] = []
+  for (let i = 1; i < hitos.length; i += 1) {
+    out.push({ desdeKm: hitos[i - 1], hastaKm: hitos[i], largoKm: hitos[i] - hitos[i - 1] })
+  }
+  return out
+}
+
+/**
+ * El desnivel POSITIVO acumulado entre dos kilómetros del recorrido.
+ *
+ * Positivo acumulado y no «altura final menos inicial»: un tramo que sube 300, baja 300 y
+ * vuelve a subir 200 se pedalea como 500 m de subida, y la resta de los extremos diría
+ * 200. Es la cifra que se siente en las piernas.
+ *
+ * Los extremos se **interpolan**: los huecos empiezan y acaban donde está una fuente, que
+ * casi nunca coincide con un vértice del perfil. Redondeando al vértice más cercano, un
+ * tramo corto en una pendiente fuerte se comería o se inventaría decenas de metros.
+ */
+export function subidaEntre(puntos: readonly PuntoPerfil[], desdeKm: number, hastaKm: number): number {
+  if (puntos.length < 2 || hastaKm <= desdeKm) return 0
+  const alturaEn = (km: number): number => {
+    if (km <= puntos[0].km) return puntos[0].ele
+    const ultimo = puntos.length - 1
+    if (km >= puntos[ultimo].km) return puntos[ultimo].ele
+    let lo = 0
+    let hi = ultimo
+    while (hi - lo > 1) {
+      const medio = (lo + hi) >> 1
+      if (puntos[medio].km < km) lo = medio
+      else hi = medio
+    }
+    const tramo = puntos[hi].km - puntos[lo].km
+    const t = tramo > 0 ? (km - puntos[lo].km) / tramo : 0
+    return puntos[lo].ele + (puntos[hi].ele - puntos[lo].ele) * t
+  }
+  let subida = 0
+  let previa = alturaEn(desdeKm)
+  for (const p of puntos) {
+    if (p.km <= desdeKm || p.km >= hastaKm) continue
+    if (p.ele > previa) subida += p.ele - previa
+    previa = p.ele
+  }
+  const fin = alturaEn(hastaKm)
+  if (fin > previa) subida += fin - previa
+  return subida
 }
 
 /** Un punto del perfil: en qué kilómetro va y a qué altura. */

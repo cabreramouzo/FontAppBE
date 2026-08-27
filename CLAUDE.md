@@ -752,6 +752,20 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - **El tramo más largo sin agua**, en una frase: «el más seco: 4,8 km, del km 3,5 al 8,3».
   No es cuántas fuentes hay ni dónde caen en el plano — es **dónde está el hueco**, y en la
   lista eso está enterrado: habría que leer diez líneas y restar kilómetros de cabeza.
+- **Y el tramo seco se dice DOS veces**, porque la primera cifra es optimista. La original
+  cuenta todas las fuentes del corredor —incluidas las que no ha comprobado nadie nunca, que
+  en esta base son casi todas, y las que constan **secas**—; la segunda solo las que pasan
+  `constaAgua` (sale agua, es reciente y tiene respaldo). La diferencia no es cosmética:
+  medido con una ruta de 14 km por Barcelona, «2,0 km» pasa a **«14,2 km», el recorrido
+  entero**, con 167 fuentes por el camino y ninguna comprobada. Ésa es la cifra que decide
+  si llevas un bidón o dos. Solo se pinta si de verdad cambia algo.
+- **La subida más larga sin agua** (`subidaEntre` + `tramosSecos`): cinco kilómetros en
+  llano y cinco cuesta arriba no son lo mismo, y el perfil ya lo enseña pero solo a quien
+  sabe leerlo. Se busca por **desnivel** y no por longitud, así que casi nunca es el mismo
+  tramo. Suma el positivo acumulado y **no** la resta de los extremos —un tramo que sube,
+  baja y vuelve a subir se pedalea entero— e interpola los extremos, porque un hueco empieza
+  donde hay una fuente y eso casi nunca cae en un vértice del perfil. Se calla sin altitudes
+  en el GPX y por debajo de 100 m, que es un repecho y no una subida.
 - **Los dos extremos cuentan** (`tramoMasSeco`): el hueco de la salida a la primera fuente y
   el de la última al final son tramos secos como cualquiera, y el del final es el peor
   porque llegas cansado. Medir solo los huecos *entre* fuentes es el error fácil y deja

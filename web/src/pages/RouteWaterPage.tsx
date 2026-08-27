@@ -27,14 +27,14 @@ import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { diasDesde, olvidaRuta, recuerdaRuta, rutaRecordada } from '../lib/routeMemory'
 import { useI18n } from '../i18n/I18nContext'
 import { nombreFuente } from '../lib/fontName'
-import { confidenceOf, CONFIDENCE_EMOJI, confidenceLabelKey, type ConfidenceLevel } from '../lib/confidence'
+import { confidenceOf, constaAgua, CONFIDENCE_EMOJI, confidenceLabelKey, type ConfidenceLevel } from '../lib/confidence'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 import { construyeGPX, MAX_WAYPOINTS, nombreFichero, type PuntoGPX } from '../lib/gpx'
 import { alterna, claveDe, soloDesde } from '../lib/routeSelection'
 import {
-  cajaDe, fuentesEnRuta, largoKm, leeGPX, perfil, simplifica, tramoMasSeco,
-  CORREDOR_M, type EnRuta,
+  cajaDe, fuentesEnRuta, largoKm, leeGPX, perfil, simplifica, subidaEntre, tramoMasSeco,
+  tramosSecos, CORREDOR_M, type EnRuta,
 } from '../lib/gpxImport'
 import { RouteProfile } from '../components/RouteProfile'
 
@@ -224,11 +224,49 @@ export function RouteWaterPage() {
     [enRuta, claves, excluidas],
   )
 
-  const seco = useMemo(
-    () => tramoMasSeco(enRuta.map((x) => x.kmRuta), largoKm(ruta)),
-    [enRuta, ruta],
-  )
   const alturas = useMemo(() => perfil(ruta), [ruta])
+  const total = useMemo(() => largoKm(ruta), [ruta])
+
+  const seco = useMemo(() => tramoMasSeco(enRuta.map((x) => x.kmRuta), total), [enRuta, total])
+
+  /**
+   * El mismo tramo, contando solo las fuentes de las que **consta agua**.
+   *
+   * La cifra de arriba cuenta todas las del corredor, incluidas las que no ha comprobado
+   * nadie nunca —que en esta base son casi todas— y las que constan **secas**. Así que es
+   * la versión optimista, y el día que estás sediento no se sostiene. Ésta es la que
+   * decide si llevas un bidón o dos.
+   *
+   * Solo se enseña si de verdad cambia algo: si coinciden, repetir la misma cifra dos
+   * veces con dos rótulos distintos es ruido.
+   */
+  const secoFiable = useMemo(
+    () => tramoMasSeco(enRuta.filter((x) => constaAgua(x.fuente)).map((x) => x.kmRuta), total),
+    [enRuta, total],
+  )
+
+  /**
+   * El hueco sin agua que más sube.
+   *
+   * Cinco kilómetros en llano y cinco cuesta arriba no son lo mismo, y el perfil ya lo
+   * enseña — pero solo a quien sabe leerlo. Se busca por desnivel y no por longitud, así
+   * que casi nunca es el mismo tramo que el de arriba: ése es el más largo, éste el que
+   * más se nota.
+   *
+   * Sin altitudes en el GPX no hay nada que decir y no se pinta.
+   */
+  const subida = useMemo(() => {
+    if (alturas.length < 2) return null
+    const kms = enRuta.map((x) => x.kmRuta)
+    let mejor: { desdeKm: number; hastaKm: number; subidaM: number } | null = null
+    for (const t of tramosSecos(kms, total)) {
+      const m = subidaEntre(alturas, t.desdeKm, t.hastaKm)
+      if (!mejor || m > mejor.subidaM) mejor = { desdeKm: t.desdeKm, hastaKm: t.hastaKm, subidaM: m }
+    }
+    // Menos de 100 m no es una subida, es un repecho: nombrarlo sería dar por importante
+    // algo que no se nota.
+    return mejor && mejor.subidaM >= 100 ? mejor : null
+  }, [alturas, enRuta, total])
 
   function descargar() {
     const puntos: PuntoGPX[] = paraGPS.map((x) => ({
@@ -316,7 +354,7 @@ export function RouteWaterPage() {
           <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, mt: 3 }}>
             <Typography sx={{ fontWeight: 700 }}>{nombreRuta}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {t('gpxIn.summary', { km: largoKm(ruta).toFixed(1), n: String(enRuta.length) })}
+              {t('gpxIn.summary', { km: total.toFixed(1), n: String(enRuta.length) })}
             </Typography>
 
             {/* El tramo más seco, antes que el reparto de fiabilidad. Es la frase que
@@ -331,6 +369,29 @@ export function RouteWaterPage() {
                     b: seco.hastaKm.toFixed(1),
                   })}
             </Typography>
+
+            {/* La versión pesimista, solo si de verdad cambia algo: si coinciden, repetir
+                la misma cifra con dos rótulos distintos es ruido. */}
+            {enRuta.length > 0 && secoFiable.largoKm > seco.largoKm && (
+              <Typography variant="body2" color="text.secondary">
+                {t('gpxIn.driestSure', {
+                  km: secoFiable.largoKm.toFixed(1),
+                  a: secoFiable.desdeKm.toFixed(1),
+                  b: secoFiable.hastaKm.toFixed(1),
+                })}
+              </Typography>
+            )}
+
+            {/* Cinco kilómetros en llano y cinco cuesta arriba no son lo mismo. */}
+            {subida && (
+              <Typography variant="body2" color="text.secondary">
+                {t('gpxIn.driestClimb', {
+                  a: subida.desdeKm.toFixed(1),
+                  b: subida.hastaKm.toFixed(1),
+                  m: String(Math.round(subida.subidaM)),
+                })}
+              </Typography>
+            )}
 
             {reparto.length > 0 && (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5 }}>
@@ -404,7 +465,7 @@ export function RouteWaterPage() {
           <RouteProfile
             puntos={alturas}
             fuentes={enRuta.map((x) => ({ kmRuta: x.kmRuta, nombre: nombreFuente(x.fuente, t) }))}
-            largoKm={largoKm(ruta)}
+            largoKm={total}
           />
 
           {/* El mapa contesta dos cosas que ni la lista ni el perfil pueden: si has subido
