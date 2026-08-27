@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 import Typography from '@mui/material/Typography'
@@ -30,16 +31,16 @@ export function AvisosDelSistema() {
   const [est, setEst] = useState<EstadoPush | null>(null)
   const [clave, setClave] = useState<string | null | undefined>(undefined)
   const [ocupado, setOcupado] = useState(false)
-  const [fallo, setFallo] = useState(false)
+  const [fallo, setFallo] = useState<string | null>(null)
 
   useEffect(() => { void estado().then(setEst) }, [])
   useEffect(() => { void claveDelServidor().then(setClave) }, [])
 
   async function cambia(quiere: boolean) {
-    setOcupado(true); setFallo(false)
+    setOcupado(true); setFallo(null)
     if (quiere) {
-      const ok = clave ? await enciende(clave) : false
-      if (!ok) setFallo(true)
+      const r = clave ? await enciende(clave) : { ok: false as const, motivo: 'sin clave' }
+      if (!r.ok) setFallo(r.motivo)
     } else {
       await apaga()
     }
@@ -80,14 +81,25 @@ export function AvisosDelSistema() {
           la única forma de separar «no funciona el push» de «nadie ha reseñado». */}
       {est === 'encendido' && (
         <Button size="small" sx={{ mt: 0.5, textTransform: 'none' }}
-                onClick={() => void prueba()}>
+                onClick={() => void prueba().then((r) => { if (!r.ok) setFallo(r.motivo) })}>
           {t('notif.pushTest')}
         </Button>
       )}
       {est === 'denegado' && (
         <Alert severity="info" sx={{ mt: 1 }}>{t('notif.pushDenied')}</Alert>
       )}
-      {fallo && <Alert severity="warning" sx={{ mt: 1 }}>{t('notif.pushFailed')}</Alert>}
+      {/* El motivo técnico se ENSEÑA, no se esconde. Los tres fallos posibles —el
+          navegador, el servicio de push y nuestra API— llegaban como el mismo «inténtalo
+          con cobertura», que además es falso cuando hay wifi de sobra; y en un móvil no
+          hay consola donde mirar. Es feo y es lo que permite arreglarlo. */}
+      {fallo && (
+        <Alert severity="warning" sx={{ mt: 1 }}>
+          {t('notif.pushFailed')}
+          <Box component="code" sx={{ display: 'block', mt: 0.5, fontSize: 11, opacity: 0.8, wordBreak: 'break-word' }}>
+            {fallo}
+          </Box>
+        </Alert>
+      )}
     </>
   )
 }

@@ -84,25 +84,41 @@ export async function claveDelServidor(): Promise<string | null> {
  * Recibe la clave ya pedida: al pulsar no puede haber ni una espera de red antes del
  * permiso.
  */
-export async function enciende(key: string): Promise<boolean> {
-  if (!sePuede() || !key) return false
-  try {
-    // Lo PRIMERO, y sin ningún `await` por delante: es lo que conserva la activación del
-    // gesto en Safari.
-    const permiso = await Notification.requestPermission()
-    if (permiso !== 'granted') return false
+export type Resultado = { ok: true } | { ok: false; motivo: string }
 
+export async function enciende(key: string): Promise<Resultado> {
+  if (!sePuede()) return { ok: false, motivo: 'sin soporte' }
+
+  // Lo PRIMERO, y sin ningún `await` por delante: es lo que conserva la activación del
+  // gesto en Safari.
+  let permiso: NotificationPermission
+  try {
+    permiso = await Notification.requestPermission()
+  } catch (e) {
+    return { ok: false, motivo: `permiso: ${describe(e)}` }
+  }
+  if (permiso !== 'granted') return { ok: false, motivo: `permiso ${permiso}` }
+
+  // Cada paso dice cuál falló. Sin esto, los tres errores posibles —el navegador, el
+  // servicio de push y nuestra API— llegan como el mismo «no se han podido activar», y
+  // desde un móvil no hay consola donde mirar.
+  let sub: PushSubscription
+  try {
     const reg = await navigator.serviceWorker.ready
     // Si ya había una suscripción se reutiliza: `subscribe` con otra clave falla, y volver
     // a suscribir el mismo aparato crearía un endpoint nuevo dejando el viejo muerto.
-    const sub = await reg.pushManager.getSubscription()
+    sub = await reg.pushManager.getSubscription()
       ?? await reg.pushManager.subscribe({
         // Obligatorio en Chromium: sin él, `subscribe` lanza. Significa «cada push
         // mostrará una notificación visible», que es exactamente lo que hacemos.
         userVisibleOnly: true,
         applicationServerKey: bytesDeClave(key),
       })
+  } catch (e) {
+    return { ok: false, motivo: `suscripción: ${describe(e)}` }
+  }
 
+  try {
     await apiFetch('/push/subscribe', {
       method: 'POST',
       body: JSON.stringify({
@@ -111,10 +127,20 @@ export async function enciende(key: string): Promise<boolean> {
         auth: aBase64URL(sub.getKey('auth')),
       }),
     })
-    return true
-  } catch {
-    return false
+  } catch (e) {
+    return { ok: false, motivo: `servidor: ${describe(e)}` }
   }
+  return { ok: true }
+}
+
+/** El nombre y el mensaje del error, que es lo único que sirve para diagnosticar. */
+function describe(e: unknown): string {
+  if (e && typeof e === 'object') {
+    const err = e as { name?: string; message?: string; status?: number; code?: string }
+    const partes = [err.name, err.status ? String(err.status) : '', err.code, err.message]
+    return partes.filter(Boolean).join(' · ').slice(0, 200)
+  }
+  return String(e).slice(0, 200)
 }
 
 /**
@@ -150,11 +176,14 @@ export async function apaga(): Promise<void> {
  * Sin esto, probar el push exige una segunda cuenta y una reseña real — y cuando no llega
  * nada, no hay forma de saber si falla la suscripción, las claves o el aviso.
  */
-export async function prueba(): Promise<boolean> {
+export async function prueba(): Promise<Resultado> {
   try {
     await apiFetch('/push/test', { method: 'POST' })
-    return true
-  } catch {
-    return false
+    return { ok: true }
+  } catch (e) {
+    // El servidor distingue «no hay claves» de «esta cuenta no tiene ningún aparato
+    // suscrito», y las dos cosas se arreglan de formas muy distintas. Tragarse eso deja
+    // el mismo silencio que el aviso que no llega.
+    return { ok: false, motivo: describe(e) }
   }
 }
