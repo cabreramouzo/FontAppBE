@@ -19,9 +19,10 @@ import UploadIcon from '@mui/icons-material/UploadFileOutlined'
 import MapIcon from '@mui/icons-material/MapOutlined'
 import DownloadIcon from '@mui/icons-material/FileDownloadOutlined'
 import type { FontSummary } from '../api/types'
-import { apiFetch, createComment, describeError } from '../api/client'
+import { apiFetch, apiUrl, createComment, describeError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/ToastContext'
+import { fijaParaOffline } from '../lib/fijarOffline'
 import { enqueue, isOffline } from '../lib/outbox'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { diasDesde, olvidaRuta, recuerdaRuta, rutaRecordada } from '../lib/routeMemory'
@@ -147,9 +148,18 @@ export function RouteWaterPage() {
       minLong: String(caja.minLong), maxLong: String(caja.maxLong),
     })
     setCargando(true)
+    const ruta = `/fonts/in-bounds?${params}`
     try {
-      setFuentes(await apiFetch<FontSummary[]>(`/fonts/in-bounds?${params}`))
+      setFuentes(await apiFetch<FontSummary[]>(ruta))
       setError(''); setReintenta(null)
+      // Las fuentes de este recorrido quedan **a salvo del descarte** del caché.
+      //
+      // Quien sube un GPX lo hace en casa y con red, y las va a necesitar en el monte y
+      // sin ella. Sin fijarlas, un rato de curiosear por el mapa antes de salir se las
+      // lleva por delante y llega al valle sin nada. Es una sola respuesta y son sus
+      // datos, así que se hace solo: no promete nada que no estuviera ya prometido, solo
+      // deja de ser una lotería.
+      void fijaParaOffline([apiUrl(ruta)])
     } catch (e) {
       // `describeError` da el motivo de verdad —«Sin conexión con el servidor»— en el
       // idioma de quien lee, en vez de una frase inventada por esta pantalla.

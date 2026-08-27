@@ -8,6 +8,17 @@ import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus
 const BASE = import.meta.env.VITE_API_URL || '/api'
 const TOKEN_KEY = 'fontapp_token'
 
+/**
+ * La URL completa de una ruta de la API, tal cual la pide `apiFetch`.
+ *
+ * Hace falta para hablar con el service worker: su caché va por URL exacta, así que fijar
+ * una respuesta exige la misma cadena, carácter a carácter, que se usó al pedirla. Sale de
+ * aquí y no se compone en cada sitio, que es como se acaban separando.
+ */
+export function apiUrl(path: string): string {
+  return BASE + path
+}
+
 /** Resuelve una ruta del backend (p. ej. /uploads/x) a URL absoluta cuando hay VITE_API_URL. */
 export function assetUrl(path: string): string {
   if (/^https?:\/\//.test(path)) return path

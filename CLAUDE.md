@@ -1851,6 +1851,25 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   `mapItems` calcula sus columnas (`ceil(width / 70)`): así el servidor obtiene exactamente
   las mismas columnas que con el ancho real y la respuesta no cambia. Si allí cambia ese
   número esto no se rompe, solo deja de ser una equivalencia exacta.
+- **Hay un caché FIJADO** (`fontapp-pinned-v1` + `lib/fijarOffline.ts`) del que no se borra
+  nada para hacer sitio, y que se consulta **antes** que los demás. Sin él, preparar una
+  zona no sirve de nada: el recorte va por orden de llegada, así que guardas lo de tu ruta
+  el viernes, el sábado miras otra comarca por curiosidad y lo que preparaste ya no está.
+  Al revalidar con red se reescribe **en el mismo caché donde estaba**: si una respuesta
+  fijada se refrescara en el normal, el descarte se la llevaría igual y fijar no habría
+  servido para nada. Hay test de esa mitad, que es la que se olvida.
+  Hoy lo usa un solo sitio y a propósito: al importar un GPX se fija la respuesta de las
+  fuentes de ese recorrido. Quien sube una ruta lo hace en casa con red y la necesita en el
+  monte sin ella, es **una** respuesta y son sus datos, así que se hace solo. No promete
+  nada nuevo — deja de ser una lotería.
+- **Las fotos tienen su propio caché** (`fontapp-photos-v1`). Compartían los 300 huecos con
+  las respuestas de la API, o sea que mover el mapa unas decenas de veces echaba todas las
+  fotos guardadas y mirar fotos echaba las respuestas del mapa: dos cosas con ritmos
+  completamente distintos peleando por el mismo sitio. Y el recorte de la API solo se
+  disparaba **al pedir una foto**, así que entre foto y foto crecía sin tope.
+  Al sacarlas **no se sube la versión de `fontapp-api-v3`**: no ha cambiado ningún formato
+  y subirla tiraría lo guardado de todo el mundo justo en el cambio que existe para
+  conservarlo mejor. Lo cazó `sw-routing.test.ts`, que está escrito para eso.
 - **Lo que sigue sin cumplirse del cartel:** un caché no descarga lo que no has mirado, así
   que «funciona sin cobertura» depende de haber pasado antes por la zona. Para prometerlo
   de verdad haría falta una **descarga de zona** explícita.

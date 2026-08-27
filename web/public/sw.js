@@ -6,11 +6,36 @@
 const SHELL_CACHE = 'fontapp-shell-v6'
 const TILE_CACHE = 'fontapp-tiles-v2'
 const API_CACHE = 'fontapp-api-v3'
+// El nombre NO sube de versión al sacar las fotos: no ha cambiado el formato de nada, y
+// subirlo tiraría las respuestas guardadas de todo el mundo justo en el cambio que existe
+// para conservarlas mejor. Las fotos que quedaran dentro se van solas con el recorte.
+//
+// Las fotos van a su PROPIO caché, no al de la API.
+//
+// Compartían los 300 huecos, así que mover el mapa unas decenas de veces echaba todas las
+// fotos guardadas, y mirar fotos echaba las respuestas del mapa. Dos cosas con ritmos
+// completamente distintos peleando por el mismo sitio.
+const PHOTO_CACHE = 'fontapp-photos-v1'
+
+// Lo FIJADO: aquí no entra nada solo y de aquí no se borra nada por hacer sitio.
+//
+// El descarte por orden de llegada es lo que hace que preparar una zona no sirva de nada:
+// guardas lo de tu ruta el viernes, el sábado miras otra comarca por curiosidad y lo que
+// preparaste ya no está. Sin un sitio a salvo del descarte, cualquier «descarga de zona»
+// se evapora sola.
+//
+// Se mira **antes** que los demás en cada búsqueda, y al revalidar con red se reescribe
+// aquí: lo fijado se mantiene fijado y además se actualiza.
+const PINNED_CACHE = 'fontapp-pinned-v1'
 // El shell NO se pide a `/index.html`: en Cloudflare Pages esa ruta responde 308 hacia
 // `/`, y `cache.addAll` guardaría la respuesta redirigida bajo esa misma clave — que es
 // justo la que sirve el respaldo sin conexión. Se pide `/` y se guarda bajo las dos.
 const SHELL_EXTRA = ['/manifest.webmanifest', '/icon.svg']
 const TILE_LIMIT = 700 // ~ suficiente para la zona de una ruta sin llenar el móvil
+const PHOTO_LIMIT = 200
+// Antes el recorte solo se disparaba al pedir una foto, así que entre foto y foto las
+// respuestas de la API crecían sin tope. Ahora cada una recorta la suya.
+const API_LIMIT = 200
 
 // Servidores de teselas de TODAS las capas (ver `src/lib/mapLayers.ts`). Antes solo
 // estaba OpenStreetMap, así que quien caminaba con el topográfico del IGN —la capa que
@@ -76,9 +101,24 @@ async function trimCache(name, max) {
   for (const k of keys.slice(0, keys.length - max)) await cache.delete(k)
 }
 
-async function cacheFirst(req, cacheName, { limit } = {}) {
+/**
+ * Lo fijado gana siempre.
+ *
+ * Devuelve además en qué caché estaba, porque quien revalide tiene que escribir en el
+ * mismo: si una respuesta fijada se refrescara en el caché normal, el descarte se la
+ * llevaría igual y el fijado no habría servido de nada.
+ */
+async function buscaFijadoPrimero(req, cacheName) {
+  const fijados = await caches.open(PINNED_CACHE)
+  const fijado = await fijados.match(req)
+  if (fijado) return { hit: fijado, destino: PINNED_CACHE }
   const cache = await caches.open(cacheName)
-  const hit = await cache.match(req)
+  return { hit: await cache.match(req), destino: cacheName }
+}
+
+async function cacheFirst(req, cacheName, { limit } = {}) {
+  const { hit } = await buscaFijadoPrimero(req, cacheName)
+  const cache = await caches.open(cacheName)
   if (hit) return hit
   const res = await sinRedirecciones(await fetch(req))
   // Cacheamos respuestas OK y opacas (las teselas <img> son cross-origin/opacas).
@@ -90,15 +130,46 @@ async function cacheFirst(req, cacheName, { limit } = {}) {
 }
 
 async function staleWhileRevalidate(req, cacheName) {
-  const cache = await caches.open(cacheName)
-  const hit = await cache.match(req)
+  const { hit, destino } = await buscaFijadoPrimero(req, cacheName)
   const network = fetch(req)
-    .then((res) => {
-      if (res && res.ok) cache.put(req, res.clone())
+    .then(async (res) => {
+      // Se refresca en el caché donde estaba: lo fijado sigue fijado y encima al día.
+      if (res && res.ok) {
+        const cache = await caches.open(destino)
+        await cache.put(req, res.clone())
+        if (destino === cacheName) trimCache(cacheName, API_LIMIT)
+      }
       return res
     })
     .catch(() => hit) // sin red: nos quedamos con lo cacheado
   return hit || network
+}
+
+/**
+ * Guarda unas URLs a salvo del descarte.
+ *
+ * Lo pide la página con `postMessage`. Se hace aquí y no en la página porque la Cache API
+ * del service worker es la que consulta `fetch`: lo que guarde la página en otro caché no
+ * lo vería nadie.
+ *
+ * Devuelve cuántas se han guardado, para que quien lo pida pueda decir la verdad en vez
+ * de prometer que la zona está lista.
+ */
+async function fija(urls) {
+  const cache = await caches.open(PINNED_CACHE)
+  let guardadas = 0
+  for (const url of urls) {
+    try {
+      const res = await sinRedirecciones(await fetch(url, { cache: 'reload' }))
+      if (res && res.ok) {
+        await cache.put(url, res.clone())
+        guardadas += 1
+      }
+    } catch {
+      // Una que falle no puede tumbar las demás: sin red no se fija nada y ya está.
+    }
+  }
+  return guardadas
 }
 
 async function precargaShell() {
@@ -123,11 +194,24 @@ self.addEventListener('install', (event) => {
 })
 
 self.addEventListener('activate', (event) => {
-  const keep = new Set([SHELL_CACHE, TILE_CACHE, API_CACHE])
+  const keep = new Set([SHELL_CACHE, TILE_CACHE, API_CACHE, PHOTO_CACHE, PINNED_CACHE])
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)))),
   )
   self.clients.claim()
+})
+
+// La página pide fijar cosas por aquí. Se contesta por el puerto del propio mensaje y no
+// a todos los clientes: quien pregunta es quien espera la respuesta.
+self.addEventListener('message', (event) => {
+  const datos = event.data
+  if (!datos || datos.tipo !== 'fijar' || !Array.isArray(datos.urls)) return
+  const puerto = event.ports && event.ports[0]
+  event.waitUntil(
+    fija(datos.urls).then((guardadas) => {
+      if (puerto) puerto.postMessage({ guardadas })
+    }),
+  )
 })
 
 self.addEventListener('fetch', (event) => {
@@ -144,7 +228,7 @@ self.addEventListener('fetch', (event) => {
   // Fotos subidas, vengan del disco local o de R2 (otro dominio). Se mira la ruta y no
   // el servidor a propósito: así vale para los dos sitios sin apuntar ninguno.
   if (url.pathname.includes('/uploads/')) {
-    event.respondWith(cacheFirst(req, API_CACHE, { limit: 300 }))
+    event.respondWith(cacheFirst(req, PHOTO_CACHE, { limit: PHOTO_LIMIT }))
     return
   }
 

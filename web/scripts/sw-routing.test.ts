@@ -31,9 +31,13 @@ function cargaSW(hrefDelSW: string) {
 test('el shell actual invalida el bundle persistente anterior', () => {
   const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
   assert.match(codigo, /const SHELL_CACHE = 'fontapp-shell-v6'/)
-  // El remedio no debe borrar mapas ni respuestas offline.
+  // El remedio no debe borrar mapas ni respuestas offline. Este test ya ha cazado un
+  // intento de subir `API_CACHE` sin que hubiera cambiado ningún formato: habría tirado
+  // lo guardado de todo el mundo en el cambio que existía para conservarlo mejor.
   assert.match(codigo, /const TILE_CACHE = 'fontapp-tiles-v2'/)
   assert.match(codigo, /const API_CACHE = 'fontapp-api-v3'/)
+  assert.match(codigo, /const PHOTO_CACHE = 'fontapp-photos-v1'/)
+  assert.match(codigo, /const PINNED_CACHE = 'fontapp-pinned-v1'/)
 })
 
 const PROD = cargaSW('https://fontapp.net/sw.js?api=https%3A%2F%2Ffontapp.fly.dev')
