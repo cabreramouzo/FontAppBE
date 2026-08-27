@@ -87,21 +87,23 @@ def aplica_marketing(plantilla: str) -> str:
   /* Variant de màrqueting: mateix cartell, amb una petita peça de marca a la capçalera. */
   .capcalera-marketing {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 27mm;
+    grid-template-columns: minmax(0, 1fr) 35mm;
     align-items: end;
     gap: 6mm;
     margin-top: 3.5mm;
   }
   .capcalera-marketing .titular { margin: 0; }
   .imatge-marketing {
-    width: 27mm;
+    width: 35mm;
     height: 31mm;
-    object-fit: cover;
-    object-position: center 38%;
     display: block;
-    border: 0.7mm solid #bae6fd;
-    border-radius: 5mm;
-    box-shadow: 0 2mm 5mm rgba(15, 23, 42, 0.16);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1.2mm #fff;
+    /* Un vel blanc és més fiable que `mask-image` en imprimir: Chrome dibuixa una
+       ratlla d'un píxel al voltant d'algunes imatges emmascarades. */
+    background:
+      radial-gradient(ellipse 50% 47% at center, transparent 38%, rgba(255, 255, 255, .74) 70%, #fff 100%),
+      url("{{IMATGE_FONTAPP}}") center 38% / cover no-repeat;
   }
   .variant-marketing ul.punts { margin-top: 4.5mm; }
   .variant-marketing ul.punts li { margin-bottom: 2.2mm; }
@@ -112,8 +114,8 @@ def aplica_marketing(plantilla: str) -> str:
     capcalera = (
         '<div class="capcalera-marketing">\n'
         f'      {titular}\n'
-        '      <img class="imatge-marketing" src="{{IMATGE_FONTAPP}}" '
-        'alt="Il·lustració de FontApp">\n'
+        '      <div class="imatge-marketing" role="img" '
+        'aria-label="Il·lustració de FontApp"></div>\n'
         '    </div>'
     )
     if titular not in plantilla:
