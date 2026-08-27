@@ -3,10 +3,10 @@
 // - Teselas del mapa (OSM, otro dominio): cache-first con tope (LRU sencillo).
 // - API GET del mismo origen: stale-while-revalidate (sirve al instante, refresca si hay red).
 // - Navegación SPA: network-first con respaldo en el shell.
-const SHELL_CACHE = 'fontapp-shell-v7'
+const SHELL_CACHE = 'fontapp-shell-v8'
 const TILE_CACHE = 'fontapp-tiles-v2'
 const API_CACHE = 'fontapp-api-v3'
-// El nombre NO sube de versión al sacar las fotos: no ha cambiado el formato de nada, y
+// El nombre NO sube de versión al guardar las fotos: no ha cambiado el formato de nada, y
 // subirlo tiraría las respuestas guardadas de todo el mundo justo en el cambio que existe
 // para conservarlas mejor. Las fotos que quedaran dentro se van solas con el recorte.
 //
@@ -184,14 +184,30 @@ async function fija(urls) {
   let bytes = 0
   for (const url of urls) {
     try {
-      const res = await sinRedirecciones(await fetch(url, { cache: 'reload' }))
-      if (res && res.ok) {
+      const destino = new URL(url, self.location.origin)
+      // Las fotos de producción salen del dominio público de R2. Un <img> puede mostrar
+      // una respuesta cross-origin sin CORS, pero fetch() la rechaza antes de entregarla
+      // al worker. `no-cors` la convierte en `opaque`, que Cache Storage sí puede guardar
+      // y servir después a ese mismo <img>. Se acota a `/uploads/`: las llamadas a la API
+      // necesitan una respuesta legible y las teselas que permiten CORS conservan así la
+      // medida real de bytes.
+      const esFotoExterna = destino.origin !== self.location.origin
+        && destino.origin !== API_ORIGIN && destino.pathname.includes('/uploads/')
+      const res = await sinRedirecciones(await fetch(url, {
+        cache: 'reload',
+        ...(esFotoExterna ? { mode: 'no-cors' } : {}),
+      }))
+      if (res && (res.ok || res.type === 'opaque')) {
         // El tamaño se mide del cuerpo y no de `Content-Length`: R2 no siempre lo manda y
         // la cifra que se le enseña a alguien no puede ser a veces cero.
         const copia = res.clone()
         await cache.put(url, res.clone())
         guardadas += 1
-        try { bytes += (await copia.blob()).size } catch { /* da igual, es informativo */ }
+        // El cuerpo de una respuesta opaca no se puede leer. Se cuenta como guardada —lo
+        // está— pero `bytes` queda a cero y la interfaz omite el tamaño en vez de mentir.
+        if (res.type !== 'opaque') {
+          try { bytes += (await copia.blob()).size } catch { /* da igual, es informativo */ }
+        }
       }
     } catch {
       // Una que falle no puede tumbar las demás: sin red no se fija nada y ya está.

@@ -19,7 +19,12 @@ class RespuestaFalsa {
   }
 }
 
-function cargaSW(cachesFalsos: Record<string, Map<string, unknown>>, idioma = 'ca') {
+function cargaSW(
+  cachesFalsos: Record<string, Map<string, unknown>>,
+  idioma = 'ca',
+  fetchFalso: (input: unknown, init?: { mode?: string }) => Promise<unknown> =
+    async () => ({ ok: true, clone: () => 'nueva' }),
+) {
   const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
   const abiertos = new Set<string>()
   const caches = {
@@ -47,7 +52,7 @@ function cargaSW(cachesFalsos: Record<string, Map<string, unknown>>, idioma = 'c
   }
   const fn = new Function('self', 'caches', 'fetch', 'Response', 'clients',
     `${codigo}\n;return { buscaFijadoPrimero, trimCache, fija, paginaSinConexion, SIN_CONEXION, PINNED_CACHE, API_CACHE, PHOTO_CACHE, API_LIMIT };`)
-  return { sw: fn(self, caches, async () => ({ ok: true, clone: () => 'nueva' }), RespuestaFalsa, {}), abiertos }
+  return { sw: fn(self, caches, fetchFalso, RespuestaFalsa, {}), abiertos }
 }
 
 test('lo fijado gana a lo normal, aunque los dos estén guardados', () => {
@@ -92,6 +97,27 @@ test('fijar guarda en el caché fijado y dice cuántas y cuánto ocupan', async 
   // Los bytes son informativos: si no se pueden medir se queda en 0, nunca en `undefined`,
   // porque esa cifra acaba pintada en una pantalla.
   assert.equal(typeof r.bytes, 'number')
+})
+
+test('una foto externa sin CORS se pide como no-cors y se guarda aunque sea opaca', async () => {
+  const datos: Record<string, Map<string, unknown>> = {}
+  let modo = ''
+  const opaca = {
+    ok: false,
+    type: 'opaque',
+    redirected: false,
+    clone: () => opaca,
+  }
+  const { sw } = cargaSW(datos, 'ca', async (_input, init) => {
+    modo = init?.mode ?? ''
+    return opaca
+  })
+  const url = 'https://pub-ejemplo.r2.dev/uploads/foto.jpg'
+  const r = await sw.fija([url]) as { guardadas: number; bytes: number }
+  assert.equal(modo, 'no-cors')
+  assert.equal(r.guardadas, 1)
+  assert.equal(r.bytes, 0, 'el cuerpo opaco no se puede medir, pero sí guardar')
+  assert.equal(datos[sw.PINNED_CACHE].get(url), opaca)
 })
 
 test('las fotos y los datos ya no comparten hueco', () => {

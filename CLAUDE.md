@@ -1922,6 +1922,11 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   dice que no, no se ha perdido nada. La estimación sale de los **489 KB de media medidos en
   producción** y se dice que es estimación; al terminar se enseña el tamaño real. Van al
   caché **fijado**, así que además dejan de pedirse al servidor: son backup y caché a la vez.
+  En producción salen de otro origen (`pub-….r2.dev`) y ese bucket no expone CORS: se
+  descargan como `no-cors` y se guardan como respuestas `opaque`. Cache Storage puede
+  servirlas después a `<img>`, pero no leer su cuerpo; en ese caso el resultado enseña el
+  número real guardado y omite los MB, nunca afirma «0,0 MB». El test de fijado tiene que
+  usar una respuesta opaca: un doble que siempre devuelve `ok: true` no reproduce R2.
   El botón es un **quinto FAB** en una columna que ya iba justa, y se paga a sabiendas: en
   la hoja «Filtros» sería repetir el error del GPX —un cajón cuyo rótulo dice otra cosa— y
   en la de GPX tampoco, porque ese botón dice «GPX» con letras y esto no lo es.

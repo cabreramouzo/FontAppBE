@@ -168,7 +168,9 @@ export function ZonaOfflineSheet({ map, onClose }: { map: LeafletMap; onClose?: 
       {fotosGuardadas && (
         <Alert severity="success" icon={false} sx={{ py: 0.5 }}>
           <Typography variant="body2">
-            {t('zonaOff.photosSaved', { n: String(fotosGuardadas.n), mb: megas(fotosGuardadas.bytes) })}
+            {fotosGuardadas.bytes > 0
+              ? t('zonaOff.photosSaved', { n: String(fotosGuardadas.n), mb: megas(fotosGuardadas.bytes) })
+              : t('zonaOff.photosSavedNoSize', { n: String(fotosGuardadas.n) })}
           </Typography>
         </Alert>
       )}
