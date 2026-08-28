@@ -2320,6 +2320,21 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   enlaces entre ellas, miles de páginas cuelgan solo del sitemap y se rastrean mal. Ojo:
   ordenar esos vecinos por número de fuentes daba Granollers y Castellar del Vallès como
   «vecinos» de Moià —los mayores de la caja, a 28 km—; van por distancia.
+- **Cada página escribe sus propias etiquetas** (`functions/places/[slug].ts`), igual que
+  las fichas: un rastreador no ejecuta React, así que sin esto las 4.436 páginas comparten
+  `<title>`, descripción y `og:url` — para Google, 4.436 copias de la portada, que es peor
+  que no tenerlas.
+  **Y hubo que sacarlas del middleware.** `_middleware.ts` envuelve a las funciones de
+  ruta, así que lo que escriben se pisa **después**; solo se apartaba de `/fonts/`. Con
+  `/places/` fuera de esa lista, la función se ejecutaba bien y el título seguía siendo el
+  genérico. No se ve leyendo el código —compila y corre—: se vio sirviendo la página con
+  `wrangler pages dev` y mirando el `<title>`. Ahora la lista es `CON_METADATOS_PROPIOS` y
+  la siguiente ruta con etiquetas propias tiene que apuntarse ahí.
+  El `noindex` de los pueblos con menos de tres fuentes usa **el mismo corte** que el
+  sitemap: ofrecer en el sitemap lo que no quieres indexado es mandar señales
+  contradictorias.
+  Ojo con la foto de la tarjeta: se descartan los **SVG**, que los scrapers no pintan —una
+  tarjeta con un SVG sale sin imagen, peor que la genérica.
 - Dice **cuántas están comprobadas**, aunque casi siempre sea ninguna. Es lo que convierte
   la página en una invitación a aportar en vez de en una promesa que no se sostiene.
 

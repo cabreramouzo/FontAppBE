@@ -31,6 +31,26 @@ export const SHARE_META: Record<ShareLang, { locale: string; title: string; desc
 }
 
 /**
+ * Los textos de una página de pueblo, por idioma.
+ *
+ * Van aquí y no en el diccionario del cliente porque un rastreador **no ejecuta React**:
+ * lo único que lee es lo que sale ya escrito en el HTML. Son los mismos textos que la
+ * página pinta después, escritos dos veces a la fuerza — el precio de ser un SPA.
+ *
+ * `{p}` es el nombre del pueblo y `{n}` cuántas fuentes hay cerca.
+ */
+export const PLACE_META: Record<ShareLang, { title: string; description: string }> = {
+  ca: { title: "Fonts d'aigua a {p}", description: "{n} fonts d'aigua a prop de {p}. Mira'n l'estat abans d'anar-hi: qui hi passa diu si en surt aigua." },
+  es: { title: 'Fuentes de agua en {p}', description: '{n} fuentes de agua cerca de {p}. Mira su estado antes de ir: quien pasa dice si sale agua.' },
+  gl: { title: 'Fontes de auga en {p}', description: '{n} fontes de auga preto de {p}. Mira o seu estado antes de ir: quen pasa di se sae auga.' },
+  eu: { title: '{p}(e)ko ur-iturriak', description: '{p} inguruan {n} ur-iturri. Begiratu egoera joan aurretik: pasatzen denak esaten du ura badariola.' },
+  en: { title: 'Water fountains in {p}', description: '{n} water fountains near {p}. Check their status before you go: whoever passes says if the water is flowing.' },
+  fr: { title: "Points d'eau à {p}", description: "{n} points d'eau près de {p}. Vérifiez leur état avant d'y aller : ceux qui passent disent s'il y a de l'eau." },
+  pt: { title: 'Fontes de água em {p}', description: '{n} fontes de água perto de {p}. Vê o estado antes de ir: quem passa diz se sai água.' },
+  it: { title: 'Fontane d’acqua a {p}', description: '{n} fontane d’acqua vicino a {p}. Controlla lo stato prima di andare: chi passa dice se c’è acqua.' },
+}
+
+/**
  * Los idiomas que tienen su propia tarjeta `public/og-card-<lang>.jpg`.
  *
  * Existe porque la tarjeta es una **imagen con texto dentro** y no se genera desde el

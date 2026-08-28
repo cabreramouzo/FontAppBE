@@ -1,11 +1,28 @@
 import { SHARE_META, shareCard, shareLang } from './_meta'
 
-/** Localiza la tarjeta genérica. Las fichas tienen su propia función y no deben perder
- * la foto de la fuente ni sus metadatos específicos. */
+/**
+ * Rutas que escriben sus PROPIAS etiquetas y a las que este middleware no debe tocar.
+ *
+ * El middleware envuelve a las funciones de ruta —llama a `ctx.next()` y transforma lo que
+ * devuelven—, así que lo que escriba una función de ruta se pisa aquí **después**. Con
+ * `/places/` fuera de esta lista, las 4.436 páginas de pueblo salían con el título y la
+ * descripción genéricos aunque su función se hubiera ejecutado bien: para Google, 4.436
+ * copias de la portada.
+ *
+ * No se vio leyendo el código —el fichero compila y la función corre— sino sirviendo la
+ * página con `wrangler pages dev` y mirando el `<title>`. Al añadir una ruta con
+ * metadatos propios hay que apuntarla aquí, y el síntoma de olvidarlo es exactamente ese:
+ * todo parece bien y el buscador ve otra cosa.
+ */
+const CON_METADATOS_PROPIOS = ['/fonts/', '/places/']
+
+/** Localiza la tarjeta genérica. Las rutas de arriba tienen la suya y no deben perder
+ * ni la foto ni sus metadatos específicos. */
 export const onRequest: PagesFunction = async (ctx) => {
   const response = await ctx.next()
   const url = new URL(ctx.request.url)
-  if (url.pathname.startsWith('/fonts/') || !response.headers.get('content-type')?.includes('text/html')) return response
+  if (CON_METADATOS_PROPIOS.some((p) => url.pathname.startsWith(p))
+      || !response.headers.get('content-type')?.includes('text/html')) return response
 
   const lang = shareLang(ctx.request)
   const meta = SHARE_META[lang]
