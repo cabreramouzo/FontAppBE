@@ -17,6 +17,8 @@ export interface Font {
   /** País y demarcación (provincia / distrito / département…). Los publica `Font`. */
   country?: string | null
   region?: string | null
+  /** Municipio exacto (límites del IGN). Nulo fuera de España, donde no hay fronteras. */
+  municipality?: string | null
   createdAt: string
   /** Id de la fuente buena si ésta es un duplicado. `null` si está en pie. */
   duplicateOf?: string | null

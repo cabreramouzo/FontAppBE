@@ -79,6 +79,13 @@ final class Font: Model, Content, @unchecked Sendable {
     // filtros). Nullable: aún sin poblar; se derivará de lat/lon más adelante.
     @OptionalField(key: "country") var country: String?
     @OptionalField(key: "region") var region: String?
+    /// Municipio, exacto: sale de los límites del IGN por point-in-polygon, no del pueblo
+    /// más cercano. Nulo significa «no lo sabemos» —fuera de España no hay fronteras
+    /// cargadas—, nunca «ninguno». Ver `AddMunicipalityToFont`.
+    @OptionalField(key: "municipality") var municipality: String?
+    /// El código INE de cinco dígitos, que es lo estable: 19 nombres de municipio se
+    /// repiten en España.
+    @OptionalField(key: "municipality_ine") var municipalityINE: String?
     /// División superior estable (ISO 3166-2): comunidad autónoma, région, etc.
     /// `region` conserva la demarcación fina usada por rankings y barras.
     @OptionalField(key: "admin1") var admin1: String?
@@ -179,7 +186,7 @@ final class Font: Model, Content, @unchecked Sendable {
 
     private enum PublicKey: String, CodingKey {
         case id, name, latitude, longitude, image, description
-        case source, drinkable, country, region, admin1, creator, createdAt
+        case source, drinkable, country, region, municipality, admin1, creator, createdAt
         // Por qué esta ficha ya no sale en el mapa. Salen **siempre**, con `null` cuando
         // está en pie: la ficha se llega a ver por un enlace viejo y tiene que poder
         // explicar por qué el punto no aparece, en vez de dar un 404 o, peor, parecer
@@ -214,6 +221,10 @@ final class Font: Model, Content, @unchecked Sendable {
         try c.encode(drinkable, forKey: .drinkable)
         try c.encode(country, forKey: .country)
         try c.encode(region, forKey: .region)
+        // El municipio SÍ sale: es lo que la gente reconoce. `region` son provincias,
+        // distritos o départements según el país, y el buscador tenía que decir «Barcelona»
+        // donde la persona esperaba «Moià».
+        try c.encode(municipality, forKey: .municipality)
         try c.encode(admin1, forKey: .admin1)
         try c.encode(CreatorRef(id: $creator.id), forKey: .creator)
         try c.encode(createdAt, forKey: .createdAt)

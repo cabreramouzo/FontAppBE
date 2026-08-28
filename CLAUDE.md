@@ -2289,6 +2289,36 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   error normal —un `undefined.algo`, un fallo de hooks— **no** se confunde: si se
   confundiera, un fallo real se taparía con una recarga y volvería a fallar.
 
+## Municipio exacto (`fonts.municipality`, límites del IGN)
+
+- `region` **no es el municipio** —son provincias, distritos o départements—, y hasta ahora
+  el buscador tenía que decir «Barcelona» donde la persona esperaba «Moià». Ahora hay
+  columna, sale de los **recintos municipales del IGN** por point-in-polygon
+  (`populate-municipalities`) y **no se adivina nada**: o el punto cae dentro del polígono
+  o no cae.
+- **Por qué no vale «el pueblo más cercano»**, que era la alternativa barata y estuvo a
+  punto de hacerse: medido sobre 2.000 fuentes catalanas, la distancia al núcleo más
+  próximo tiene mediana de **1,64 km**, p90 de 4,55 y máximo de 16,9, y **una de cada
+  cuatro está a más de 3 km**. Escribir «Moià» para una fuente a nueve kilómetros es
+  inventarse un dato — y una vez en una columna se propaga al buscador, a `/zones` y al
+  ranking.
+- Resultado medido: **52.310 de 52.336 fuentes españolas (100 %)**. Fuera de España queda
+  nulo, que significa «no lo sabemos» y no «ninguno».
+- **Corrige el país de rebote.** Fuentes que Natural Earth ponía en Francia o Portugal caen
+  dentro de Irun, Hondarribia, Puigcerdà o Salvaterra de Miño: son españolas y el borde de
+  Natural Earth estaba mal (ya sabíamos que falla 1,9 km de mediana). El municipio es el
+  dato más fiable que tenemos de la zona de una fuente.
+- Se guarda también el **código INE**: hay 19 nombres de municipio repetidos en España y el
+  nombre no sirve para cruzar con nada.
+- El fichero de límites **no se versiona** (12 MB con la precisión necesaria); se regenera
+  con `scripts/ign-municipios.py` desde la descarga del CNIG. Runbook en DEPLOY.md.
+- Dos fallos **silenciosos** que ya están resueltos en el script y conviene no reintroducir:
+  el `.dbf` viene en **UTF-8** y su `.cpg` lo dice —leyéndolo como Latin-1 salen
+  «Salvaterra de MiÃ±o» y «PuigcerdÃ », y el fichero se genera igual—; y Douglas-Peucker
+  sobre un **anillo cerrado** da distancia cero para todos los puntos, así que cada
+  municipio se quedaba en dos puntos y se descartaba entero, con un GeoJSON de 42 bytes
+  como único síntoma.
+
 ## Páginas por pueblo (`Place` + `/places/:slug`)
 
 - «Fonts a Moià». Es el único canal que sigue trayendo gente **cuando dejas de empujar**:

@@ -588,13 +588,17 @@ function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f
   // seguidas llamadas «A Fonte»** sin nada que las distinga: en un desplegable pequeño se
   // disimulaba, ocupando la pantalla entera es que no se puede elegir.
   //
-  // No hay columna de municipio —`fonts.region` son provincias, distritos o départements,
-  // ver «Comarca ≠ provincia»— así que se dice la **demarcación**, que es lo que de verdad
-  // hay. Y delante la **distancia**, que es lo que responde a «¿a cuál voy?», solo si se
-  // sabe dónde estás. Lo que falte simplemente no sale; nada se inventa.
+  // Dice el **municipio** cuando se sabe, y si no la demarcación. El municipio sale de
+  // los límites del IGN por point-in-polygon, así que es exacto y no «el pueblo más
+  // cercano»; donde no hay fronteras cargadas —fuera de España— sigue siendo la
+  // demarcación, que es lo que de verdad hay (y `region` son provincias, distritos o
+  // départements según el país: ver «Comarca ≠ provincia»).
+  //
+  // Y delante la **distancia**, que es lo que responde a «¿a cuál voy?», solo si se sabe
+  // dónde estás. Lo que falte simplemente no sale; nada se inventa.
   const donde = (f: RecentFountain) => [
     me ? formatDist(haversineKm(me[0], me[1], f.latitude, f.longitude)) : null,
-    f.region,
+    f.municipality || f.region,
   ].filter(Boolean).join(' · ')
 
   // Los resultados, una sola vez. Cambia el tamaño de la fila —48 px para el pulgar en la

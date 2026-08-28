@@ -1361,6 +1361,69 @@ cobra nunca (es lo que distingue a R2 de S3). A 489 KB por foto son unas **20.00
 antes de pagar nada. El script avisa al pasar de 8 GB. Conviene confirmar los importes en
 el panel de Cloudflare antes de fiarse de esta línea: los precios cambian.
 
+## Municipio exacto de cada fuente (límites del IGN)
+
+`fonts.region` son provincias, distritos o départements según el país — nunca municipios.
+El municipio sale de los recintos municipales del IGN por point-in-polygon, sin adivinar y
+sin llamar a nadie.
+
+### Regenerar el fichero (solo si cambian los límites)
+
+1. En el [Centro de Descargas del CNIG](https://centrodedescargas.cnig.es/CentroDescargas/limites-municipales-provinciales-autonomicos),
+   **«Límites y Unidades Administrativas Actuales» en SHAPEFILE** (~157 MB). Shapefile y no
+   GML porque se lee sin GDAL: `.shp` y `.dbf` son formatos binarios documentados.
+2. Descomprimir y convertir las dos carpetas de recintos municipales —península/Baleares y
+   Canarias van por separado:
+
+```bash
+python3 scripts/ign-municipios.py \
+  SHP_ETRS89/recintos_municipales_inspire_peninbal_etrs89 \
+  SHP_WGS84/recintos_municipales_inspire_canarias_wgs84 \
+  municipios-es.geojson
+```
+
+Salen **8.219 municipios** y unos 12 MB. El fichero **no se versiona** (ver `.gitignore`):
+es la entrada de un comando que se ejecuta una vez y pesa demasiado para el repo.
+
+Dos cosas que fallan **en silencio** si se tocan, las dos ya resueltas en el script:
+
+- **La codificación.** El `.dbf` viene en UTF-8 y lo dice su `.cpg`. Leyéndolo como
+  Latin-1 salen «Salvaterra de MiÃ±o» y «PuigcerdÃ », el fichero se genera igual y solo se
+  ve mirando los nombres uno a uno.
+- **La proyección.** El `.prj` dice EPSG:4258 (grados), así que no hay que reproyectar. Si
+  algún día viniera en UTM, el point-in-polygon **no daría ningún error**: dejaría todas
+  las fuentes sin municipio.
+
+### Asignar
+
+```bash
+DATABASE_URL="$NEON_URL" swift run App populate-municipalities municipios-es.geojson
+```
+
+Por defecto solo toca las que están sin clasificar; con `--all`, todas. `--dry-run` cuenta
+sin escribir. Tarda unos segundos: el índice es una rejilla de 0,1° y el trabajo es local.
+
+Medido sobre la base local (80.345 fuentes): **52.310 de 52.336 españolas clasificadas
+(100 %)**. Las 26 restantes son de costa o de raya. Fuera de España quedan nulas, que es
+lo correcto: no hay fronteras cargadas y no se inventa nada.
+
+**Y corrige el país de rebote:** las fuentes que Natural Earth ponía en Francia o Portugal
+y el IGN sitúa en Irun, Hondarribia, Puigcerdà o Salvaterra de Miño resultan estar en
+España. El municipio es el dato más fiable que tenemos de la zona de una fuente.
+
+## Páginas por pueblo
+
+```bash
+DATABASE_URL="$NEON_URL" swift run App import-places nuclis-es.json
+```
+
+Carga los 8.790 núcleos de población y cuenta las fuentes de cada uno. **Hay que
+ejecutarlo después de desplegar** o `/places/<pueblo>` devuelve 404 con la tabla vacía.
+Contra Neon tarda unos 35 minutos por la latencia; en local, 36 segundos.
+
+Para regenerar `nuclis-es.json` desde OpenStreetMap, ver la cabecera de
+`scripts/nuclis-osm.py`.
+
 ## Notificaciones push (Web Push)
 
 Avisan de lo mismo que la campana —reseña, incidencia, incidencia resuelta y fuente

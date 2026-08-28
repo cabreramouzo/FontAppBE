@@ -120,6 +120,14 @@ fonts_*.geojson
 *-osm-crudo.json
 *-limpio.json
 
+# Límites municipales del IGN, convertidos con scripts/ign-municipios.py.
+#
+# NO se versiona, al revés que las fronteras admin-1 (`fronteras-*.geojson`, que son
+# pequeñas): con la precisión que hace falta para decidir en qué municipio cae una fuente
+# son 12 MB, y es la entrada de un comando que se ejecuta una vez. Se regenera con el
+# script desde la descarga del CNIG — el runbook está en DEPLOY.md.
+municipios-*.geojson
+
 # Estado local de la CLI de Cloudflare (`wrangler dev` / `pages dev`).
 # `cache/cf.json` guarda la GEOLOCALIZACIÓN de tu conexión —ciudad, latitud, longitud,
 # código postal y operador—, y este repo es público.

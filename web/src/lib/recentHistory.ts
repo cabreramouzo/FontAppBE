@@ -6,6 +6,8 @@ const MAX_FOUNTAINS = 8
 
 export type RecentFountain = Pick<Font, 'id' | 'name' | 'latitude' | 'longitude'> & {
   region?: string | null
+  /** Municipio exacto cuando se sabe; es lo que se enseña antes que la demarcación. */
+  municipality?: string | null
   source?: WaterSource | null
 }
 
