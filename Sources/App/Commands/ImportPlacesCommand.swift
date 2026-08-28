@@ -48,7 +48,9 @@ struct ImportPlacesCommand: AsyncCommand {
         var usados = Set(try await Place.query(on: db).all().map { $0.slug })
         var nuevos = 0, actualizados = 0, conFuentes = 0
 
+        var fallos = 0
         for n in nucleos {
+            do {
             let slug = Self.slug(n.n, lat: n.la, long: n.lo, usados: &usados)
             let lugar = try await Place.query(on: db).filter(\.$slug == slug).first()
                 ?? Place(slug: slug, name: n.n, kind: n.t, latitude: n.la, longitude: n.lo)
@@ -69,9 +71,24 @@ struct ImportPlacesCommand: AsyncCommand {
 
             if !signature.dryRun { try await lugar.save(on: db) }
             if esNuevo { nuevos += 1 } else { actualizados += 1 }
+            } catch {
+                // Un núcleo que falla no puede tirar la pasada entera.
+                //
+                // Contra una base remota esto tarda tres cuartos de hora, y Neon cierra la
+                // conexión antes de acabar: la primera ejecución murió en el 93 % con un
+                // «Operation timed out» y perdió los 587 que faltaban. El pool reconecta
+                // solo en el siguiente intento, así que seguir adelante convierte una
+                // ejecución perdida en unos pocos huecos — y como esto es idempotente,
+                // relanzarlo los rellena.
+                fallos += 1
+                if fallos <= 5 { context.console.warning("Fallo en \(n.n): \(error)") }
+            }
         }
 
         context.console.info("Nuevos: \(nuevos) · actualizados: \(actualizados)")
+        if fallos > 0 {
+            context.console.warning("Fallaron \(fallos). Relanza el comando: es idempotente y solo rellenará los huecos.")
+        }
         context.console.info("Con fuentes cerca (los únicos con página): \(conFuentes)")
         if signature.dryRun { context.console.warning("--dry-run: no se ha escrito nada.") }
     }
