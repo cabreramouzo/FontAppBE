@@ -859,3 +859,25 @@ export async function searchMentions(q: string): Promise<string[]> {
   const filas: { username: string }[] = await apiFetch(`/mentions?q=${encodeURIComponent(q)}`)
   return filas.map((f) => f.username)
 }
+
+export interface PlaceDTO {
+  slug: string
+  name: string
+  kind: string
+  latitude: number
+  longitude: number
+  country: string | null
+  region: string | null
+  fontCount: number
+}
+
+export interface PlacePage {
+  place: PlaceDTO
+  fonts: FontSummary[]
+  nearby: PlaceDTO[]
+}
+
+/** La página de un pueblo: «Fonts a Moià». Pública, sin sesión. */
+export async function fetchPlace(slug: string): Promise<PlacePage> {
+  return apiFetch<PlacePage>(`/places/${encodeURIComponent(slug)}`)
+}

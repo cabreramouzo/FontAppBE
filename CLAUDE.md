@@ -2289,6 +2289,40 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   error normal —un `undefined.algo`, un fallo de hooks— **no** se confunde: si se
   confundiera, un fallo real se taparía con una recarga y volvería a fallar.
 
+## Páginas por pueblo (`Place` + `/places/:slug`)
+
+- «Fonts a Moià». Es el único canal que sigue trayendo gente **cuando dejas de empujar**:
+  nadie busca el nombre de una fuente suelta —por eso el sitemap de fichas solo puede
+  ofrecer 553, las que ha tocado alguien— pero «fonts Moià» sí se busca. Medido: de 8.790
+  núcleos de España, **6.568 tienen alguna fuente cerca y 4.436 tienen tres o más**, que es
+  el corte para entrar en el sitemap. De 553 URLs indexables a casi 5.000.
+- **No hay columna de municipio, y no se ha creado.** `fonts.region` es admin-1
+  (provincias) y una columna `municipality` costaría un fichero de **límites municipales**,
+  una migración y reprocesar 160.738 puntos en cada importación. La página pregunta al
+  revés —**qué fuentes hay cerca de este pueblo**— que es además lo que trae a quien busca.
+  Que una fuente entre dos pueblos salga en las dos páginas no es un error: es cierto en
+  las dos.
+- Los núcleos salen de OpenStreetMap (`place=city|town|village`), la misma fuente que las
+  fuentes y la misma licencia. `scripts/nuclis-osm.py` compacta el volcado de Overpass a
+  `nuclis-es.json` (539 KB, versionado como las fronteras); `import-places` lo carga, y de
+  paso **cuenta las fuentes del radio** y hereda país y demarcación de las de alrededor
+  (`mode()`), con el mismo criterio de vecino más cercano que `inheritZone`.
+- El radio depende del tipo —6 km una ciudad, 4 una villa, 3 un pueblo— porque el punto de
+  OSM es el centro y una ciudad se extiende kilómetros. No es una frontera, es «cerca de».
+- El slug se desempata con **las coordenadas** y no con un contador: 86 nombres se repiten
+  («El Campillo» hay tres) y un contador depende del orden del fichero, así que la
+  siguiente importación podría intercambiar dos pueblos y dejar dos URLs publicadas
+  apuntando al sitio equivocado.
+- **`font_count` decide si la página existe.** Un pueblo sin fuentes no tiene nada que
+  enseñar, y publicar páginas vacías no es neutro: le dice a Google que el sitio está lleno
+  de relleno. Es el mismo argumento que ya filtra las fichas en `SitemapController`.
+- La página enlaza **los seis pueblos más cercanos** con fuentes, y eso no es adorno: sin
+  enlaces entre ellas, miles de páginas cuelgan solo del sitemap y se rastrean mal. Ojo:
+  ordenar esos vecinos por número de fuentes daba Granollers y Castellar del Vallès como
+  «vecinos» de Moià —los mayores de la caja, a 28 km—; van por distancia.
+- Dice **cuántas están comprobadas**, aunque casi siempre sea ninguna. Es lo que convierte
+  la página en una invitación a aportar en vez de en una promesa que no se sostiene.
+
 ## Compartir y buscadores (Cloudflare Pages Functions)
 
 - La web es un SPA: **un** `index.html` para las 60.000 fichas, así que todas compartían

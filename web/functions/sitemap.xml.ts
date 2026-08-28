@@ -18,6 +18,7 @@ import { apiOrigin, esc, siteOrigin, type Env } from './_meta'
  * Google deja de fiarse.
  */
 interface Entry { id: string; lastmod: string }
+interface PlaceEntry { slug: string; fontCount: number }
 
 /** Las páginas que existen aunque nadie haya aportado nada, con su prioridad relativa. */
 const ESTATICAS: [string, string][] = [
@@ -34,21 +35,34 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const api = apiOrigin(ctx.env)
 
   let fuentes: Entry[] = []
+  // Las páginas por pueblo son la mitad más importante de esto: nadie busca el nombre de
+  // una fuente suelta, pero «fonts Moià» sí. Y existen desde el primer día, sin esperar a
+  // que alguien aporte — al revés que las fichas.
+  let pueblos: PlaceEntry[] = []
   if (api) {
-    try {
-      const res = await fetch(`${api}/sitemap/fonts`, {
-        cf: { cacheTtl: 3600, cacheEverything: true },
-      })
-      if (res.ok) fuentes = await res.json()
-    } catch {
-      // Sin backend se sirve igualmente el sitemap de las estáticas. Un sitemap corto es
-      // mejor que un 500: un 500 repetido hace que Search Console deje de pedirlo.
+    const pide = async <T>(ruta: string): Promise<T[]> => {
+      try {
+        const res = await fetch(`${api}${ruta}`, { cf: { cacheTtl: 3600, cacheEverything: true } })
+        return res.ok ? await res.json() : []
+      } catch {
+        // Sin backend se sirve igualmente el sitemap de las estáticas. Un sitemap corto es
+        // mejor que un 500: un 500 repetido hace que Search Console deje de pedirlo.
+        return []
+      }
     }
+    ;[fuentes, pueblos] = await Promise.all([
+      pide<Entry>('/sitemap/fonts'),
+      pide<PlaceEntry>('/sitemap/places'),
+    ])
   }
 
   const urls = [
     ...ESTATICAS.map(([ruta, prio]) =>
       `  <url><loc>${esc(origin + ruta)}</loc><priority>${prio}</priority></url>`),
+    // Antes que las fichas: es la página de entrada natural desde un buscador, y desde
+    // ella se llega a las fuentes.
+    ...pueblos.map((p) =>
+      `  <url><loc>${esc(`${origin}/places/${p.slug}`)}</loc><priority>0.6</priority></url>`),
     ...fuentes.map((f) =>
       `  <url><loc>${esc(`${origin}/fonts/${f.id}`)}</loc>` +
       `<lastmod>${esc(f.lastmod.slice(0, 10))}</lastmod></url>`),

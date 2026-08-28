@@ -38,9 +38,37 @@ struct SitemapController: RouteCollection {
     static let maxURLs = 50_000
 
     func boot(routes: any RoutesBuilder) throws {
-        routes.grouped("sitemap")
+        let sitemap = routes.grouped("sitemap")
             .grouped(RateLimitMiddleware(scope: "sitemap", max: 60, window: 60 * 60))
-            .get("fonts", use: fonts)
+        sitemap.get("fonts", use: fonts)
+        sitemap.get("places", use: places)
+    }
+
+    /// Cuántas fuentes tiene que haber cerca de un pueblo para que su página entre.
+    ///
+    /// Con una o dos, la página es tan delgada como la ficha de una fuente muda —y el
+    /// comentario de arriba explica por qué eso hace daño en vez de bien—. Medido sobre la
+    /// base: de 8.790 núcleos, 2.222 no tienen ninguna y 3.276 tienen entre una y cuatro.
+    /// Con el corte en tres quedan unas 3.700 páginas con algo que contar.
+    static let minFontsPorPueblo = 3
+
+    struct PlaceEntry: Content, Sendable {
+        let slug: String
+        let fontCount: Int
+    }
+
+    /// GET /sitemap/places — los pueblos con fuentes suficientes para tener página.
+    ///
+    /// Esto es lo que de verdad puede traer gente de un buscador: nadie busca el nombre de
+    /// una fuente suelta, pero «fonts Moià» sí. Y a diferencia de las fichas, estas páginas
+    /// existen desde el primer día, sin esperar a que alguien aporte.
+    @Sendable func places(req: Request) async throws -> [PlaceEntry] {
+        let lugares = try await Place.query(on: req.db)
+            .filter(\.$fontCount >= Self.minFontsPorPueblo)
+            .sort(\.$fontCount, .descending)
+            .limit(Self.maxURLs)
+            .all()
+        return lugares.map { PlaceEntry(slug: $0.slug, fontCount: $0.fontCount) }
     }
 
     struct Entry: Content, Sendable {
