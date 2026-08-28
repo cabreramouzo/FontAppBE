@@ -45,7 +45,19 @@ struct ImportPlacesCommand: AsyncCommand {
             return
         }
 
-        var usados = Set(try await Place.query(on: db).all().map { $0.slug })
+        // Los slugs asignados EN ESTA PASADA, para desempatar nombres repetidos.
+        //
+        // **No se siembra con los que ya hay en la base**, que es lo que hacía y rompía la
+        // idempotencia que este comando promete: en la segunda pasada todos los slugs
+        // estaban «ocupados», así que cada núcleo recibía sufijo en vez de actualizar el
+        // suyo y la tabla se duplicaba —16.904 filas para un fichero de 8.790, con `moia`
+        // y `moia-cf7c` apuntando al mismo pueblo—. Y no falla nada: el comando termina
+        // diciendo «8.700 nuevos», que suena a que ha ido bien.
+        //
+        // Vacío es lo correcto porque el fichero viene ordenado y el desempate sale de las
+        // coordenadas: dos pasadas sobre el mismo fichero asignan exactamente los mismos
+        // slugs, y cada uno encuentra su fila y la actualiza.
+        var usados = Set<String>()
         var nuevos = 0, actualizados = 0, conFuentes = 0
 
         var fallos = 0
