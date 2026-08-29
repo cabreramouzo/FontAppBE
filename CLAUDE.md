@@ -1051,6 +1051,22 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   ejecutarse nunca más tras la primera visita. Hay test de las dos mitades, verificado
   rompiéndolo. El mapa te sigue hasta que tocas el mapa: arrastrar o
   hacer zoom desengancha el seguimiento; el botón «centrar en mí» lo vuelve a activar.
+- **Con una pulsación larga sobre el mapa se añade una fuente ahí** (`LongPressToAdd`).
+  Es el gesto que cualquiera espera de un mapa y, sobre todo, **quita pasos de la única
+  acción que importa**: con el botón hay que pulsarlo, esperar a que el pin caiga donde
+  decida el algoritmo y arrastrarlo hasta el sitio.
+  **Manda sobre el GPS a propósito**: `newFontPosition` pone el pin en tu posición si el
+  centro está a menos de 250 m —y hace bien, porque el caso normal es estar delante— pero
+  una pulsación larga es la intención más explícita que existe. El aviso de distancia del
+  formulario sigue saliendo, que es lo que protege de colocar una fuente a diez kilómetros.
+  **Se detecta a mano y no con `contextmenu`**: Leaflet solo convierte la pulsación larga
+  en ese evento en **Safari móvil** (su `tapHold`), así que en Android Chrome no llegaría
+  nunca y encima saldría el menú del navegador. Con `touchstart`/`touchend` va igual en los
+  dos. En escritorio se usa el botón derecho, que sí es `contextmenu`.
+  Medio segundo, 12 px de tolerancia, cancela si el mapa se mueve, no se dispara sobre pines
+  ni controles, y vibra al completarse — sin ese toque el gesto termina sin señal hasta que
+  aparece el formulario y se duda de si ha funcionado. Comprobado en el navegador con
+  eventos táctiles: 700 ms abren el formulario en el punto tocado y un arrastre de 40 px no.
 - **Añadir respeta la intención del mapa.** Si el centro visible está a 250 m o menos
   del GPS, el pin nace en la persona: estar delante de la fuente sigue siendo el camino
   principal. Si ha buscado o desplazado el mapa más lejos, nace en el centro visible y

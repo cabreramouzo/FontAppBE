@@ -414,6 +414,109 @@ function PlacePicker({ onPick }: { onPick: (pos: LatLng) => void }) {
   return null
 }
 
+/** Cuánto hay que mantener el dedo. Medio segundo es el estándar de facto de los mapas. */
+const PULSACION_LARGA_MS = 500
+/** Si el dedo se mueve más que esto, es un arrastre del mapa y no una pulsación. */
+const TOLERANCIA_PX = 12
+
+/**
+ * Añadir una fuente con una pulsación larga sobre el mapa.
+ *
+ * ## Por qué
+ *
+ * Es el gesto que cualquiera espera de un mapa, y sobre todo **quita pasos de la única
+ * acción que importa**: con el botón hay que pulsarlo, esperar a que el pin caiga donde el
+ * algoritmo decida y arrastrarlo hasta el sitio. Aquí el sitio es el del dedo.
+ *
+ * ## Y por eso manda sobre el GPS
+ *
+ * `newFontPosition` coloca el pin en tu posición si el centro del mapa está a menos de 250
+ * m, y hace bien: el caso normal es estar delante de la fuente. Pero una pulsación larga
+ * es la intención **más explícita que existe** —has señalado un punto con el dedo—, así
+ * que aquí no se consulta esa regla. El aviso de distancia del formulario sigue saliendo
+ * igual, que es lo que protege de colocar una fuente a diez kilómetros sin darse cuenta.
+ *
+ * ## Se detecta a mano y no con `contextmenu`
+ *
+ * Leaflet solo convierte la pulsación larga en `contextmenu` en Safari móvil (su
+ * `tapHold`), así que en Android Chrome no llegaría nunca — y encima el navegador enseña
+ * su propio menú. Con `touchstart`/`touchend` funciona igual en los dos, que es lo que
+ * hace que esto sea una función y no una sorpresa para la mitad de la gente.
+ */
+function LongPressToAdd({ onAdd }: { onAdd: (pos: LatLng) => void }) {
+  const map = useMap()
+  useEffect(() => {
+    const contenedor = map.getContainer()
+    let reloj: number | null = null
+    let inicio: { x: number; y: number } | null = null
+
+    const cancela = () => {
+      if (reloj !== null) { clearTimeout(reloj); reloj = null }
+      inicio = null
+    }
+
+    // No se dispara encima de un pin ni de los controles: ahí la pulsación larga significa
+    // otra cosa (o nada), y colocar una fuente debajo de un marcador es justo el caso en
+    // el que probablemente ya existe.
+    const sobreAlgo = (destino: EventTarget | null) =>
+      destino instanceof Element && !!destino.closest(
+        '.leaflet-marker-icon, .leaflet-popup, .leaflet-control, .map-controls, .search, .panel, .nearby, .legend, .map-fabs')
+
+    const empieza = (x: number, y: number, destino: EventTarget | null) => {
+      if (sobreAlgo(destino)) return
+      inicio = { x, y }
+      reloj = window.setTimeout(() => {
+        reloj = null
+        if (!inicio) return
+        const punto = map.containerPointToLatLng(
+          L.point(inicio.x - contenedor.getBoundingClientRect().left,
+                  inicio.y - contenedor.getBoundingClientRect().top))
+        inicio = null
+        // Un toque en el móvil: sin esto el gesto se completa sin que pase nada visible
+        // hasta que aparece el formulario, y se duda de si ha funcionado.
+        navigator.vibrate?.(15)
+        onAdd(punto)
+      }, PULSACION_LARGA_MS)
+    }
+
+    const alTocar = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return cancela()   // dos dedos es zoom o giro
+      empieza(e.touches[0].clientX, e.touches[0].clientY, e.target)
+    }
+    const alMover = (e: TouchEvent) => {
+      if (!inicio || e.touches.length === 0) return
+      const dx = e.touches[0].clientX - inicio.x
+      const dy = e.touches[0].clientY - inicio.y
+      if (Math.hypot(dx, dy) > TOLERANCIA_PX) cancela()
+    }
+
+    contenedor.addEventListener('touchstart', alTocar, { passive: true })
+    contenedor.addEventListener('touchmove', alMover, { passive: true })
+    contenedor.addEventListener('touchend', cancela)
+    contenedor.addEventListener('touchcancel', cancela)
+    // En escritorio, el equivalente natural es el botón derecho. Leaflet ya lo publica
+    // como `contextmenu` del mapa, así que ahí no hace falta temporizador.
+    const alBotonDerecho = (e: L.LeafletMouseEvent) => {
+      if (sobreAlgo(e.originalEvent.target)) return
+      onAdd(e.latlng)
+    }
+    map.on('contextmenu', alBotonDerecho)
+    // El mapa moviéndose cancela: un arrastre con inercia no debe acabar en un formulario.
+    map.on('movestart zoomstart', cancela)
+
+    return () => {
+      cancela()
+      contenedor.removeEventListener('touchstart', alTocar)
+      contenedor.removeEventListener('touchmove', alMover)
+      contenedor.removeEventListener('touchend', cancela)
+      contenedor.removeEventListener('touchcancel', cancela)
+      map.off('contextmenu', alBotonDerecho)
+      map.off('movestart zoomstart', cancela)
+    }
+  }, [map, onAdd])
+  return null
+}
+
 // Enfoca una fuente centrándola en el área visible por ENCIMA del panel inferior
 // (bottom-sheet "cerca de ti"), para que el pin no quede tapado por la lista.
 function FocusOn({ target }: { target: [number, number] | null }) {
@@ -1503,6 +1606,18 @@ export function MapPage() {
         <VigilaGiro onChange={setBearing} />
         {me && <MeMarker pos={me} heading={heading} bearing={bearing} />}
         {placing && <PlacePicker onPick={setPos} />}
+        {/* Añadir con una pulsación larga. Solo con sesión —sin ella no se puede crear
+            nada— y solo cuando no se está colocando ya: durante la colocación el mapa
+            responde al toque simple, y dos gestos para lo mismo se estorban. */}
+        {!placing && user && (
+          <LongPressToAdd
+            onAdd={(punto) => {
+              trackInteraction('map_add_font')
+              setPlacing(true)
+              setPos(punto)
+            }}
+          />
+        )}
         {pos && <Marker position={pos} />}
       </MapContainer>
 
