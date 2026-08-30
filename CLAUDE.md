@@ -1219,6 +1219,17 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   que viaja en `data-antes` por la misma razón que el id.
 - Sin cobertura va a la bandeja de salida, como el resto de reseñas. Sin sesión no se
   pintan los chips: no hay nada que hacer si no puedes aportar.
+- **Los objetivos del globo van a 48 px**, medido y no a ojo. Estaban a 24 el aspa de
+  cerrar y a 40 los chips y «Ver detalle»: por debajo de los **44 pt** que pide la guía de
+  Apple y de los **48** que esta app ya usa en todo lo que se toca con el pulgar (hojas del
+  mapa, filas del buscador, barra de guardar). Del aspa crece **la zona sensible, no el
+  dibujo** —el glifo se queda en 18 px, centrado—, que es justo la distinción que hace esa
+  guía: el objetivo táctil no tiene por qué verse.
+  Ojo con el selector: `.leaflet-container a.leaflet-popup-close-button` tiene **la misma
+  especificidad que el de Leaflet**, cuya hoja se inyecta después por venir de un trozo
+  diferido, así que el ancho seguía en 24 mientras el resto de la regla sí se aplicaba —lo
+  que despista mucho al depurarlo—. Hace falta meter `.leaflet-popup` por medio. Misma
+  trampa que la del color del globo en modo oscuro.
 
 ## Capas del mapa
 - Cinco capas elegibles (`web/src/lib/mapLayers.ts`, selector en `BaseLayers.tsx`, usado

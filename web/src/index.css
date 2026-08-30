@@ -911,6 +911,41 @@ select:not([class*="Mui"]) {
 .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
 .leaflet-container a.leaflet-popup-close-button:hover { color: var(--fg); }
 
+/* El aspa de cerrar la trae Leaflet a 24×24, que con el pulgar sobre un mapa en marcha es
+   casi imposible de acertar — reportado desde el móvil. La guía de Apple pide **44 pt**
+   como mínimo y esta app ya usa **48** en todo lo que se toca con el dedo (las hojas del
+   mapa, las filas del buscador, la barra de guardar), así que se iguala a eso.
+   Lo que crece es la ZONA SENSIBLE, no el dibujo: el glifo se queda pequeño y discreto,
+   centrado dentro del área. Es la distinción que hace la propia guía —el objetivo táctil
+   no tiene por qué verse.
+
+   Ojo con el selector: `.leaflet-container a.leaflet-popup-close-button` tiene **la misma
+   especificidad que el de Leaflet**, y su hoja se inyecta después que `index.css` —viene
+   de un trozo de carga diferida—, así que ganaba él y el aspa seguía midiendo 24 px
+   mientras el resto de esta regla sí se aplicaba. Con `.leaflet-popup` por medio ya no.
+   Es la misma trampa que la del color del globo, apuntada más arriba. */
+.leaflet-container .leaflet-popup a.leaflet-popup-close-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Y el título no se mete debajo del aspa. */
+.popup-card strong { display: block; padding-right: 36px; }
+
+@media (max-width: 560px) {
+  /* Con el pulgar, 48. Es la misma medida que las hojas del mapa y la barra de guardar:
+     por debajo de eso el objetivo es de ratón, y esto se usa andando. */
+  .leaflet-container .leaflet-popup a.leaflet-popup-close-button { width: 48px; height: 48px; }
+  .leaflet-container .popup-quick button:not(.popup-undo) { min-height: 48px; }
+  .popup-card .popup-link { min-height: 48px; display: flex; align-items: center; justify-content: center; }
+}
+
+
 /* Agregados que ya vienen calculados por el servidor. No entran en markercluster:
    cada círculo representa el recuento real de su celda, no una muestra del LIMIT. */
 .leaflet-container .server-map-cluster {
