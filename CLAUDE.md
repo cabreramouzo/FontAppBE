@@ -1136,8 +1136,12 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   en ese evento en **Safari móvil** (su `tapHold`), así que en Android Chrome no llegaría
   nunca y encima saldría el menú del navegador. Con `touchstart`/`touchend` va igual en los
   dos. En escritorio se usa el botón derecho, que sí es `contextmenu`.
-  **El pin se ve dos segundos antes de que salga el formulario**
-  (`ESPERA_ANTES_DEL_FORMULARIO_MS`). Esto se pidió al principio, se resolvió de otra
+  **El pin se ve medio segundo antes de que salga el formulario**
+  (`ESPERA_ANTES_DEL_FORMULARIO_MS`). Se probaron dos segundos y se hacen largos en cada
+  alta —el gesto ya ha costado otro medio segundo de pulsación—; con medio basta para
+  verlo caer. Y el pin es **el mismo azul** que una fuente sin comprobar
+  (`statusIcon(null)`), que es lo que va a ser: con el marcador por defecto de Leaflet
+  salía un pin de otro estilo y la fuente que estabas creando parecía de otra cosa. Esto se pidió al principio, se resolvió de otra
   manera —desplazando el mapa— y se volvió a reportar: en móvil el formulario **tapa el
   73 % del mapa** (medido: 509 px de 699 a 375×812), así que asomar el pin por la franja
   que queda no basta para registrar dónde ha caído. El pin cae **al instante**, con su
@@ -1975,6 +1979,38 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   fuentes» para que al abrir no haya ninguna comprobada es empezar por el peor sitio.
   Usa siempre la tarjeta genérica del idioma y **no** la foto de una fuente: la página va
   del municipio entero, y una foto de las veintiséis lo representaría por sorteo.
+- **El municipio se recalcula solo al mover el pin** (`Municipalities.refresh`, desde
+  `inheritZone` al crear y desde `update` al reubicar). Antes no: una fuente movida se
+  quedaba con el municipio viejo y una nueva nacía sin ninguno hasta que se lanzara
+  `populate-municipalities` con el fichero de 13 MB. El comentario de `inheritZone` decía
+  que resolver contra las fronteras de verdad obligaría a llevar ese GeoJSON en el
+  contenedor, y **dejó de ser cierto** cuando los contornos entraron en la base para
+  dibujar el mapa: ahora es una consulta por caja (`min_/max_`) más un point-in-polygon
+  sobre uno o dos candidatos.
+  · Usa **la misma función** que `populate-municipalities` (`dentro`): con dos
+    implementaciones, el municipio que se dibuja y el que se guarda podrían discrepar en
+    un borde y no habría forma de saber cuál miente.
+  · Fuera de todo contorno queda **nulo**, no el anterior. Comprobado moviendo una fuente
+    de Castellcir a Moià (se recalcula) y de ahí a Madrid, sin contorno cargado (se
+    limpia).
+  · País y demarcación se siguen **heredando** del vecino y el municipio se **calcula**:
+    heredar el municipio sería dar una respuesta exacta desde una aproximación, y el
+    vecino más cercano puede estar al otro lado del límite.
+- **El municipio no se edita a mano, y no debe poder.** No es un campo que alguien
+  rellena: es el resultado de meter unas coordenadas en un polígono del IGN. Una caja de
+  texto ahí crearía fuentes que dicen «Moià» pintadas dentro de Castellcir, contradiciendo
+  a `/zones`, al ranking y a la página del municipio. Cuando está mal es porque el pin
+  está mal, y eso ya se corrige moviéndolo. Para quien no puede moverlo, la ficha técnica
+  lleva un **«¿algo no cuadra?»** que abre la caja de comentarios con el texto empezado —
+  un **comentario y no una incidencia**, porque no hay nada roto en la fuente. Que lleve a
+  otro sitio de la página es lo contrario del caso del hueco de la foto: allí la intención
+  era «tengo una foto» y se respondía con un formulario de reseña; aquí la intención **es**
+  escribir.
+  Ojo: el estado del borrador y su `ref` van **arriba con el resto de hooks**. Puestos
+  junto a donde se usan quedan debajo de la salida temprana y cambia el número de hooks
+  entre el render de carga y el de la ficha — «Rendered more hooks than during the
+  previous render» y la pantalla entera al error boundary. Ya estaba escrito aquí por el
+  `useMediaQuery` y volvió a pasar.
 - Ojo con `CoverageBar`: pinta el porcentaje **tal cual se lo pasan** (en `/zones` se lo da
   el servidor ya redondeado). Aquí se calcula en el cliente, y sin redondear salía
   «73.07692307692308 %».

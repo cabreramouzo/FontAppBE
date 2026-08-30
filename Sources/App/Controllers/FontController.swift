@@ -496,7 +496,15 @@ struct FontController: RouteCollection {
             """).run()
     }
 
-    /// Copia país/región de la fuente ya clasificada más cercana.
+    /// Copia país/región de la fuente ya clasificada más cercana, y resuelve el municipio
+    /// contra los contornos del IGN.
+    ///
+    /// Las dos mitades no son lo mismo y por eso conviven: el país y la demarcación se
+    /// **heredan** del vecino (una aproximación buena y barata), mientras que el municipio
+    /// se **calcula** contra el polígono, porque para eso están los contornos en la base
+    /// desde que se dibuja el mapa de un municipio. Heredar el municipio del vecino sería
+    /// dar una respuesta exacta a partir de una aproximación, y el vecino más cercano
+    /// puede estar al otro lado del límite.
     ///
     /// La alternativa —resolver el punto contra las fronteras reales— obligaría a llevar
     /// el GeoJSON dentro del contenedor y tenerlo en memoria para usarlo cuatro veces al
@@ -504,6 +512,7 @@ struct FontController: RouteCollection {
     /// un par de kilómetros y su zona es la buena. Los pocos casos de frontera los corrige
     /// después `populate-regions`, que sigue siendo la autoridad.
     static func inheritZone(fontID: UUID, lat: Double, long: Double, db: any Database, logger: Logger) async {
+        await Municipalities.refresh(fontID: fontID, lat: lat, long: long, db: db, logger: logger)
         // ~55 km de caja: si en ese radio no hay ninguna fuente clasificada, es que la
         // zona no está poblada y no hay nada mejor que adivinar; mejor dejarlo nulo.
         let delta = 0.5
@@ -607,6 +616,13 @@ struct FontController: RouteCollection {
         if !puedeReubicar {
             puedeReubicar = try await Capabilities.has(.relocateAnyFont, user, on: req.db)
         }
+        // Si el pin se mueve, el municipio deja de ser el que era. Es **el** camino para
+        // corregirlo: el municipio no se escribe a mano —es el resultado de meter unas
+        // coordenadas en un polígono— así que cuando está mal es porque el punto está mal,
+        // y moverlo tiene que arreglarlo. Antes no se recalculaba y la fuente se quedaba
+        // con el municipio viejo.
+        let seMueve = puedeReubicar
+            && (font.latitude != dto.latitude || font.longitude != dto.longitude)
         if puedeReubicar {
             font.latitude = dto.latitude
             font.longitude = dto.longitude
@@ -632,6 +648,14 @@ struct FontController: RouteCollection {
         let after = FontInfoSnapshot(font)
         if before != after {
             try await FontEdit(fontID: try font.requireID(), editorID: try? user.requireID(), before: before, after: after).save(on: req.db)
+        }
+        // En segundo plano y después de guardar, igual que al crear: es un dato derivado
+        // y no debe hacer esperar a quien está corrigiendo un pin en el monte.
+        if seMueve {
+            let app = req.application
+            let movida = try font.requireID()
+            let lat = font.latitude, long = font.longitude
+            Task.detached { await Municipalities.refresh(fontID: movida, lat: lat, long: long, db: app.db, logger: app.logger) }
         }
         return font
     }

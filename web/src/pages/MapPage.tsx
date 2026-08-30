@@ -60,6 +60,7 @@ import { cercanasEn, enCaja } from '../lib/zonaOffline'
 import { zonaGuardada } from '../lib/zonaAlmacen'
 import { nombreFuente } from '../lib/fontName'
 import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
+import { statusIcon } from '../lib/statusMarker'
 import { clearRecentHistory, recentFountains, recentSearches, rememberFountain, rememberSearch, type RecentFountain } from '../lib/recentHistory'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -427,12 +428,16 @@ const PULSACION_LARGA_MS = 500
  * (medido: 509 px de 699 en una pantalla de 375×812), así que asomar el pin por la franja
  * que queda no basta para registrar dónde ha caído. Ahora se hacen las dos cosas.
  *
- * El pin cae **al instante** con su vibración; lo que espera es el formulario. Los dos
- * segundos no son tiempo muerto: son el único momento en que se ve el punto exacto que has
- * marcado sin nada delante, que es lo que hay que comprobar antes de escribir nada.
- * `AsomaElPin` sigue haciendo falta para lo de después, cuando el formulario ya está.
+ * El pin cae **al instante** con su vibración; lo que espera es el formulario. Esa espera
+ * no es tiempo muerto: es el único momento en que se ve el punto exacto que has marcado
+ * sin nada delante, que es lo que hay que comprobar antes de escribir nada. `AsomaElPin`
+ * sigue haciendo falta para lo de después, cuando el formulario ya está.
+ *
+ * **Medio segundo y no dos.** Se probaron los dos y dos se hacen largos en cada alta —el
+ * gesto ya ha costado otro medio segundo de pulsación—; con medio basta para ver caer el
+ * pin, que es lo único que hacía falta.
  */
-const ESPERA_ANTES_DEL_FORMULARIO_MS = 2000
+const ESPERA_ANTES_DEL_FORMULARIO_MS = 500
 /** Si el dedo se mueve más que esto, es un arrastre del mapa y no una pulsación. */
 const TOLERANCIA_PX = 12
 
@@ -1709,7 +1714,11 @@ export function MapPage() {
             }}
           />
         )}
-        {pos && <Marker position={pos} />}
+        {/* El mismo pin azul que una fuente que nadie ha comprobado todavía, que es
+            exactamente lo que va a ser dentro de un momento. Con el marcador por defecto
+            de Leaflet salía un pin de otro estilo, y la fuente que estás creando parecía
+            de otra cosa. `statusIcon(null)` es el que pinta el mapa para ese caso. */}
+        {pos && <Marker position={pos} icon={statusIcon(null)} />}
       </MapContainer>
 
       <SearchBox me={me} historyScope={user?.id ?? 'anonymous'} onSelect={(f) => { setGoto([f.latitude, f.longitude]); setSelectedID(f.id) }} onSelectPlace={setPlace} />

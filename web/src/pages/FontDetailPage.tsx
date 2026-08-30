@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { capabilities, capabilityLevels } from '../lib/capabilities'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
@@ -382,7 +382,13 @@ function LocationActions({ font }: { font: Font }) {
  * El tipo solo se pregunta **cuando ya has dicho que es una incidencia**: preguntarlo
  * antes obliga a clasificar algo que a lo mejor no es nada.
  */
-function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void }) {
+function ReportForm({ fontID, onPosted, borrador }: {
+  fontID: string
+  onPosted: () => void
+  /** Texto con el que llega ya escrita la caja, si se ha pedido desde otro sitio de la
+   *  ficha. El `nonce` es lo que permite volver a rellenarla una segunda vez. */
+  borrador?: { texto: string; nonce: number } | null
+}) {
   const { t } = useI18n()
   const toast = useToast()
   const [message, setMessage] = useState('')
@@ -390,6 +396,13 @@ function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
   const [tipo, setTipo] = useState<IncidentKind>('other')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (borrador) setMessage(borrador.texto)
+    // Solo el `nonce`: con `borrador.texto` en la lista, escribir encima y volver a
+    // renderizar devolvería el texto original.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [borrador?.nonce])
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -747,6 +760,18 @@ export function FontDetailPage() {
   // el render de carga y el de la ficha — «Rendered more hooks than during the previous
   // render», la pantalla entera al error boundary.
   const dosColumnas = useMediaQuery((tema: Theme) => tema.breakpoints.up('md'))
+
+  /**
+   * Texto con el que llega la caja de comentarios cuando se pide desde otro sitio de la
+   * ficha (hoy, el «¿algo no cuadra?» de la ficha técnica).
+   *
+   * **Aquí arriba por lo mismo que el `useMediaQuery` de al lado**: más abajo hay una
+   * salida temprana y colgar un hook después cambia el número de hooks entre el render de
+   * carga y el de la ficha — «Rendered more hooks than during the previous render» y la
+   * pantalla entera al error boundary. Ya estaba escrito y volvió a pasar.
+   */
+  const [borrador, setBorrador] = useState<{ texto: string; nonce: number } | null>(null)
+  const cajaComentarios = useRef<HTMLDivElement | null>(null)
   // Cerrar incidencias ajenas lo abre el nivel 6. Se resuelve una vez por ficha y se
   // comparte con la caché de `lib/capabilities`, así que no cuesta una petición.
   const [puedeCerrarIncidencias, setPuedeCerrar] = useState(false)
@@ -1024,7 +1049,19 @@ export function FontDetailPage() {
   // columnas va al final de la columna de la fuente, y en una, al final de la página. Se
   // pinta **una sola vez**, en un hueco o en el otro; dos copias con `display:none`
   // montarían las dos.
-  const fichaTecnica = <FichaTecnica font={font} />
+  const fichaTecnica = (
+    <FichaTecnica
+      font={font}
+      onReportarDato={(texto) => {
+        // El texto viaja con un `nonce` porque el formulario tiene su propio estado: sin
+        // algo que cambie, pulsar dos veces no volvería a rellenarlo.
+        setBorrador({ texto, nonce: Date.now() })
+        // Y se lleva al usuario hasta la caja: en móvil está muy abajo, y rellenar algo
+        // que no se ve es lo mismo que no hacer nada.
+        cajaComentarios.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }}
+    />
+  )
   const insignias = (
     <FontBadges
       creatorName={creatorName}
@@ -1456,7 +1493,7 @@ export function FontDetailPage() {
           )}
         </Box>
 
-        <Box component="section" sx={{ mt: 3 }}>
+        <Box component="section" sx={{ mt: 3 }} ref={cajaComentarios}>
           {/* «Comentarios» y no «incidencias»: es lo que de verdad hay en esta lista
               desde que la caja dejó de exigir que todo fuera una avería. */}
           <Typography variant="h6" gutterBottom>{t('detail.comments', { n: reports.length })}</Typography>
@@ -1520,7 +1557,7 @@ export function FontDetailPage() {
           </List>
           <Divider sx={{ my: 1 }} />
           {user ? (
-            <ReportForm fontID={font.id} onPosted={load} />
+            <ReportForm fontID={font.id} onPosted={load} borrador={borrador} />
           ) : (
             <Typography color="text.secondary"><Link href="/login">{t('nav.enter')}</Link> {t('report.loginToReport')}</Typography>
           )}

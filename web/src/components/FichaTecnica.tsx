@@ -33,7 +33,29 @@ import { nombrePais } from '../lib/countries'
  * —los límites son del IGN—, así que ahí la ficha técnica enseña una línea menos en vez
  * de un «—» que no dice nada.
  */
-export function FichaTecnica({ font }: { font: Font }) {
+/**
+ * ## Y si algo de esto está mal
+ *
+ * El municipio **no se puede editar a mano y no debe poder**: no es un campo que alguien
+ * rellena, es el resultado de meter unas coordenadas dentro de un polígono del IGN. Una
+ * caja de texto ahí crearía una segunda verdad —fuentes que dicen «Moià» pintadas dentro
+ * de Castellcir— que contradiría a `/zones`, al ranking y a la página del municipio.
+ *
+ * Cuando está mal es casi siempre porque **el pin está mal**, y eso ya se corrige
+ * moviéndolo (creador, admin o nivel 5), que ahora además recalcula el municipio solo.
+ * Para quien no puede moverlo, la salida es **decirlo**: este enlace abre la caja de
+ * comentarios con el texto empezado.
+ *
+ * Es un **comentario y no una incidencia**: no hay nada roto en la fuente, hay un dato que
+ * no cuadra, y quien puede arreglarlo lo lee igual. Justo el caso para el que la caja dejó
+ * de llamarse «incidencia».
+ *
+ * Y sí, lleva a otro sitio de la página, que es lo que se descartó con el hueco de la foto
+ * — allí estaba mal porque la intención era «tengo una foto» y se le respondía con un
+ * formulario de reseña. Aquí la intención **es** escribir, así que llevar a la caja de
+ * escribir es exactamente lo pedido.
+ */
+export function FichaTecnica({ font, onReportarDato }: { font: Font; onReportarDato?: (texto: string) => void }) {
   const { t } = useI18n()
   const [abierto, setAbierto] = useState(false)
 
@@ -99,6 +121,15 @@ export function FichaTecnica({ font }: { font: Font }) {
             </Box>
           ))}
         </Box>
+        {onReportarDato && (
+          <Button
+            size="small"
+            onClick={() => onReportarDato(t('detail.dataWrongDraft'))}
+            sx={{ textTransform: 'none', ml: -1, mt: 0.5 }}
+          >
+            {t('detail.dataWrong')}
+          </Button>
+        )}
       </Collapse>
     </Box>
   )
