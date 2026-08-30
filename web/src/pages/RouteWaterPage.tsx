@@ -566,7 +566,11 @@ function Fila({ x, contado, onCuenta, movil, elegible, llevar, onLlevar, onDesde
   const nombre = nombreFuente(x.fuente, t)
   return (
     <ListItem divider alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
+      {/* La casilla va en su propia columna y CENTRADA con el bloque de texto. Con
+          `alignItems: baseline` y la casilla dentro del mismo flex que envuelve, en cuanto
+          el nombre de la fuente pasaba a la línea siguiente la casilla se quedaba sola
+          arriba, descuadrada del kilómetro. Reportado con una captura. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {elegible && (
           // A la izquierda del kilómetro y no al final de la fila: es lo primero que se
           // recorre con la vista al decidir cuáles llevarse, y al final quedaría por
@@ -576,14 +580,18 @@ function Fila({ x, contado, onCuenta, movil, elegible, llevar, onLlevar, onDesde
             onChange={onLlevar}
             size={movil ? 'medium' : 'small'}
             slotProps={{ input: { 'aria-label': t('gpxIn.takeAria', { name: nombre }) } }}
-            sx={{ p: movil ? 1.5 : 0.5, ml: movil ? -1.5 : -0.5, alignSelf: 'center' }}
+            sx={{ p: movil ? 1.5 : 0.5, ml: movil ? -1.5 : -0.5 }}
           />
         )}
-        {/* El kilómetro primero y en negrita: es por lo que se lee esta lista. */}
-        <Typography sx={{ fontWeight: 800, minWidth: 62 }}>{t('gpxIn.km', { km: x.kmRuta.toFixed(1) })}</Typography>
-        <Link component={RouterLink} to={`/fonts/${x.fuente.id}`} sx={{ fontWeight: 600 }}>
-          {nombre}
-        </Link>
+        {/* El kilómetro y el nombre sí comparten línea base entre ellos, y envuelven
+            juntos sin arrastrar la casilla. */}
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap', minWidth: 0 }}>
+          {/* El kilómetro primero y en negrita: es por lo que se lee esta lista. */}
+          <Typography sx={{ fontWeight: 800, minWidth: 62 }}>{t('gpxIn.km', { km: x.kmRuta.toFixed(1) })}</Typography>
+          <Link component={RouterLink} to={`/fonts/${x.fuente.id}`} sx={{ fontWeight: 600 }}>
+            {nombre}
+          </Link>
+        </Box>
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ ml: movil ? 0 : '62px' }}>
         {[

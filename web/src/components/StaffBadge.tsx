@@ -81,6 +81,12 @@ export function RoleChip({ role, count = 0 }: { role: UserRole; count?: number }
         // publicar nada. Es lo mismo que hace `StaffStripe`.
         data-role={role}
         sx={{
+          // **Se sale a propósito del mínimo táctil de 44 px del tema.** Esto no es un
+          // control sino una etiqueta de estado —«estás con una cuenta del equipo»— cuyo
+          // clic es un atajo, no la razón de que exista; la guía de Apple pide 44 para lo
+          // que se pulsa, no para lo que se lee. A 44 se convertía en un bloque morado que
+          // dominaba la cabecera, que es justo lo que no debe hacer un distintivo.
+          '&&': { minHeight: 22 },
           height: 22,
           fontSize: 11,
           fontWeight: 800,

@@ -587,6 +587,21 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 - Lo que el tema **no** alcanza y hay que hacer a mano: los `Box component="button"`, que
   no pasan por `MuiButton` (la vitrina de insignias y el «verlas todas» de las listas). Si
   se añade otro, hay que acordarse.
+- **Y 44 no se aplica a ciegas: lo estético también cuenta.** La primera pasada lo metió en
+  todo y rompió tres sitios, reportados con capturas:
+  · el distintivo **EQUIPO** de la cabecera se convirtió en un bloque morado enorme. Se
+    sale de la regla **a propósito** (`'&&': { minHeight: 22 }` en `StaffBadge`): es una
+    etiqueta de estado cuyo clic es un atajo, y la guía pide 44 para lo que se pulsa, no
+    para lo que se lee.
+  · los **interruptores** se deformaron: estirar el `root` de `MuiSwitch` no agranda la
+    zona sensible, agranda la caja, y el dibujo vive dentro del acolchado. Ahora llevan la
+    forma «estilo iOS» que propone la documentación de MUI (pista de 46×28, pulgar de 24) y
+    **el objetivo de 44 lo pone la fila** (`MuiFormControlLabel`), que es lo que se toca de
+    verdad y lo que hacen los ajustes de un teléfono.
+  · la **casilla de la lista del GPX** se descuadró: iba dentro de un flex con
+    `alignItems: baseline` y `flexWrap`, así que al pasar el nombre de la fuente a la línea
+    siguiente se quedaba sola arriba. Ahora es una columna aparte centrada, y el kilómetro
+    y el nombre envuelven juntos sin arrastrarla.
 - Comprobado midiendo en siete rutas —mapa, `/me`, `/me/badges`, ajustes, novedades, zonas
   y GPX—: **cero controles por debajo de 44**.
 

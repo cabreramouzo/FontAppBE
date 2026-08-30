@@ -48,12 +48,48 @@ const objetivosTactiles = {
       }),
     },
   },
+  /**
+   * El interruptor, al estilo del sistema.
+   *
+   * Estirar el alto del `root` a 44 fue un error: el dibujo de MUI vive dentro de ese
+   * acolchado, así que no crecía la zona sensible sino la caja, y el resultado eran unos
+   * bloques cuadrados con el pulgar descolocado. Reportado con una captura.
+   *
+   * MUI solo tiene un `Switch`; lo que su documentación propone para que parezca del
+   * sistema es esta forma —pista redondeada, pulgar grande, sin sombra— y es lo que se
+   * aplica aquí. Ojo: **el interruptor no tiene por qué medir 44**. Quien lo toca apunta a
+   * la fila entera, y de eso se encarga `MuiFormControlLabel` justo debajo.
+   */
   MuiSwitch: {
     styleOverrides: {
+      root: { width: 46, height: 28, padding: 0, margin: 8 },
+      switchBase: ({ theme }: { theme: Theme }) => ({
+        padding: 2,
+        '&.Mui-checked': {
+          transform: 'translateX(18px)',
+          color: '#fff',
+          '& + .MuiSwitch-track': { opacity: 1, backgroundColor: theme.palette.primary.main },
+        },
+      }),
+      thumb: { width: 24, height: 24, boxShadow: '0 1px 2px rgba(0,0,0,.2)' },
+      track: ({ theme }: { theme: Theme }) => ({
+        borderRadius: 14,
+        opacity: 1,
+        backgroundColor: theme.palette.mode === 'dark' ? '#39393d' : '#e9e9ea',
+      }),
+    },
+  },
+  /**
+   * La fila entera es el objetivo, no el interruptor.
+   *
+   * Es lo que hacen los ajustes de un teléfono y lo que resuelve el mínimo táctil sin
+   * deformar el control: el rótulo ya activa el interruptor —`FormControlLabel` lo hace
+   * por nosotros—, así que basta con darle alto.
+   */
+  MuiFormControlLabel: {
+    styleOverrides: {
       root: ({ theme }: { theme: Theme }) => ({
-        // El interruptor de MUI lleva el dibujo dentro de un acolchado: subir el alto
-        // agranda la zona sensible sin cambiar cómo se ve.
-        [theme.breakpoints.down('sm')]: { height: MIN_TACTIL },
+        [theme.breakpoints.down('sm')]: { minHeight: MIN_TACTIL },
       }),
     },
   },
