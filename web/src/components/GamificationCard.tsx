@@ -184,8 +184,20 @@ export function GamificationCard() {
           230 px de permisos en medio de un marcador que existe para decir cuántas gotas
           llevas. Y son cosas que se consultan una vez —cuando subes de nivel— y no cada
           vez que abres tu perfil. El recuento en el rótulo conserva lo único que hay que
-          ver de un vistazo («abre 6 cosas»); lo demás está a un toque, y la explicación
-          completa sigue en `/gamification`. */}
+          ver de un vistazo («abre 6 acciones»); lo demás está a un toque, y la explicación
+          completa sigue en `/gamification`.
+
+          **«Acciones» y no «cosas», «poderes», «capacidades» ni «permisos».** «Cosas» era
+          relleno justo en el rótulo que tiene que justificar el pliegue. «Capacidades» es
+          la palabra del código y suena a ficha técnica. «Poderes» se lee mejor como premio
+          pero contradice la regla que ordena la escalera —un nivel abre poder sobre el
+          mapa y nunca sobre la gente, y por eso el nivel 10 es candidatura y no
+          concesión—, y «permisos» es el vocabulario de los roles y la moderación, o sea
+          el mismo eje de autoridad sobre personas que esto evita. Lo que hay debajo son
+          literalmente acciones sobre una fuente: mover el pin, añadir una foto, retirarla.
+
+          El plural no se dobla porque no hace falta: el primer nivel que abre algo abre
+          dos a la vez, así que `n` nunca vale 1. */}
       {(data.grant?.capabilities.length ?? 0) > 0 && (
         <Box sx={{ mt: 1.5 }}>
           <Button

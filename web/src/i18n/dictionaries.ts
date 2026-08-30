@@ -341,7 +341,7 @@ const ca: Dict = {
   'local.contributors': 'Ho manteniu entre {n} persones.',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'El teu nivell obre',
-  'game.unlockedCount': 'El teu nivell obre {n} coses',
+  'game.unlockedCount': 'El teu nivell obre {n} accions',
   'game.willUnlock': 'Més endavant obriràs',
   'game.can.addSecondaryPhoto': 'Afegir més fotos a una font',
   'game.can.resolveIncident': 'Donar per resolta una incidència aliena',
@@ -1608,7 +1608,7 @@ const es: Dict = {
   'local.contributors': 'Lo mantenéis entre {n} personas.',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Tu nivel abre',
-  'game.unlockedCount': 'Tu nivel abre {n} cosas',
+  'game.unlockedCount': 'Tu nivel abre {n} acciones',
   'game.willUnlock': 'Más adelante abrirás',
   'game.can.addSecondaryPhoto': 'Añadir más fotos a una fuente',
   'game.can.resolveIncident': 'Dar por resuelta una incidencia ajena',
@@ -2866,7 +2866,7 @@ const it: Dict = {
   'local.contributors': 'La tenete viva in {n} persone.',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Il tuo livello sblocca',
-  'game.unlockedCount': 'Il tuo livello apre {n} cose',
+  'game.unlockedCount': 'Il tuo livello apre {n} azioni',
   'game.willUnlock': 'Più avanti sbloccherai',
   'game.can.addSecondaryPhoto': 'Aggiungere altre foto a una fontana',
   'game.can.resolveIncident': 'Dare per risolta la segnalazione di un altro',
@@ -4124,7 +4124,7 @@ const gl: Dict = {
   'local.contributors': 'Mantédelo entre {n} persoas.',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'O teu nivel abre',
-  'game.unlockedCount': 'O teu nivel abre {n} cousas',
+  'game.unlockedCount': 'O teu nivel abre {n} accións',
   'game.willUnlock': 'Máis adiante abrirás',
   'game.can.addSecondaryPhoto': 'Engadir máis fotos a unha fonte',
   'game.can.resolveIncident': 'Dar por resolta unha incidencia allea',
@@ -5382,7 +5382,7 @@ const eu: Dict = {
   'local.contributors': '{n} lagunen artean mantentzen duzue.',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Zure mailak irekitzen du',
-  'game.unlockedCount': 'Zure mailak {n} gauza irekitzen ditu',
+  'game.unlockedCount': 'Zure mailak {n} ekintza irekitzen ditu',
   'game.willUnlock': 'Aurrerago irekiko duzu',
   'game.can.addSecondaryPhoto': 'Gehitu argazki gehiago iturri bati',
   'game.can.resolveIncident': 'Beste baten intzidentzia konpondutzat eman',
@@ -6640,7 +6640,7 @@ const en: Dict = {
   'local.contributors': '{n} of you keep this up to date.',
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Your level unlocks',
-  'game.unlockedCount': 'Your level unlocks {n} things',
+  'game.unlockedCount': 'Your level unlocks {n} actions',
   'game.willUnlock': 'You will unlock later',
   'game.can.addSecondaryPhoto': 'Add more photos to a fountain',
   'game.can.resolveIncident': 'Mark someone else’s incident as resolved',
@@ -7888,7 +7888,7 @@ const fr: Dict = {
   'local.oneContributor': "Jusqu’à présent, tout ce que l’on savait à leur sujet avait été rapporté par une seule personne.",
   'local.contributors': "{n} de votre part le tiennent à jour.",
   'game.unlocked': "Votre niveau se débloque",
-  'game.unlockedCount': 'Votre niveau ouvre {n} choses',
+  'game.unlockedCount': 'Votre niveau ouvre {n} actions',
   'game.willUnlock': "Vous débloquerez plus tard",
   'game.can.addSecondaryPhoto': "Ajouter plus de photos à une fontaine",
   'game.can.resolveIncident': "Marquer l'incident de quelqu'un d'autre comme résolu",
@@ -9120,7 +9120,7 @@ const pt: Dict = {
   'local.oneContributor': 'De momento, tudo o que se sabe sobre elas foi contado por uma única pessoa.',
   'local.contributors': 'Mantêm entre {n} pessoas.',
   'game.unlocked': 'O teu nível abre',
-  'game.unlockedCount': 'O teu nível abre {n} coisas',
+  'game.unlockedCount': 'O teu nível abre {n} ações',
   'game.willUnlock': 'Mais tarde abrirás',
   'game.can.addSecondaryPhoto': 'Adicionar mais fotos a uma fonte',
   'game.can.resolveIncident': 'Dar como resolvida uma ocorrência alheia',

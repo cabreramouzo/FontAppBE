@@ -1592,6 +1592,12 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   **una vez, al subir de nivel**, no en cada visita al perfil. El recuento del rótulo
   conserva lo único que hay que ver de un vistazo —que abre algo y cuánto—; la explicación
   completa sigue en `/gamification`, que es donde están también las condiciones.
+  El rótulo dice **«acciones»**, no «cosas» —relleno—, ni «capacidades» —la palabra del
+  código, que suena a ficha técnica—, ni **«poderes»**, que se lee mejor como premio pero
+  contradice la regla que ordena la escalera: un nivel abre poder **sobre el mapa** y nunca
+  sobre la gente. «Permisos» es peor todavía: es el vocabulario de los roles y la
+  moderación, el mismo eje de autoridad sobre personas que estas capacidades evitan a
+  propósito. Lo que hay debajo son literalmente acciones sobre una fuente.
 - **Las tres listas llevan tope** (`ListaConTope`, 6 filas y «verlas todas (N)»). No lo
   tenían y crecen para siempre: con 21 favoritas ya ocupaban 1.068 px, y entre las tres
   eran el **70 %** de lo que quedaba de página. Con 200, la página son 10.000 px.
