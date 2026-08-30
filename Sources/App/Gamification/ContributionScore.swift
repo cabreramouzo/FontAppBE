@@ -105,6 +105,16 @@ enum ContributionScore {
         }
     }
 
+    /// Hasta cuándo tocar el chip del mapa **confirma** el parte que ya hay en vez de
+    /// publicar otro igual. Sale de la curva de aquí arriba y no de una decisión de
+    /// diseño: dentro del tramo plano, repetir la reseña paga `freshness(0)` = 5 gotas y
+    /// una confirmación paga `Kind.confirmation` = 10, así que confirmar es a la vez la
+    /// mejor señal y lo mejor pagado. Pasado ese tramo la curva sube hasta 70 por una
+    /// fuente olvidada, y seguir cambiando la reseña por una confirmación degradaría la
+    /// aportación que más paga la app. `testElCorteSaleDeLaCurvaYNoDeUnNumeroEscrito`
+    /// fija que este número siga siendo el último día del tramo plano.
+    static let quickConfirmDays = 7
+
     /// A qué distancia de la fuente reseñada más cercana empieza a contar como «desierto».
     ///
     /// Eran 10 km y saltaba en el 46 % de las aportaciones: en demarcación rural, diez

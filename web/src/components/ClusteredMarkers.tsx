@@ -17,7 +17,6 @@ import { confirmComment, createComment, deleteComment, describeError, getGamific
 import { prepararFoto } from '../lib/image'
 import { useAuth } from '../auth/AuthContext'
 import { enqueue, isOffline } from '../lib/outbox'
-import { accionRapida } from '../lib/quickReview'
 
 /**
  * Los estados que se pueden decir de un toque desde el globo del mapa.
@@ -161,33 +160,32 @@ export function ClusteredMarkers({
 
       const estado = objetivo.getAttribute('data-estado')
       if (!estado) return
-      // ## Tocar el chip que ya consta es CONFIRMAR, no repetir
-      //
-      // Los tres chips solo sabían crear reseñas, así que decir «sale agua» sobre una
-      // fuente que ya lo dice desde hace una hora publicaba un parte repetido en vez de
-      // respaldar el que había —que es exactamente lo que significa el botón «sigue igual»
-      // de la ficha—. Quien toca el chip no tiene por qué distinguir las dos cosas: la app
-      // ya sabe cuál está diciendo. El porqué del corte de 7 días está en `quickReview.ts`;
-      // en corto, es donde acaba el tramo plano de la curva de frescura.
-      const accion = accionRapida({
-        estado,
-        lastWaterStatus: caja.dataset.antes || null,
-        lastCommentID: caja.dataset.cid || null,
-        lastReportAt: caja.dataset.lastat || null,
-      })
       caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.sending'))}</span>`
       void (async () => {
         try {
-          if (accion.tipo === 'confirmar') {
-            await confirmComment(fontID, accion.commentID, true)
-            // Se dice con otras palabras que al reseñar: si pone «gracias, ya lo saben los
-            // demás» parece que se ha publicado un parte nuevo, y lo que se ha hecho es
-            // respaldar el de otra persona. Son cosas distintas y la de aquí es la que
-            // hace que una fuente llegue a «confirmada».
+          // ## Tocar el chip que ya consta es CONFIRMAR, no repetir
+          //
+          // Los tres chips solo sabían crear reseñas, así que decir «sale agua» sobre una
+          // fuente que ya lo dice desde hace una hora publicaba un parte repetido en vez
+          // de respaldar el que había —que es lo que significa el botón «sigue igual» de
+          // la ficha—. Quien toca el chip no tiene por qué distinguir las dos cosas.
+          //
+          // **Quien decide es el servidor**, no esto. Aquí solo se manda la intención, y
+          // por eso el camino es uno solo: lo que se publica ahora y lo que sale de la
+          // bandeja de salida tres días después pasan por la misma decisión, tomada
+          // siempre con los datos frescos. Si la decisión se tomara aquí habría que
+          // repetirla en `sw.js` —que es un espejo de la cola y no puede importar de
+          // `src/`— y una cola vieja colgaría el «sigue igual» de un parte ya superado.
+          const creada = await createComment(fontID, { waterStatus: estado, confirmIfUnchanged: true })
+          if (creada.confirmedInstead) {
+            // Se dice con otras palabras que al reseñar: «gracias, ya lo saben los demás»
+            // sobre una confirmación parece que se ha publicado un parte nuevo, y lo que
+            // se ha hecho es respaldar el de otra persona. La respuesta trae el parte
+            // respaldado, así que su id es el que sirve para deshacerlo.
             caja.innerHTML =
               `<span class="muted small">${escapeHtml(t('popup.confirmedThanks'))}</span>` +
               ` <button type="button" class="popup-undo">${escapeHtml(t('popup.undo'))}</button>`
-            caja.dataset.confirmado = accion.commentID
+            caja.dataset.confirmado = creada.id
             window.setTimeout(() => { caja.querySelector('.popup-undo')?.remove() }, DESHACER_MS)
             // El pin NO cambia de color: el estado es el mismo que ya se veía. Lo que
             // cambia es la confianza, y eso lo recoge el mapa en su siguiente carga.
@@ -195,7 +193,6 @@ export function ClusteredMarkers({
             trackInteraction('map_quick_confirm')
             return
           }
-          const creada = await createComment(fontID, { waterStatus: estado })
           // **Con deshacer.** Un toque de más aquí no es inocuo: una reseña cambia el color
           // del pin para todo el mundo, refresca la frescura, paga gotas y, si dice que
           // sale agua, cierra sola las incidencias abiertas de esa fuente. Y los chips
@@ -236,12 +233,11 @@ export function ClusteredMarkers({
           if (isOffline(e)) {
             // En el monte, que es donde se sabe cómo está la fuente, no hay cobertura.
             //
-            // Sin red se encola una RESEÑA aunque tocara confirmar: la bandeja de salida
-            // no sabe confirmar, y entre perder la aportación y guardar un parte repetido
-            // se guarda el parte. Es el criterio de siempre —nunca se castiga a quien
-            // informa— y el caso es raro: confirmar solo aplica a las cuatro de cada ciento
-            // diecinueve fuentes que tienen más de un parte.
-            await enqueue({ kind: 'comment', fontID, data: { waterStatus: estado } })
+            // Se encola **la misma intención**, no una reseña a secas: la cola la manda
+            // tal cual y el servidor decide al recibirla, con los datos de ese momento.
+            // Por eso sin cobertura pasa exactamente lo mismo que con ella, y `sw.js` no
+            // ha tenido que aprender nada — sigue publicando el `data` que encuentre.
+            await enqueue({ kind: 'comment', fontID, data: { waterStatus: estado, confirmIfUnchanged: true } })
             caja.innerHTML = `<span class="muted small">${escapeHtml(t('offline.savedUpdate'))}</span>`
             // También sin cobertura, que es donde más se está delante de la fuente: la
             // foto se encola igual. Las gotas no se sabrán si el baremo no está cacheado,
@@ -345,7 +341,7 @@ export function ClusteredMarkers({
           <div class="muted small" title="${escapeHtml(t(confidenceDetailKey(confidence)))}">${CONFIDENCE_EMOJI[confidence]} ${escapeHtml(t(confidenceLabelKey(confidence)))}</div>
           ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
         </div>
-        ${user ? `<div class="popup-quick" data-font="${f.id}" data-antes="${f.lastWaterStatus ?? ''}" data-cid="${f.lastCommentID ?? ''}" data-lastat="${f.lastReportAt ?? ''}" data-sinfoto="${f.image ? '' : '1'}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
+        ${user ? `<div class="popup-quick" data-font="${f.id}" data-antes="${f.lastWaterStatus ?? ''}" data-sinfoto="${f.image ? '' : '1'}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
           <span class="muted small">${escapeHtml(t('popup.howIsIt'))}</span>
           <div class="popup-quick-row">
             ${ESTADOS_RAPIDOS.map((e) => {

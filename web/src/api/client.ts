@@ -346,6 +346,15 @@ export interface NewComment {
   rating?: number
   waterStatus?: string
   image?: string
+  /**
+   * «Si esto no añade nada, cuéntalo como que sigue igual.»
+   *
+   * Lo manda el atajo del globo del mapa. **Quien decide es el servidor**, y por eso viaja
+   * como una intención y no como una decisión: así el mismo campo sirve para lo que se
+   * publica ahora y para lo que sale de la bandeja de salida tres días después, que es lo
+   * que hace que sin cobertura pase exactamente lo mismo que con ella.
+   */
+  confirmIfUnchanged?: boolean
 }
 
 export async function createComment(fontID: string, data: NewComment, queuedOffline = false): Promise<CommentResponse> {

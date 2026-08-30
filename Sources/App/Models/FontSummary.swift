@@ -26,21 +26,8 @@ struct FontSummary: Content {
     let latestConfirmations: Int
     let recentStatusReporters: Int
     let recentStatusConflict: Bool
-    /// El último parte, identificado y con SU propia fecha. Es lo que permite al globo del
-    /// mapa confirmar en vez de crear una reseña repetida cuando tocas el chip que dice lo
-    /// mismo que ya consta. Ver `ClusteredMarkers`.
-    ///
-    /// La fecha va aparte de `lastUpdate` y no se puede reutilizar aquella: `lastUpdate` es
-    /// la más fresca entre el parte y sus confirmaciones, mientras que la curva de frescura
-    /// del baremo mide **desde la reseña anterior** (`freshness(daysSincePrevious:)`, que
-    /// solo mira fechas de reseña). Con `lastUpdate` una fuente reseñada hace un año y
-    /// confirmada ayer parecería fresca, y cambiaríamos por 10 gotas una reseña que paga 60.
-    let lastCommentID: UUID?
-    let lastReportAt: Date?
-
     init(_ font: Font, lastWaterStatus: String?, lastUpdate: Date?, latestConfirmations: Int = 0,
-         recentStatusReporters: Int = 0, recentStatusConflict: Bool = false,
-         lastCommentID: UUID? = nil, lastReportAt: Date? = nil) {
+         recentStatusReporters: Int = 0, recentStatusConflict: Bool = false) {
         self.id = font.id
         self.name = font.name
         self.latitude = font.latitude
@@ -58,8 +45,6 @@ struct FontSummary: Content {
         self.latestConfirmations = latestConfirmations
         self.recentStatusReporters = recentStatusReporters
         self.recentStatusConflict = recentStatusConflict
-        self.lastCommentID = lastCommentID
-        self.lastReportAt = lastReportAt
     }
 
     /// Construcción directa desde la consulta compacta del mapa. Evita materializar
@@ -84,8 +69,6 @@ struct FontSummary: Content {
         self.latestConfirmations = Int(try row.decode(column: "latest_confirmations", as: Int64.self))
         self.recentStatusReporters = Int(try row.decode(column: "recent_status_reporters", as: Int64.self))
         self.recentStatusConflict = try row.decode(column: "recent_status_conflict", as: Bool.self)
-        self.lastCommentID = try row.decode(column: "last_comment_id", as: UUID?.self)
-        self.lastReportAt = try row.decode(column: "last_report_at", as: Date?.self)
     }
 }
 
@@ -200,8 +183,7 @@ extension Font {
             return FontSummary(font, lastWaterStatus: l.status, lastUpdate: freshest,
                                latestConfirmations: l.commentID.flatMap { confirmationCounts[$0] } ?? 0,
                                recentStatusReporters: reporters.count,
-                               recentStatusConflict: families.count > 1,
-                               lastCommentID: l.commentID, lastReportAt: l.date)
+                               recentStatusConflict: families.count > 1)
         }
     }
 
@@ -258,9 +240,7 @@ extension Font {
                    greatest(l.created_at, cf.last_at) AS last_update,
                    coalesce(cf.quantity, 0)::bigint AS latest_confirmations,
                    coalesce(r.reporters, 0)::bigint AS recent_status_reporters,
-                   coalesce(r.conflict, false) AS recent_status_conflict,
-                   l.comment_id AS last_comment_id,
-                   l.created_at AS last_report_at
+                   coalesce(r.conflict, false) AS recent_status_conflict
             FROM selected_fonts f
             LEFT JOIN latest l ON l.font_id = f.id
             LEFT JOIN confirmations cf ON cf.font_id = f.id

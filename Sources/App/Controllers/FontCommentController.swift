@@ -138,6 +138,18 @@ struct FontCommentController: RouteCollection {
             throw AppError(.badRequest, "comment.empty", "Indica el estado o escribe un comentario")
         }
 
+        // ## Tocar el chip que ya consta es CONFIRMAR, no repetir
+        //
+        // Si esto no añade nada nuevo —el mismo estado que el último parte, y ese parte es
+        // reciente y **de otra persona**— lo que el usuario está diciendo es «sigue igual»,
+        // que ya tiene su propio gesto. Publicar otro parte idéntico no aporta respaldo al
+        // que había y llena la ficha de reseñas gemelas.
+        if dto.confirmIfUnchanged == true,
+           let confirmada = try await confirmacionEnLugarDeParte(dto, body: body, font: font,
+                                                                 user: user, on: req.db) {
+            return try await respuestaDeConfirmacion(confirmada, user: user, on: req)
+        }
+
         let comment = FontComment(
             fontID: fontID,
             userID: try user.requireID(),
@@ -205,6 +217,61 @@ struct FontCommentController: RouteCollection {
         return response
     }
 
+    /// ¿Este parte es en realidad un «sigue igual»? Devuelve la reseña a confirmar, o `nil`.
+    ///
+    /// Las cuatro condiciones son necesarias y cada una tapa un agujero distinto:
+    ///
+    /// 1. **Solo el estado**, sin texto, nota ni foto. Convertir en confirmación una reseña
+    ///    con texto tiraría lo que esa persona escribió, que es lo más caro que aporta.
+    /// 2. **El mismo estado** que el último parte. Decir otra cosa es un desacuerdo y tiene
+    ///    que quedar como parte propio, o `confidenceOf` no puede ver la contradicción.
+    /// 3. **De otra persona.** Es el problema que esto vino a arreglar —perder la
+    ///    verificación ajena— y además evita el único caso que podía acabar sin publicar
+    ///    nada: confirmar la tuya tiene una espera de 24 h (ver `confirm`), así que dentro
+    ///    de ese día el atajo devolvería un 403 a alguien que está delante de la fuente.
+    ///    Repetir tu propio parte al menos refresca la fecha, que es información cierta.
+    /// 4. **Reciente**, con el corte que sale de la curva de frescura del baremo.
+    private func confirmacionEnLugarDeParte(_ dto: CreateCommentDTO, body: String, font: Font,
+                                            user: User, on db: any Database) async throws -> FontComment? {
+        guard body.isEmpty, dto.rating == nil, dto.image == nil,
+              let estado = dto.waterStatus else { return nil }
+        let userID = try user.requireID()
+        guard let ultimo = try await FontComment.query(on: db)
+            .filter(\.$font.$id == font.requireID())
+            .filter(\.$waterStatus != nil)
+            .sort(\.$createdAt, .descending)
+            .first(),
+            ultimo.waterStatus == estado,
+            let autor = ultimo.$user.id, autor != userID,
+            let cuando = ultimo.createdAt else { return nil }
+        let dias = Date().timeIntervalSince(cuando) / 86_400
+        // Una fecha en el futuro (reloj torcido) no puede colar como reciente por abajo.
+        guard dias >= 0, dias <= Double(ContributionScore.quickConfirmDays) else { return nil }
+        return ultimo
+    }
+
+    /// Guarda el «sigue igual» y responde con la reseña respaldada, no con una nueva.
+    ///
+    /// Va con **200 y no 201**: no se ha creado nada. El id que lleva es el del parte
+    /// confirmado, que es justo lo que el cliente necesita para poder deshacerlo.
+    private func respuestaDeConfirmacion(_ comment: FontComment, user: User,
+                                         on req: Request) async throws -> Response {
+        let commentID = try comment.requireID()
+        let userID = try user.requireID()
+        let ya = try await FontConfirmation.query(on: req.db)
+            .filter(\.$comment.$id == commentID)
+            .filter(\.$user.$id == userID)
+            .first()
+        if ya == nil {
+            try await FontConfirmation(commentID: commentID, userID: userID).save(on: req.db)
+        }
+        let response = Response(status: .ok)
+        try response.content.encode(
+            try await Self.response(for: comment, viewer: userID, on: req.db,
+                                    confirmedInstead: true))
+        return response
+    }
+
     /// Verifica que la fuente existe (404 si no) y la devuelve.
     private func requireFont(_ req: Request) async throws -> Font {
         guard let font = try await Font.find(req.parameters.get("fontID"), on: req.db) else {
@@ -263,12 +330,14 @@ struct FontCommentController: RouteCollection {
     }
 
     /// Construye la respuesta de un comentario con su recuento de confirmaciones.
-    static func response(for comment: FontComment, viewer: UUID?, on db: Database) async throws -> CommentResponse {
+    static func response(for comment: FontComment, viewer: UUID?, on db: Database,
+                         confirmedInstead: Bool = false) async throws -> CommentResponse {
         let autores = try await User.authors(for: comment.$user.id.map { [$0] } ?? [], on: db)
         let confs = try await confirmations(for: [comment], viewer: viewer, on: db)
         let quien = comment.$user.id.flatMap { autores[$0] }
         return CommentResponse(comment, username: quien?.username, staff: quien?.staff,
-                               confirm: comment.id.flatMap { confs[$0] })
+                               confirm: comment.id.flatMap { confs[$0] },
+                               confirmedInstead: confirmedInstead)
     }
 
     /// PUT /fonts/:fontID/comments/:commentID — edita una reseña propia.
@@ -314,6 +383,15 @@ struct CreateCommentDTO: Content {
     let rating: Int?
     let waterStatus: String?
     let image: String?
+    /// «Si esto no cambia nada, cuéntalo como que sigue igual.»
+    ///
+    /// Lo manda el atajo del globo del mapa. La decisión de confirmar en vez de publicar
+    /// un parte repetido se toma **aquí y no en el cliente**, y eso es lo que hace que sin
+    /// cobertura pase exactamente lo mismo que con ella: la bandeja de salida guarda la
+    /// observación tal cual y el servidor la resuelve al recibirla, con los datos frescos.
+    /// Guardando la decisión ya tomada, una cola que se vacía tres días después colgaría
+    /// tu «sigue igual» de un parte que para entonces puede estar superado o borrado.
+    let confirmIfUnchanged: Bool?
 }
 
 extension CreateCommentDTO: Validatable {
@@ -359,9 +437,14 @@ struct CommentResponse: Content {
     /// Va como `Bool` y no como opcional a propósito: en la lista siempre sale `false` y
     /// el cliente nunca tiene que distinguir «no» de «el servidor no lo dijo».
     let coverAdopted: Bool
+    /// Lo que se pidió publicar no añadía nada, así que se ha contado como «sigue igual»
+    /// sobre el parte que ya había — y es ESTE el que viaja en la respuesta, no uno nuevo.
+    /// Va como `Bool` y no como opcional por lo mismo que `coverAdopted`: en las listas
+    /// siempre es `false` y el cliente no tiene que distinguir «no» de «no lo dijeron».
+    let confirmedInstead: Bool
 
     init(_ comment: FontComment, username: String?, staff: UserRole? = nil, confirm: ConfirmAgg? = nil,
-         coverAdopted: Bool = false) {
+         coverAdopted: Bool = false, confirmedInstead: Bool = false) {
         self.id = comment.id
         self.fontID = comment.$font.id
         self.userID = comment.$user.id
@@ -373,6 +456,7 @@ struct CommentResponse: Content {
         self.image = comment.image
         self.createdAt = comment.createdAt
         self.coverAdopted = coverAdopted
+        self.confirmedInstead = confirmedInstead
         self.confirmations = confirm?.count ?? 0
         self.confirmedByMe = confirm?.byViewer ?? false
         self.lastConfirmedAt = confirm?.lastAt

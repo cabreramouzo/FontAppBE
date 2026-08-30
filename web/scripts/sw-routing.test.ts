@@ -110,6 +110,30 @@ test('el alta y la reseña siguen yendo por donde iban', () => {
   assert.deepEqual(resenya, { method: 'POST', url: '/api/fonts/F2/comments', body: { body: 'raja', image: undefined } })
 })
 
+/**
+ * Lo que la cola guarda es la **intención**, y el service worker la reenvía tal cual.
+ *
+ * De esto depende que sin cobertura pase exactamente lo mismo que con ella. El atajo del
+ * globo del mapa encola `confirmIfUnchanged`, y quien decide si eso acaba siendo un parte
+ * nuevo o un «sigue igual» es el servidor, al recibirlo. Si este espejo de la cola filtrara
+ * los campos que no conoce —o si alguien decidiera aquí en vez de allí— volveríamos a tener
+ * dos comportamientos y **la lógica repetida en dos ficheros que no pueden compartirla**:
+ * `sw.js` no puede importar de `src/`.
+ *
+ * Y no vale con «hoy pasa el campo»: lo que se fija es que pasa **cualquier** campo, porque
+ * el siguiente se añadirá en `outbox.ts` sin que nadie se acuerde de este fichero.
+ */
+test('el service worker reenvía la aportación entera, incluidos los campos que no conoce', () => {
+  const p = PROD.peticionDeSalida(
+    { kind: 'comment', fontID: 'F3', data: { waterStatus: 'flowing', confirmIfUnchanged: true, loQueVenga: 42 } },
+    '/api', undefined)
+  assert.deepEqual(p, {
+    method: 'POST',
+    url: '/api/fonts/F3/comments',
+    body: { waterStatus: 'flowing', confirmIfUnchanged: true, loQueVenga: 42, image: undefined },
+  })
+})
+
 // --- Teselas: tope alto y caducidad ------------------------------------------------
 
 /** Un Cache API de mentira, lo justo para preguntarle al SW qué borra y qué conserva. */

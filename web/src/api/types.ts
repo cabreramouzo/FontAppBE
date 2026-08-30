@@ -192,6 +192,12 @@ export interface CommentResponse {
   lastConfirmedAt: string | null
   /** Esta foto ha pasado además a ser la portada de la fuente (solo al publicarla). */
   coverAdopted: boolean
+  /**
+   * No se publicó un parte nuevo: lo que se dijo ya constaba, así que se ha contado como
+   * «sigue igual» y **esta respuesta es el parte respaldado**, no uno nuevo. Su `id` es el
+   * que hay que usar para deshacerlo.
+   */
+  confirmedInstead?: boolean
 }
 
 /** Reseña propia con el nombre de la fuente (pantalla de perfil). */
@@ -217,10 +223,6 @@ export interface FontSummary extends Font {
   latestConfirmations: number
   recentStatusReporters: number
   recentStatusConflict: boolean
-  /** El último parte, para poder confirmarlo desde el globo en vez de repetirlo. */
-  lastCommentID?: string | null
-  /** La fecha del parte en sí, sin contar sus confirmaciones. Ver `lib/quickReview.ts`. */
-  lastReportAt?: string | null
 }
 
 /** Agregado exacto del mapa cuando el viewport contiene demasiadas fuentes. */

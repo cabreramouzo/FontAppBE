@@ -1352,37 +1352,57 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   persona ya daba `verified` por `recentStatusReporters > 1`, así que la corroboración no se
   estaba perdiendo. El cuello de botella real no es qué pasa en la segunda visita: es que
   **no hay segunda visita**. Este cambio es preventivo y barato, no un agujero sangrando.
-- **La regla** (`lib/quickReview.ts`, puro y con tests): si el chip dice **lo mismo** que el
-  último parte y ese parte es **reciente**, se confirma; si dices otra cosa es un desacuerdo
-  y tiene que ser su propio parte, o la contradicción se pierde. El usuario no aprende
-  ninguna distinción — la app ya sabe cuál de las dos cosas está diciendo.
-- **El corte de 7 días sale del baremo, no del diseño.** `freshness` es plana en
-  `case ..<8: return 5`: dentro de la primera semana repetir paga **5 gotas** y confirmar
-  **10**, así que confirmar es a la vez la mejor señal y lo mejor pagado. A partir del
-  octavo día la curva sube hasta 70 por una fuente olvidada, y seguir convirtiendo la
-  reseña en confirmación **degradaría la aportación que más paga la app**. Por eso muere a
-  los 7 días y no a los 30 de la ventana de confianza.
-- Por lo mismo se mide contra `lastReportAt` —la fecha **del parte**— y no contra
-  `lastUpdate`, que es la más fresca entre el parte y sus confirmaciones: una fuente
-  reseñada hace cuarenta días y confirmada ayer parecería fresca. Hay test de esa mitad,
-  que es la que se olvida.
-- `FontSummary` publica ahora `lastCommentID` y `lastReportAt`, que ya calculaba por dentro:
-  **cero consultas nuevas**. Son contrato de cable y por eso tienen test — si dejan de salir
-  el globo no se rompe, vuelve a crear reseñas, y **nadie se entera**.
+- **La decisión vive en el SERVIDOR** (`confirmIfUnchanged` en `CreateCommentDTO`), y esto
+  es lo importante del diseño. El cliente manda **la intención**, no la decisión, y el
+  servidor la resuelve al recibirla. Se hizo primero al revés —decidiendo en el globo, con
+  `lastCommentID`/`lastReportAt` publicados en el resumen del mapa— y estaba mal por tres
+  cosas, las tres medidas o comprobadas:
+  · **sin cobertura no se comportaba igual**, que es de donde salió la pregunta. La bandeja
+    de salida no sabía confirmar, así que se encolaba una reseña. Ahora se encola la misma
+    intención y `sw.js` **no ha tenido que aprender nada**: reenvía `{...item.data}` tal
+    cual (hay test de que reenvía incluso campos que no conoce);
+  · guardar la **decisión ya tomada** habría sido peor que no hacer nada: una cola que se
+    vacía tres días después colgaría tu «sigue igual» de un parte que puede estar **superado
+    o borrado**, y si el nuevo dice lo contrario estarías respaldando el desactualizado;
+  · y decidir en el cliente obligaba a repetir la regla en `sw.js`, que es **un espejo de la
+    cola y no puede importar de `src/`**.
+- Y costaba lo suyo: los dos campos del resumen medían **65 B por fuente**, o sea **191 KB
+  por carga de mapa** sobre los 925 KB que ya pesa una vista de 3.000 — un 21 % más de
+  payload en todo el mapa para una decisión que afecta a 4 fuentes de 119. Con el servidor
+  decidiendo no hace falta ni un campo nuevo ni una consulta extra: ya tiene el parte
+  delante.
+- **Las cuatro condiciones del swap**, cada una tapando un agujero distinto
+  (`confirmacionEnLugarDeParte`): solo estado —**sin texto, nota ni foto**, porque
+  convertir en un pulgar lo que alguien escribió tira lo más caro que aporta—, **el mismo
+  estado** —decir otra cosa es un desacuerdo y tiene que quedar como parte propio o
+  `confidenceOf` no ve la contradicción—, **de otra persona**, y **reciente**.
+- Lo de «otra persona» no es solo que confirmarte a ti mismo no dé respaldo: confirmar el
+  parte propio tiene una **espera de 24 h** (ver `confirm`), así que dentro de ese día el
+  atajo acabaría devolviendo un **403 a alguien que está delante de la fuente** y no
+  publicaría nada. Repetir tu propio parte al menos refresca la fecha, que es cierto.
+- **El corte de 7 días sale del baremo, no del diseño** (`ContributionScore
+  .quickConfirmDays`). `freshness` es plana en `case ..<8: return 5`: dentro de la primera
+  semana repetir paga **5 gotas** y confirmar **10**, así que confirmar es a la vez la mejor
+  señal y lo mejor pagado. A partir del octavo día la curva sube hasta 70 por una fuente
+  olvidada, y seguir cambiando la reseña por una confirmación **degradaría la aportación que
+  más paga la app**. Hay un test que compara la constante **contra la propia curva**, no
+  contra un número escrito: si alguien mueve la rodilla, salta.
+- Responde **200 y no 201** —no se ha creado nada— y el cuerpo es **el parte respaldado**,
+  con `confirmedInstead: true`. Su `id` es el que el globo usa para deshacer.
 - **Se dice con otras palabras** (`popup.confirmedThanks`): «gracias, ya lo saben los demás»
   sobre una confirmación parece que has publicado un parte nuevo. Y **el pin no cambia de
   color**, porque el estado es el mismo; lo que cambia es la confianza.
 - Deshacer sirve para las dos cosas: el mismo botón borra la reseña o retira el «sigue
   igual» según lo que haya en el `dataset`. Desde fuera es el mismo gesto.
-- **Sin cobertura se encola una reseña aunque tocara confirmar**: la bandeja de salida no
-  sabe confirmar, y entre perder la aportación y guardar un parte repetido se guarda el
-  parte. Nunca se castiga a quien informa.
-- Si el último parte es **tuyo y de hoy**, el servidor contesta 403 `confirm.tooSoon` —la
-  regla de las 24 h de `SelfConfirmTests`— y el globo lo enseña traducido. Hizo falta añadir
-  `err.confirm.tooSoon` a los ocho diccionarios; sin la clave saldría la frase en castellano.
+- Sin la bandera todo se comporta como siempre, así que **un cliente sin actualizar publica
+  lo que siempre publicó**. Hay test.
 - Analítica: `map_quick_confirm`, en la lista cerrada del servidor y con su rótulo en los
-  ocho idiomas. Sin las dos mitades no hay forma de saber si el cambio trae respaldo nuevo
-  o solo mueve de sitio lo de siempre.
+  ocho idiomas. Y de paso se tradujo `err.confirm.tooSoon`, que llegaba en castellano a
+  todo el mundo desde el botón de la ficha.
+- Aviso al tocar `CreateCommentDTO`: el campo nuevo rompió **6 llamadas** en los tests y el
+  compilador las cazó todas. Es justo lo que se perdió aquella vez que dos tests publicaban
+  con un diccionario suelto — por eso el DTO no lleva un init con valores por defecto, que
+  habría hecho «cómodo» añadir campos sin enterarse.
 
 ### Y después del toque, la foto
 

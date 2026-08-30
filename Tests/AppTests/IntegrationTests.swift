@@ -267,7 +267,7 @@ final class IntegrationTests: XCTestCase {
     private func addComment(_ app: Application, token: String, fontID: UUID, body: String) async throws -> UUID {
         var id = UUID()
         try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(token), beforeRequest: { req in
-            try req.content.encode(CreateCommentDTO(body: body, rating: nil, waterStatus: nil, image: nil))
+            try req.content.encode(CreateCommentDTO(body: body, rating: nil, waterStatus: nil, image: nil, confirmIfUnchanged: nil))
         }, afterResponse: { res in
             XCTAssertEqual(res.status, .created)
             id = try res.content.decode(CommentResponse.self).id ?? id
@@ -947,7 +947,8 @@ final class IntegrationTests: XCTestCase {
             let tokFoto = try await login(app, username: "lens")
             try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tokFoto), beforeRequest: { req in
                 try req.content.encode(CreateCommentDTO(
-                    body: "Mana", rating: 5, waterStatus: "flowing", image: "/uploads/resena.jpg"))
+                    body: "Mana", rating: 5, waterStatus: "flowing", image: "/uploads/resena.jpg",
+                    confirmIfUnchanged: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .created)
             })
@@ -1061,7 +1062,7 @@ final class IntegrationTests: XCTestCase {
             let tokFoto = try await login(app, username: "camara")
             try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tokFoto), beforeRequest: { req in
                 try req.content.encode(CreateCommentDTO(body: "Foto", rating: 5, waterStatus: "flowing",
-                                                        image: "/uploads/de-la-resena.jpg"))
+                                                        image: "/uploads/de-la-resena.jpg", confirmIfUnchanged: nil))
             }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
 
             // La fuente ya luce esa foto. Se pone directamente para no depender aquí de
@@ -1291,7 +1292,7 @@ final class IntegrationTests: XCTestCase {
             // 1) Fuente sin foto: la reseña se la pone, y la respuesta lo dice.
             let vacia = try await createFont(app, token: tok, name: "Sin foto", lat: 41.1, long: 2.1)
             try await app.test(.POST, "fonts/\(vacia)/comments", headers: bearer(tok), beforeRequest: { req in
-                try req.content.encode(CreateCommentDTO(body: "raja", rating: nil, waterStatus: "flowing", image: "/uploads/a.jpg"))
+                try req.content.encode(CreateCommentDTO(body: "raja", rating: nil, waterStatus: "flowing", image: "/uploads/a.jpg", confirmIfUnchanged: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .created)
                 XCTAssertTrue(try res.content.decode(CommentResponse.self).coverAdopted)
@@ -1314,7 +1315,7 @@ final class IntegrationTests: XCTestCase {
             // 2) La siguiente reseña con foto ya no toca nada.
             let antes = conPortada?.image
             try await app.test(.POST, "fonts/\(vacia)/comments", headers: bearer(tok), beforeRequest: { req in
-                try req.content.encode(CreateCommentDTO(body: "otra", rating: nil, waterStatus: "flowing", image: "/uploads/b.jpg"))
+                try req.content.encode(CreateCommentDTO(body: "otra", rating: nil, waterStatus: "flowing", image: "/uploads/b.jpg", confirmIfUnchanged: nil))
             }, afterResponse: { res in
                 XCTAssertFalse(try res.content.decode(CommentResponse.self).coverAdopted)
             })
@@ -2647,7 +2648,8 @@ final class IntegrationTests: XCTestCase {
             })
             try await app.test(.POST, "fonts/\(fontID)/comments", headers: headers, beforeRequest: { req in
                 try req.content.encode(CreateCommentDTO(body: "Raja", rating: nil,
-                                                        waterStatus: nil, image: nil))
+                                                        waterStatus: nil, image: nil,
+                                                        confirmIfUnchanged: nil))
             }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
 
             let storedFont = try await Font.find(fontID, on: app.db)
