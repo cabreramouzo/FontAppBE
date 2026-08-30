@@ -40,8 +40,17 @@
 
 * { box-sizing: border-box; }
 html, body {
-  height: 100%;
-  /* Sin rebote elástico ni scroll de página: se comporta como una app. */
+  /* Alto AUTOMÁTICO, no `height: 100%`.
+     Venía de cuando la app era solo el mapa y ninguna página se desplazaba. Hoy casi
+     todas lo hacen, y fijar html y body a un viewport exacto mientras el contenido mide
+     mucho más deja el área que se desplaza y la caja del documento sin coincidir. Blink
+     lo tolera; **WebKit no**: los `position: fixed` se anclan a esa caja y la tab bar
+     viaja con el contenido al desplazarse, subiendo hasta media pantalla. Medido en
+     producción en /zones: html y body a 812 px con 67.998 px de contenido.
+     El alto completo lo pone `.app` con `min-height: 100dvh`, que es donde toca.
+     Lo fija `scripts/layout-css.test.ts`. */
+  min-height: 100%;
+  /* Sin rebote elástico: se comporta como una app. */
   overscroll-behavior: none;
 }
 body {
