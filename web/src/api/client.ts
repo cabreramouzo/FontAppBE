@@ -478,6 +478,19 @@ export interface MunicipalReport {
   }[]
 }
 
+/** El contorno de un municipio (recintos del IGN), para dibujarlo. */
+export interface MunicipalBoundary {
+  ine: string
+  name: string
+  /** `[minLong, minLat, maxLong, maxLat]`, el orden de GeoJSON. */
+  bbox: [number, number, number, number]
+  multiPolygon: [number, number][][][]
+}
+
+export async function getMunicipalBoundary(ine: string): Promise<MunicipalBoundary> {
+  return apiFetch<MunicipalBoundary>(`/municipalities/${encodeURIComponent(ine)}/boundary`)
+}
+
 export async function getMunicipality(ine: string): Promise<MunicipalReport> {
   return apiFetch<MunicipalReport>(`/municipalities/${encodeURIComponent(ine)}`)
 }

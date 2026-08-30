@@ -1915,6 +1915,39 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - **No se enlaza desde la navegación** todavía, y no es un descuido: es una dirección que
   se manda por correo mientras se valida. Esconderla no hace falta —no hay nada privado—;
   prometer una sección que aún no existe, sí sobra.
+- **El mapa recorta el municipio y apaga lo demás** (`MunicipalityMap`, cargado a demanda
+  tras un botón: Leaflet son ~300 KB y esta página se lee entera sin él). Es el efecto del
+  mapa del Meteocat y se hace **sin capa nueva**: un polígono que cubre el mundo con el
+  municipio como **agujero**, relleno de gris. Leaflet dibuja agujeros pasando
+  `[exterior, hueco1, hueco2…]`. No es decoración: la página dice «las fuentes de
+  Castellcir» y sin el recorte no hay forma de saber dónde acaba Castellcir.
+  · El polígono sale de `municipal_boundaries`, cargada por `import-municipal-boundaries`
+    desde **el mismo fichero del IGN** que usó `populate-municipalities` para clasificar
+    las fuentes. Con otro polígono habría fuentes pintadas fuera de su municipio y no se
+    sabría cuál de las dos cosas está mal. Comprobado con Castellcir: **las 26 caen
+    dentro**.
+  · El contorno va en **su propia ruta** (`/municipalities/:ine/boundary`, caché de un
+    año) y no dentro del informe: el informe cambia cada vez que alguien reseña y el
+    contorno no cambia nunca, así que juntos cada visita arrastraría dos kilobytes de
+    polígono que ya estaban en el navegador.
+  · `@Field` con `[[[[Double]]]]` **no funciona** aunque la columna sea `.json`:
+    PostgresNIO ve un array de Postgres e intenta `DOUBLE PRECISION[]`, y revienta en
+    ejecución pese a compilar. Va envuelto en una estructura (`Contorno`).
+  · La máscara lleva `interactive={false}` —si captura los clics no se puede arrastrar el
+    mapa por fuera— y `fillRule: 'evenodd'`, porque Castellcir tiene **dos** polígonos y
+    sin eso los agujeros se anulan entre sí.
+  · Y el mapa necesita `Encuadre`: montado dentro de un `lazy`, Leaflet se crea con el
+    contenedor a 0×0 y `fitBounds` se va al **zoom máximo** —sale un bosque—. Se arregla
+    con `invalidateSize()` + `fitBounds` en un `setTimeout` (no `requestAnimationFrame`,
+    por lo mismo que `AsomaElPin`).
+- **Etiquetas propias** (`functions/municipalities/[ine].ts`), con `/municipalities/`
+  apuntado en `CON_METADATOS_PROPIOS` — sin eso el middleware las pisa **después** y no se
+  ve leyendo el código, solo sirviendo la página. Comprobado con `wrangler pages dev`:
+  «Fonts de Castellcir · FontApp». La descripción dice **cuántas hay y cuántas ha
+  comprobado alguien**: ése es el enlace que se manda a un ayuntamiento, y prometer «26
+  fuentes» para que al abrir no haya ninguna comprobada es empezar por el peor sitio.
+  Usa siempre la tarjeta genérica del idioma y **no** la foto de una fuente: la página va
+  del municipio entero, y una foto de las veintiséis lo representaría por sorteo.
 - Ojo con `CoverageBar`: pinta el porcentaje **tal cual se lo pasan** (en `/zones` se lo da
   el servidor ya redondeado). Aquí se calcula en el cliente, y sin redondear salía
   «73.07692307692308 %».

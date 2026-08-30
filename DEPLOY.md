@@ -926,6 +926,35 @@ Moianès, así que Moià sale con un 91,8 % de fuentes comprobadas cuando en pro
 cobertura de estado de toda la base es del orden del 0,2 %. Un informe que se enseñe fuera
 tiene que salir de producción.
 
+## Contornos municipales (`import-municipal-boundaries`)
+
+Los necesita el mapa de `/municipalities/:ine` para recortar el municipio sobre el resto
+del territorio. Salen del **mismo fichero** que `populate-municipalities`, y eso no es una
+comodidad: si se dibujara otro polígono habría fuentes pintadas fuera de su propio
+municipio y no habría manera de saber cuál de las dos cosas está mal.
+
+El GeoJSON son 13 MB y **no está en el repo** (ver `.gitignore`), así que hay que subirlo
+igual que para `populate-municipalities`:
+
+```bash
+fly ssh sftp shell -a fontapp
+put municipios-es.geojson /tmp/municipios-es.geojson
+```
+
+Y cargarlo:
+
+```bash
+fly ssh console -a fontapp -C "/app/App import-municipal-boundaries /tmp/municipios-es.geojson"
+```
+
+Son 8.219 municipios y ocupan del orden de **15 MB** en la tabla (mediana por contorno:
+1,8 KB; el mayor, 10 KB). Es idempotente: borra y reescribe cada fila, así que repetirlo
+no duplica nada. Con `--only <ine>` carga uno solo, que es lo cómodo para probar.
+
+**Encadena las dos órdenes o comprueba la salida de la primera**, el mismo aviso que en la
+importación por partes: un `put` que falla porque el fichero ya existe no impide que el
+comando siguiente se ejecute sobre el fichero anterior.
+
 ## Cloudflare delante de la API (`api.fontapp.net`)
 
 ### Por qué

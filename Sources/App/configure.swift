@@ -174,6 +174,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddAbuseModeration()) // cuarentena reversible y sanciones contra abuso
     app.migrations.add(AddSourceLimitExemptionToUser()) // excepción temporal al cupo de cuentas nuevas
     app.migrations.add(OptimizeMapSummaries()) // resumen del mapa sin materializar todo el historial
+    app.migrations.add(CreateMunicipalBoundary()) // contorno de cada municipio, para dibujarlo en el mapa
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
@@ -201,6 +202,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(ImportPlacesCommand(), as: "import-places")
     app.asyncCommands.use(PopulateMunicipalitiesCommand(), as: "populate-municipalities")
     app.asyncCommands.use(MunicipalReportCommand(), as: "municipal-report")
+    app.asyncCommands.use(ImportMunicipalBoundariesCommand(), as: "import-municipal-boundaries")
     app.asyncCommands.use(SeedCommand(), as: "seed")
     app.asyncCommands.use(ImportCommand(), as: "import-fonts")
     app.asyncCommands.use(ImportGeoJSONCommand(), as: "import-geojson")

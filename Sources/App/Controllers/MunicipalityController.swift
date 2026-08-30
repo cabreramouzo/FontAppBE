@@ -28,6 +28,7 @@ struct MunicipalityController: RouteCollection {
         let grupo = routes.grouped(RateLimitMiddleware(scope: "municipalities", max: 120, window: 60 * 60))
         grupo.get("municipalities", ":ine", use: report)
         grupo.get("municipalities", use: search)
+        grupo.get("municipalities", ":ine", "boundary", use: boundary)
     }
 
     func report(req: Request) async throws -> MunicipalReport {
@@ -43,6 +44,35 @@ struct MunicipalityController: RouteCollection {
         }
         await Self.cache.set(ine, r)
         return r
+    }
+
+    /// El contorno del municipio, para dibujarlo. Va **aparte del informe** porque son
+    /// dos cosas con vidas distintas: el informe cambia cada vez que alguien reseña una
+    /// fuente y el contorno no cambia nunca. Juntos, cada visita a la página arrastraría
+    /// dos kilobytes de polígono que ya estaban en el navegador, y la caché del informe
+    /// —cinco minutos— tiraría también el polígono.
+    struct Boundary: Content, Sendable {
+        let ine: String
+        let name: String
+        /// `[minLong, minLat, maxLong, maxLat]`, el orden de GeoJSON.
+        let bbox: [Double]
+        let multiPolygon: [[[[Double]]]]
+    }
+
+    func boundary(req: Request) async throws -> Boundary {
+        let ine = try req.parameters.require("ine")
+        guard ine.count == 5, ine.allSatisfy(\.isNumber) else {
+            throw AppError(.badRequest, "municipality.badCode", "El código INE son cinco dígitos.")
+        }
+        guard let b = try await MunicipalBoundary.find(ine, on: req.db) else {
+            throw AppError(.notFound, "municipality.noBoundary", "No hay contorno para ese municipio.")
+        }
+        // Un año de caché: los límites municipales no se mueven, y cuando se mueven se
+        // vuelve a importar el fichero y cambia la respuesta de todas formas.
+        req.headers.cacheControl = .init(isPublic: true, maxAge: 60 * 60 * 24 * 365)
+        return Boundary(ine: b.id ?? ine, name: b.name,
+                        bbox: [b.minLong, b.minLat, b.maxLong, b.maxLat],
+                        multiPolygon: b.rings.multiPolygon)
     }
 
     /// `GET /municipalities?name=Arroyomolinos` → los candidatos con su código.

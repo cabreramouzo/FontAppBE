@@ -51,6 +51,25 @@ export const PLACE_META: Record<ShareLang, { title: string; description: string 
 }
 
 /**
+ * La tarjeta de la página de un municipio.
+ *
+ * Dice **cuántas hay y cuántas ha comprobado alguien**, no solo cuántas hay: es la misma
+ * honestidad que la página, y en un chat o en un correo a un ayuntamiento esa segunda
+ * cifra es justo la que abre la conversación. Prometer «26 fuentes» a secas y que al
+ * abrir resulte que ninguna está comprobada es empezar por el peor sitio.
+ */
+export const MUNI_META: Record<ShareLang, { title: string; description: string }> = {
+  ca: { title: 'Fonts de {p}', description: '{n} fonts al mapa de {p}, {c} comprovades alguna vegada. Dades públiques i obertes.' },
+  es: { title: 'Fuentes de {p}', description: '{n} fuentes en el mapa de {p}, {c} comprobadas alguna vez. Datos públicos y abiertos.' },
+  gl: { title: 'Fontes de {p}', description: '{n} fontes no mapa de {p}, {c} comprobadas algunha vez. Datos públicos e abertos.' },
+  eu: { title: '{p} iturriak', description: '{p}(e)ko mapan {n} iturri, {c} noizbait egiaztatuak. Datu publiko eta irekiak.' },
+  en: { title: 'Fountains in {p}', description: '{n} fountains on the map of {p}, {c} checked at least once. Public, open data.' },
+  fr: { title: 'Fontaines de {p}', description: '{n} fontaines sur la carte de {p}, {c} vérifiées au moins une fois. Données publiques et ouvertes.' },
+  pt: { title: 'Fontes de {p}', description: '{n} fontes no mapa de {p}, {c} verificadas alguma vez. Dados públicos e abertos.' },
+  it: { title: 'Fontane di {p}', description: '{n} fontane sulla mappa di {p}, {c} controllate almeno una volta. Dati pubblici e aperti.' },
+}
+
+/**
  * Los idiomas que tienen su propia tarjeta `public/og-card-<lang>.jpg`.
  *
  * Existe porque la tarjeta es una **imagen con texto dentro** y no se genera desde el

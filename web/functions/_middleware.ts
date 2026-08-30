@@ -14,7 +14,7 @@ import { SHARE_META, shareCard, shareLang } from './_meta'
  * metadatos propios hay que apuntarla aquí, y el síntoma de olvidarlo es exactamente ese:
  * todo parece bien y el buscador ve otra cosa.
  */
-const CON_METADATOS_PROPIOS = ['/fonts/', '/places/']
+const CON_METADATOS_PROPIOS = ['/fonts/', '/places/', '/municipalities/']
 
 /** Localiza la tarjeta genérica. Las rutas de arriba tienen la suya y no deben perder
  * ni la foto ni sus metadatos específicos. */

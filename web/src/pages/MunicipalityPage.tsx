@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -9,13 +9,14 @@ import Typography from '@mui/material/Typography'
 import DownloadIcon from '@mui/icons-material/Download'
 import PlaceIcon from '@mui/icons-material/Place'
 import WaterDropOutlinedIcon from '@mui/icons-material/WaterDropOutlined'
-import { getMunicipality, type MunicipalReport } from '../api/client'
+import { getMunicipality, getMunicipalBoundary, type MunicipalBoundary, type MunicipalReport } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { CoverageBar } from '../components/CoverageBar'
 import { FilaDeFuente } from '../components/FilaDeFuente'
 import { ListaConTope } from '../components/ListaConTope'
 import { TituloDeSeccion } from '../components/TituloDeSeccion'
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import { SOURCE_EMOJI } from '../lib/waterType'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { rotulo } from '../lib/fontName'
@@ -47,15 +48,24 @@ import type { WaterSource } from '../api/types'
  *   mientras se valida. No hace falta esconderla; hace falta no prometer una sección que
  *   aún no existe.
  */
+// Leaflet ronda los 300 KB y esta página se lee igual sin él: la lista, la cobertura y
+// las descargas no pintan una sola tesela. Se carga a demanda, como en «Agua en mi ruta».
+const MunicipalityMap = lazy(() => import('../components/MunicipalityMap').then((m) => ({ default: m.MunicipalityMap })))
+
 export function MunicipalityPage() {
   const { ine = '' } = useParams()
   const { t, lang } = useI18n()
   const [datos, setDatos] = useState<MunicipalReport | null>(null)
   const [error, setError] = useState(false)
+  const [contorno, setContorno] = useState<MunicipalBoundary | null>(null)
+  const [verMapa, setVerMapa] = useState(false)
 
   useEffect(() => {
-    setDatos(null); setError(false)
+    setDatos(null); setError(false); setContorno(null); setVerMapa(false)
     getMunicipality(ine).then(setDatos).catch(() => setError(true))
+    // El contorno se pide aparte y **no bloquea nada**: si no lo hay —fuera de España no
+    // existen los recintos del IGN— el mapa se dibuja igual, solo que sin el recorte.
+    getMunicipalBoundary(ine).then(setContorno).catch(() => setContorno(null))
   }, [ine])
 
   if (error) return <Box className="pad"><Alert severity="info">{t('muni.notFound')}</Alert></Box>
@@ -130,7 +140,20 @@ export function MunicipalityPage() {
         {t('muni.drinkableNote')}
       </Typography>
 
-      <TituloDeSeccion icono={<WaterDropOutlinedIcon fontSize="small" />}>{t('muni.list')}</TituloDeSeccion>
+      <TituloDeSeccion icono={<MapOutlinedIcon fontSize="small" />}>{t('muni.map')}</TituloDeSeccion>
+      {verMapa ? (
+        <Suspense fallback={<Skeleton lines={4} />}>
+          <MunicipalityMap datos={datos} contorno={contorno} />
+        </Suspense>
+      ) : (
+        <Button variant="outlined" startIcon={<MapOutlinedIcon />} onClick={() => setVerMapa(true)} sx={{ mb: 1 }}>
+          {t('muni.showMap')}
+        </Button>
+      )}
+
+      <Box sx={{ mt: 3 }}>
+        <TituloDeSeccion icono={<WaterDropOutlinedIcon fontSize="small" />}>{t('muni.list')}</TituloDeSeccion>
+      </Box>
       <ListaConTope
         items={lista}
         clave={(f) => f.id}
