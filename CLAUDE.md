@@ -420,6 +420,14 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - `web/` — frontend (mapa, detalle, auth, reseñas); ver `web/README.md`.
 
 ## Convenciones
+- **Los mensajes de commit van en inglés**, siempre, aunque el resto del repositorio
+  —código, comentarios, CLAUDE.md y esta misma línea— esté en catalán o castellano. El
+  historial es lo único de aquí que se lee desde fuera: en un `git log`, un `blame`, una
+  PR o un informe de fallo. Lo demás lo lee quien ya está dentro del proyecto.
+  El cuerpo también, no solo el asunto: es donde está el porqué, que es la parte que se
+  consulta meses después. Y sigue valiendo la regla de siempre —qué se midió, qué se
+  descartó y por qué—; lo que cambia es el idioma, no la exigencia.
+  Ojo: **los commits anteriores a esta línea están en castellano** y no se reescriben.
 - Todo `async/await`; nada de `EventLoopFuture` en código nuevo.
 - Un `RouteCollection` por recurso, registrado en `routes.swift`.
 - Config sensible sólo vía `Environment.get(...)`, nunca hardcodeada.
