@@ -121,10 +121,24 @@ export function MunicipalityPage() {
       </Box>
       <TextField className="municipality-no-print" size="small" value={query} onChange={(e) => setQuery(e.target.value)} label={t('muni.search')} sx={{ mb: 1.5, width: '100%', maxWidth: 460 }} />
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('muni.showing', { n: String(filtered.length), total: String(data.fonts) })}</Typography>
-      {filtered.length === 0 ? <Alert severity="info">{t('muni.noResults')}</Alert> : <ListaConTope items={filtered} clave={(f) => f.id} fila={(f) => {
-        const status = waterStatusInfo(f.lastStatus)
-        return <FilaDeFuente to={`/fonts/${f.id}`} source={f.source as WaterSource | null} primary={rotulo(f.name, t)} secondary={f.days == null ? t('muni.neverCheckedRow') : <>{status && <span title={t(`status.${status.key}`)}>{status.emoji} </span>}{t('muni.checkedAgo', { d: String(f.days) })}{f.openReports ? ` · ${f.openReports} ${t('muni.openReports')}` : ''}</>} />
-      }} />}
+      {filtered.length === 0 ? <Alert severity="info">{t('muni.noResults')}</Alert> : <>
+        <Box className="municipality-screen-only"><ListaConTope items={filtered} clave={(f) => f.id} fila={(f) => {
+          const status = waterStatusInfo(f.lastStatus)
+          return <FilaDeFuente to={`/fonts/${f.id}`} source={f.source as WaterSource | null} primary={rotulo(f.name, t)} secondary={f.days == null ? t('muni.neverCheckedRow') : <>{status && <span title={t(`status.${status.key}`)}>{status.emoji} </span>}{t('muni.checkedAgo', { d: String(f.days) })}{f.openReports ? ` · ${f.openReports} ${t('muni.openReports')}` : ''}</>} />
+        }} /></Box>
+        {/* La lista interactiva recorta a seis filas. Para imprimir se monta el inventario
+            entero: CSS no puede imprimir nodos que React nunca llegó a crear. */}
+        <Box className="municipality-print-only" sx={{ display: 'none' }}>
+          {filtered.map((f) => {
+            const url = `https://fontapp.net/fonts/${f.id}`
+            return <Box key={f.id} sx={{ py: 1, borderBottom: '1px solid', borderColor: 'divider', breakInside: 'avoid' }}>
+              <Typography sx={{ fontWeight: 700 }}>{rotulo(f.name, t)}</Typography>
+              <Typography variant="body2">{f.latitude.toFixed(6)}, {f.longitude.toFixed(6)}</Typography>
+              <Typography component="a" href={url} variant="body2" color="primary">{url}</Typography>
+            </Box>
+          })}
+        </Box>
+      </>}
     </Box>
 
     <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, mt: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto' }, gap: 2, alignItems: 'center' }}>
@@ -136,7 +150,7 @@ export function MunicipalityPage() {
       <Box className="municipality-no-print" sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}><Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => download(csvOf(data), `${data.ine}-fuentes.csv`, 'text/csv')}>CSV</Button><Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => download(geojsonOf(data), `${data.ine}-fuentes.geojson`, 'application/geo+json')}>GeoJSON</Button><Button variant="outlined" startIcon={<PrintOutlinedIcon />} onClick={() => window.print()}>{t('muni.print')}</Button></Box>
     </Box>
     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3 }}>{t('muni.licence')}</Typography>
-    <style>{`@media print { header, footer, .municipality-no-print { display:none!important } .municipality-report { color-adjust:exact; print-color-adjust:exact } }`}</style>
+    <style>{`.municipality-print-only{display:none!important}@media print { header, footer, .municipality-no-print, .municipality-screen-only { display:none!important } .municipality-print-only { display:block!important } .municipality-report { color-adjust:exact; print-color-adjust:exact } }`}</style>
   </Box>
 }
 
