@@ -74,9 +74,17 @@ export function Abrible({ puede, nombre, onOpen, redondo = true, children }: {
         // línea se ajusta al dibujo y el `text-align: center` del contenedor lo centra.
         // Donde el padre ya es flex no cambia nada: los hijos de un flex se bloquean.
         p: 0, border: 0, background: 'none', cursor: 'pointer', display: 'inline-flex',
-        // En móvil, 44 px de alto aunque el chip mida 24: es un control y se toca con el
-        // pulgar. Crece la caja, no el dibujo — el chip se centra dentro.
-        alignItems: 'center', minHeight: { xs: 44, sm: 0 },
+        // En móvil, 44 px de alto **solo las chapas y los escudos**: son redondos, el
+        // dibujo se centra dentro y la zona sensible crece sin que se vea, que es la
+        // distinción que hace la propia guía de Apple.
+        //
+        // Con un chip NO se puede hacer lo mismo, y se vio en el marcador: la píldora mide
+        // 24 y la caja 44, así que cada fila arrastraba **20 px muertos** y ocho insignias
+        // ocupaban 200 px de aire. Aquí manda la excepción que ya usa `StaffBadge`: la
+        // guía pide 44 para lo que se pulsa, no para lo que se lee, y esto es una etiqueta
+        // cuyo clic es un **atajo** — el mismo visor se abre desde «ver toda la colección»
+        // y desde `/me/badges`, con objetivos de sobra. Medido: las filas pasan de 50 a 30.
+        alignItems: 'center', minHeight: redondo ? { xs: 44, sm: 0 } : 0,
         borderRadius: redondo ? '50%' : 999,
         transition: 'transform 160ms ease',
         '&:hover': { transform: 'scale(1.06)' },

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import Button from '@mui/material/Button'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import Collapse from '@mui/material/Collapse'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
@@ -44,6 +46,8 @@ export function GamificationCard() {
   const [mirando, setMirando] = useState<
     { kind: 'level' | 'badge'; key: string; tier: string | null; subtitle?: string } | null
   >(null)
+  /** Lo que abre el nivel nace plegado: se consulta al subir, no en cada visita. */
+  const [abiertoAbre, setAbiertoAbre] = useState(false)
 
   useEffect(() => {
     getGamification()
@@ -168,49 +172,68 @@ export function GamificationCard() {
         </Box>
       </Box>
 
-      {/* Fase 6: qué abre el nivel. Solo se enseña si abre algo — anunciar una lista de
-          permisos que no tienes convierte el marcador en una pantalla de bloqueos, y el
-          sistema está apagado por defecto, así que para casi todo el mundo no diría nada
-          verdadero. Los motivos del bloqueo viajan en `grant.blockedBy` y se usan donde
-          la acción está, no aquí. */}
+      {/* ## Qué abre el nivel, plegado
+          Fase 6. Solo se enseña si abre algo — anunciar una lista de permisos que no
+          tienes convierte el marcador en una pantalla de bloqueos, y el sistema está
+          apagado por defecto, así que para casi todo el mundo no diría nada verdadero.
+          Los motivos del bloqueo viajan en `grant.blockedBy` y se usan donde la acción
+          está, no aquí.
+
+          **Va plegado, y esa es la corrección.** En el nivel 6 son SEIS chips, uno por
+          línea porque el texto es largo, más las dos líneas de lo que viene después: unos
+          230 px de permisos en medio de un marcador que existe para decir cuántas gotas
+          llevas. Y son cosas que se consultan una vez —cuando subes de nivel— y no cada
+          vez que abres tu perfil. El recuento en el rótulo conserva lo único que hay que
+          ver de un vistazo («abre 6 cosas»); lo demás está a un toque, y la explicación
+          completa sigue en `/gamification`. */}
       {(data.grant?.capabilities.length ?? 0) > 0 && (
         <Box sx={{ mt: 1.5 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-            {t('game.unlocked')}
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 0.5 }}>
-            {data.grant?.capabilities.map((c) => (
-              <Chip
-                key={c}
-                icon={<KeyOutlinedIcon />}
-                label={t(`game.can.${c}`)}
-                size="small"
-                variant="outlined"
-                color="success"
-                sx={{ fontWeight: 600 }}
-              />
-            ))}
-          </Box>
-        </Box>
-      )}
-
-      {/* Y lo que todavía no. Antes el marcador solo nombraba lo ya concedido, así que
-          para casi todo el mundo —el sistema está apagado por defecto— la escalera no
-          llevaba visiblemente a ninguna parte. Se enlaza a la página, que es donde están
-          las condiciones completas, en vez de repetirlas en la tarjeta. */}
-      {(data.grant?.upcoming?.length ?? 0) > 0 && (
-        <Box sx={{ mt: 1.5 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-            {t('game.willUnlock')}
-          </Typography>
-          {data.grant?.upcoming?.map((c) => (
-            <Typography key={c.key} variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-              <strong>{t(`game.level.${c.level}`)}</strong> — {t(`game.can.${c.key}`)}
-            </Typography>
-          ))}
-          <Button component={RouterLink} to="/gamification" size="small" sx={{ textTransform: 'none', ml: -1 }}>
-            {t('gameHelp.readMore')}
+          <Button
+            onClick={() => setAbiertoAbre((v) => !v)}
+            aria-expanded={abiertoAbre}
+            size="small"
+            endIcon={<ExpandMoreIcon sx={{ transform: abiertoAbre ? 'rotate(180deg)' : 'none', transition: 'transform 160ms ease' }} />}
+            sx={{ textTransform: 'none', ml: -1, color: 'text.secondary' }}
+          >
+            {t('game.unlockedCount', { n: String(data.grant?.capabilities.length ?? 0) })}
           </Button>
+          <Collapse in={abiertoAbre} unmountOnExit>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 0.5 }}>
+              {data.grant?.capabilities.map((c) => (
+                <Chip
+                  key={c}
+                  icon={<KeyOutlinedIcon />}
+                  label={t(`game.can.${c}`)}
+                  size="small"
+                  variant="outlined"
+                  color="success"
+                  sx={{ fontWeight: 600 }}
+                />
+              ))}
+            </Box>
+
+            {/* Y lo que todavía no. Antes el marcador solo nombraba lo ya concedido, así
+                que para casi todo el mundo —el sistema está apagado por defecto— la
+                escalera no llevaba visiblemente a ninguna parte. Va DENTRO del pliegue:
+                es la continuación de la misma lista, y fuera volvía a cargar la tarjeta
+                de lo que este cambio viene a quitarle. */}
+            {(data.grant?.upcoming?.length ?? 0) > 0 && (
+              <Box sx={{ mt: 1.5 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  {t('game.willUnlock')}
+                </Typography>
+                {data.grant?.upcoming?.map((c) => (
+                  <Typography key={c.key} variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                    <strong>{t(`game.level.${c.level}`)}</strong> — {t(`game.can.${c.key}`)}
+                  </Typography>
+                ))}
+              </Box>
+            )}
+
+            <Button component={RouterLink} to="/gamification" size="small" sx={{ textTransform: 'none', ml: -1 }}>
+              {t('gameHelp.readMore')}
+            </Button>
+          </Collapse>
         </Box>
       )}
 

@@ -603,6 +603,15 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
     se quedaron con el pulgar descuadrado respecto a los de arriba. Se les quitó: la
     jerarquía la marca la indentación, no el tamaño. Si se añade un `Switch` nuevo, sin
     variante.
+  · los **chips de insignia del marcador** quedaron con las filas separadísimas, y es el
+    mismo error visto desde el otro lado: el envoltorio pulsable (`Abrible`) subía a 44
+    mientras la píldora se quedaba en 24, así que cada fila arrastraba **20 px muertos** y
+    ocho insignias ocupaban 200 px de aire. Con un escudo redondo eso está bien —el dibujo
+    se centra y la zona sensible crece sin verse—; con una píldora ancha no. Se sale de la
+    regla por la puerta de `StaffBadge`: es una **etiqueta cuyo clic es un atajo**, y el
+    mismo visor se abre desde «ver toda la colección» y desde `/me/badges`, los dos con
+    objetivos de sobra. Medido: las filas pasan de **50 a 30 px**. Solo afecta al
+    `redondo={false}`, que lo usa un único sitio.
   · la **casilla de la lista del GPX** se descuadró: iba dentro de un flex con
     `alignItems: baseline` y `flexWrap`, así que al pasar el nombre de la fuente a la línea
     siguiente se quedaba sola arriba. Ahora es una columna aparte centrada, y el kilómetro
@@ -1576,6 +1585,13 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   más. El botón de guardar está apagado mientras no cambies nada, y el aviso de lo que
   cuesta cambiar de nombre solo sale cuando de verdad lo has tocado.
 - La ruta es `/me/settings` **en inglés**, como el resto de rutas de la app.
+- **Lo que abre tu nivel va plegado** («Tu nivel abre 7 cosas», con lo que viene después
+  dentro). En el nivel 6 son seis chips, uno por línea porque el texto es largo, más las
+  dos líneas de «más adelante abrirás»: **252 px medidos** de permisos en medio de un
+  marcador que existe para decir cuántas gotas llevas. Y es información que se consulta
+  **una vez, al subir de nivel**, no en cada visita al perfil. El recuento del rótulo
+  conserva lo único que hay que ver de un vistazo —que abre algo y cuánto—; la explicación
+  completa sigue en `/gamification`, que es donde están también las condiciones.
 - **Las tres listas llevan tope** (`ListaConTope`, 6 filas y «verlas todas (N)»). No lo
   tenían y crecen para siempre: con 21 favoritas ya ocupaban 1.068 px, y entre las tres
   eran el **70 %** de lo que quedaba de página. Con 200, la página son 10.000 px.
