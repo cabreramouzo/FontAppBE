@@ -560,6 +560,36 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   Las tarjetas sin foto usan `welcome.jpg` oscurecida y con el encuadre variado por un
   hash del id — con el mismo recorte parecían tarjetas duplicadas.
 
+## Objetivos táctiles: 44 px en móvil, y vive en el tema
+
+- La guía de Apple fija **44 pt** como mínimo para cualquier cosa que se toque, y los
+  **tamaños por defecto de MUI están por debajo**. Medido a 375 px recorriendo la app: el
+  menú de los tres puntos a **34**, los botones pequeños a **31**, los chips pulsables a
+  **32**, los interruptores a **38**, las filas del ranking de zonas a **36** y los FAB del
+  mapa a **40**. No era ningún componente mal puesto: era el tema.
+- Por eso el arreglo vive en `theme/MuiProvider.tsx` (`objetivosTactiles`) y no pantalla
+  por pantalla: `MuiIconButton`, `MuiButton`, `MuiFab`, `MuiSwitch`, `MuiCardActionArea`,
+  `MuiListItemButton` y los `MuiChip` **pulsables**. Repartido por las pantallas habría que
+  acordarse en cada botón nuevo, y el que se olvide no rompe nada — solo deja un objetivo
+  que falla una de cada cinco veces con el pulgar en marcha.
+- **Solo hasta `sm`.** En escritorio el ratón apunta fino y estirarlo todo a 44 hincharía
+  interfaces densas (el ranking son cien filas) por un problema que allí no existe. Mismo
+  corte que el resto de la app.
+- **Los chips NO pulsables se quedan como están**: son etiquetas —el estado del agua en las
+  tarjetas de novedades, el `beta` del logotipo— y agrandarlas no ayuda a nadie. La
+  distinción la da `MuiChip-clickable`, que MUI ya marca.
+- **Los pines del mapa eran el peor caso** y son el objetivo más pulsado de la app: 26×38.
+  Ahora llevan margen transparente hasta 44×44 (`statusMarker.ts`) y **el dibujo no cambia**
+  — pines más gordos taparían el mapa y en una ciudad se solaparían hasta hacerlo ilegible.
+  El margen va **arriba** y no abajo: la punta tiene que seguir clavada en el punto, y de
+  paso la zona crece hacia donde viene el pulgar. Precio asumido: en zonas densas las zonas
+  sensibles vecinas se solapan y gana la de encima, que es mejor que fallar el toque.
+- Lo que el tema **no** alcanza y hay que hacer a mano: los `Box component="button"`, que
+  no pasan por `MuiButton` (la vitrina de insignias y el «verlas todas» de las listas). Si
+  se añade otro, hay que acordarse.
+- Comprobado midiendo en siete rutas —mapa, `/me`, `/me/badges`, ajustes, novedades, zonas
+  y GPX—: **cero controles por debajo de 44**.
+
 ## Navegación: tab bar en móvil, barra de arriba en escritorio
 
 - **En móvil la navegación va abajo** (`TabBar.tsx`, `BottomNavigation` de MUI): Mapa ·

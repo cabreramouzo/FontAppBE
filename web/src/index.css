@@ -480,6 +480,13 @@ select:not([class*="Mui"]) {
 /* Pin de estado (divIcon): quitar el fondo blanco por defecto de Leaflet. */
 .status-pin { background: none; border: none; overflow: visible; }
 
+/* Los grupos de markercluster vienen a 40 px: por debajo del mínimo táctil, y se tocan
+   igual que un pin. El dibujo interior no cambia, solo la caja. */
+@media (max-width: 560px) {
+  .leaflet-container .marker-cluster { width: 44px !important; height: 44px !important; }
+  .leaflet-container .marker-cluster div { width: 36px; height: 36px; margin-top: 4px; margin-left: 4px; }
+}
+
 /* Ubicación del usuario, estilo iOS: punto azul + onda expansiva. */
 .me-loc-wrap { background: none; border: none; }
 .me-loc { position: relative; width: 28px; height: 28px; }

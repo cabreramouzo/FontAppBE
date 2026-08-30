@@ -74,6 +74,9 @@ export function Abrible({ puede, nombre, onOpen, redondo = true, children }: {
         // línea se ajusta al dibujo y el `text-align: center` del contenedor lo centra.
         // Donde el padre ya es flex no cambia nada: los hijos de un flex se bloquean.
         p: 0, border: 0, background: 'none', cursor: 'pointer', display: 'inline-flex',
+        // En móvil, 44 px de alto aunque el chip mida 24: es un control y se toca con el
+        // pulgar. Crece la caja, no el dibujo — el chip se centra dentro.
+        alignItems: 'center', minHeight: { xs: 44, sm: 0 },
         borderRadius: redondo ? '50%' : 999,
         transition: 'transform 160ms ease',
         '&:hover': { transform: 'scale(1.06)' },

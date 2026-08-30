@@ -42,7 +42,14 @@ export function ListaConTope<T>({ items, tope = TOPE, clave, fila }: {
         <Typography
           component="button" variant="body2"
           onClick={() => setTodas((v) => !v)}
-          sx={{ mt: 1, background: 'none', border: 0, p: 0, color: 'primary.main', cursor: 'pointer' }}
+          // 44 px de alto en móvil: es un control, no una nota al pie, y venía a 20.
+          // El acolchado va abajo y a los lados en cero, para que el texto siga alineado
+          // con la lista de arriba en vez de aparecer sangrado.
+          sx={{
+            mt: 1, background: 'none', border: 0, px: 0, color: 'primary.main', cursor: 'pointer',
+            display: 'flex', alignItems: 'center',
+            minHeight: { xs: 44, sm: 0 }, py: { xs: 0, sm: 0 },
+          }}
         >
           {todas ? t('guard.showLess') : t('guard.showAll', { n: String(items.length) })}
         </Typography>
