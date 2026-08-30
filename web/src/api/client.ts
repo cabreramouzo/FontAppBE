@@ -453,6 +453,10 @@ export interface Guarded {
   days: number
   /** Ya ha pasado del corte de 90 días. */
   stale: boolean
+  /** Qué clase de punto es, para el icono de la fila. */
+  source: WaterSource | null
+  /** Lo que dijiste la última vez: es lo que caduca. */
+  waterStatus: string | null
 }
 
 /**

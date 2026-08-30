@@ -7,8 +7,6 @@ import Link from '@mui/material/Link'
 import Chip from '@mui/material/Chip'
 import Avatar from '@mui/material/Avatar'
 import ListItem from '@mui/material/ListItem'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemText from '@mui/material/ListItemText'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import ShieldIcon from '@mui/icons-material/GppMaybeOutlined'
 import type { Font, MyComment } from '../api/types'
@@ -22,6 +20,7 @@ import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
 import { GuardedFonts } from '../components/GuardedFonts'
 import { ListaConTope } from '../components/ListaConTope'
+import { FilaDeFuente } from '../components/FilaDeFuente'
 import { nombreFuente, rotulo } from '../lib/fontName'
 
 /**
@@ -131,11 +130,18 @@ export function ProfilePage() {
             items={favorites}
             clave={(f) => f.id}
             fila={(f) => (
-              <ListItem disablePadding divider>
-                <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
-                  <ListItemText primary={nombreFuente(f, t)} />
-                </ListItemButton>
-              </ListItem>
+              <FilaDeFuente
+                to={`/fonts/${f.id}`}
+                source={f.source}
+                primary={nombreFuente(f, t)}
+                // El municipio y no el tipo: el emoji ya dice qué clase de punto es, y
+                // repetirlo escrito no añade nada. Lo que falta para reconocer una fuente
+                // de una lista es DÓNDE está, que es lo mismo que ya hacen los resultados
+                // del buscador. `municipality` está fuera de España en nulo, así que cae
+                // en la demarcación, y si tampoco hay, la fila se queda en una línea:
+                // nunca se inventa un sitio.
+                secondary={f.municipality ?? f.region ?? undefined}
+              />
             )}
           />
         )}
@@ -151,11 +157,18 @@ export function ProfilePage() {
             items={fonts}
             clave={(f) => f.id}
             fila={(f) => (
-              <ListItem disablePadding divider>
-                <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
-                  <ListItemText primary={nombreFuente(f, t)} />
-                </ListItemButton>
-              </ListItem>
+              <FilaDeFuente
+                to={`/fonts/${f.id}`}
+                source={f.source}
+                primary={nombreFuente(f, t)}
+                // El municipio y no el tipo: el emoji ya dice qué clase de punto es, y
+                // repetirlo escrito no añade nada. Lo que falta para reconocer una fuente
+                // de una lista es DÓNDE está, que es lo mismo que ya hacen los resultados
+                // del buscador. `municipality` está fuera de España en nulo, así que cae
+                // en la demarcación, y si tampoco hay, la fila se queda en una línea:
+                // nunca se inventa un sitio.
+                secondary={f.municipality ?? f.region ?? undefined}
+              />
             )}
           />
         )}
@@ -172,7 +185,7 @@ export function ProfilePage() {
             fila={(c) => {
               const ws = waterStatusInfo(c.waterStatus)
               return (
-                <ListItem divider alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
+                <ListItem alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Link component={RouterLink} to={`/fonts/${c.fontID}`} sx={{ fontWeight: 600 }}>{rotulo(c.fontName, t)}</Link>
                   {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`} />}

@@ -40,6 +40,14 @@ enum Guardianship {
         let days: Int
         /// Si ya pasó de `staleDays`.
         let stale: Bool
+        /// Qué clase de punto es. Sale de la misma fila de `fonts` que ya se une para el
+        /// nombre, así que no cuesta nada, y es lo que permite que la lista tenga un
+        /// icono que **dice algo** en vez de repetir el mismo adorno en cada fila.
+        let source: WaterSource?
+        /// Lo que **tú** dijiste la última vez. Es el dato que caduca —de eso va esta
+        /// lista entera— y ya viene en la fila del `DISTINCT ON`: la reseña más reciente
+        /// de esa fuente es justamente la tuya.
+        let waterStatus: String?
     }
 
     /// Las fuentes que cuida esta persona, **las más olvidadas primero**.
@@ -49,11 +57,14 @@ enum Guardianship {
     /// 60.000 fuentes eso importa.
     static func of(_ userID: UUID, on db: any Database, now: Date = Date()) async throws -> [Guarded] {
         guard let sql = db as? any SQLDatabase else { return [] }
-        struct Fila: Decodable { let font_id: UUID; let name: String?; let last_at: Date }
+        struct Fila: Decodable {
+            let font_id: UUID; let name: String?; let last_at: Date
+            let source: WaterSource?; let water_status: String?
+        }
         let filas = try await sql.raw("""
-            SELECT ultima.font_id, f.name, ultima.last_at
+            SELECT ultima.font_id, f.name, f.source, ultima.water_status, ultima.last_at
             FROM (
-              SELECT DISTINCT ON (font_id) font_id, user_id, created_at AS last_at
+              SELECT DISTINCT ON (font_id) font_id, user_id, water_status, created_at AS last_at
               FROM font_comments
               ORDER BY font_id, created_at DESC
             ) ultima
@@ -69,7 +80,8 @@ enum Guardianship {
         return filas.map {
             let dias = Int(now.timeIntervalSince($0.last_at) / 86_400)
             return Guarded(fontID: $0.font_id, name: $0.name, lastCheck: $0.last_at,
-                           days: dias, stale: Double(dias) >= staleDays)
+                           days: dias, stale: Double(dias) >= staleDays,
+                           source: $0.source, waterStatus: $0.water_status)
         }
     }
 }

@@ -1598,6 +1598,40 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   sobre la gente. «Permisos» es peor todavía: es el vocabulario de los roles y la
   moderación, el mismo eje de autoridad sobre personas que estas capacidades evitan a
   propósito. Lo que hay debajo son literalmente acciones sobre una fuente.
+- **Las filas dicen algo, y van rayadas** (`FilaDeFuente` + el rayado de `ListaConTope`).
+  Favoritas y «fuentes que has añadido» eran **un nombre por fila y nada más**: un muro de
+  texto donde no se distingue una fila de la siguiente y no hay con qué elegir.
+  · El icono es **el tipo de punto** (`SOURCE_EMOJI`, el mismo vocabulario del globo y de
+    la lista del GPX), y está casi siempre: medido sobre la importación real, **211 de
+    80.345 fuentes** no llevan tipo (0,26 %). Sin él se pinta una gota neutra, que no
+    afirma nada.
+  · La segunda línea es **el municipio**, no el tipo escrito: el emoji ya dice la clase, y
+    lo que falta para reconocer una fuente en una lista es **dónde** está — lo mismo que ya
+    hacen los resultados del buscador. Fuera de España `municipality` es nulo y cae en la
+    demarcación; sin ninguno de los dos, la fila se queda en una línea. Nunca se inventa
+    un sitio.
+  · **Lo que NO se hace: la miniatura de la foto.** Es lo primero que apetece y es peor por
+    dos cifras: **64.150 de 64.295 fuentes no tienen ninguna**, así que casi todas las
+    filas enseñarían un hueco, y solo hay **un tamaño** por foto (~386 KB de media), o sea
+    ~2 MB para pintar seis cuadrados de 40 px. Ver «Peso de las fotos»: el día que existan
+    miniaturas se puede reconsiderar.
+  · **En «fuentes que dependen de ti» sale además el estado que dijiste tú.** Es el dato
+    que caduca —de eso va la lista entera— y no salía: la fila decía cuándo pasaste, pero
+    no qué contaste. Sale de la **misma consulta**, que ya une `fonts` por el nombre y ya
+    trae la reseña más reciente con el `DISTINCT ON`: `f.source` y `ultima.water_status`
+    son dos columnas más y cero coste.
+  · Y en esa lista **se quitó un aviso de los dos**: estaban «toca volver» a la derecha y
+    «vale 70 gotas» debajo, que dicen lo mismo (90 días y 30). Con los dos, la fila medía
+    **129 px** y el chip de la derecha le robaba el ancho al nombre, que se partía en dos
+    líneas; ahora **85**. Se queda el de las gotas, que es el que **varía** y por tanto
+    ordena; lo binario ya lo dice la negrita del nombre.
+  · El **rayado sustituye a los separadores** y vive en `ListaConTope`, no en cada lista:
+    con filas de una línea y una raya de 1 px, seis favoritas se leen como un párrafo.
+    Se raya el propio `<li>` para que valga igual en las listas que se pulsan y en la de
+    reseñas, que no. Ojo con el color: el rayado usa `action.hover`, **el mismo** que MUI
+    da al pasar por encima, así que el hover sube a `action.selected` — sin eso la mitad
+    de las filas pierden la respuesta al dedo, que en móvil es la única señal de que la
+    fila se pulsa.
 - **Las tres listas llevan tope** (`ListaConTope`, 6 filas y «verlas todas (N)»). No lo
   tenían y crecen para siempre: con 21 favoritas ya ocupaban 1.068 px, y entre las tres
   eran el **70 %** de lo que quedaba de página. Con 200, la página son 10.000 px.

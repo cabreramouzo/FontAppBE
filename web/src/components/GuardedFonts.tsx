@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
 import Box from '@mui/material/Box'
-import Chip from '@mui/material/Chip'
-import ListItem from '@mui/material/ListItem'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemText from '@mui/material/ListItemText'
 import Typography from '@mui/material/Typography'
 import ShieldMoonIcon from '@mui/icons-material/ShieldOutlined'
 import { guardedFonts, type Guarded } from '../api/client'
@@ -13,6 +8,8 @@ import { Skeleton } from './Skeleton'
 import { ListaConTope } from './ListaConTope'
 import { WorthChip } from './WorthChip'
 import { rotulo } from '../lib/fontName'
+import { waterStatusInfo } from '../lib/waterStatus'
+import { FilaDeFuente } from './FilaDeFuente'
 
 
 /**
@@ -61,25 +58,39 @@ export function GuardedFonts() {
       <ListaConTope
         items={fuentes}
         clave={(f) => f.fontID}
-        fila={(f) => (
-          <ListItem disablePadding divider>
-            <ListItemButton component={RouterLink} to={`/fonts/${f.fontID}`}>
-              <ListItemText
-                primary={rotulo(f.name, t)}
-                secondary={
-                  <>
-                    {t('guard.checkedAgo', { d: String(f.days) })}{' '}
-                    <WorthChip lastCheck={f.lastCheck} />
-                  </>
-                }
-                slotProps={{ primary: { sx: { fontWeight: f.stale ? 700 : 400 } } }}
-              />
-              {f.stale && (
-                <Chip size="small" color="warning" variant="outlined" label={t('guard.stale')} sx={{ height: 20 }} />
-              )}
-            </ListItemButton>
-          </ListItem>
-        )}
+        fila={(f) => {
+          // Lo que TÚ dijiste la última vez, con su emoji. Es el dato que caduca —de eso
+          // va la lista entera— y hasta ahora no salía: la fila decía cuándo pasaste,
+          // pero no qué contaste, que es justo lo que hay que volver a comprobar.
+          const estado = waterStatusInfo(f.waterStatus)
+          return (
+            <FilaDeFuente
+              to={`/fonts/${f.fontID}`}
+              source={f.source}
+              primary={
+                <Box component="span" sx={{ fontWeight: f.stale ? 700 : 400 }}>{rotulo(f.name, t)}</Box>
+              }
+              // ## Un solo aviso por fila, no dos
+              // Estaba el chip «toca volver» a la derecha **y** el de «vale 70 gotas»
+              // debajo, y los dos dicen lo mismo: que hace mucho que nadie pasa (90 días
+              // el primero, 30 el segundo). Con los dos, la fila subía a 129 px y el chip
+              // de la derecha le robaba el ancho al nombre, que se partía en dos líneas.
+              //
+              // Se queda el de las gotas, que es el que **varía** —70, 60, 45— y por
+              // tanto ordena; el otro era binario y su información ya la lleva el nombre
+              // en negrita. Es la misma regla que ya obedece `WorthChip`: una etiqueta en
+              // todas las filas no señala ninguna.
+              secondary={
+                <>
+                  {estado && <span title={t(`status.${estado.key}`)}>{estado.emoji} </span>}
+                  {t('guard.checkedAgo', { d: String(f.days) })}{' '}
+                  <WorthChip lastCheck={f.lastCheck} />
+                </>
+              }
+
+            />
+          )
+        }}
       />
     </Box>
   )

@@ -35,7 +35,29 @@ export function ListaConTope<T>({ items, tope = TOPE, clave, fila }: {
 
   return (
     <>
-      <List disablePadding>
+      {/* ## Filas alternadas, y no una línea entre cada dos
+          Con filas de una sola línea y un separador de 1 px, seis favoritas se leen como
+          un bloque de texto: hay que ir contando para saber dónde acaba una. El rayado
+          separa **por superficie** y no por línea, que es lo que hace legible cualquier
+          tabla larga, y de paso deja de hacer falta el `divider`.
+
+          Va aquí y no en cada lista por lo mismo que el tope: son cuatro sitios y el que
+          se olvide no rompe nada, solo queda distinto.
+
+          Ojo con el color: el rayado usa `action.hover`, que es **el mismo** que MUI da al
+          pasar por encima, así que en las filas rayadas el hover no se vería. Por eso el
+          hover sube a `action.selected` — sin eso, la mitad de las filas pierden la
+          respuesta al dedo, que en móvil es la única señal de que la fila se pulsa. */}
+      <List
+        disablePadding
+        sx={{
+          // Se raya el propio `<li>` y no el botón de dentro: así vale igual para las
+          // filas que se pulsan (favoritas, tus fuentes) y para las que no (tus reseñas,
+          // que son un bloque de texto). El botón es transparente y deja pasar el color.
+          '& > li:nth-of-type(odd)': { bgcolor: 'action.hover' },
+          '& .MuiListItemButton-root:hover': { bgcolor: 'action.selected' },
+        }}
+      >
         {lista.map((x) => <Fragment key={clave(x)}>{fila(x)}</Fragment>)}
       </List>
       {items.length > tope && (
