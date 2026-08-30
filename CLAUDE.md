@@ -3259,6 +3259,13 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   como se acaba teniendo dos comportamientos.
 - Hay test de las dos mitades (`testCommentIsNotAnIncidentUntilItIsMarked`), **verificado
   rompiéndolo**: con el `create` volviendo a marcar por defecto, sale en rojo.
+- **Aviso al tocar el DTO de un endpoint: el compilador no cubre los tests que publican con
+  un diccionario suelto.** Añadir `isIncident` rompió la construcción de `CreateReportDTO`
+  en cuatro tests y eso se vio al compilar; otros dos publicaban `["message": …]`, que
+  encaja con cualquier cosa, así que compilaron y **llegaron a CI en rojo** creando
+  comentarios donde el test esperaba una incidencia. Los dos ya pasan por el DTO. La
+  lección de siempre y van dos veces: **la suite entera antes de subir**, no la filtrada,
+  justo cuando se cambia el significado por defecto de algo.
 
 ## Confianza del estado de una fuente
 

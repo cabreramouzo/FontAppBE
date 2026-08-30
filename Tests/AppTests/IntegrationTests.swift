@@ -974,7 +974,7 @@ final class IntegrationTests: XCTestCase {
 
             var reportID = UUID()
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(tok), beforeRequest: { req in
-                try req.content.encode(["message": "El caño está roto"])
+                try req.content.encode(CreateReportDTO(message: "El caño está roto", isIncident: true, incidentKind: .broken))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .created)
                 reportID = try res.content.decode(ReportResponse.self).id ?? reportID
@@ -4151,7 +4151,7 @@ final class IntegrationTests: XCTestCase {
             let fontID = try await createFont(app, token: token, name: "Font seca", lat: 41.8, long: 2.1)
 
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(token), beforeRequest: { req in
-                try req.content.encode(["message": "Está seca desde julio"])
+                try req.content.encode(CreateReportDTO(message: "Está seca desde julio", isIncident: true, incidentKind: .dry))
             }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
 
             // Una reseña que NO dice que mana no cierra nada.
