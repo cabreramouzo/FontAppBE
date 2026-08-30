@@ -902,6 +902,30 @@ Cada ascenso **copia** el objeto (la reseña conserva el suyo) y deja su entrada
 historial de ediciones, así que se revierte una a una desde el panel. Es idempotente: una
 fuente que ya tenga portada no se toca, así que repetirlo no hace nada.
 
+## Informe de fuentes de un municipio (`municipal-report`)
+
+El inventario de un municipio para enseñárselo a su ayuntamiento: resumen por pantalla y
+tres ficheros (`<ine>.informe.json`, `<ine>.fuentes.csv`, `<ine>.fuentes.geojson`). Es el
+paso 2 de la escalera de validación de [docs/monetizacion.md](docs/monetizacion.md); el
+plan entero, en [docs/ayuntamientos.md](docs/ayuntamientos.md).
+
+```bash
+fly ssh console -a fontapp -C "/app/App municipal-report 08138 --dry-run"
+```
+
+Acepta el **código INE** o el nombre. Con un nombre repetido —hay municipios que se llaman
+igual en provincias distintas— no elige: lista los códigos y para. Elegir por su cuenta
+significaría entregarle a un ayuntamiento el inventario de otro.
+
+**Los ficheros se escriben dentro de la máquina de Fly**, que es efímera: con `--out /tmp`
+y después `fly ssh sftp get`. Para un informe puntual suele salir más a cuenta correrlo en
+local contra una copia, porque solo lee.
+
+Ojo con las cifras: **en local mienten**. `seed --demo` deja reseñas de ejemplo por el
+Moianès, así que Moià sale con un 91,8 % de fuentes comprobadas cuando en producción la
+cobertura de estado de toda la base es del orden del 0,2 %. Un informe que se enseñe fuera
+tiene que salir de producción.
+
 ## Cloudflare delante de la API (`api.fontapp.net`)
 
 ### Por qué

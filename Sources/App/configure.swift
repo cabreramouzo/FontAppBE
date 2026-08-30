@@ -200,6 +200,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(VapidKeysCommand(), as: "vapid-keys")
     app.asyncCommands.use(ImportPlacesCommand(), as: "import-places")
     app.asyncCommands.use(PopulateMunicipalitiesCommand(), as: "populate-municipalities")
+    app.asyncCommands.use(MunicipalReportCommand(), as: "municipal-report")
     app.asyncCommands.use(SeedCommand(), as: "seed")
     app.asyncCommands.use(ImportCommand(), as: "import-fonts")
     app.asyncCommands.use(ImportGeoJSONCommand(), as: "import-geojson")

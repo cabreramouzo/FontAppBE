@@ -50,6 +50,12 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   así que hay que medir el solape antes) · `import-geojson` (ICGC/ACA; acepta Point y
   MultiPoint, con `--dry-run` y `--titlecase`) ·
   `populate-regions <fronteras.geojson>` (rellena país/región offline por point-in-polygon).
+- Informe de un municipio: `swift run App municipal-report <ine|nombre> [--out dir] [--dry-run]`
+  (resumen + CSV + GeoJSON + JSON). Es el **paso 2 de la validación** del producto
+  territorial, no un panel: ver [docs/ayuntamientos.md](docs/ayuntamientos.md). Con un
+  nombre ambiguo **no elige**, lista los códigos INE y para — elegir por su cuenta sería
+  darle a un ayuntamiento el inventario de otro. Y sus cifras **en local mienten**:
+  `seed --demo` deja Moià con un 91,8 % comprobado cuando producción va por el 0,2 %.
 - Resumen semanal por correo: `swift run App send-weekly-digest [--dry-run] [--user <username>]`
   (pensado para un cron semanal; ver DEPLOY.md). También a mano desde el panel de
   administración (solo owner): vista previa + enviar, con el mismo código (`WeeklyDigestSender`).

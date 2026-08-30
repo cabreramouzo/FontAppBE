@@ -148,9 +148,10 @@ trabaja: **qué tengo, qué está roto, qué no sé, y qué ha cambiado desde la
 
 ## 5. El orden de construcción
 
-1. **Comando `municipal-report <ine>`**: junta lo que ya está en la base y escribe
-   JSON + CSV + GeoJSON. Sin PDF todavía. Un día de trabajo y ya se puede llamar a
-   alguien.
+1. ✅ **Comando `municipal-report <ine>`** (hecho): junta lo que ya está en la base y
+   escribe JSON + CSV + GeoJSON, con el resumen por pantalla. Sin PDF todavía —el PDF es
+   maquetación y solo hace falta cuando haya alguien a quien mandárselo—. Acepta nombre o
+   código INE y con un nombre ambiguo se niega a elegir.
 2. **Tres entrevistas** con entidades de tamaños distintos, informe en la mano. Preguntar
    qué harían con esto, quién lo abriría, cada cuánto, y de qué partida saldría.
 3. **La página pública municipal**, que es barata y sirve igual sin cliente: agrupa por
