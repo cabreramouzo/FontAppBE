@@ -517,6 +517,62 @@ function LongPressToAdd({ onAdd }: { onAdd: (pos: LatLng) => void }) {
   return null
 }
 
+/**
+ * Asoma el pin recién puesto por encima del formulario.
+ *
+ * Reportado probando la pulsación larga: el pin cae donde has tocado y el formulario, que
+ * sale de abajo, lo tapa — así que no ves dónde ha quedado justo cuando más importa, que
+ * es antes de escribir el nombre.
+ *
+ * Se propuso **enseñar el pin dos segundos y luego el formulario**, y hace lo mismo peor:
+ * son dos segundos de espera en cada alta y al terminar el pin vuelve a estar tapado. Aquí
+ * el mapa se desplaza y el pin **se queda visible todo el rato**, que es lo que de verdad
+ * hacía falta; y el propio desplazamiento ya es la señal de que ha pasado algo.
+ *
+ * Es la misma idea que `FocusOn` con la lista de cercanas, y por eso la cuenta es igual:
+ * centrar en la mitad del hueco que queda libre. Solo se hace **al colocar el pin la
+ * primera vez** — si te movieras el mapa cada vez que tocas para afinar la posición, sería
+ * imposible afinar nada.
+ */
+function AsomaElPin({ pos, activo }: { pos: LatLng | null; activo: boolean }) {
+  const map = useMap()
+  const yaAsomado = useRef(false)
+  useEffect(() => {
+    if (!activo) { yaAsomado.current = false; return }
+    if (!pos || yaAsomado.current) return
+    // Un instante de espera para medir el formulario ya pintado; midiendo en el mismo
+    // render daría la pantalla sin él.
+    //
+    // Es `setTimeout` y **no `requestAnimationFrame`**, que era lo natural: los
+    // navegadores congelan los fotogramas cuando la pestaña no se ve, así que el
+    // desplazamiento no llegaba a ocurrir nunca y el pin se quedaba tapado sin ningún
+    // error por medio. Se vio instrumentando: el efecto entraba y el fotograma no salía.
+    //
+    // Y la marca se pone **dentro**, no antes de programar la espera: puesta antes, en
+    // desarrollo no se desplazaba nunca, porque React monta los efectos dos veces, la
+    // limpieza cancela la primera espera y la segunda se encuentra la marca ya puesta.
+    const id = window.setTimeout(() => {
+      const panel = document.querySelector('.panel') as HTMLElement | null
+      if (!panel) return
+      yaAsomado.current = true
+      const mapRect = map.getContainer().getBoundingClientRect()
+      const panelRect = panel.getBoundingClientRect()
+      const punto = map.latLngToContainerPoint(pos)
+      const hueco = panelRect.top - mapRect.top
+      // Ya se ve con holgura: no se toca el mapa. Mover por mover desorienta.
+      if (punto.y < hueco - 32) return
+      // Sin animación a propósito. La de Leaflet también va por fotogramas, así que se
+      // queda a medias en cuanto el navegador los frena —medido: el pin se movía 3 px de
+      // los 480 que le tocaban— y ese fallo solo aparece a veces, que es lo peor. Además
+      // el pin y el formulario salen a la vez: un salto instantáneo se lee igual de bien
+      // que un deslizamiento.
+      map.panBy([0, Math.round(punto.y - hueco / 2)], { animate: false })
+    }, 32)
+    return () => clearTimeout(id)
+  }, [map, pos, activo])
+  return null
+}
+
 // Enfoca una fuente centrándola en el área visible por ENCIMA del panel inferior
 // (bottom-sheet "cerca de ti"), para que el pin no quede tapado por la lista.
 function FocusOn({ target }: { target: [number, number] | null }) {
@@ -1606,6 +1662,7 @@ export function MapPage() {
         <VigilaGiro onChange={setBearing} />
         {me && <MeMarker pos={me} heading={heading} bearing={bearing} />}
         {placing && <PlacePicker onPick={setPos} />}
+        <AsomaElPin pos={pos} activo={placing} />
         {/* Añadir con una pulsación larga. Solo con sesión —sin ella no se puede crear
             nada— y solo cuando no se está colocando ya: durante la colocación el mapa
             responde al toque simple, y dos gestos para lo mismo se estorban. */}

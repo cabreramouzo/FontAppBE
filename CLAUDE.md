@@ -1063,10 +1063,23 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   en ese evento en **Safari móvil** (su `tapHold`), así que en Android Chrome no llegaría
   nunca y encima saldría el menú del navegador. Con `touchstart`/`touchend` va igual en los
   dos. En escritorio se usa el botón derecho, que sí es `contextmenu`.
+  **Y el mapa se desplaza para que el pin se vea** (`AsomaElPin`): el formulario sale de
+  abajo y tapaba el punto que acabas de tocar, justo cuando más falta hace verlo. Se
+  propuso enseñar el pin dos segundos y luego el formulario, y hace lo mismo peor —dos
+  segundos de espera en cada alta y al final el pin vuelve a estar tapado—; desplazando, se
+  queda visible todo el rato. Es la cuenta de `FocusOn` con la lista de cercanas. Solo la
+  primera vez: si moviera el mapa en cada toque, afinar la posición sería imposible.
+  Dos cosas que se pagan si se tocan, las dos descubiertas midiendo y no leyendo: la espera
+  para medir el formulario es un **`setTimeout` y no `requestAnimationFrame`** —los
+  navegadores congelan los fotogramas con la pestaña oculta y el desplazamiento no llegaba
+  a ocurrir—, y el desplazamiento va **sin animación**, porque la de Leaflet también va por
+  fotogramas y se quedaba a medias (medido: 3 px de los 480 que tocaban).
   Medio segundo, 12 px de tolerancia, cancela si el mapa se mueve, no se dispara sobre pines
   ni controles, y vibra al completarse — sin ese toque el gesto termina sin señal hasta que
   aparece el formulario y se duda de si ha funcionado. Comprobado en el navegador con
-  eventos táctiles: 700 ms abren el formulario en el punto tocado y un arrastre de 40 px no.
+  eventos táctiles: 700 ms abren el formulario en el punto tocado, un arrastre de 40 px no,
+  un toque a 573 px deja el pin en 95 —por encima del formulario, que empieza en 189— y uno
+  a 90 px no mueve el mapa.
 - **Añadir respeta la intención del mapa.** Si el centro visible está a 250 m o menos
   del GPS, el pin nace en la persona: estar delante de la fuente sigue siendo el camino
   principal. Si ha buscado o desplazado el mapa más lejos, nace en el centro visible y
