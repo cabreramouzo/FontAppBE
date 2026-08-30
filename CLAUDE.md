@@ -254,6 +254,13 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
     visor a pantalla completa. La ruta resuelve **por username además de por UUID**, como
     el resto de `/users/:id`: solo aceptaba el UUID y `/users/oriol_t` daba 400 — la ficha
     de la fuente funcionaba porque allí se tiene el UUID del creador. Hay test.
+    **Se ve como `/me`**: los mismos títulos con icono (`TituloDeSeccion`), las mismas
+    filas (`FilaDeFuente`: emoji del tipo + municipio) y el mismo rayado. El bloque del
+    nivel se queda **sin icono**, igual que «Tu aportación», porque tiene el escudo
+    dibujado justo debajo. Y de paso sus dos listas pasan por `ListaConTope`, que **no
+    tenían tope ninguno**: pintaban las 83 reseñas de una cuenta activa de una sentada —
+    el mismo fallo que ya se corrigió en el perfil propio, y aquí peor, porque esta
+    página la abre gente que no es esa persona.
     `GET /users/:id/badges` devuelve ahora también `level`
     (`null` **solo** si lo tiene apagado o la cuenta está anonimizada: con cero gotas el
     nivel es «Gota», porque la escalera empieza ahí y ahí está todo el mundo. Antes se

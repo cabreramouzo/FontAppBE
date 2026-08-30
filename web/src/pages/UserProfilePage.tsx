@@ -5,10 +5,7 @@ import Typography from '@mui/material/Typography'
 import Link from '@mui/material/Link'
 import Chip from '@mui/material/Chip'
 import Avatar from '@mui/material/Avatar'
-import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemText from '@mui/material/ListItemText'
 import type { Font, MyComment, UserResponse } from '../api/types'
 import { getUser, getUserComments, getUserFonts, getUserGamification } from '../api/client'
 import type { PublicGamification } from '../api/client'
@@ -24,6 +21,11 @@ import { BADGE_ART } from '../lib/levelBadges'
 import { TIER_COLOR } from '../lib/tierColors'
 import { useTheme } from '@mui/material/styles'
 import { nombreFuente, rotulo } from '../lib/fontName'
+import { FilaDeFuente } from '../components/FilaDeFuente'
+import { ListaConTope } from '../components/ListaConTope'
+import { TituloDeSeccion } from '../components/TituloDeSeccion'
+import AddLocationAltOutlinedIcon from '@mui/icons-material/AddLocationAltOutlined'
+import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined'
 
 export function UserProfilePage() {
   const { id } = useParams<{ id: string }>()
@@ -91,6 +93,8 @@ export function UserProfilePage() {
           servidor devuelve la lista vacía y el nivel nulo. */}
       {juego && (juego.level || juego.badges.length > 0) && (
         <Box component="section" sx={{ mb: 3 }}>
+          {/* Sin icono, igual que «Tu aportación» en `/me` y por la misma razón: el
+              escudo del nivel va dibujado justo debajo y los dos competirían. */}
           <Typography variant="h6" gutterBottom>{t('user.gamification')}</Typography>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
             {/* El nombre debajo del escudo y no al lado: puesto en horizontal quedaba
@@ -145,29 +149,46 @@ export function UserProfilePage() {
       )}
 
       <Box component="section" sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>{t('user.fonts', { n: fonts?.length ?? 0 })}</Typography>
+        <TituloDeSeccion icono={<AddLocationAltOutlinedIcon fontSize="small" />}>
+          {t('user.fonts', { n: fonts?.length ?? 0 })}
+        </TituloDeSeccion>
         {fonts === null && <Skeleton lines={2} />}
         {fonts?.length === 0 && <Typography color="text.secondary">{t('user.noFonts')}</Typography>}
-        <List disablePadding>
-          {fonts?.map((f) => (
-            <ListItem key={f.id} disablePadding divider>
-              <ListItemButton component={RouterLink} to={`/fonts/${f.id}`}>
-                <ListItemText primary={nombreFuente(f, t)} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
+        {/* Mismas filas y mismo tope que en `/me`: el icono del tipo, el municipio debajo
+            y el rayado en vez de rayas. Aquí el tope además arreglaba algo: esta lista
+            **no tenía ninguno** y crece para siempre, que es el mismo fallo que ya se
+            corrigió en el perfil propio — con una cuenta prolífica, la página se hace
+            interminable justo para quien viene a mirarla desde fuera. */}
+        {fonts && fonts.length > 0 && (
+          <ListaConTope
+            items={fonts}
+            clave={(f) => f.id}
+            fila={(f) => (
+              <FilaDeFuente
+                to={`/fonts/${f.id}`}
+                source={f.source}
+                primary={nombreFuente(f, t)}
+                secondary={f.municipality ?? f.region ?? undefined}
+              />
+            )}
+          />
+        )}
       </Box>
 
       <Box component="section">
-        <Typography variant="h6" gutterBottom>{t('user.reviews', { n: comments?.length ?? 0 })}</Typography>
+        <TituloDeSeccion icono={<ChatBubbleOutlineOutlinedIcon fontSize="small" />}>
+          {t('user.reviews', { n: comments?.length ?? 0 })}
+        </TituloDeSeccion>
         {comments === null && <Skeleton lines={3} />}
         {comments?.length === 0 && <Typography color="text.secondary">{t('user.noReviews')}</Typography>}
-        <List disablePadding>
-          {comments?.map((c) => {
+        {comments && comments.length > 0 && (
+          <ListaConTope
+            items={comments}
+            clave={(c) => c.id}
+            fila={(c) => {
             const ws = waterStatusInfo(c.waterStatus)
             return (
-              <ListItem key={c.id} divider alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
+              <ListItem alignItems="flex-start" sx={{ display: 'block', py: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Link component={RouterLink} to={`/fonts/${c.fontID}`} sx={{ fontWeight: 600 }}>{rotulo(c.fontName, t)}</Link>
                   {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`} />}
@@ -176,8 +197,9 @@ export function UserProfilePage() {
                 <Typography variant="body2" sx={{ mt: 0.5 }}>{c.body}</Typography>
               </ListItem>
             )
-          })}
-        </List>
+          }}
+          />
+        )}
       </Box>
 
       <BadgeShowcase
