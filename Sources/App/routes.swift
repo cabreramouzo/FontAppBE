@@ -29,6 +29,7 @@ func routes(_ app: Application) throws {
     try app.register(collection: GamificationController())
     try app.register(collection: MissionController())
     try app.register(collection: ZoneController())
+    try app.register(collection: MunicipalityController())
     try app.register(collection: NotificationController())
     try app.register(collection: PushController())
     try app.register(collection: PlaceController())

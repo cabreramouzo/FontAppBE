@@ -143,6 +143,12 @@ Una sola pantalla no sirve para las tres cosas. Separadas por **quién las mira*
    reunión y lo que se archiva en un expediente, y por eso es la más importante de las
    tres aunque sea la menos vistosa.
 
+El orden de la capa 1 es la mitad del mensaje: **cuántas hay → cuántas ha comprobado
+alguien → qué falta → cuáles son**. Un ayuntamiento tiene que ver en tres segundos que su
+inventario existe y que el estado está por llenar, porque eso segundo es exactamente lo
+que se le va a proponer. Enseñar solo «26 fuentes» sería la versión bonita y es la que se
+rompe el día que alguien vaya a una y esté seca.
+
 Lo que la capa 2 tiene que contestar, y en este orden, porque es el orden en que se
 trabaja: **qué tengo, qué está roto, qué no sé, y qué ha cambiado desde la última vez.**
 
@@ -154,8 +160,15 @@ trabaja: **qué tengo, qué está roto, qué no sé, y qué ha cambiado desde la
    código INE y con un nombre ambiguo se niega a elegir.
 2. **Tres entrevistas** con entidades de tamaños distintos, informe en la mano. Preguntar
    qué harían con esto, quién lo abriría, cada cuánto, y de qué partida saldría.
-3. **La página pública municipal**, que es barata y sirve igual sin cliente: agrupa por
-   `municipality_ine` en vez de por radio.
+3. ✅ **La página pública municipal** (primer esquema hecho): `/municipalities/:ine`,
+   servida por `GET /municipalities/:ine`. Agrupa por `municipality_ine` en vez de por
+   radio, es **pública y sin sesión** —lo que enseña ya se ve en el mapa, y la mayoría de
+   los datos son de OpenStreetMap y del ICGC/ACA, así que ponerle una puerta sería cerrar
+   datos abiertos que no son nuestros— y **no se enlaza todavía desde la navegación**: es
+   una dirección que se manda por correo mientras se valida. Lleva la descarga en CSV y
+   GeoJSON compuesta **en el navegador**, como el GPX: ni una ruta más que mantener.
+   La consulta la comparte con el comando (`MunicipalReport`), para que el PDF que firma
+   alguien y la página que ese alguien abre en el móvil no puedan dar cifras distintas.
 4. **Un piloto**, acotado a un municipio y una temporada, con campaña de verificación. El
    primero puede ser gratis; **el segundo se cobra o no hay producto**.
 5. **El panel**, solo si de los pasos 2 y 4 sale que hace falta y que alguien lo pagaría.

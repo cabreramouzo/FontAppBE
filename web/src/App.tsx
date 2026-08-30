@@ -45,6 +45,7 @@ const GamificationPage = lazy(() => import('./pages/GamificationPage').then((m) 
 const BadgesPage = lazy(() => import('./pages/BadgesPage').then((m) => ({ default: m.BadgesPage })))
 // Los ajustes son una pantalla por tema, como los del teléfono. Cada una en su trozo:
 // son pantallas que se abren de una en una y casi nunca.
+const MunicipalityPage = lazy(() => import('./pages/MunicipalityPage').then((m) => ({ default: m.MunicipalityPage })))
 const PlacePage = lazy(() => import('./pages/PlacePage').then((m) => ({ default: m.PlacePage })))
 const SettingsIndexPage = lazy(() => import('./pages/settings/SettingsIndexPage').then((m) => ({ default: m.SettingsIndexPage })))
 const AccountSettingsPage = lazy(() => import('./pages/settings/AccountSettingsPage').then((m) => ({ default: m.AccountSettingsPage })))
@@ -80,6 +81,10 @@ export default function App() {
                   <Route path="/gamification" element={<GamificationPage />} />
                   <Route path="/me/badges" element={<BadgesPage />} />
                   <Route path="/places/:slug" element={<PlacePage />} />
+                  {/* Pública y sin enlazar todavía desde la navegación: se manda por
+                      correo mientras se valida el producto territorial. Ver
+                      docs/ayuntamientos.md. */}
+                  <Route path="/municipalities/:ine" element={<MunicipalityPage />} />
                   <Route path="/me/settings" element={<SettingsIndexPage />} />
                   <Route path="/me/settings/account" element={<AccountSettingsPage />} />
                   <Route path="/me/settings/privacy" element={<PrivacySettingsPage />} />

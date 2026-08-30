@@ -40,131 +40,49 @@ struct MunicipalReportCommand: AsyncCommand {
 
     var help: String { "Informe e inventario de las fuentes de un municipio" }
 
-    /// Sin comprobar desde hace más de esto, en días. Es el corte de «Centinela» y el de
-    /// la curva del baremo: tres cortes distintos para la misma idea serían tres
-    /// explicaciones distintas de por qué algo sale en rojo.
-    static let olvidadaDias = 365
-
-    private struct Fila: Decodable {
-        let id: UUID
-        let name: String?
-        let latitude: Double
-        let longitude: Double
-        let source: String?
-        let drinkable: String?
-        let image: String?
-        let created_by: UUID?
-        let created_at: Date?
-        let municipality: String?
-        let municipality_ine: String?
-        /// Última reseña con estado, si alguien ha pasado alguna vez.
-        let last_status: String?
-        let last_at: Date?
-        let reviews: Int
-        /// Incidencias abiertas ahora mismo.
-        let open_reports: Int
-    }
-
     func run(using context: CommandContext, signature: Signature) async throws {
-        guard let sql = context.application.db as? any SQLDatabase else {
-            context.console.error("Hace falta PostgreSQL.")
-            return
-        }
-        guard let ine = try await resuelve(signature.municipio, on: sql, console: context.console) else { return }
-
-        // Una sola consulta con todo lo que cuelga de cada fuente. Los `LEFT JOIN LATERAL`
-        // evitan traerse el historial entero de reseñas: de cada fuente solo interesa la
-        // última con estado y dos recuentos.
-        let filas = try await sql.raw("""
-            SELECT f.id, f.name, f.latitude, f.longitude, f.source, f.drinkable, f.image,
-                   f.created_by, f.created_at, f.municipality, f.municipality_ine,
-                   ultima.water_status AS last_status, ultima.created_at AS last_at,
-                   COALESCE(r.n, 0) AS reviews,
-                   COALESCE(inc.n, 0) AS open_reports
-            FROM fonts f
-            LEFT JOIN LATERAL (
-              SELECT c.water_status, c.created_at FROM font_comments c
-              WHERE c.font_id = f.id AND c.water_status IS NOT NULL
-              ORDER BY c.created_at DESC LIMIT 1
-            ) ultima ON true
-            LEFT JOIN LATERAL (
-              SELECT count(*) AS n FROM font_comments c WHERE c.font_id = f.id
-            ) r ON true
-            LEFT JOIN LATERAL (
-              SELECT count(*) AS n FROM font_reports fr
-              WHERE fr.font_id = f.id AND fr.resolved_at IS NULL
-            ) inc ON true
-            WHERE f.municipality_ine = \(bind: ine)
-              -- Solo las que están en pie. Las duplicadas y las retiradas se cuentan
-              -- aparte: no son inventario, pero callarlas del todo haría que las cifras
-              -- no cuadraran con lo que se ve en el mapa.
-              AND \(unsafeRaw: Font.visibleSQL)
-            ORDER BY f.name NULLS LAST, f.id
-            """).all(decoding: Fila.self)
-
-        guard !filas.isEmpty else {
+        let db = context.application.db
+        guard let ine = try await resuelve(signature.municipio, on: db, console: context.console) else { return }
+        guard let r = try await MunicipalReport.of(ine: ine, on: db) else {
             context.console.warning("El municipio \(ine) no tiene ninguna fuente visible.")
             return
         }
-        let nombre = filas.first?.municipality ?? ine
-
-        let escondidas = try await sql.raw("""
-            SELECT count(*) FILTER (WHERE duplicate_of IS NOT NULL) AS duplicadas,
-                   count(*) FILTER (WHERE retired_at IS NOT NULL) AS retiradas
-            FROM fonts WHERE municipality_ine = \(bind: ine)
-            """).first(decoding: Escondidas.self) ?? Escondidas(duplicadas: 0, retiradas: 0)
+        let filas = r.items
+        let nombre = r.municipality
 
         let ahora = Date()
-        let dias: (Date?) -> Int? = { f in f.map { Int(ahora.timeIntervalSince($0) / 86_400) } }
-
-        let comprobadas = filas.filter { $0.reviews > 0 }
-        let olvidadas = filas.filter { f in
-            guard let d = dias(f.last_at) else { return false }
-            return d >= Self.olvidadaDias
-        }
-        let sinComprobar = filas.filter { $0.last_at == nil }
-        let incidencias = filas.filter { $0.open_reports > 0 }
-
-        func reparto(_ clave: (Fila) -> String?) -> [String: Int] {
-            var r: [String: Int] = [:]
-            for f in filas { r[clave(f) ?? "(sin declarar)", default: 0] += 1 }
-            return r
-        }
 
         // ## El resumen por pantalla
         let c = context.console
         c.info("")
         c.info("Fuentes de \(nombre) (INE \(ine))")
         c.info(String(repeating: "─", count: 40))
-        c.info("Inventario:            \(filas.count) fuentes en el mapa")
-        if escondidas.duplicadas + escondidas.retiradas > 0 {
-            c.info("  (fuera del recuento: \(escondidas.duplicadas) duplicadas, \(escondidas.retiradas) retiradas)")
+        c.info("Inventario:            \(r.fonts) fuentes en el mapa")
+        if r.hiddenDuplicates + r.retired > 0 {
+            c.info("  (fuera del recuento: \(r.hiddenDuplicates) duplicadas, \(r.retired) retiradas)")
         }
-        c.info("Por tipo:              \(describe(reparto { $0.source }))")
-        c.info("Potabilidad declarada: \(describe(reparto { $0.drinkable }))")
-        c.info("Con foto:              \(filas.filter { $0.image != nil }.count)")
-        c.info("Puestas por una persona: \(filas.filter { $0.created_by != nil }.count) (el resto vienen de mapas abiertos)")
+        c.info("Por tipo:              \(describe(r.bySource))")
+        c.info("Potabilidad declarada: \(describe(r.byDrinkable))")
+        c.info("Con foto:              \(r.withPhoto)")
+        c.info("Puestas por una persona: \(r.byPeople) (el resto vienen de mapas abiertos)")
         c.info("")
         c.info("Estado del agua:")
-        c.info("  Comprobadas alguna vez:  \(comprobadas.count) de \(filas.count) (\(pct(comprobadas.count, filas.count)))")
-        c.info("  Sin comprobar nunca:     \(sinComprobar.count)")
-        c.info("  Más de \(Self.olvidadaDias) días sin nadie: \(olvidadas.count)")
-        if !comprobadas.isEmpty {
-            c.info("  Último parte:            \(describe(repartoDe(comprobadas.map { $0.last_status })))")
+        c.info("  Comprobadas alguna vez:  \(r.checkedEver) de \(r.fonts) (\(pct(r.checkedEver, r.fonts)))")
+        c.info("  Sin comprobar nunca:     \(r.neverChecked)")
+        c.info("  Más de \(MunicipalReport.olvidadaDias) días sin nadie: \(r.staleOverYear)")
+        if !r.byLastStatus.isEmpty {
+            c.info("  Último parte:            \(describe(r.byLastStatus))")
         }
-        c.info("  Incidencias abiertas:    \(incidencias.count)")
+        c.info("  Incidencias abiertas:    \(r.openReports)")
         c.info("")
 
         guard !signature.dryRun else { return }
 
         let carpeta = signature.out ?? FileManager.default.currentDirectoryPath
         let base = URL(fileURLWithPath: carpeta).appendingPathComponent(ine)
-        try escribe(csv(filas, dias: dias), a: base.appendingPathExtension("fuentes.csv"))
+        try escribe(csv(filas), a: base.appendingPathExtension("fuentes.csv"))
         try escribe(geojson(filas, nombre: nombre, ine: ine), a: base.appendingPathExtension("fuentes.geojson"))
-        try escribe(json(filas, nombre: nombre, ine: ine, escondidas: escondidas,
-                         comprobadas: comprobadas.count, olvidadas: olvidadas.count,
-                         incidencias: incidencias.count, ahora: ahora),
-                    a: base.appendingPathExtension("informe.json"))
+        try escribe(json(r, ahora: ahora), a: base.appendingPathExtension("informe.json"))
         c.info("Escritos \(ine).fuentes.csv, \(ine).fuentes.geojson y \(ine).informe.json en \(carpeta)")
     }
 
@@ -174,33 +92,27 @@ struct MunicipalReportCommand: AsyncCommand {
     /// que se llaman igual en provincias distintas—, y entonces **no elige**: lista los
     /// códigos y para. Elegir uno por su cuenta significaría entregarle a un ayuntamiento
     /// el inventario de otro.
-    private func resuelve(_ entrada: String, on sql: any SQLDatabase, console: any Console) async throws -> String? {
+    private func resuelve(_ entrada: String, on db: any Database, console: any Console) async throws -> String? {
         let limpio = entrada.trimmingCharacters(in: .whitespaces)
         if limpio.count == 5, limpio.allSatisfy(\.isNumber) { return limpio }
 
-        struct Candidato: Decodable { let municipality: String; let municipality_ine: String; let n: Int }
-        let candidatos = try await sql.raw("""
-            SELECT municipality, municipality_ine, count(*)::int AS n FROM fonts
-            WHERE lower(municipality) = lower(\(bind: limpio))
-            GROUP BY 1, 2 ORDER BY 3 DESC
-            """).all(decoding: Candidato.self)
-
+        let candidatos = try await MunicipalReport.candidates(name: limpio, on: db)
         switch candidatos.count {
         case 0:
             console.error("No hay ningún municipio llamado «\(limpio)» con fuentes.")
             return nil
         case 1:
-            return candidatos[0].municipality_ine
+            return candidatos[0].ine
         default:
             console.warning("«\(limpio)» es ambiguo. Repite con el código INE:")
-            for c in candidatos { console.info("  \(c.municipality_ine)  \(c.municipality)  (\(c.n) fuentes)") }
+            for c in candidatos { console.info("  \(c.ine)  \(c.municipality)  (\(c.fonts) fuentes)") }
             return nil
         }
     }
 
     // MARK: - Ficheros
 
-    private func csv(_ filas: [Fila], dias: (Date?) -> Int?) -> String {
+    private func csv(_ filas: [MunicipalReport.Item]) -> String {
         var out = "id,nombre,latitud,longitud,tipo,potabilidad_declarada,tiene_foto,resenas,ultimo_estado,dias_desde_la_ultima,incidencias_abiertas\n"
         for f in filas {
             let campos: [String] = [
@@ -210,11 +122,11 @@ struct MunicipalReportCommand: AsyncCommand {
                 String(format: "%.6f", f.longitude),
                 f.source ?? "",
                 f.drinkable ?? "",
-                f.image != nil ? "sí" : "no",
+                f.hasPhoto ? "sí" : "no",
                 String(f.reviews),
-                f.last_status ?? "",
-                dias(f.last_at).map(String.init) ?? "",
-                String(f.open_reports),
+                f.lastStatus ?? "",
+                f.days.map(String.init) ?? "",
+                String(f.openReports),
             ]
             out += campos.map(escapaCSV).joined(separator: ",") + "\n"
         }
@@ -229,7 +141,7 @@ struct MunicipalReportCommand: AsyncCommand {
         return "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\""
     }
 
-    private func geojson(_ filas: [Fila], nombre: String, ine: String) -> String {
+    private func geojson(_ filas: [MunicipalReport.Item], nombre: String, ine: String) -> String {
         let features: [[String: Any]] = filas.map { f in
             [
                 "type": "Feature",
@@ -239,10 +151,10 @@ struct MunicipalReportCommand: AsyncCommand {
                     "nombre": f.name as Any? ?? NSNull(),
                     "tipo": f.source as Any? ?? NSNull(),
                     "potabilidad_declarada": f.drinkable as Any? ?? NSNull(),
-                    "tiene_foto": f.image != nil,
+                    "tiene_foto": f.hasPhoto,
                     "resenas": f.reviews,
-                    "ultimo_estado": f.last_status as Any? ?? NSNull(),
-                    "incidencias_abiertas": f.open_reports,
+                    "ultimo_estado": f.lastStatus as Any? ?? NSNull(),
+                    "incidencias_abiertas": f.openReports,
                 ],
             ]
         }
@@ -259,28 +171,27 @@ struct MunicipalReportCommand: AsyncCommand {
         return String(data: datos, encoding: .utf8) ?? "{}"
     }
 
-    private func json(_ filas: [Fila], nombre: String, ine: String, escondidas: Escondidas,
-                      comprobadas: Int, olvidadas: Int, incidencias: Int, ahora: Date) -> String {
+    private func json(_ r: MunicipalReport, ahora: Date) -> String {
         let iso = ISO8601DateFormatter()
         let root: [String: Any] = [
-            "municipio": nombre,
-            "ine": ine,
+            "municipio": r.municipality,
+            "ine": r.ine,
             "generado": iso.string(from: ahora),
             "inventario": [
-                "fuentes": filas.count,
-                "con_foto": filas.filter { $0.image != nil }.count,
-                "puestas_por_personas": filas.filter { $0.created_by != nil }.count,
-                "duplicadas_ocultas": escondidas.duplicadas,
-                "retiradas": escondidas.retiradas,
-                "por_tipo": Dictionary(grouping: filas, by: { $0.source ?? "sin declarar" }).mapValues(\.count),
-                "por_potabilidad_declarada": Dictionary(grouping: filas, by: { $0.drinkable ?? "sin declarar" }).mapValues(\.count),
+                "fuentes": r.fonts,
+                "con_foto": r.withPhoto,
+                "puestas_por_personas": r.byPeople,
+                "duplicadas_ocultas": r.hiddenDuplicates,
+                "retiradas": r.retired,
+                "por_tipo": r.bySource,
+                "por_potabilidad_declarada": r.byDrinkable,
             ],
             "estado": [
-                "comprobadas_alguna_vez": comprobadas,
-                "sin_comprobar_nunca": filas.filter { $0.last_at == nil }.count,
-                "olvidadas_mas_de_un_ano": olvidadas,
-                "incidencias_abiertas": incidencias,
-                "por_ultimo_parte": Dictionary(grouping: filas.compactMap(\.last_status), by: { $0 }).mapValues(\.count),
+                "comprobadas_alguna_vez": r.checkedEver,
+                "sin_comprobar_nunca": r.neverChecked,
+                "olvidadas_mas_de_un_ano": r.staleOverYear,
+                "incidencias_abiertas": r.openReports,
+                "por_ultimo_parte": r.byLastStatus,
             ],
             "licencia": "Datos bajo ODbL; fotos bajo CC BY-SA 4.0. Atribución: FontApp y sus colaboradores.",
         ]
@@ -288,19 +199,11 @@ struct MunicipalReportCommand: AsyncCommand {
         return String(data: datos, encoding: .utf8) ?? "{}"
     }
 
-    private struct Escondidas: Decodable { let duplicadas: Int; let retiradas: Int }
-
     private func escribe(_ texto: String, a url: URL) throws {
         try texto.write(to: url, atomically: true, encoding: .utf8)
     }
 
     // MARK: - Presentación
-
-    private func repartoDe(_ valores: [String?]) -> [String: Int] {
-        var r: [String: Int] = [:]
-        for v in valores.compactMap({ $0 }) { r[v, default: 0] += 1 }
-        return r
-    }
 
     private func describe(_ r: [String: Int]) -> String {
         r.sorted { ($0.value, $1.key) > ($1.value, $0.key) }

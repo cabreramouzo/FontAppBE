@@ -446,6 +446,42 @@ export async function forgotPassword(email: string, lang?: string): Promise<{ ok
 // Baja del resumen semanal desde el enlace del correo: no requiere sesión, el token
 // firmado que viaja en la URL es la única credencial (ver UnsubscribeToken en el backend).
 /** Una fuente que cuidas: tu reseña es la última que tiene. */
+/** El inventario de un municipio. Lo sirve `GET /municipalities/:ine`, público. */
+export interface MunicipalReport {
+  municipality: string
+  ine: string
+  fonts: number
+  withPhoto: number
+  byPeople: number
+  hiddenDuplicates: number
+  retired: number
+  bySource: Record<string, number>
+  byDrinkable: Record<string, number>
+  checkedEver: number
+  neverChecked: number
+  staleOverYear: number
+  openReports: number
+  byLastStatus: Record<string, number>
+  items: {
+    id: string
+    name: string | null
+    latitude: number
+    longitude: number
+    source: string | null
+    drinkable: string | null
+    hasPhoto: boolean
+    reviews: number
+    lastStatus: string | null
+    /** Días desde el último parte. `null` = nadie ha pasado nunca. */
+    days: number | null
+    openReports: number
+  }[]
+}
+
+export async function getMunicipality(ine: string): Promise<MunicipalReport> {
+  return apiFetch<MunicipalReport>(`/municipalities/${encodeURIComponent(ine)}`)
+}
+
 export interface Guarded {
   fontID: string
   name: string | null

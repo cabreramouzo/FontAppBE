@@ -1888,6 +1888,37 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   salvan en el primer kilómetro y después ya casi nada, porque no hay archipiélagos que
   cubrir, solo precisión de costa.
 
+## La página de un municipio (`/municipalities/:ine`)
+
+- «Fuentes de Castellcir»: el inventario de un municipio, **público y sin sesión**. Es el
+  primer esquema del producto territorial de [docs/ayuntamientos.md](docs/ayuntamientos.md);
+  lo que enseña ya se ve en el mapa, y la mayoría de los datos son de OpenStreetMap (ODbL)
+  y del ICGC/ACA, así que ponerle una puerta sería cerrar datos abiertos que no son
+  nuestros. Lo cobrable es lo otro —avisos, histórico, campañas—, y no se construye hasta
+  que haya quien lo pague.
+- **La consulta vive en `MunicipalReport` y la comparten dos llamadores**: el comando
+  `municipal-report`, que escribe el informe que se enseña en una reunión, y
+  `GET /municipalities/:ine`, que pinta la página. Dos consultas parecidas se separan al
+  primer arreglo, y aquí eso significaría que el PDF que firma alguien y la página que ese
+  alguien abre en el móvil dan cifras distintas. Mismo motivo que `ContributionLedger.sync()`.
+- **Va por código INE y no por nombre**: hay municipios que se llaman igual en provincias
+  distintas. Con nombre (`GET /municipalities?name=`) se devuelve **la lista de
+  candidatos**, nunca uno elegido a dedo — sería enseñarle a alguien el inventario de otro
+  pueblo con el rótulo del suyo. El comando hace lo mismo y se planta.
+- El orden de la página **es el mensaje**: cuántas hay → cuántas ha comprobado alguien →
+  qué falta → cuáles son. Enseñar solo «26 fuentes» es la versión bonita y es la que se
+  rompe el día que alguien vaya a una y esté seca.
+- Descarga de CSV y GeoJSON **compuesta en el navegador** con lo que la página ya pidió,
+  igual que el GPX: cero coste de servidor y ninguna ruta nueva. La atribución va **dentro
+  del fichero**, porque un GeoJSON se reenvía suelto por correo sin la página que lo
+  explicaba.
+- **No se enlaza desde la navegación** todavía, y no es un descuido: es una dirección que
+  se manda por correo mientras se valida. Esconderla no hace falta —no hay nada privado—;
+  prometer una sección que aún no existe, sí sobra.
+- Ojo con `CoverageBar`: pinta el porcentaje **tal cual se lo pasan** (en `/zones` se lo da
+  el servidor ya redondeado). Aquí se calcula en el cliente, y sin redondear salía
+  «73.07692307692308 %».
+
 ## Carteles / campañas
 - Cartel A5 en catalán en `flyer/` (HTML editable + PDF). `flyer/genera-cartells.py <codis>`
   genera una copia por pueblo con su QR y su código (`fontapp.net/?p=castellcir`).
