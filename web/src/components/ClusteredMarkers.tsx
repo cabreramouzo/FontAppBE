@@ -179,23 +179,36 @@ export function ClusteredMarkers({
       const srcText = src ? `${src.emoji} ${t(src.labelKey)}` : ''
       const drText = dr ? `${dr.emoji} ${t(dr.labelKey)}` : ''
       const el = document.createElement('div')
-      // Todo el popup es UN enlace, no solo el botón: en un mapa se toca con el pulgar
-      // mientras andas y el objetivo pequeño es el problema. Y va como `<a>` de verdad y
-      // no como un `<div>` con un `onclick`, para que siga funcionando con teclado, con
-      // «abrir en pestaña nueva» y con un lector de pantalla.
+      // ## Qué es pulsable aquí, y por qué cambió
       //
-      // El botón de dentro se queda como **señal**: sin algo que parezca pulsable, nadie
-      // descubre que la tarjeta entera lo es. Por eso es un `<span>` y no otro enlace —
-      // un enlace dentro de otro no es HTML válido.
+      // Antes **todo el globo** era un enlace a la ficha, con un botón dentro como señal.
+      // Tenía sentido cuando esa era la única acción y el botón medía 142×40 px sobre un
+      // mapa en movimiento. Ya no:
+      //
+      //  · el objetivo pequeño se arregló —el enlace ocupa ahora el ancho y 48 px de alto—,
+      //    así que la razón original desapareció;
+      //  · con los chips de estado hay **controles dentro de un control**, que es lo que la
+      //    guía de Apple dice que no se haga: apuntar a «poca agua» y caer dos milímetros
+      //    arriba no fallaba el chip, te **sacaba del mapa**, que es el peor error posible
+      //    porque pierdes el contexto;
+      //  · y la jerarquía decía lo contrario de lo que quiere esta app: lo más llamativo
+      //    era un botón relleno que lleva a **leer**, cuando lo que hace falta es que la
+      //    gente **cuente** cómo está la fuente.
+      //
+      // Así que la tarjeta ya **no** es pulsable, el enlace baja al final como salida —no
+      // como acción principal— y los chips suben justo debajo del estado. El orden se lee
+      // solo: qué es → cómo está → dime cómo está ahora → ver más.
+      //
+      // Sigue siendo un `<a>` de verdad y no un `<div>` con `onclick`, para que funcionen
+      // el teclado, «abrir en pestaña nueva» y los lectores de pantalla.
       el.innerHTML = `
-        <a href="/fonts/${f.id}" class="popup-card">
+        <div class="popup-card">
           <strong>${escapeHtml(nombreFuente(f, t))}</strong>
           <div class="muted small">${srcText}${src && dr ? ' · ' : ''}${drText}</div>
           ${ws ? `<div class="badge">${ws.emoji} ${t(`status.${ws.key}`)}</div>` : ''}
           <div class="muted small" title="${escapeHtml(t(confidenceDetailKey(confidence)))}">${CONFIDENCE_EMOJI[confidence]} ${escapeHtml(t(confidenceLabelKey(confidence)))}</div>
           ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
-          <span class="popup-link">${t('popup.detail')}</span>
-        </a>
+        </div>
         ${user ? `<div class="popup-quick" data-font="${f.id}" data-antes="${f.lastWaterStatus ?? ''}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
           <span class="muted small">${escapeHtml(t('popup.howIsIt'))}</span>
           <div class="popup-quick-row">
@@ -204,8 +217,9 @@ export function ClusteredMarkers({
               return `<button type="button" data-estado="${e}" title="${escapeHtml(t(`status.${e}`))}">${info?.emoji ?? ''} ${escapeHtml(t(`status.${e}`))}</button>`
             }).join('')}
           </div>
-        </div>` : ''}`
-      el.querySelector('.popup-card')?.addEventListener('click', (e) => {
+        </div>` : ''}
+        <a href="/fonts/${f.id}" class="popup-link">${t('popup.detail')}</a>`
+      el.querySelector('.popup-link')?.addEventListener('click', (e) => {
         e.preventDefault()
         navigate(`/fonts/${f.id}`)
       })

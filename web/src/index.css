@@ -770,42 +770,30 @@ select:not([class*="Mui"]) {
    Iba sin ninguna regla —era un `<a>` pelado— y por eso parecía lo que era: un enlace.
    Y en un mapa el objetivo se toca con el pulgar mientras andas, así que va a lo ancho
    del popup y con 40 px de alto, por encima del mínimo cómodo. */
-.popup-card .popup-link {
+/* «Ver detalle» es la SALIDA, no la acción principal.
+   Era un botón relleno a todo lo ancho y arriba, y con eso lo más llamativo del globo
+   llevaba a **leer** — cuando lo que esta app necesita es que la gente **cuente** cómo
+   está la fuente. Ahora es una fila de enlace al final, debajo de los chips.
+   Mantiene los 48 px de alto: sigue siendo un objetivo de pulgar. */
+.leaflet-container a.popup-link {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  margin-top: 10px;
-  padding: 0 16px;
-  border-radius: 12px;
-  background: var(--accent);
-  /* Texto OSCURO, no blanco — y no es una preferencia: es lo que hace MUI. Su
-     `getContrastText` calcula que este azul es demasiado claro para el blanco y pone
-     `rgba(0,0,0,.87)`, que da 7,6:1 de contraste frente a los 2,8:1 del blanco. Con
-     `--accent-fg` el botón quedaba menos legible que el resto y encima distinto del
-     resto de botones de la app. Vale para los dos modos: el azul del oscuro es aún
-     más claro. */
-  color: rgba(0, 0, 0, 0.87);
+  min-height: 48px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border, rgba(128, 128, 128, 0.25));
+  color: var(--accent);
   font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
   /* Leaflet centra el contenido del popup con `text-align`; sin esto el rótulo se
      desalinea al ponerlo en flex. */
   text-align: center;
-  line-height: 1.2;
-  transition: filter 0.15s ease;
 }
 
-.popup-card:hover .popup-link {
-  /* Oscurecer con un filtro y no con un segundo color: así vale igual para el azul claro
-     y el oscuro sin declarar dos tonos más. */
-  filter: brightness(0.92);
-  text-decoration: none;
-}
 
-.popup-card:active .popup-link { filter: brightness(0.85); }
 
-.popup-card:focus-visible .popup-link {
+.leaflet-container a.popup-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -858,30 +846,13 @@ select:not([class*="Mui"]) {
 .leaflet-container .popup-quick button:hover { filter: brightness(0.94); }
 .leaflet-container .popup-quick button:active { filter: brightness(0.88); }
 
-@media (prefers-reduced-motion: reduce) {
-  .popup-card .popup-link { transition: none; }
-}
-
-/* La tarjeta entera del popup es el enlace. El texto de dentro tiene que seguir siendo
-   texto: sin esto, el `.leaflet-container a { color: #0078A8 }` de Leaflet tiñe de azul
-   el nombre de la fuente y el distintivo de estado. */
-.leaflet-container a.popup-card {
+/* La tarjeta ya NO es pulsable: es información. Lo era para agrandar un objetivo que
+   entonces era diminuto, y desde que hay chips de estado dentro eso significaba controles
+   dentro de un control — apuntar a un chip y fallar por dos milímetros te sacaba del mapa.
+   Ver el comentario largo en `ClusteredMarkers`. */
+.leaflet-container .popup-card {
   display: block;
   color: var(--fg);
-  text-decoration: none;
-  cursor: pointer;
-  /* Se estira hasta el borde del popup y recupera el hueco por dentro, para que el área
-     pulsable llegue a las esquinas en vez de dejar un marco muerto alrededor. */
-  margin: -4px;
-  padding: 4px;
-  border-radius: 10px;
-}
-
-.leaflet-container a.popup-card:hover { background: var(--border); }
-
-.leaflet-container a.popup-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
 }
 
 /* El globo del popup sigue el tema de la app.
@@ -942,7 +913,6 @@ select:not([class*="Mui"]) {
      por debajo de eso el objetivo es de ratón, y esto se usa andando. */
   .leaflet-container .leaflet-popup a.leaflet-popup-close-button { width: 48px; height: 48px; }
   .leaflet-container .popup-quick button:not(.popup-undo) { min-height: 48px; }
-  .popup-card .popup-link { min-height: 48px; display: flex; align-items: center; justify-content: center; }
 }
 
 

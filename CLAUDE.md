@@ -1135,13 +1135,25 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
 
 ## El popup del mapa
 
-- **Todo el popup es un enlace**, no solo el botón: se toca con el pulgar sobre un mapa en
-  movimiento y el objetivo pequeño era el problema. El área pulsable pasó de 142×40 a
-  150×93 px.
+- **La tarjeta ya no es pulsable, y el enlace bajó al final.** Todo el globo fue un enlace
+  durante un tiempo, con un botón dentro como señal: tenía sentido cuando esa era la única
+  acción y el botón medía 142×40 px sobre un mapa en movimiento. Con los chips de estado
+  dentro dejó de tenerlo, por tres razones:
+  · el objetivo pequeño ya está resuelto —el enlace ocupa el ancho y 48 px de alto—, así
+    que la razón original desapareció;
+  · había **controles dentro de un control**, que es lo que la guía de Apple dice que no se
+    haga: apuntar a «poca agua» y fallar por dos milímetros no fallaba el chip, **te sacaba
+    del mapa**, que es el peor error posible porque pierdes el contexto;
+  · y la jerarquía decía lo contrario de lo que quiere la app: lo más llamativo era un botón
+    relleno que lleva a **leer**, cuando lo que hace falta es que la gente **cuente**.
+  Ahora el orden se lee solo: qué es → cómo está → dime cómo está ahora → ver más.
+  Comprobado midiendo: tocar el nombre de la fuente no navega, el enlace del final sí, y
+  los tres objetivos (aspa, chips, enlace) miden 48 px.
+  **Lo que NO pasó**, y lo predije mal: no se ahorró espacio. El globo pasó de 227 a 236 px
+  porque el enlace sigue ocupando una fila de 48 —tiene que seguir siendo un objetivo de
+  pulgar—. Lo que se gana es lo otro, no altura.
 - Va como `<a>` de verdad y no como un `<div>` con `onclick`, para que sigan funcionando el
-  teclado, «abrir en pestaña nueva» y los lectores de pantalla. El botón de dentro es un
-  `<span>` —un enlace dentro de otro no es HTML válido— y se queda como **señal**: sin algo
-  que parezca pulsable, nadie descubre que la tarjeta entera lo es.
+  teclado, «abrir en pestaña nueva» y los lectores de pantalla.
 - El botón imita a MUI a mano porque **Leaflet no monta React**: los valores salen del tema
   (radio 12, sin mayúsculas, peso 600) y el color de `--accent`, para no mantener un
   segundo azul. Dos trampas que solo se ven midiendo: Leaflet trae
