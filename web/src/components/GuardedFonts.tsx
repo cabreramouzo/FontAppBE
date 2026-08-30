@@ -10,6 +10,7 @@ import { WorthChip } from './WorthChip'
 import { rotulo } from '../lib/fontName'
 import { waterStatusInfo } from '../lib/waterStatus'
 import { FilaDeFuente } from './FilaDeFuente'
+import { TituloDeSeccion } from './TituloDeSeccion'
 
 
 /**
@@ -44,9 +45,7 @@ export function GuardedFonts() {
 
   return (
     <Box component="section" sx={{ mb: 3 }}>
-      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-        <ShieldMoonIcon fontSize="small" /> {t('guard.title')}
-      </Typography>
+      <TituloDeSeccion icono={<ShieldMoonIcon fontSize="small" />}>{t('guard.title')}</TituloDeSeccion>
       {/* El resumen antes de la lista: lo que hay que saber es cuántas se han quedado
           viejas, no cuántas hay en total. */}
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

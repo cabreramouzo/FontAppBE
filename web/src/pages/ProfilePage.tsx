@@ -21,6 +21,10 @@ import { GamificationCard } from '../components/GamificationCard'
 import { GuardedFonts } from '../components/GuardedFonts'
 import { ListaConTope } from '../components/ListaConTope'
 import { FilaDeFuente } from '../components/FilaDeFuente'
+import { TituloDeSeccion } from '../components/TituloDeSeccion'
+import StarBorderIcon from '@mui/icons-material/StarBorder'
+import AddLocationAltOutlinedIcon from '@mui/icons-material/AddLocationAltOutlined'
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined'
 import { nombreFuente, rotulo } from '../lib/fontName'
 
 /**
@@ -121,7 +125,9 @@ export function ProfilePage() {
 
       <Box>
       <Box component="section" sx={{ mb: 3 }}>
-        <Typography variant="h6">{t('profile.myFavorites')}</Typography>
+        {/* La estrella y no un marcapáginas: es la misma con la que se marca una fuente
+            en su ficha, así que el rótulo y el gesto se reconocen el uno al otro. */}
+        <TituloDeSeccion icono={<StarBorderIcon fontSize="small" />}>{t('profile.myFavorites')}</TituloDeSeccion>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('profile.myFavoritesHint')}</Typography>
         {favorites === null && <Skeleton lines={2} />}
         {favorites?.length === 0 && <Typography color="text.secondary">{t('profile.noFavorites')}</Typography>}
@@ -148,7 +154,9 @@ export function ProfilePage() {
       </Box>
 
       <Box component="section" sx={{ mb: 3 }}>
-        <Typography variant="h6">{t('profile.myFonts')}</Typography>
+        {/* El chincheta-con-más: es literalmente lo que dice el subtítulo —«las que
+            pusiste tú en el mapa»— y el mismo icono del botón de añadir una fuente. */}
+        <TituloDeSeccion icono={<AddLocationAltOutlinedIcon fontSize="small" />}>{t('profile.myFonts')}</TituloDeSeccion>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('profile.myFontsHint')}</Typography>
         {fonts === null && <Skeleton lines={2} />}
         {fonts?.length === 0 && <Typography color="text.secondary">{t('profile.noFonts')}</Typography>}
@@ -175,7 +183,7 @@ export function ProfilePage() {
       </Box>
 
       <Box component="section">
-        <Typography variant="h6" gutterBottom>{t('profile.myReviews')}</Typography>
+        <TituloDeSeccion icono={<ChatBubbleOutlineIcon fontSize="small" />}>{t('profile.myReviews')}</TituloDeSeccion>
         {comments === null && <Skeleton lines={3} />}
         {comments?.length === 0 && <Typography color="text.secondary">{t('profile.noReviews')}</Typography>}
         {comments && (

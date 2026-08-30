@@ -1598,6 +1598,14 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   sobre la gente. «Permisos» es peor todavía: es el vocabulario de los roles y la
   moderación, el mismo eje de autoridad sobre personas que estas capacidades evitan a
   propósito. Lo que hay debajo son literalmente acciones sobre una fuente.
+- **Los cuatro títulos llevan icono** (`TituloDeSeccion`): escudo, **estrella**, chincheta
+  con un más y **bocadillo**. Solo lo tenía «fuentes que dependen de ti», así que en una
+  página de cuatro bloques uno parecía de otra familia. No es adorno: en una pantalla
+  larga el icono es lo que permite volver a encontrar una sección **sin leer**, la misma
+  razón por la que las filas llevan el emoji del tipo. La estrella es la misma con la que
+  se marca una fuente en su ficha y la chincheta la misma del botón de añadir, para que
+  el rótulo y el gesto se reconozcan. «Tu aportación» se queda **sin** icono a propósito:
+  lleva el escudo del nivel dibujado justo debajo y competirían.
 - **Las filas dicen algo, y van rayadas** (`FilaDeFuente` + el rayado de `ListaConTope`).
   Favoritas y «fuentes que has añadido» eran **un nombre por fila y nada más**: un muro de
   texto donde no se distingue una fila de la siguiente y no hay con qué elegir.
