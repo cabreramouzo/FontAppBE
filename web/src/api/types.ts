@@ -217,6 +217,10 @@ export interface FontSummary extends Font {
   latestConfirmations: number
   recentStatusReporters: number
   recentStatusConflict: boolean
+  /** El último parte, para poder confirmarlo desde el globo en vez de repetirlo. */
+  lastCommentID?: string | null
+  /** La fecha del parte en sí, sin contar sus confirmaciones. Ver `lib/quickReview.ts`. */
+  lastReportAt?: string | null
 }
 
 /** Agregado exacto del mapa cuando el viewport contiene demasiadas fuentes. */

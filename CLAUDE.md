@@ -662,6 +662,18 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - **El pie desaparece del mapa en móvil** y se queda en el resto de páginas. La atribución
   de OSM/ICGC es obligación de licencia y no se pierde: en el mapa la pinta Leaflet abajo a
   la derecha, y en las demás páginas sigue el pie entero.
+- **`html` y `body` NO pueden llevar `height: 100%`.** Lo llevaban desde que la app era
+  solo el mapa y ninguna página se desplazaba («se comporta como una app», decía el
+  comentario). Hoy casi todas se desplazan, y entonces esa regla fija el documento a **un
+  viewport exacto** con el contenido midiendo mucho más — medido en producción en
+  `/zones`: html y body a **812 px** con **67.998 px** de contenido. Blink lo tolera;
+  **WebKit no**: ancla ahí los `position: fixed`, así que la tab bar viaja con el
+  contenido al hacer scroll y sube hasta media pantalla. Reportado desde un iPhone.
+  El alto de pantalla lo pone `.app` con `min-height: 100dvh`, que es su sitio; html y
+  body se quedan en `min-height: 100%` para cubrir las páginas cortas.
+  Ojo al buscarlo: **en Chrome no se reproduce**, la barra se queda clavada con la regla
+  mala puesta. Por eso `scripts/layout-css.test.ts` va sobre el CSS y no sobre la
+  posición: una comprobación de posición pasaría en verde con el fallo dentro.
 - Dos medidas que hay que respetar al tocar esto, las dos en `index.css`:
   `--alto-barra` y `--bajo-el-mapa`. El mapa se dimensiona restándolas y los toasts se
   levantan con la segunda. Van en variables porque son **cinco sitios** y el que se olvide
@@ -1317,6 +1329,52 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   que viaja en `data-antes` por la misma razón que el id.
 - Sin cobertura va a la bandeja de salida, como el resto de reseñas. Sin sesión no se
   pintan los chips: no hay nada que hacer si no puedes aportar.
+
+### Tocar el chip que ya consta es CONFIRMAR, no repetir
+
+- Los tres chips solo sabían **crear reseñas**. Así que tocar «sale agua» sobre una fuente
+  que ya lo dice desde hace una hora publicaba un parte repetido en vez de respaldar el que
+  había — que es literalmente lo que significa el botón «sigue igual» de la ficha. Lo
+  reportó el autor: «perdemos la verificación por parte de otro usuario constantemente».
+- **Medido antes de tocar nada, y la magnitud desmiente la mitad de la alarma:** 123 reseñas
+  con estado sobre **119 fuentes distintas**, de 21 personas. Solo **4** fuentes tienen más
+  de un parte en toda la historia y solo 4 reseñas siguieron a otra (3 en menos de 24 h).
+  Enfrente, **36 confirmaciones**, 30 sobre la reseña de otra persona: la gente sí confirma
+  **cuando se le ofrece**, y desde el mapa no se le ofrecía nunca. Y una reseña de **otra**
+  persona ya daba `verified` por `recentStatusReporters > 1`, así que la corroboración no se
+  estaba perdiendo. El cuello de botella real no es qué pasa en la segunda visita: es que
+  **no hay segunda visita**. Este cambio es preventivo y barato, no un agujero sangrando.
+- **La regla** (`lib/quickReview.ts`, puro y con tests): si el chip dice **lo mismo** que el
+  último parte y ese parte es **reciente**, se confirma; si dices otra cosa es un desacuerdo
+  y tiene que ser su propio parte, o la contradicción se pierde. El usuario no aprende
+  ninguna distinción — la app ya sabe cuál de las dos cosas está diciendo.
+- **El corte de 7 días sale del baremo, no del diseño.** `freshness` es plana en
+  `case ..<8: return 5`: dentro de la primera semana repetir paga **5 gotas** y confirmar
+  **10**, así que confirmar es a la vez la mejor señal y lo mejor pagado. A partir del
+  octavo día la curva sube hasta 70 por una fuente olvidada, y seguir convirtiendo la
+  reseña en confirmación **degradaría la aportación que más paga la app**. Por eso muere a
+  los 7 días y no a los 30 de la ventana de confianza.
+- Por lo mismo se mide contra `lastReportAt` —la fecha **del parte**— y no contra
+  `lastUpdate`, que es la más fresca entre el parte y sus confirmaciones: una fuente
+  reseñada hace cuarenta días y confirmada ayer parecería fresca. Hay test de esa mitad,
+  que es la que se olvida.
+- `FontSummary` publica ahora `lastCommentID` y `lastReportAt`, que ya calculaba por dentro:
+  **cero consultas nuevas**. Son contrato de cable y por eso tienen test — si dejan de salir
+  el globo no se rompe, vuelve a crear reseñas, y **nadie se entera**.
+- **Se dice con otras palabras** (`popup.confirmedThanks`): «gracias, ya lo saben los demás»
+  sobre una confirmación parece que has publicado un parte nuevo. Y **el pin no cambia de
+  color**, porque el estado es el mismo; lo que cambia es la confianza.
+- Deshacer sirve para las dos cosas: el mismo botón borra la reseña o retira el «sigue
+  igual» según lo que haya en el `dataset`. Desde fuera es el mismo gesto.
+- **Sin cobertura se encola una reseña aunque tocara confirmar**: la bandeja de salida no
+  sabe confirmar, y entre perder la aportación y guardar un parte repetido se guarda el
+  parte. Nunca se castiga a quien informa.
+- Si el último parte es **tuyo y de hoy**, el servidor contesta 403 `confirm.tooSoon` —la
+  regla de las 24 h de `SelfConfirmTests`— y el globo lo enseña traducido. Hizo falta añadir
+  `err.confirm.tooSoon` a los ocho diccionarios; sin la clave saldría la frase en castellano.
+- Analítica: `map_quick_confirm`, en la lista cerrada del servidor y con su rótulo en los
+  ocho idiomas. Sin las dos mitades no hay forma de saber si el cambio trae respaldo nuevo
+  o solo mueve de sitio lo de siempre.
 
 ### Y después del toque, la foto
 

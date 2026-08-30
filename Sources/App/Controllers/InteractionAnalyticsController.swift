@@ -18,7 +18,7 @@ struct InteractionAnalyticsController: RouteCollection {
         // Reseñar de un toque desde el globo del mapa, y la foto que se ofrece justo
         // después cuando la fuente no tiene ninguna. Los dos son la única forma de saber
         // si el atajo trae reseñas que antes no llegaban o solo las mueve de sitio.
-        "map_quick_review", "map_quick_photo",
+        "map_quick_review", "map_quick_photo", "map_quick_confirm",
         "map_cluster_click", "map_heatmap_click",
         "font_favorite", "font_directions", "font_share", "font_update",
         "auth_google", "auth_passkey", "auth_password", "auth_register", "install_start",
