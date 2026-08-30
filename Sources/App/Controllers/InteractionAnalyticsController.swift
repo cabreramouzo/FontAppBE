@@ -15,6 +15,10 @@ struct InteractionAnalyticsController: RouteCollection {
         "nav_map", "nav_activity", "nav_zones", "nav_profile", "nav_login",
         "map_filters", "map_missions", "map_locate", "map_add_font", "map_export_gpx", "map_gpx",
         "map_offline",
+        // Reseñar de un toque desde el globo del mapa, y la foto que se ofrece justo
+        // después cuando la fuente no tiene ninguna. Los dos son la única forma de saber
+        // si el atajo trae reseñas que antes no llegaban o solo las mueve de sitio.
+        "map_quick_review", "map_quick_photo",
         "map_cluster_click", "map_heatmap_click",
         "font_favorite", "font_directions", "font_share", "font_update",
         "auth_google", "auth_passkey", "auth_password", "auth_register", "install_start",

@@ -853,6 +853,32 @@ select:not([class*="Mui"]) {
 .leaflet-container .popup-quick button:hover { filter: brightness(0.94); }
 .leaflet-container .popup-quick button:active { filter: brightness(0.88); }
 
+/* Ponle la foto, justo después de haber dicho cómo está.
+   Va DESPUÉS y nunca antes: el estado ya está guardado, así que esto no puede costar la
+   aportación. Se pinta como los chips —mismo alto, mismo fondo opaco— pero a lo ancho y
+   con el borde discontinuo, que es lo que dice «aquí falta algo» sin competir con lo
+   que se acaba de hacer. */
+.popup-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+  min-height: 40px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.15;
+  text-align: center;
+  border: 1px dashed var(--accent);
+  border-radius: 12px;
+  background: var(--bg, #fff);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.popup-photo:hover { filter: brightness(0.94); }
+.popup-photo:active { filter: brightness(0.88); }
+
 /* La tarjeta ya NO es pulsable: es información. Lo era para agrandar un objetivo que
    entonces era diminuto, y desde que hay chips de estado dentro eso significaba controles
    dentro de un control — apuntar a un chip y fallar por dos milímetros te sacaba del mapa.
@@ -920,6 +946,7 @@ select:not([class*="Mui"]) {
      por debajo de eso el objetivo es de ratón, y esto se usa andando. */
   .leaflet-container .leaflet-popup a.leaflet-popup-close-button { width: 48px; height: 48px; }
   .leaflet-container .popup-quick button:not(.popup-undo) { min-height: 48px; }
+  .popup-photo { min-height: 48px; }
 }
 
 

@@ -13,7 +13,8 @@ import { drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 import { nombreFuente } from '../lib/fontName'
 import { CONFIDENCE_EMOJI, confidenceDetailKey, confidenceLabelKey, confidenceOf } from '../lib/confidence'
-import { createComment, deleteComment, describeError, trackInteraction } from '../api/client'
+import { createComment, deleteComment, describeError, getGamificationScale, setFontPhoto, trackInteraction, uploadImage } from '../api/client'
+import { prepararFoto } from '../lib/image'
 import { useAuth } from '../auth/AuthContext'
 import { enqueue, isOffline } from '../lib/outbox'
 
@@ -35,6 +36,24 @@ const ESTADOS_RAPIDOS = ['flowing', 'trickle', 'dry'] as const
  * botón para siempre convertiría el globo en un sitio donde se edita, y no lo es.
  */
 const DESHACER_MS = 10_000
+
+/**
+ * Las gotas que paga la primera foto de una fuente, para poder decirlo en el globo.
+ *
+ * **No se escribe aquí**: viene de `/gamification/scale`, como todo lo demás del baremo.
+ * Se ha recalibrado varias veces —la primera foto y la primera reseña llegaron a
+ * intercambiar sus valores— y un cartel que promete 120 cuando el servidor paga otra cosa
+ * es peor que no poner cartel. Se pide una vez por sesión y se comparte.
+ */
+let gotasFoto: Promise<number | null> | null = null
+function gotasPrimeraFoto(): Promise<number | null> {
+  if (!gotasFoto) {
+    gotasFoto = getGamificationScale()
+      .then((e) => e.kinds.find((k) => k.kind === 'firstPhoto')?.base ?? null)
+      .catch(() => null)
+  }
+  return gotasFoto
+}
 
 const HEATMAP_MAX_ZOOM = 6
 
@@ -101,16 +120,22 @@ export function ClusteredMarkers({
       // `data-estado` y por eso se escapaba al mapa: el globo se cerraba en el mismo gesto
       // y el mensaje acababa escrito en un nodo ya desprendido — exactamente el fallo que
       // esta delegación vino a arreglar, repetido en el botón nuevo.
-      const boton = (ev.target as Element | null)?.closest?.('.popup-quick button')
-      if (!boton) return
-      const caja = boton.closest('.popup-quick') as HTMLElement | null
+      const objetivo = (ev.target as Element | null)?.closest?.('.popup-quick button, .popup-quick .popup-photo')
+      if (!objetivo) return
+      const caja = objetivo.closest('.popup-quick') as HTMLElement | null
       const fontID = caja?.dataset.font
       if (!caja || !fontID) return
-      ev.preventDefault()
+      // Apartar el toque del mapa vale para todo lo de este bloque —incluida la etiqueta
+      // de la foto, que si no cierra el globo y deja el `<input>` desprendido, con lo que
+      // el `change` no llegaría nunca aquí: el mismo fallo de siempre, en un tercer
+      // control—. Lo que NO se le puede quitar a la etiqueta es su comportamiento por
+      // defecto, que es lo único que abre la cámara.
       ev.stopPropagation()
+      if (!objetivo.matches('button')) return
+      ev.preventDefault()
 
       // Deshacer: borra la reseña que se acaba de crear y devuelve el pin a su color.
-      if (boton.classList.contains('popup-undo')) {
+      if (objetivo.classList.contains('popup-undo')) {
         const reseña = caja.dataset.resena
         if (!reseña) return
         caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.sending'))}</span>`
@@ -125,7 +150,7 @@ export function ClusteredMarkers({
         return
       }
 
-      const estado = boton.getAttribute('data-estado')
+      const estado = objetivo.getAttribute('data-estado')
       if (!estado) return
       caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.sending'))}</span>`
       void (async () => {
@@ -143,6 +168,20 @@ export function ClusteredMarkers({
           caja.innerHTML =
             `<span class="muted small">${escapeHtml(t('popup.thanks'))}</span>` +
             (creada.id ? ` <button type="button" class="popup-undo">${escapeHtml(t('popup.undo'))}</button>` : '')
+          // ## Y después, la foto — nunca antes
+          //
+          // El atajo del globo hace más probable que una reseña llegue **sin foto y sin
+          // texto**, y eso preocupaba con razón. Pero medido en producción, la reseña rica
+          // ya era minoría antes de existir el atajo: de 122 reseñas, 39 llevaban texto y
+          // **21 llevaban foto**. Así que lo que hay que hacer no es entorpecer el camino
+          // corto —lo escaso es la señal, no la riqueza— sino **encadenar** el paso
+          // siguiente cuando el valor ya está guardado.
+          //
+          // Se pide la **foto y no el texto**, por orden de utilidad para quien se va a
+          // desviar: estado → foto → valoración → texto. Y **solo si la fuente no tiene
+          // ninguna** (hoy, 64.150 de 64.295): sustituir una que ya existe no es de
+          // cualquiera y además invita a la guerra de ediciones.
+          if (caja.dataset.sinfoto) void ofreceFoto(caja)
           if (creada.id) {
             caja.dataset.resena = creada.id
             // Pasado el plazo se quita el botón y queda como cualquier otra reseña: se
@@ -158,6 +197,10 @@ export function ClusteredMarkers({
             // En el monte, que es donde se sabe cómo está la fuente, no hay cobertura.
             await enqueue({ kind: 'comment', fontID, data: { waterStatus: estado } })
             caja.innerHTML = `<span class="muted small">${escapeHtml(t('offline.savedUpdate'))}</span>`
+            // También sin cobertura, que es donde más se está delante de la fuente: la
+            // foto se encola igual. Las gotas no se sabrán si el baremo no está cacheado,
+            // y entonces el rótulo va sin cifra en vez de inventarse una.
+            if (caja.dataset.sinfoto) void ofreceFoto(caja)
             porID.get(fontID)?.setIcon(statusIcon(estado, fontID === selectedID))
           } else {
             caja.innerHTML = `<span class="muted small">${escapeHtml(describeError(e, t))}</span>`
@@ -165,8 +208,55 @@ export function ClusteredMarkers({
         }
       })()
     }
+    /** Añade al globo el ofrecimiento de foto, con las gotas que paga si se saben. */
+    async function ofreceFoto(caja: HTMLElement) {
+      const gotas = await gotasPrimeraFoto()
+      // La caja pudo cerrarse mientras llegaba el baremo.
+      if (!caja.isConnected) return
+      const rotulo = gotas
+        ? t('popup.addPhotoDrops', { n: String(gotas) })
+        : t('popup.addPhoto')
+      caja.insertAdjacentHTML('beforeend',
+        `<label class="popup-photo">` +
+        `<input type="file" accept="image/*" capture="environment" hidden>` +
+        `📷 ${escapeHtml(rotulo)}</label>`)
+    }
+
+    /** La foto elegida desde el globo: se sube y pasa a ser la portada de la fuente. */
+    const alElegirFoto = (ev: Event) => {
+      const input = ev.target as HTMLInputElement | null
+      const caja = input?.closest?.('.popup-quick') as HTMLElement | null
+      const fontID = caja?.dataset.font
+      const file = input?.files?.[0]
+      if (!caja || !fontID || !file) return
+      ev.stopPropagation()
+      caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.sending'))}</span>`
+      void (async () => {
+        // El EXIF se lee y la imagen se comprime en el mismo sitio que en el resto de
+        // subidas: `prepararFoto` existe justo para que el orden no sea una decisión. Va
+        // FUERA del try, y una sola vez: preparándola otra vez en la rama de la bandeja se
+        // encolaría sin el EXIF, que es lo único que después no se puede recuperar.
+        const { photo, meta } = await prepararFoto(file)
+        try {
+          const image = await uploadImage(photo, meta)
+          await setFontPhoto(fontID, image)
+          caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.photoThanks'))}</span>`
+          trackInteraction('map_quick_photo')
+        } catch (e) {
+          if (isOffline(e)) {
+            // Delante de una fuente sin foto es justo donde peor se está de cobertura.
+            await enqueue({ kind: 'photo', fontID, photo, photoName: photo.name, photoMeta: meta })
+            caja.innerHTML = `<span class="muted small">${escapeHtml(t('offline.savedUpdate'))}</span>`
+          } else {
+            caja.innerHTML = `<span class="muted small">${escapeHtml(describeError(e, t))}</span>`
+          }
+        }
+      })()
+    }
+
     const contenedorMapa = map.getContainer()
     contenedorMapa.addEventListener('click', alTocarChip, true)
+    contenedorMapa.addEventListener('change', alElegirFoto, true)
 
     for (const f of fonts) {
       const isSelected = !!f.id && f.id === selectedID
@@ -209,7 +299,7 @@ export function ClusteredMarkers({
           <div class="muted small" title="${escapeHtml(t(confidenceDetailKey(confidence)))}">${CONFIDENCE_EMOJI[confidence]} ${escapeHtml(t(confidenceLabelKey(confidence)))}</div>
           ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
         </div>
-        ${user ? `<div class="popup-quick" data-font="${f.id}" data-antes="${f.lastWaterStatus ?? ''}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
+        ${user ? `<div class="popup-quick" data-font="${f.id}" data-antes="${f.lastWaterStatus ?? ''}" data-sinfoto="${f.image ? '' : '1'}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
           <span class="muted small">${escapeHtml(t('popup.howIsIt'))}</span>
           <div class="popup-quick-row">
             ${ESTADOS_RAPIDOS.map((e) => {
@@ -363,6 +453,7 @@ export function ClusteredMarkers({
     return () => {
       map.off('click', cerrarAMano)
       contenedorMapa.removeEventListener('click', alTocarChip, true)
+      contenedorMapa.removeEventListener('change', alElegirFoto, true)
       map.off('click', zoomIntoHeat)
       map.off('move zoom resize', scheduleHeatmap)
       map.off('zoomend', syncDensityMode)

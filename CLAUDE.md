@@ -1281,6 +1281,41 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   que viaja en `data-antes` por la misma razón que el id.
 - Sin cobertura va a la bandeja de salida, como el resto de reseñas. Sin sesión no se
   pintan los chips: no hay nada que hacer si no puedes aportar.
+
+### Y después del toque, la foto
+
+- El atajo hace más probable que la reseña llegue **sin texto y sin foto**, y la
+  preocupación era razonable. Lo que dicen los datos de producción es que **la reseña rica
+  ya era minoría antes de que el atajo existiera**: de 122 reseñas, **122 llevan estado
+  (100 %)**, 47 valoración (39 %), **39 texto (32 %)** y **21 foto (17 %)**, con una media
+  de 51 caracteres. Lo escaso es la señal, no la riqueza — así que la salida no es
+  entorpecer el camino corto, sino **encadenar** el paso siguiente cuando lo importante ya
+  está guardado.
+- Se pide **la foto y no el texto**, que es el orden de utilidad para quien va a desviarse
+  tres kilómetros: estado → foto → valoración → texto. Y **solo si la fuente no tiene
+  ninguna** (64.150 de 64.295): sustituir una que ya existe no es de cualquiera e invita a
+  la guerra de ediciones — la misma asimetría de siempre. Viaja en `data-sinfoto`, por lo
+  mismo que el id: en el HTML y no en una clausura.
+- **Con la cifra delante**, leída de `/gamification/scale`. Y aquí se vio pagar la regla de
+  no escribir ni una cifra en el cliente: al probarlo, el rótulo salió **«+80 gotas»** y no
+  las 120 que se habrían escrito a mano — la primera foto y la primera reseña
+  intercambiaron sus valores el 19/08/2026. Sin el baremo cacheado el rótulo va **sin
+  cifra**, nunca con una inventada.
+- **Tercer control en el globo, tercera vez con la misma trampa.** La etiqueta de la foto
+  necesita `stopPropagation` —si no, el clic llega al mapa, `cerrarAMano` cierra el globo y
+  el `change` se dispara sobre un `<input>` ya desprendido, o sea que la foto no llega y no
+  falla nada visible— pero **no** `preventDefault`, que es lo único que abre la cámara. Por
+  eso el manejador delegado atiende `button` **y** `.popup-photo`, y solo a los botones les
+  quita el comportamiento por defecto.
+- `prepararFoto` va **fuera del `try` y una sola vez**: prepararla otra vez en la rama de
+  la bandeja de salida la encolaría **sin EXIF**, que es lo único que después no se puede
+  recuperar. Y sin cobertura se encola igual (`kind: 'photo'`), que es donde más se está
+  delante de una fuente sin foto.
+- Analítica: `map_quick_review` y `map_quick_photo`. Ojo, `map_quick_review` **se llamaba
+  desde el cliente desde el primer día y no se guardaba ni una fila**: no estaba en la
+  lista cerrada del servidor, que lo descarta en silencio. Es exactamente lo que avisa
+  «añadir un evento exige incorporarlo a la lista cerrada»; sin las dos mitades no hay
+  forma de saber si el atajo trae reseñas nuevas o solo mueve de sitio las de siempre.
 - **Los objetivos del globo van a 48 px**, medido y no a ojo. Estaban a 24 el aspa de
   cerrar y a 40 los chips y «Ver detalle»: por debajo de los **44 pt** que pide la guía de
   Apple y de los **48** que esta app ya usa en todo lo que se toca con el pulgar (hojas del
