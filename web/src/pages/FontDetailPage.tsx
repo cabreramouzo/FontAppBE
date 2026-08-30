@@ -95,6 +95,7 @@ import { isStale, timeAgo } from '../lib/time'
 import { FreshnessChip } from '../components/FreshnessChip'
 import { freshnessOf } from '../lib/freshness'
 import { FontBadges } from '../components/FontBadges'
+import { FichaTecnica } from '../components/FichaTecnica'
 import { Autor } from '../components/AuthorLine'
 import { TextoRico } from '../components/RichText'
 import { FontHiddenNotice, FontMaintenance } from '../components/FontMaintenance'
@@ -948,6 +949,11 @@ export function FontDetailPage() {
   const ultimaComprobacion = latest?.lastConfirmedAt ?? latest?.createdAt ?? null
   const frescor = freshnessOf(ultimaComprobacion)
 
+  // La ficha técnica viaja pegada a las insignias por la misma razón que ellas: en dos
+  // columnas va al final de la columna de la fuente, y en una, al final de la página. Se
+  // pinta **una sola vez**, en un hueco o en el otro; dos copias con `display:none`
+  // montarían las dos.
+  const fichaTecnica = <FichaTecnica font={font} />
   const insignias = (
     <FontBadges
       creatorName={creatorName}
@@ -1279,6 +1285,7 @@ export function FontDetailPage() {
 
         {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
           {dosColumnas && insignias}
+          {dosColumnas && fichaTecnica}
         </Box>
 
       {/* Columna derecha: lo que la gente ha contado. */}
@@ -1453,6 +1460,7 @@ export function FontDetailPage() {
       </Dialog>
 
       {!dosColumnas && insignias}
+      {!dosColumnas && fichaTecnica}
 
       <BadgeShowcase
         open={!!mirando}

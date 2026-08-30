@@ -169,6 +169,13 @@ trabaja: **qué tengo, qué está roto, qué no sé, y qué ha cambiado desde la
   `fonts.country` y Natural Earth.
 - **26 fuentes españolas se quedaron sin municipio** (52.310 de 52.336). Son bordes y
   costa; hay que decir «no clasificada» y no colgarla del municipio de al lado.
+- **`region` contradice al municipio en 502 de 52.463 fuentes** (medido). Los dos primeros
+  dígitos del código INE **son la provincia**, así que se puede comprobar sin ningún dato
+  nuevo: «Arnes, INE 43018» es Tarragona y la columna dice «Teruel». Es el error conocido
+  de los polígonos de Natural Earth, y ahora que el municipio sale en la ficha se ve.
+  Arreglarlo con una tabla de 52 provincias es barato y **mejora `/zones` y el ranking a
+  la vez**; hacerlo es requisito para poner una demarcación en un informe que firma un
+  ayuntamiento. Mientras tanto, la ficha calla la demarcación cuando hay municipio.
 - **El estado está casi vacío**, que es el punto 1 de este documento y la razón de que el
   primer producto sea el inventario y la campaña, y no el cuadro de mandos.
 
