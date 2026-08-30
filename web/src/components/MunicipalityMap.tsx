@@ -5,10 +5,12 @@ import type { LatLngTuple } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { BaseLayerTile } from './BaseLayers'
 import { MAP_LAYERS } from '../lib/mapLayers'
-import { statusColor } from '../lib/waterStatus'
+import { NO_STATUS_COLOR, WATER_STATUS_OPTIONS, statusColor, waterStatusInfo } from '../lib/waterStatus'
 import type { MunicipalBoundary, MunicipalReport } from '../api/client'
 import { rotulo } from '../lib/fontName'
 import { useI18n } from '../i18n/I18nContext'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
 
 /**
  * Las fuentes de un municipio, con el municipio recortado sobre el resto del mapa.
@@ -88,6 +90,34 @@ export function MunicipalityMap({ datos, contorno }: {
     return [[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]]
   }, [contorno, datos])
 
+  // ## La leyenda, y solo con lo que hay
+  //
+  // Un punto de color sin leyenda es un dato que solo entiende quien ya conoce la app, y
+  // esta página está pensada para enseñársela a alguien que llega de cero.
+  //
+  // Se pintan **únicamente los estados presentes en este municipio**: una leyenda de seis
+  // filas fija para un pueblo que solo tiene tres colores obliga a buscar cuál de ellas
+  // sirve, y de paso promete estados que aquí no existen. Misma regla que los chips de
+  // «lo que falta» y que `WorthChip`: una etiqueta que sale siempre no señala nada.
+  //
+  // El azul va **el último y con su propio rótulo**, «sin comprobar nunca». En el mapa
+  // grande ese color se rotula «desconocido» porque allí no se puede distinguir; aquí sí
+  // se sabe, y decir «desconocido» dos veces —una para el azul y otra para el gris de
+  // quien pasó y no supo decirlo— sería confundir dos cosas distintas a propósito.
+  const leyenda: { color: string; texto: string; n: number }[] = [
+    ...WATER_STATUS_OPTIONS
+      .map((k) => ({ clave: k, n: datos.byLastStatus[k] ?? 0 }))
+      .filter((x) => x.n > 0)
+      .map((x) => ({
+        color: waterStatusInfo(x.clave)?.color ?? NO_STATUS_COLOR,
+        texto: t(`status.${x.clave}`),
+        n: x.n,
+      })),
+    ...(datos.neverChecked > 0
+      ? [{ color: NO_STATUS_COLOR, texto: t('muni.neverChecked'), n: datos.neverChecked }]
+      : []),
+  ]
+
   if (datos.items.length === 0) return null
 
   // El mundo entero como exterior y el municipio como agujeros: lo de dentro se ve normal
@@ -95,6 +125,7 @@ export function MunicipalityMap({ datos, contorno }: {
   const mundo: LatLngTuple[] = [[-90, -180], [-90, 180], [90, 180], [90, -180]]
 
   return (
+    <>
     <MapContainer
       bounds={bounds}
       boundsOptions={{ padding: [24, 24] }}
@@ -154,5 +185,24 @@ export function MunicipalityMap({ datos, contorno }: {
         </CircleMarker>
       ))}
     </MapContainer>
+
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1 }}>
+      {leyenda.map((l) => (
+        <Box key={l.texto} sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+          <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: l.color, flexShrink: 0 }} />
+          {/* Mayúscula inicial con `::first-letter` y no con `capitalize`, que pondría en
+              mayúscula **cada palabra** («Sin Comprobar Nunca»). Hace falta porque el
+              rótulo del azul reutiliza la clave de los chips de arriba, escrita para ir
+              detrás de un número («7 sin comprobar nunca»), y aquí va la primera.
+              Y `display: inline-block` no es cosmético: `::first-letter` **solo se aplica
+              a cajas de bloque**, y `Typography variant="caption"` es un `<span>` inline,
+              así que sin esto la regla no hace nada — y no falla, simplemente se ignora. */}
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'inline-block', '&::first-letter': { textTransform: 'uppercase' } }}>
+            {l.texto} · {l.n}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+    </>
   )
 }

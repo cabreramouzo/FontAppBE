@@ -1940,6 +1940,17 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
     contenedor a 0×0 y `fitBounds` se va al **zoom máximo** —sale un bosque—. Se arregla
     con `invalidateSize()` + `fitBounds` en un `setTimeout` (no `requestAnimationFrame`,
     por lo mismo que `AsomaElPin`).
+  · **Debajo va la leyenda de los colores, y solo con lo que hay** en ese municipio: una
+    leyenda fija de seis filas para un pueblo con tres colores obliga a buscar cuál sirve y
+    promete estados que allí no existen — misma regla que los chips de «lo que falta» y que
+    `WorthChip`. Lleva el recuento de cada color, así que se comprueba sola: en Castellcir
+    suma 26. El azul va el último y con **su propio rótulo**, «sin comprobar nunca»: en el
+    mapa grande ese color se rotula «desconocido» porque allí no se puede distinguir, pero
+    aquí sí se sabe, y usar la misma palabra para el azul y para el gris de quien pasó y no
+    supo decirlo sería confundir dos cosas distintas a propósito.
+    Ojo con la mayúscula inicial: se pone con `::first-letter` y no con `capitalize` —que
+    la pondría en cada palabra— y **solo funciona sobre una caja de bloque**; en un `<span>`
+    inline la regla se ignora sin fallar.
 - **Etiquetas propias** (`functions/municipalities/[ine].ts`), con `/municipalities/`
   apuntado en `CON_METADATOS_PROPIOS` — sin eso el middleware las pisa **después** y no se
   ve leyendo el código, solo sirviendo la página. Comprobado con `wrangler pages dev`:
