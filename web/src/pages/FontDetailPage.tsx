@@ -102,6 +102,7 @@ import { FontBadges } from '../components/FontBadges'
 import { FichaTecnica } from '../components/FichaTecnica'
 import { Autor } from '../components/AuthorLine'
 import { TextoRico } from '../components/RichText'
+import { TextoLargo } from '../components/TextoLargo'
 import { FontHiddenNotice, FontMaintenance } from '../components/FontMaintenance'
 import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
@@ -1251,10 +1252,11 @@ export function FontDetailPage() {
                 importe más. El resto del tiempo no ocupa nada — no se pinta. */}
             <FinalApproach lat={font.latitude} long={font.longitude} tieneFoto={!!font.image} />
             {font.description && (
-              <Typography color="text.secondary">
-                {/* Sin menciones: el servidor no avisa de las que se escriban aquí. */}
-                <TextoRico texto={font.description} menciones={false} />
-              </Typography>
+              // Con «ver más» a partir de 300 caracteres: las descripciones buenas de
+              // verdad pasan de 600 y empujaban hacia abajo lo que la ficha tiene que
+              // contestar primero, que es cómo está el agua.
+              // Sin menciones: el servidor no avisa de las que se escriban aquí.
+              <TextoLargo texto={font.description} menciones={false} />
             )}
             {(() => {
               const src = sourceInfo(font.source)

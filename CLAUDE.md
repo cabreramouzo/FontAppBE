@@ -1535,6 +1535,22 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   tomara distinta aquí: simplemente se quedó sin hacer.
 - **Techos distintos a propósito:** 6 líneas en la ficha, **4** en el formulario de crear
   fuente. Ése flota sobre el mapa y crece **hacia arriba**.
+- **Y en la ficha se recorta a 300 caracteres con «ver más»** (`TextoLargo`). La mayoría
+  son una línea, pero las buenas de verdad —de dónde nace el agua, cómo se llega, qué hay
+  al lado— pasan de **600**, y esas empujaban hacia abajo lo que la ficha tiene que
+  contestar primero: cómo está el agua. Solo se recorta si sobran más de 60 caracteres:
+  cortar un texto de 310 para esconder diez cuesta un botón y un toque para ganar media
+  línea.
+  · **Se corta por el último espacio**, no por el carácter 300: `TextoRico` convierte en
+    enlaces las direcciones que encuentra, así que un corte a mitad de una URL dejaría un
+    enlace roto **y pulsable** apuntando a otro sitio. Por espacios no se parte ningún
+    trozo, porque una URL nunca lleva uno dentro.
+  · **Una vez desplegado no se vuelve a plegar**, como hace iOS. La razón es de lectura:
+    quien pulsa «ver más» ha dicho que quiere leer, y un «ver menos» **mueve la página
+    bajo el dedo** justo al terminar el párrafo y te deja en un sitio que no reconoces.
+    Dicho con precisión, porque se preguntó: la guía de Apple **no exige** que sea de un
+    solo sentido; lo que pide es que el contenido no salte ni se reorganice bajo el
+    lector, y que la expansión no tenga vuelta es cómo lo cumplen sus propias apps.
 - Y al mirarlo salió un fallo latente que no lo traía esto: `.panel` no tenía **ni techo ni
   desbordamiento**, así que en horizontal, o con el teclado abierto, el nombre y el botón
   de crear se salían por encima del mapa y no había forma de llegar a ellos. Ahora
