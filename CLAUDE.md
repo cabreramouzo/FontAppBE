@@ -1833,6 +1833,23 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - No hizo falta migración: la columna es `.string`, no un enum de Postgres.
 - **`untreated` NO cuenta como no potable** (`isNotPotable` sigue siendo `d === 'no'`).
   Esconderla del mapa vaciaría justo la zona a la que se va a andar. Hay test.
+- **Y el mapa ya no esconde las no potables por defecto** (`hideNonPotable`, antes
+  `showNonPotable`). Estaba al revés: había que activar un filtro para verlas, así que al
+  marcar una fuente como no potable **desaparecía delante de quien la acababa de marcar**.
+  Reportado por quien lo sufrió varias veces, y el daño no es solo el susto: la fuente
+  sigue existiendo, así que la siguiente persona —o la misma— la vuelve a añadir y queda
+  un **duplicado**, que es de lo que peor se limpia aquí.
+  Además, esconderlas era discutible de por sí: una fuente no potable sigue siendo un
+  punto útil —para el perro, para mojarse la cabeza, para saber que **ésa** no vale y no
+  volver a mirarla— y en un mapa que existe para decir la verdad sobre el agua, borrar lo
+  que alguien acaba de contar castiga justo la aportación que más cuesta.
+  **El valor guardado viejo no se migra a propósito**: para casi todo el mundo no era una
+  elección sino el valor por defecto, y traducirlo dejaría el arreglo sin efecto justo
+  para quien ya tiene filtros guardados, que es quien lo reportó. Comprobado con un
+  `sessionStorage` del esquema antiguo: el chip sale apagado y se ven todas.
+  Las claves de i18n **sí** se renombran (`map.hideNonPotable`), al revés que de costumbre:
+  el texto cambia igual en los ocho idiomas y una clave que diga «include» sobre un chip
+  que esconde es una trampa para el siguiente que edite el diccionario.
 - El orden del desplegable es **de más a menos garantía** (`yes`, `untreated`,
   `conditional`, `no`) y no el de aparición: con cuatro opciones el orden ya es
   información, y enterrar `untreated` la dejaría sin usar siendo la que toca casi siempre.

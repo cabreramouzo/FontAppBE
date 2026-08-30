@@ -154,8 +154,28 @@ function saveView(v: SavedMapView) {
 // es de este paseo. Volver mañana y no encontrar las fuentes donde estaban, sin recordar
 // que un día marcaste una casilla, es un fallo peor que el que se arregla.
 const FILTERS_KEY = 'fontapp_map_filters'
-type SavedFilters = { onlyWithWater: boolean; onlyReliable: boolean; showNonPotable: boolean; source: WaterSource | 'all' }
-const SIN_FILTROS: SavedFilters = { onlyWithWater: false, onlyReliable: false, showNonPotable: false, source: 'all' }
+/**
+ * Los filtros del mapa, tal y como se guardan.
+ *
+ * ## Por qué `hideNonPotable` y no `showNonPotable`
+ *
+ * Estaba al revés: el mapa **escondía por defecto** las fuentes marcadas como no potables
+ * y había que activar un filtro para verlas. El efecto, reportado por quien lo sufrió
+ * varias veces: marcas una fuente como no potable y **desaparece delante de tus ojos**.
+ * No es solo confuso — la fuente sigue existiendo, así que la siguiente persona (o tú
+ * mismo) la vuelve a añadir, y el resultado es un **duplicado**, que es de lo que peor se
+ * limpia en esta base.
+ *
+ * Esconder no potable es además discutible como comportamiento por defecto: una fuente
+ * marcada como no potable sigue siendo un punto útil —para el perro, para mojarse la
+ * cabeza, para saber que ESA no vale y no volver a mirarla— y en un mapa que existe para
+ * decir la verdad sobre el agua, borrar del mapa lo que alguien acaba de contar es
+ * castigar justo la aportación que más cuesta.
+ *
+ * Ahora se ven siempre salvo que alguien pida esconderlas.
+ */
+type SavedFilters = { onlyWithWater: boolean; onlyReliable: boolean; hideNonPotable: boolean; source: WaterSource | 'all' }
+const SIN_FILTROS: SavedFilters = { onlyWithWater: false, onlyReliable: false, hideNonPotable: false, source: 'all' }
 const SOURCES: readonly string[] = ['all', 'tap', 'mountain', 'spring', 'well', 'fountain', 'other']
 
 function loadFilters(): SavedFilters {
@@ -169,7 +189,12 @@ function loadFilters(): SavedFilters {
     return {
       onlyWithWater: v.onlyWithWater === true,
       onlyReliable: v.onlyReliable === true,
-      showNonPotable: v.showNonPotable === true,
+      // El `showNonPotable` de antes **no se migra a propósito**. Para casi todo el mundo
+      // no era una elección: era el valor por defecto, y traducirlo a `hideNonPotable:
+      // true` dejaría el arreglo sin efecto justo para quien ya tiene filtros guardados,
+      // que es la gente que reportó el problema. Quien de verdad las quiera escondidas
+      // tiene el chip a un toque.
+      hideNonPotable: v.hideNonPotable === true,
       source: SOURCES.includes(v.source as string) ? (v.source as WaterSource | 'all') : 'all',
     }
   } catch {
@@ -299,14 +324,14 @@ function FontMarkers({
   nonce,
   onlyWithWater,
   onlyReliable,
-  showNonPotable,
+  hideNonPotable,
   sourceFilter,
   selectedID,
 }: {
   nonce: number
   onlyWithWater: boolean
   onlyReliable: boolean
-  showNonPotable: boolean
+  hideNonPotable: boolean
   sourceFilter: WaterSource | 'all'
   selectedID: string | null
 }) {
@@ -400,12 +425,12 @@ function FontMarkers({
   // marcadores cuando cambia la identidad del array, el popup que acababas de abrir se
   // destruía solo al segundo siguiente, sin que hubiera cambiado ni un dato.
   const shown = useMemo(() => {
-    let l = showNonPotable ? mapData.fonts : mapData.fonts.filter((f) => !isNotPotable(f.drinkable))
+    let l = hideNonPotable ? mapData.fonts.filter((f) => !isNotPotable(f.drinkable)) : mapData.fonts
     if (onlyWithWater) l = l.filter(hasWater)
     if (onlyReliable) l = l.filter(isReliable)
     if (sourceFilter !== 'all') l = l.filter((f) => f.source === sourceFilter)
     return l
-  }, [mapData.fonts, showNonPotable, onlyWithWater, onlyReliable, sourceFilter])
+  }, [mapData.fonts, hideNonPotable, onlyWithWater, onlyReliable, sourceFilter])
   return <ClusteredMarkers fonts={shown} clusters={mapData.clusters} selectedID={selectedID} />
 }
 
@@ -1370,7 +1395,7 @@ export function MapPage() {
   const [filtrosGuardados] = useState(loadFilters)
   const [onlyWithWater, setOnlyWithWater] = useState(filtrosGuardados.onlyWithWater)
   const [onlyReliable, setOnlyReliable] = useState(filtrosGuardados.onlyReliable)
-  const [showNonPotable, setShowNonPotable] = useState(filtrosGuardados.showNonPotable)
+  const [hideNonPotable, setHideNonPotable] = useState(filtrosGuardados.hideNonPotable)
   const [sourceFilter, setSourceFilter] = useState<WaterSource | 'all'>(filtrosGuardados.source)
   const [controlsOpen, setControlsOpen] = useState(false)
   const [gpxOpen, setGpxOpen] = useState(false)
@@ -1381,13 +1406,13 @@ export function MapPage() {
   const [bearing, setBearing] = useState(0)
   const { heading, enable: enableCompass } = useHeading()
   // Nº de filtros activos (para el aviso cuando las herramientas están plegadas).
-  const activeFilters = (onlyWithWater ? 1 : 0) + (onlyReliable ? 1 : 0) + (showNonPotable ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
+  const activeFilters = (onlyWithWater ? 1 : 0) + (onlyReliable ? 1 : 0) + (hideNonPotable ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
 
   // Al cambiar cualquiera, se recuerda. Es lo que hace que volver del detalle no
   // repueble el mapa con lo que acababas de esconder.
   useEffect(() => {
-    saveFilters({ onlyWithWater, onlyReliable, showNonPotable, source: sourceFilter })
-  }, [onlyWithWater, onlyReliable, showNonPotable, sourceFilter])
+    saveFilters({ onlyWithWater, onlyReliable, hideNonPotable, source: sourceFilter })
+  }, [onlyWithWater, onlyReliable, hideNonPotable, sourceFilter])
   const [showNearby, setShowNearby] = useState(false)
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [missionsOpen, setMissionsOpen] = useState(false)
@@ -1608,13 +1633,13 @@ export function MapPage() {
         />
         <Chip
           clickable
-          variant={showNonPotable ? 'filled' : 'outlined'}
-          color={enHoja && showNonPotable ? 'primary' : undefined}
+          variant={hideNonPotable ? 'filled' : 'outlined'}
+          color={enHoja && hideNonPotable ? 'primary' : undefined}
           icon={<DoNotDisturbAltIcon />}
-          label={noEmoji(t('map.includeNonPotable'))}
-          onClick={() => setShowNonPotable((v) => !v)}
-          title={t('map.includeNonPotableTitle')}
-          sx={sxChip(showNonPotable)}
+          label={noEmoji(t('map.hideNonPotable'))}
+          onClick={() => setHideNonPotable((v) => !v)}
+          title={t('map.hideNonPotableTitle')}
+          sx={sxChip(hideNonPotable)}
         />
         <Select
           size="small"
@@ -1686,7 +1711,7 @@ export function MapPage() {
         fadeAnimation={false}
       >
         <BaseLayerTile layer={layer} />
-        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} onlyReliable={onlyReliable} showNonPotable={showNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
+        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} onlyReliable={onlyReliable} hideNonPotable={hideNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
         <PersistView />
         <FocusOn target={goto} />
         <DetectaGestoDelUsuario onGesto={() => setSiguiendo(false)} />
