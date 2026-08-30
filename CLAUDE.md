@@ -1202,8 +1202,21 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   `cerrarAMano` lo cerrara. Desde fuera parecía que no hacía nada: la confirmación se
   escribía en un nodo ya desprendido. Delegando se para el evento antes de que llegue a
   nadie, y el id de la fuente viaja en el HTML (`data-font`) en vez de en una clausura.
+- **Se puede deshacer durante 10 segundos**, y no es un adorno: un toque de más aquí no es
+  inocuo. Una reseña cambia el color del pin para todo el mundo, refresca la frescura, paga
+  gotas y —si dice que sale agua— **cierra sola las incidencias abiertas** de esa fuente. Y
+  los chips están dentro de un globo que se abre al rozar un pin, con objetivos de unos
+  50 px. Poder deshacer convierte un error irreversible en uno recuperable, que sale más
+  barato que agrandar los objetivos o pedir confirmación en cada toque. Pasado el plazo
+  queda como cualquier otra reseña y se borra desde la ficha.
+- El botón de deshacer **repitió el mismo fallo** que la delegación vino a arreglar: como no
+  lleva `data-estado`, el clic se escapaba al mapa y cerraba el globo —la reseña sí se
+  borraba, pero el mensaje se escribía en un nodo ya desprendido—. El manejador delegado
+  atiende ahora **cualquier botón del bloque**, y el id de la reseña recién creada viaja en
+  el `dataset` en vez de en una clausura.
 - El pin **cambia de color al momento** (`setIcon`): sin eso hay que esperar a que el mapa
-  se recargue solo para ver que ha servido de algo.
+  se recargue solo para ver que ha servido de algo. Al deshacer vuelve al color anterior,
+  que viaja en `data-antes` por la misma razón que el id.
 - Sin cobertura va a la bandeja de salida, como el resto de reseñas. Sin sesión no se
   pintan los chips: no hay nada que hacer si no puedes aportar.
 

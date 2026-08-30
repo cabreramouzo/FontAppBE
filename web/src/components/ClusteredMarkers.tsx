@@ -13,7 +13,7 @@ import { drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 import { nombreFuente } from '../lib/fontName'
 import { CONFIDENCE_EMOJI, confidenceDetailKey, confidenceLabelKey, confidenceOf } from '../lib/confidence'
-import { createComment, describeError, trackInteraction } from '../api/client'
+import { createComment, deleteComment, describeError, trackInteraction } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { enqueue, isOffline } from '../lib/outbox'
 
@@ -26,6 +26,15 @@ import { enqueue, isOffline } from '../lib/outbox'
  * no puede estar a un toque en un globo que se abre sin querer. Para eso está la ficha.
  */
 const ESTADOS_RAPIDOS = ['flowing', 'trickle', 'dry'] as const
+
+/**
+ * Cuánto se puede deshacer una reseña puesta de un toque.
+ *
+ * Diez segundos: lo que tarda alguien en darse cuenta de que ha pulsado el chip que no
+ * era. Pasado eso queda como cualquier otra reseña y se borra desde la ficha — dejar el
+ * botón para siempre convertiría el globo en un sitio donde se edita, y no lo es.
+ */
+const DESHACER_MS = 10_000
 
 const HEATMAP_MAX_ZOOM = 6
 
@@ -88,19 +97,58 @@ export function ClusteredMarkers({
      * (`data-font`) en vez de en una clausura.
      */
     const alTocarChip = (ev: Event) => {
-      const boton = (ev.target as Element | null)?.closest?.('.popup-quick button[data-estado]')
+      // Cualquier botón de este bloque, no solo los de estado. El de deshacer no lleva
+      // `data-estado` y por eso se escapaba al mapa: el globo se cerraba en el mismo gesto
+      // y el mensaje acababa escrito en un nodo ya desprendido — exactamente el fallo que
+      // esta delegación vino a arreglar, repetido en el botón nuevo.
+      const boton = (ev.target as Element | null)?.closest?.('.popup-quick button')
       if (!boton) return
       const caja = boton.closest('.popup-quick') as HTMLElement | null
       const fontID = caja?.dataset.font
       if (!caja || !fontID) return
       ev.preventDefault()
       ev.stopPropagation()
-      const estado = boton.getAttribute('data-estado')!
+
+      // Deshacer: borra la reseña que se acaba de crear y devuelve el pin a su color.
+      if (boton.classList.contains('popup-undo')) {
+        const reseña = caja.dataset.resena
+        if (!reseña) return
+        caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.sending'))}</span>`
+        void deleteComment(fontID, reseña)
+          .then(() => {
+            caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.undone'))}</span>`
+            porID.get(fontID)?.setIcon(statusIcon(caja.dataset.antes || null, fontID === selectedID))
+          })
+          .catch((e) => {
+            caja.innerHTML = `<span class="muted small">${escapeHtml(describeError(e, t))}</span>`
+          })
+        return
+      }
+
+      const estado = boton.getAttribute('data-estado')
+      if (!estado) return
       caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.sending'))}</span>`
       void (async () => {
         try {
-          await createComment(fontID, { waterStatus: estado })
-          caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.thanks'))}</span>`
+          const creada = await createComment(fontID, { waterStatus: estado })
+          // **Con deshacer.** Un toque de más aquí no es inocuo: una reseña cambia el color
+          // del pin para todo el mundo, refresca la frescura, paga gotas y, si dice que
+          // sale agua, cierra sola las incidencias abiertas de esa fuente. Y los chips
+          // están dentro de un globo que se abre al rozar un pin, con objetivos de unos
+          // 50 px. Poder deshacerlo convierte un error irreversible en uno recuperable,
+          // que es más barato que hacer los objetivos más grandes o pedir confirmación.
+          //
+          // Solo se ofrece un rato: pasado eso queda como cualquier otra reseña y se borra
+          // desde la ficha, que es donde vive el resto de lo que has escrito.
+          caja.innerHTML =
+            `<span class="muted small">${escapeHtml(t('popup.thanks'))}</span>` +
+            (creada.id ? ` <button type="button" class="popup-undo">${escapeHtml(t('popup.undo'))}</button>` : '')
+          if (creada.id) {
+            caja.dataset.resena = creada.id
+            // Pasado el plazo se quita el botón y queda como cualquier otra reseña: se
+            // borra desde la ficha, que es donde vive el resto de lo que has escrito.
+            window.setTimeout(() => { caja.querySelector('.popup-undo')?.remove() }, DESHACER_MS)
+          }
           // El pin cambia de color al momento: es la prueba de que ha servido de algo, y
           // sin ella hay que esperar a que el mapa se recargue solo.
           porID.get(fontID)?.setIcon(statusIcon(estado, fontID === selectedID))
@@ -148,7 +196,7 @@ export function ClusteredMarkers({
           ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
           <span class="popup-link">${t('popup.detail')}</span>
         </a>
-        ${user ? `<div class="popup-quick" data-font="${f.id}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
+        ${user ? `<div class="popup-quick" data-font="${f.id}" data-antes="${f.lastWaterStatus ?? ''}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
           <span class="muted small">${escapeHtml(t('popup.howIsIt'))}</span>
           <div class="popup-quick-row">
             ${ESTADOS_RAPIDOS.map((e) => {

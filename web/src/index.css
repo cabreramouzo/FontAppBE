@@ -842,6 +842,19 @@ select:not([class*="Mui"]) {
   cursor: pointer;
 }
 
+/* Deshacer: enlace, no botón. Es la salida, no la acción principal — misma regla que el
+   descartar de la bandeja de salida. */
+.leaflet-container .popup-quick button.popup-undo {
+  flex: none;
+  min-height: 0;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  text-decoration: underline;
+  color: var(--accent);
+}
+
 .leaflet-container .popup-quick button:hover { filter: brightness(0.94); }
 .leaflet-container .popup-quick button:active { filter: brightness(0.88); }
 
