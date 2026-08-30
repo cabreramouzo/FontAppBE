@@ -1905,9 +1905,16 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   distintas. Con nombre (`GET /municipalities?name=`) se devuelve **la lista de
   candidatos**, nunca uno elegido a dedo — sería enseñarle a alguien el inventario de otro
   pueblo con el rótulo del suyo. El comando hace lo mismo y se planta.
-- El orden de la página **es el mensaje**: cuántas hay → cuántas ha comprobado alguien →
-  qué falta → cuáles son. Enseñar solo «26 fuentes» es la versión bonita y es la que se
-  rompe el día que alguien vaya a una y esté seca.
+- El orden de la página **es el mensaje**: resumen operativo → prioridades → mapa →
+  inventario filtrable. «Con agua» y «sin agua» solo usan partes de los últimos **90
+  días**; «requiere revisión» significa nunca comprobada o más de un año. Las prioridades
+  ordenan incidencias, falta de agua reciente y antigüedad, pero **no son órdenes de
+  trabajo**: responsables, SLA y estados internos esperan al primer piloto.
+- En escritorio el mapa se carga de entrada y comparte la primera pantalla con las
+  prioridades; en móvil sigue bajo demanda para no cargar Leaflet (~300 KB) antes de que
+  haga falta. Los filtros afectan a la lista **y a los puntos del mapa**, para que ambos
+  cuenten la misma historia. La página incluye búsqueda, un CTA municipal e
+  impresión/«guardar como PDF» mediante `window.print()`.
 - Descarga de CSV y GeoJSON **compuesta en el navegador** con lo que la página ya pidió,
   igual que el GPX: cero coste de servidor y ninguna ruta nueva. La atribución va **dentro
   del fichero**, porque un GeoJSON se reenvía suelto por correo sin la página que lo

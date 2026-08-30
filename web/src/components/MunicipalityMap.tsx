@@ -104,17 +104,25 @@ export function MunicipalityMap({ datos, contorno }: {
   // grande ese color se rotula «desconocido» porque allí no se puede distinguir; aquí sí
   // se sabe, y decir «desconocido» dos veces —una para el azul y otra para el gris de
   // quien pasó y no supo decirlo— sería confundir dos cosas distintas a propósito.
+  // La página municipal puede pasar un inventario filtrado. La leyenda se cuenta desde
+  // esos puntos y no desde el resumen global, o al elegir «sin agua» seguiría sumando
+  // también los verdes que ya no están en el mapa.
+  const estadosVisibles = datos.items.reduce<Record<string, number>>((acc, f) => {
+    if (f.lastStatus) acc[f.lastStatus] = (acc[f.lastStatus] ?? 0) + 1
+    return acc
+  }, {})
+  const nuncaVisibles = datos.items.filter((f) => f.days == null).length
   const leyenda: { color: string; texto: string; n: number }[] = [
     ...WATER_STATUS_OPTIONS
-      .map((k) => ({ clave: k, n: datos.byLastStatus[k] ?? 0 }))
+      .map((k) => ({ clave: k, n: estadosVisibles[k] ?? 0 }))
       .filter((x) => x.n > 0)
       .map((x) => ({
         color: waterStatusInfo(x.clave)?.color ?? NO_STATUS_COLOR,
         texto: t(`status.${x.clave}`),
         n: x.n,
       })),
-    ...(datos.neverChecked > 0
-      ? [{ color: NO_STATUS_COLOR, texto: t('muni.neverChecked'), n: datos.neverChecked }]
+    ...(nuncaVisibles > 0
+      ? [{ color: NO_STATUS_COLOR, texto: t('muni.neverChecked'), n: nuncaVisibles }]
       : []),
   ]
 

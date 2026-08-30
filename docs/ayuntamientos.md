@@ -160,13 +160,16 @@ trabaja: **qué tengo, qué está roto, qué no sé, y qué ha cambiado desde la
    código INE y con un nombre ambiguo se niega a elegir.
 2. **Tres entrevistas** con entidades de tamaños distintos, informe en la mano. Preguntar
    qué harían con esto, quién lo abriría, cada cuánto, y de qué partida saldría.
-3. ✅ **La página pública municipal** (primer esquema hecho): `/municipalities/:ine`,
+3. ✅ **La página pública municipal** (primer esquema operativo): `/municipalities/:ine`,
    servida por `GET /municipalities/:ine`. Agrupa por `municipality_ine` en vez de por
    radio, es **pública y sin sesión** —lo que enseña ya se ve en el mapa, y la mayoría de
    los datos son de OpenStreetMap y del ICGC/ACA, así que ponerle una puerta sería cerrar
    datos abiertos que no son nuestros— y **no se enlaza todavía desde la navegación**: es
-   una dirección que se manda por correo mientras se valida. Lleva la descarga en CSV y
-   GeoJSON compuesta **en el navegador**, como el GPX: ni una ruta más que mantener.
+   una dirección que se manda por correo mientras se valida. Lleva resumen operativo,
+   prioridades, búsqueda y filtros que afectan también al mapa, impresión/guardado como
+   PDF y descarga en CSV y GeoJSON compuesta **en el navegador**, como el GPX: ni una ruta
+   más que mantener. «Con agua» y «sin agua» solo cuentan partes de los últimos **90
+   días**; una comprobación histórica no se presenta como estado actual.
    La consulta la comparte con el comando (`MunicipalReport`), para que el PDF que firma
    alguien y la página que ese alguien abre en el móvil no puedan dar cifras distintas.
 4. **Un piloto**, acotado a un municipio y una temporada, con campaña de verificación. El
