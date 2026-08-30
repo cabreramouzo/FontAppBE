@@ -107,7 +107,10 @@ struct WeeklyDigest {
             .filter(\.$user.$id != userID)
             .sort(\.$createdAt, .descending)
             .all()
+        // Solo incidencias: el resumen semanal cuenta lo que pasa con las fuentes, no
+        // los comentarios de organización.
         let reports = try await FontReport.query(on: db)
+            .filter(\.$isIncident == true)
             .filter(\.$font.$id ~~ myFontIDs)
             .filter(\.$createdAt >= since)
             .filter(\.$user.$id != userID)

@@ -175,6 +175,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddSourceLimitExemptionToUser()) // excepción temporal al cupo de cuentas nuevas
     app.migrations.add(OptimizeMapSummaries()) // resumen del mapa sin materializar todo el historial
     app.migrations.add(CreateMunicipalBoundary()) // contorno de cada municipio, para dibujarlo en el mapa
+    app.migrations.add(AddIncidentFlagToFontReport()) // la caja pasa a ser de comentarios; la incidencia se marca
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

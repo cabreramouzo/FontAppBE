@@ -9,6 +9,12 @@ struct FontReportController: RouteCollection {
         reports.get(use: index) // lectura pública
         let auth = reports.grouped(UserToken.authenticator(), User.guardMiddleware())
         auth.grouped(RateLimitMiddleware(scope: "report", max: 20, window: 60 * 60)).post(use: create)
+        // El listado para revisar lo que ya está escrito. Va fuera del grupo de una
+        // fuente concreta porque la pregunta es «enséñame todo», que es justo lo que no
+        // se puede contestar entrando ficha por ficha.
+        routes.grouped("admin", "reports")
+            .grouped(UserToken.authenticator(), User.guardMiddleware())
+            .get(use: adminIndex)
         auth.group(":reportID") { r in
             r.delete(use: destroy)
             // Cerrar y reabrir. Reabrir es lo que hace que cerrar se pueda conceder por
@@ -16,6 +22,7 @@ struct FontReportController: RouteCollection {
             // silenciada por alguien que se equivocó.
             r.post("resolve", use: resolve)
             r.delete("resolve", use: reopen)
+            r.patch("incident", use: setIncident)
         }
     }
 
@@ -78,6 +85,7 @@ struct FontReportController: RouteCollection {
     static func autoResolve(fontID: UUID, on db: any Database) async throws -> Set<UUID> {
         let abiertas = try await FontReport.query(on: db)
             .filter(\.$font.$id == fontID)
+            .filter(\.$isIncident == true)
             .filter(\.$resolvedAt == nil)
             .all()
         guard !abiertas.isEmpty else { return [] }
@@ -95,6 +103,11 @@ struct FontReportController: RouteCollection {
         guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {
             throw AppError(.notFound, "report.notFound", "Incidencia no encontrada")
         }
+        // Un comentario no se «resuelve»: no hay nada que arreglar. Si de verdad lo era,
+        // primero se marca como incidencia y después se cierra.
+        guard report.isIncident else {
+            throw AppError(.badRequest, "report.notAnIncident", "Esto es un comentario, no una incidencia")
+        }
         let userID = try user.requireID()
         var puede = report.$user.id == userID || user.canModerate
         if !puede { puede = try await Capabilities.has(.resolveIncident, user, on: req.db) }
@@ -102,6 +115,113 @@ struct FontReportController: RouteCollection {
 
         report.resolvedAt = resolviendo ? Date() : nil
         report.$resolver.id = resolviendo ? userID : nil
+        try await report.save(on: req.db)
+        let autores = try await User.authors(
+            for: [report.$user.id, report.$resolver.id].compactMap { $0 }, on: req.db)
+        let quien = report.$user.id.flatMap { autores[$0] }
+        return ReportResponse(report, username: quien?.username, staff: quien?.staff,
+                              resolverName: report.$resolver.id.flatMap { autores[$0]?.username })
+    }
+
+    /// GET /admin/reports — todos los comentarios e incidencias, para repasarlos.
+    ///
+    /// Existe porque la marca de incidencia llegó **después** que los datos: todo lo
+    /// escrito hasta ahora entró cuando la caja se llamaba «incidencia», así que hay que
+    /// poder mirarlo entero y desmarcar lo que no lo era. Ficha por ficha eso es
+    /// imposible: no hay ninguna pantalla que responda «enséñame todo lo que hay escrito».
+    ///
+    /// Solo admin, y solo lectura: escribir es la ruta de siempre (`PATCH …/incident`),
+    /// para no abrir una segunda puerta con reglas distintas — el mismo criterio que
+    /// siguió el panel de moderación.
+    struct AdminReport: Content {
+        let id: UUID
+        let fontID: UUID
+        let fontName: String?
+        let username: String?
+        let message: String
+        let isIncident: Bool
+        let incidentKind: IncidentKind?
+        let createdAt: Date?
+        let resolvedAt: Date?
+
+        /// Los opcionales, **explícitos**. El codificador de Swift omite los nulos y en el
+        /// cliente `undefined !== null`; aquí solo se miran por verdadero/falso, pero es
+        /// la regla de esta API desde que el mismo descuido tumbó la pantalla de ayuda
+        /// (`fromDays`) y dio por conseguida toda insignia bloqueada (`tier`).
+        func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(id, forKey: .id)
+            try c.encode(fontID, forKey: .fontID)
+            try c.encode(fontName, forKey: .fontName)
+            try c.encode(username, forKey: .username)
+            try c.encode(message, forKey: .message)
+            try c.encode(isIncident, forKey: .isIncident)
+            try c.encode(incidentKind, forKey: .incidentKind)
+            try c.encode(createdAt, forKey: .createdAt)
+            try c.encode(resolvedAt, forKey: .resolvedAt)
+        }
+    }
+
+    @Sendable func adminIndex(req: Request) async throws -> [AdminReport] {
+        let user = try req.auth.require(User.self)
+        guard user.isAdmin else { throw AppError(.forbidden, "auth.adminOnly", "Solo administradores") }
+
+        let reports = try await FontReport.query(on: req.db)
+            .sort(\.$createdAt, .descending)
+            .limit(500)
+            .all()
+        // Los nombres de fuente y de autor en dos consultas y no una por fila: son
+        // quinientas y esto se abre para repasarlas de una sentada.
+        let fuentes = try await Font.query(on: req.db)
+            .filter(\.$id ~~ Set(reports.map { $0.$font.id }))
+            .all()
+            .reduce(into: [UUID: String?]()) { $0[$1.id!] = $1.name }
+        let autores = try await User.authors(for: reports.compactMap { $0.$user.id }, on: req.db)
+
+        return reports.compactMap { r in
+            guard let id = r.id else { return nil }
+            return AdminReport(
+                id: id, fontID: r.$font.id, fontName: fuentes[r.$font.id] ?? nil,
+                username: r.$user.id.flatMap { autores[$0]?.username },
+                message: r.message, isIncident: r.isIncident, incidentKind: r.incidentKind,
+                createdAt: r.createdAt, resolvedAt: r.resolvedAt)
+        }
+    }
+
+    /// PATCH /fonts/:fontID/report/:reportID/incident — marcar o desmarcar como incidencia.
+    ///
+    /// Existe por las dos direcciones y las dos hacen falta:
+    ///
+    /// - **Desmarcar** es lo que limpia lo que ya está escrito. Sin esto, los comentarios
+    ///   que entraron cuando la caja se llamaba «incidencia» se quedan abiertos para
+    ///   siempre, porque nadie va a «resolver» una petición de foto.
+    /// - **Marcar** es la red de seguridad del interruptor apagado por defecto: una avería
+    ///   real que se escribió como comentario la puede ascender otro.
+    ///
+    /// Quién: el autor sobre lo suyo y moderador+ sobre lo ajeno. La misma escalera de
+    /// siempre — y no se abre por nivel a propósito, porque decidir si el aviso de otro es
+    /// una avería es criterio sobre una persona y no sobre el mapa.
+    struct SetIncidentDTO: Content { let isIncident: Bool; let incidentKind: IncidentKind? }
+
+    @Sendable func setIncident(req: Request) async throws -> ReportResponse {
+        let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
+        guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {
+            throw AppError(.notFound, "report.notFound", "Incidencia no encontrada")
+        }
+        let dto = try req.content.decode(SetIncidentDTO.self)
+        guard report.$user.id == (try user.requireID()) || user.canModerate else {
+            throw AppError(.forbidden, "report.notYours", "Solo puedes cambiar los tuyos")
+        }
+        report.isIncident = dto.isIncident
+        report.incidentKind = dto.isIncident ? (dto.incidentKind ?? report.incidentKind) : nil
+        // Dejar de ser incidencia también borra el cierre: «resuelta» no significa nada
+        // sobre un comentario, y si se volviera a marcar aparecería cerrada sin que nadie
+        // la haya arreglado.
+        if !dto.isIncident {
+            report.resolvedAt = nil
+            report.$resolver.id = nil
+        }
         try await report.save(on: req.db)
         let autores = try await User.authors(
             for: [report.$user.id, report.$resolver.id].compactMap { $0 }, on: req.db)
@@ -118,7 +238,13 @@ struct FontReportController: RouteCollection {
         try CreateReportDTO.validate(content: req)
         let dto = try req.content.decode(CreateReportDTO.self)
 
-        let report = FontReport(fontID: fontID, userID: try user.requireID(), message: dto.message)
+        let esIncidencia = dto.isIncident ?? false
+        let report = FontReport(fontID: fontID, userID: try user.requireID(), message: dto.message,
+                                isIncident: esIncidencia,
+                                // El tipo solo tiene sentido si es una incidencia: guardarlo
+                                // en un comentario dejaría filas que dicen «rota» sobre algo
+                                // que nadie ha declarado avería.
+                                incidentKind: esIncidencia ? dto.incidentKind : nil)
         try await report.save(on: req.db)
 
         // Después de guardar y sin esperar: un aviso que no sale no puede costarle la
@@ -148,9 +274,14 @@ struct FontReportController: RouteCollection {
         // mismo que ya se hace con los avisos.
         try? await FontFavorite.follow(fontID: fontID, userID: quienID, on: db)
 
-        let push = PushEnvio(req.application)
-        Task.detached {
-            await FontWatchNotifier.notify(fontID: fontID, change: .report, actorID: quienID, on: db, push: push)
+        // **Solo una incidencia despierta a nadie.** Un comentario sobre la fuente no es
+        // urgente por definición: no cambia lo que vas a hacer, y esta app se silencia una
+        // vez y no se vuelve. La marca es justo lo que separa las dos cosas.
+        if esIncidencia {
+            let push = PushEnvio(req.application)
+            Task.detached {
+                await FontWatchNotifier.notify(fontID: fontID, change: .report, actorID: quienID, on: db, push: push)
+            }
         }
 
         let response = Response(status: .created)
@@ -183,6 +314,13 @@ struct FontReportController: RouteCollection {
 
 struct CreateReportDTO: Content {
     let message: String
+    /// Si no viene, es un **comentario**. El valor por defecto es el opuesto al de la
+    /// columna a propósito: la columna nace a `true` para que lo ya escrito conserve su
+    /// significado, y el DTO a `false` porque de aquí en adelante marcar una incidencia
+    /// tiene que ser un gesto explícito. Un cliente viejo que no mande el campo publicará
+    /// comentarios, que es el fallo barato: se marca después.
+    let isIncident: Bool?
+    let incidentKind: IncidentKind?
 }
 
 extension CreateReportDTO: Validatable {
@@ -202,6 +340,8 @@ struct ReportResponse: Content {
     /// mismo texto pasa de ser la opinión de alguien a ser una decisión.
     let staff: UserRole?
     let message: String
+    let isIncident: Bool
+    let incidentKind: IncidentKind?
     let createdAt: Date?
     /// Nulo = sigue abierta. Explícito en el JSON, como el resto de opcionales de esta
     /// API: omitido llega como `undefined` y «resuelta» se distingue de «no lo sé».
@@ -215,6 +355,8 @@ struct ReportResponse: Content {
         self.username = username
         self.staff = staff
         self.message = report.message
+        self.isIncident = report.isIncident
+        self.incidentKind = report.incidentKind
         self.createdAt = report.createdAt
         self.resolvedAt = report.resolvedAt
         self.resolvedBy = resolverName
@@ -228,6 +370,11 @@ struct ReportResponse: Content {
         try c.encode(username, forKey: .username)
         try c.encode(staff, forKey: .staff)
         try c.encode(message, forKey: .message)
+        // Explícitos, como el resto de opcionales de esta API: omitido llega como
+        // `undefined` y el cliente no puede distinguir «no es incidencia» de «este
+        // servidor todavía no lo sabe».
+        try c.encode(isIncident, forKey: .isIncident)
+        try c.encode(incidentKind, forKey: .incidentKind)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(resolvedAt, forKey: .resolvedAt)
         try c.encode(resolvedBy, forKey: .resolvedBy)

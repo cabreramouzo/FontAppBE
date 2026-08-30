@@ -149,6 +149,15 @@ export interface LoginResponse {
   isNewUser?: boolean
 }
 
+/**
+ * De qué clase es una avería. Corta a propósito —es para que se pueda ordenar el trabajo,
+ * no para clasificar el mundo— y con `other`, porque sin él la gente mete lo que sea en la
+ * categoría que más se le parece y la clasificación deja de valer.
+ */
+export type IncidentKind = 'broken' | 'dry' | 'dirty' | 'access' | 'other'
+
+export const INCIDENT_KINDS: IncidentKind[] = ['broken', 'dry', 'dirty', 'access', 'other']
+
 export interface ReportResponse {
   id: string
   fontID: string
@@ -157,6 +166,9 @@ export interface ReportResponse {
   /** Rol de quien lo escribió, solo si es del equipo. `null` para todos los demás. */
   staff?: UserRole | null
   message: string
+  /** Si es una avería que alguien tiene que arreglar, o solo un comentario. */
+  isIncident: boolean
+  incidentKind: IncidentKind | null
   createdAt: string
   /** Nulo = sigue abierta. Se cierra, no se borra: la avería es parte de la historia. */
   resolvedAt: string | null

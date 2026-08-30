@@ -273,7 +273,12 @@ struct ActivityController: RouteCollection {
     }
 
     private func fetchReports(_ req: Request, limit: Int, ambito: Ambito?) async throws -> [ActivityItem] {
-        let query = FontReport.query(on: req.db).sort(\.$createdAt, .descending).limit(limit)
+        // **Solo las incidencias salen en novedades**, y esto es la mitad del arreglo:
+        // un comentario de organización —«¿puedes añadir una foto?»— no tiene por qué
+        // tener protagonismo en la portada. Lo que pasa con las fuentes, sí.
+        let query = FontReport.query(on: req.db)
+            .filter(\.$isIncident == true)
+            .sort(\.$createdAt, .descending).limit(limit)
         // Acotar por país va como **join** y no resolviendo a identificadores: España son
         // 52.341 fuentes y esto son cuatro consultas por visita. Ojo, el join no filtra
         // por `Font.visible`, igual que no lo hace el camino de los identificadores;

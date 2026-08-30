@@ -252,7 +252,12 @@ enum ContributionScore {
         let users = try await User.query(on: db).all()
         let comments = try await FontComment.query(on: db).sort(\.$createdAt, .ascending).all()
         let confirmations = try await FontConfirmation.query(on: db).all()
-        let reports = try await FontReport.query(on: db).sort(\.$createdAt, .ascending).all()
+        // Solo lo marcado como incidencia. Un comentario sobre la fuente no es una
+        // aportación de campo —no dice si mana, no se puede resolver— y pagarlo abriría
+        // la puerta a cobrar por escribir cualquier cosa en la caja.
+        let reports = try await FontReport.query(on: db)
+            .filter(\.$isIncident == true)
+            .sort(\.$createdAt, .ascending).all()
         let edits = try await FontEdit.query(on: db).sort(\.$createdAt, .ascending).all()
 
         // **Solo las fuentes que participan en algo, no la base entera.**

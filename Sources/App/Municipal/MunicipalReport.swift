@@ -102,7 +102,10 @@ struct MunicipalReport: Content, Sendable {
             ) r ON true
             LEFT JOIN LATERAL (
               SELECT count(*) AS n FROM font_reports fr
-              WHERE fr.font_id = f.id AND fr.resolved_at IS NULL
+              -- `is_incident` no es un detalle aquí: este número es el que se le enseña a
+              -- un ayuntamiento, y basta con que una de las «incidencias abiertas» sea un
+              -- «¿puedes poner una foto?» para que deje de creerse el resto del informe.
+              WHERE fr.font_id = f.id AND fr.is_incident AND fr.resolved_at IS NULL
             ) inc ON true
             WHERE f.municipality_ine = \(bind: ine)
               AND \(unsafeRaw: Font.visibleSQL)

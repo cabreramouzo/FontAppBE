@@ -10,6 +10,8 @@ import IconButton from '@mui/material/IconButton'
 import TextField from '@mui/material/TextField'
 import MenuItem from '@mui/material/MenuItem'
 import Chip from '@mui/material/Chip'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Switch from '@mui/material/Switch'
 import Alert from '@mui/material/Alert'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
@@ -37,7 +39,8 @@ import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
 import HideImageIcon from '@mui/icons-material/HideImageOutlined'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
-import type { CommentResponse, Drinkable, FavoriteStatus, Font, ReportResponse, WaterSource } from '../api/types'
+import type { CommentResponse, Drinkable, FavoriteStatus, Font, IncidentKind, ReportResponse, WaterSource } from '../api/types'
+import { INCIDENT_KINDS } from '../api/types'
 import type { PublicBadge } from '../api/client'
 import {
   apiFetch,
@@ -50,6 +53,7 @@ import {
   deleteFont,
   deleteReport,
   resolveReport,
+  setReportIncident,
   describeError,
   getFavoriteStatus,
   getFontPhotoAuthor,
@@ -357,10 +361,33 @@ function LocationActions({ font }: { font: Font }) {
   )
 }
 
+/**
+ * La caja de texto de la ficha: **un comentario**, que se puede marcar como incidencia.
+ *
+ * ## Por qué dejó de llamarse «incidencia»
+ *
+ * Era la única caja de la ficha que no pedía nada más —ni estado del agua, ni valoración,
+ * ni foto—, así que se convirtió en el camino de menos resistencia para decir cualquier
+ * cosa. Entraban comentarios de organización («¿podrías añadir una foto @usuario?») que
+ * nadie va a «resolver» nunca, y se quedaban abiertos inflando el recuento de incidencias
+ * abiertas — el mismo que se le enseña a un ayuntamiento en `/municipalities/:ine`.
+ *
+ * ## El interruptor nace APAGADO
+ *
+ * Es lo que hace que la palabra vuelva a significar algo: si estuviera encendido por
+ * defecto seguiríamos donde estábamos. El riesgo simétrico —que una avería de verdad se
+ * quede sin marcar— lo cubre que cualquiera pueda marcarla después desde la propia ficha,
+ * que es la misma lógica de relevo que usa el resto de la app.
+ *
+ * El tipo solo se pregunta **cuando ya has dicho que es una incidencia**: preguntarlo
+ * antes obliga a clasificar algo que a lo mejor no es nada.
+ */
 function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void }) {
   const { t } = useI18n()
   const toast = useToast()
   const [message, setMessage] = useState('')
+  const [esIncidencia, setEsIncidencia] = useState(false)
+  const [tipo, setTipo] = useState<IncidentKind>('other')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -369,9 +396,11 @@ function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
     setError('')
     setSaving(true)
     try {
-      await createReport(fontID, message)
+      await createReport(fontID, message, esIncidencia ? tipo : undefined)
       setMessage('')
-      toast.show(t('toast.reportSent'))
+      setEsIncidencia(false)
+      setTipo('other')
+      toast.show(t(esIncidencia ? 'toast.reportSent' : 'toast.commentSent'))
       onPosted()
     } catch (e) {
       setError(describeError(e, t))
@@ -382,10 +411,34 @@ function ReportForm({ fontID, onPosted }: { fontID: string; onPosted: () => void
 
   return (
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1.5 }}>
-      <MentionInput value={message} onChange={setMessage} placeholder={t('report.placeholder')} required fullWidth multiline minRows={2} size="small" />
+      <MentionInput value={message} onChange={setMessage} placeholder={t('comment.placeholder')} required fullWidth multiline minRows={2} size="small" />
+      <FormControlLabel
+        control={<Switch checked={esIncidencia} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEsIncidencia(e.target.checked)} />}
+        label={t('comment.isIncident')}
+      />
+      {esIncidencia && (
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+          {INCIDENT_KINDS.map((k: IncidentKind) => (
+            <Chip
+              key={k}
+              label={t(`incident.${k}`)}
+              size="small"
+              color={tipo === k ? 'warning' : 'default'}
+              variant={tipo === k ? 'filled' : 'outlined'}
+              onClick={() => setTipo(k)}
+            />
+          ))}
+        </Box>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
-      <Button type="submit" color="warning" variant="contained" disableElevation disabled={saving} startIcon={<ReportProblemIcon />} sx={{ alignSelf: 'flex-start' }}>
-        {saving ? t('report.sending') : t('report.submit')}
+      <Button
+        type="submit"
+        color={esIncidencia ? 'warning' : 'primary'}
+        variant="contained" disableElevation disabled={saving}
+        startIcon={esIncidencia ? <ReportProblemIcon /> : undefined}
+        sx={{ alignSelf: 'flex-start' }}
+      >
+        {saving ? t('report.sending') : t(esIncidencia ? 'report.submit' : 'comment.submit')}
       </Button>
     </Box>
   )
@@ -846,6 +899,24 @@ export function FontDetailPage() {
   /// el botón, para no ofrecer una acción que va a devolver 403.
   function puedeResolver(r: ReportResponse): boolean {
     return !!user && (user.id === r.userID || !!user.isAdmin || puedeCerrarIncidencias)
+  }
+
+  /// Quién puede marcar o desmarcar: el autor sobre lo suyo y moderador+ sobre lo ajeno.
+  /// **No se abre por nivel**, al revés que cerrar una incidencia: decidir si el aviso de
+  /// otro es una avería es criterio sobre una persona, no sobre el mapa, y esa es la línea
+  /// que ordena toda la escalera de capacidades.
+  function puedeMarcar(r: ReportResponse): boolean {
+    return !!user && (user.id === r.userID || !!user.isAdmin)
+  }
+
+  async function cambiaIncidencia(r: ReportResponse, esIncidencia: boolean) {
+    if (!id) return
+    try {
+      await setReportIncident(id, r.id, esIncidencia)
+      load()
+    } catch (e) {
+      setError(describeError(e, t))
+    }
   }
 
   async function cambiaResuelta(r: ReportResponse, resolver: boolean) {
@@ -1386,8 +1457,10 @@ export function FontDetailPage() {
         </Box>
 
         <Box component="section" sx={{ mt: 3 }}>
-          <Typography variant="h6" gutterBottom>{t('detail.incidents', { n: reports.length })}</Typography>
-          {reports.length === 0 && <Typography color="text.secondary">{t('detail.noIncidents')}</Typography>}
+          {/* «Comentarios» y no «incidencias»: es lo que de verdad hay en esta lista
+              desde que la caja dejó de exigir que todo fuera una avería. */}
+          <Typography variant="h6" gutterBottom>{t('detail.comments', { n: reports.length })}</Typography>
+          {reports.length === 0 && <Typography color="text.secondary">{t('detail.noComments')}</Typography>}
           <List disablePadding>
             {reports.map((r) => (
               <ListItem key={r.id} divider disableGutters secondaryAction={(user?.id === r.userID || user?.isAdmin) ? (
@@ -1400,6 +1473,23 @@ export function FontDetailPage() {
                   <Typography variant="body2" sx={{ ...(r.resolvedAt && { color: 'text.secondary' }) }}>
                     <Autor username={r.username} staff={r.staff} />: <TextoRico texto={r.message} />
                   </Typography>
+                  {/* La marca se ve y se puede cambiar desde aquí. Marcar es la red de
+                      seguridad del interruptor apagado por defecto —una avería real
+                      escrita como comentario la asciende cualquiera de los dos que
+                      pueden—, y desmarcar es lo que saca de la cola lo que nunca lo fue. */}
+                  {r.isIncident && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25, flexWrap: 'wrap' }}>
+                      <Chip
+                        size="small" color="warning" variant="outlined" sx={{ height: 20 }}
+                        label={r.incidentKind ? t(`incident.${r.incidentKind}`) : t('comment.isIncident')}
+                      />
+                    </Box>
+                  )}
+                  {puedeMarcar(r) && (
+                    <Button size="small" onClick={() => cambiaIncidencia(r, !r.isIncident)} sx={{ textTransform: 'none', ml: -1, mr: 1 }}>
+                      {t(r.isIncident ? 'comment.unmark' : 'comment.mark')}
+                    </Button>
+                  )}
                   {/* Resuelta: se tacha el problema, no se esconde. Que la fuente estuvo
                       rota y volvió a manar es lo que mira quien duda si acercarse. */}
                   {r.resolvedAt ? (
@@ -1416,11 +1506,14 @@ export function FontDetailPage() {
                         </Button>
                       )}
                     </Box>
-                  ) : puedeResolver(r) && (
+                  ) : (r.isIncident && puedeResolver(r) && (
+                    // Solo si es una incidencia: «resolver» un comentario no significa
+                    // nada y el servidor lo rechaza, así que ofrecerlo sería un botón que
+                    // solo sabe dar error.
                     <Button size="small" onClick={() => cambiaResuelta(r, true)} sx={{ textTransform: 'none', ml: -1 }}>
                       {t('report.resolve')}
                     </Button>
-                  )}
+                  ))}
                 </Box>
               </ListItem>
             ))}

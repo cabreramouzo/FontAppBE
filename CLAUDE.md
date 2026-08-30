@@ -3219,6 +3219,47 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - Renombrar la clave hace que quien ya la tuviera vea **una celebración más** (la vitrina
   compara por `familia:grado` en `localStorage`). Asumido: es cierta y son nueve personas.
 
+## La caja de la ficha es de comentarios; la incidencia se marca
+
+- Era la **única caja de la ficha que no pedía nada más** —ni estado del agua, ni
+  valoración, ni foto—, así que se convirtió en el camino de menos resistencia para decir
+  cualquier cosa. Entraban comentarios de organización («¿podrías añadir una foto
+  @usuario?») que nadie va a resolver nunca, y se quedaban abiertos **inflando el recuento
+  de incidencias abiertas** — el mismo que se le enseña a un ayuntamiento en
+  `/municipalities/:ine`. Basta con que una de las «incidencias abiertas» sea una petición
+  de foto para que ese informe deje de creerse entero.
+- Ahora `font_reports` lleva `is_incident` y **solo lo marcado** entra en la cola, cuenta
+  como avería abierta, **sale en novedades**, paga gotas, avisa con push y se puede
+  resolver. Lo de novedades es la otra mitad de lo mismo: un comentario de organización no
+  tiene por qué tener protagonismo en la portada.
+- **La columna nace a `true` y el DTO a `false`**, y no es una incoherencia: lo ya escrito
+  entró cuando la caja se llamaba «incidencia» y tiene que conservar su significado; de
+  aquí en adelante marcarla es un gesto explícito o volveríamos a donde estábamos. Un
+  cliente sin actualizar publica comentarios, que es el fallo barato.
+- **La tabla y el modelo NO se renombran.** `FontReport` con un `isIncident` al lado no
+  engaña a nadie, y renombrar en trece ficheros no arregla nada que no arregle la bandera.
+  Misma regla que `guard.showAll` o `FontFavorite`.
+- **Marcar y desmarcar**: `PATCH /fonts/:id/report/:reportID/incident`, autor sobre lo
+  suyo y moderador+ sobre lo ajeno. **No se abre por nivel**, al revés que cerrar una
+  incidencia: decidir si el aviso de otro es una avería es criterio sobre una persona y no
+  sobre el mapa, que es la línea que ordena toda la escalera de capacidades.
+  Desmarcar **borra el cierre**: «resuelta» no significa nada sobre un comentario, y si se
+  volviera a marcar aparecería cerrada sin que nadie la haya arreglado.
+- Un comentario **no se puede resolver** (400 `report.notAnIncident`) y la ficha no pinta
+  el botón: ofrecer una acción que solo sabe dar error es lo que esta app no hace.
+- **Tipo de incidencia** (`IncidentKind`: `broken` · `dry` · `dirty` · `access` ·
+  **`other`**), preguntado **solo cuando ya has dicho que es una incidencia**. `other`
+  existe porque sin él la gente mete lo que sea en la categoría que más se le parece y la
+  clasificación deja de valer — el mismo problema que la bandera viene a arreglar, un
+  nivel más abajo.
+- **`/admin/reports`** (solo admin) lista todo lo escrito con su interruptor en cada fila.
+  Existe porque la marca llegó **después que los datos**: hay que poder repasarlos de una
+  sentada, y ficha por ficha eso es imposible. Escribe por la **misma ruta** que la ficha,
+  no por una de administración aparte — dos puertas con reglas distintas para lo mismo es
+  como se acaba teniendo dos comportamientos.
+- Hay test de las dos mitades (`testCommentIsNotAnIncidentUntilItIsMarked`), **verificado
+  rompiéndolo**: con el `create` volviendo a marcar por defecto, sale en rojo.
+
 ## Confianza del estado de una fuente
 
 - Es una categoría explicable, no una puntuación opaca: **confirmada**, **informe

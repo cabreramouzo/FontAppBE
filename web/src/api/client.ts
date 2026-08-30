@@ -1,7 +1,7 @@
 import type { PhotoUploadMeta } from '../lib/image'
 import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
 import { storedSource } from '../lib/campaign'
-import type { AdminUser, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
+import type { AdminUser, IncidentKind, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -391,11 +391,45 @@ export async function confirmComment(fontID: string, commentID: string, on: bool
   })
 }
 
-export async function createReport(fontID: string, message: string): Promise<ReportResponse> {
+/**
+ * Publica un comentario en una fuente. Con `kind`, además lo marca como incidencia.
+ *
+ * El servidor da por hecho que **no** lo es si no se dice: marcarla tiene que ser un gesto
+ * explícito o volvemos a donde estábamos, con la caja llenándose de cosas que nadie va a
+ * resolver nunca.
+ */
+export async function createReport(fontID: string, message: string, kind?: IncidentKind): Promise<ReportResponse> {
   return apiFetch<ReportResponse>(`/fonts/${fontID}/report`, {
     method: 'POST',
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, isIncident: !!kind, incidentKind: kind }),
   })
+}
+
+/** Marca o desmarca un comentario como incidencia. Autor o moderador+. */
+export async function setReportIncident(
+  fontID: string, reportID: string, isIncident: boolean, kind?: IncidentKind,
+): Promise<ReportResponse> {
+  return apiFetch<ReportResponse>(`/fonts/${fontID}/report/${reportID}/incident`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isIncident, incidentKind: kind }),
+  })
+}
+
+/** Todos los comentarios e incidencias, para repasarlos. Solo admin. */
+export interface AdminReport {
+  id: string
+  fontID: string
+  fontName: string | null
+  username: string | null
+  message: string
+  isIncident: boolean
+  incidentKind: IncidentKind | null
+  createdAt: string | null
+  resolvedAt: string | null
+}
+
+export async function getAdminReports(): Promise<AdminReport[]> {
+  return apiFetch<AdminReport[]>('/admin/reports')
 }
 
 /** Cerrar (o reabrir) una incidencia. Cerrar no la borra: queda con fecha y autor. */

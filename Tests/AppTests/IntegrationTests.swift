@@ -582,6 +582,68 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Un comentario no es una incidencia hasta que alguien lo dice, y entonces sí.
+    ///
+    /// Fija las dos mitades de la regla, que es donde está el valor: sin la primera
+    /// volvemos a tener la caja llenándose de cosas que nadie va a cerrar nunca, y sin la
+    /// segunda no habría forma de limpiar lo que ya entró así ni de ascender una avería
+    /// real escrita como comentario.
+    ///
+    /// Y comprueba lo que se paga por descuido: **un comentario no se puede «resolver»**.
+    /// Sin ese 400, el botón existiría sobre algo que no tiene nada que arreglar y la
+    /// palabra «resuelta» dejaría de significar nada.
+    func testCommentIsNotAnIncidentUntilItIsMarked() async throws {
+        try await withApp { app in
+            try await register(app, username: "comentador")
+            let token = try await login(app, username: "comentador")
+            let fontID = try await createFont(app, token: token, name: "F", lat: 40, long: -3)
+
+            // Sin decir nada, es un comentario.
+            var reportID = ""
+            try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(CreateReportDTO(message: "¿le pones una foto?", isIncident: nil, incidentKind: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+                let r = try res.content.decode(ReportResponse.self)
+                XCTAssertFalse(r.isIncident)
+                XCTAssertNil(r.incidentKind)
+                reportID = try XCTUnwrap(r.id).uuidString
+            })
+
+            // Y como no lo es, no se puede dar por resuelto.
+            try await app.test(.POST, "fonts/\(fontID)/report/\(reportID)/resolve", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+
+            // Marcarlo lo convierte en incidencia, con su tipo.
+            try await app.test(.PATCH, "fonts/\(fontID)/report/\(reportID)/incident", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(FontReportController.SetIncidentDTO(isIncident: true, incidentKind: .broken))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let r = try res.content.decode(ReportResponse.self)
+                XCTAssertTrue(r.isIncident)
+                XCTAssertEqual(r.incidentKind, .broken)
+            })
+
+            // Ahora sí se cierra.
+            try await app.test(.POST, "fonts/\(fontID)/report/\(reportID)/resolve", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .ok)
+            }
+
+            // Y desmarcarlo borra el cierre: «resuelta» no significa nada sobre un
+            // comentario, y si se volviera a marcar aparecería cerrada sin que nadie la
+            // haya arreglado.
+            try await app.test(.PATCH, "fonts/\(fontID)/report/\(reportID)/incident", headers: bearer(token), beforeRequest: { req in
+                try req.content.encode(FontReportController.SetIncidentDTO(isIncident: false, incidentKind: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let r = try res.content.decode(ReportResponse.self)
+                XCTAssertFalse(r.isIncident)
+                XCTAssertNil(r.resolvedAt)
+            })
+        }
+    }
+
     func testReportRecordsAuthor() async throws {
         try await withApp { app in
             try await register(app, username: "reporter")
@@ -589,7 +651,7 @@ final class IntegrationTests: XCTestCase {
             let fontID = try await createFont(app, token: token, name: "F", lat: 40, long: -3)
 
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(token), beforeRequest: { req in
-                try req.content.encode(CreateReportDTO(message: "grifo roto"))
+                try req.content.encode(CreateReportDTO(message: "grifo roto", isIncident: true, incidentKind: .broken))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .created)
                 let report = try res.content.decode(ReportResponse.self)
@@ -1916,7 +1978,7 @@ final class IntegrationTests: XCTestCase {
             })
 
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(tok), beforeRequest: { req in
-                try req.content.encode(CreateReportDTO(message: "El agua no es potable"))
+                try req.content.encode(CreateReportDTO(message: "El agua no es potable", isIncident: true, incidentKind: .other))
             }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
 
             try await app.test(.GET, "fonts/\(fontID)/favorite", headers: bearer(tok), afterResponse: { res in
@@ -1926,7 +1988,7 @@ final class IntegrationTests: XCTestCase {
             // Una segunda incidencia no duplica la fila: `count` es el total de gente que
             // la tiene, así que dos filas de la misma persona lo inflarían.
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(tok), beforeRequest: { req in
-                try req.content.encode(CreateReportDTO(message: "Y además está rota"))
+                try req.content.encode(CreateReportDTO(message: "Y además está rota", isIncident: true, incidentKind: .broken))
             }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
 
             try await app.test(.GET, "fonts/\(fontID)/favorite", headers: bearer(tok), afterResponse: { res in
@@ -2063,7 +2125,7 @@ final class IntegrationTests: XCTestCase {
             for id in [aqui, alla] {
                 _ = try await addComment(app, token: tok, fontID: id, body: "Mana")
                 try await app.test(.POST, "fonts/\(id)/report", headers: bearer(tok), beforeRequest: { req in
-                    try req.content.encode(CreateReportDTO(message: "Grifo roto"))
+                    try req.content.encode(CreateReportDTO(message: "Grifo roto", isIncident: true, incidentKind: .broken))
                 }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
             }
             // La zona la pone `populate-regions` en producción; aquí a mano.
