@@ -598,6 +598,11 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
     forma «estilo iOS» que propone la documentación de MUI (pista de 46×28, pulgar de 24) y
     **el objetivo de 44 lo pone la fila** (`MuiFormControlLabel`), que es lo que se toca de
     verdad y lo que hacen los ajustes de un teléfono.
+    Y ojo con `size="small"`: es **otra variante** de MUI con sus propias medidas, y el
+    estilo del tema solo viste la normal — los tres interruptores de los grupos de avisos
+    se quedaron con el pulgar descuadrado respecto a los de arriba. Se les quitó: la
+    jerarquía la marca la indentación, no el tamaño. Si se añade un `Switch` nuevo, sin
+    variante.
   · la **casilla de la lista del GPX** se descuadró: iba dentro de un flex con
     `alignItems: baseline` y `flexWrap`, así que al pasar el nombre de la fuente a la línea
     siguiente se quedaba sola arriba. Ahora es una columna aparte centrada, y el kilómetro

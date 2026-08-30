@@ -89,11 +89,15 @@ export function AvisosDelSistema({ guardar, guardando }: {
           Van AGRUPADOS por lo que significan —hechos de una fuente que sigues, alguien
           que te habla, y lo de administración— y no uno por evento: nueve casillas nadie
           las lee, y habría que ampliarlas cada vez que se añade un aviso. */}
+      {/* Los tres de dentro NO llevan `size="small"`: esa es otra variante de MUI, con sus
+          propias medidas, y el estilo del tema solo viste la normal — quedaban con el
+          pulgar descuadrado respecto a los de arriba. La jerarquía la marca la
+          indentación, no el tamaño. */}
       {est === 'encendido' && user && (
         <Box sx={{ pl: 2, mt: 0.5, borderLeft: 2, borderColor: 'divider' }}>
           <FormControlLabel
             control={
-              <Switch size="small" disabled={guardando}
+              <Switch disabled={guardando}
                       checked={user.pushFontUpdates ?? true}
                       onChange={(e) => void guardar({ pushFontUpdates: e.target.checked })} />
             }
@@ -101,7 +105,7 @@ export function AvisosDelSistema({ guardar, guardando }: {
           />
           <FormControlLabel
             control={
-              <Switch size="small" disabled={guardando}
+              <Switch disabled={guardando}
                       checked={user.pushMentions ?? true}
                       onChange={(e) => void guardar({ pushMentions: e.target.checked })} />
             }
@@ -111,7 +115,7 @@ export function AvisosDelSistema({ guardar, guardando }: {
           {user.isAdmin && (
             <FormControlLabel
               control={
-                <Switch size="small" disabled={guardando}
+                <Switch disabled={guardando}
                         checked={user.pushAdmin ?? true}
                         onChange={(e) => void guardar({ pushAdmin: e.target.checked })} />
               }
