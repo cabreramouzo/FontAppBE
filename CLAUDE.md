@@ -1551,6 +1551,13 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
     Dicho con precisión, porque se preguntó: la guía de Apple **no exige** que sea de un
     solo sentido; lo que pide es que el contenido no salte ni se reorganice bajo el
     lector, y que la expansión no tenga vuelta es cómo lo cumplen sus propias apps.
+  · **Lo mismo en las reseñas**, por lo mismo: una larga empuja las siguientes fuera de la
+    pantalla en la ficha, y en los perfiles convierte una fila de una lista en media
+    página. En las tarjetas de **novedades no** se toca: allí ya se recorta por líneas con
+    CSS (`WebkitLineClamp`), que es lo que le toca a una tarjeta cuyo trabajo es llevar a
+    la ficha, no dejarte leer allí. En los dos perfiles el cuerpo se pintaba además en
+    texto plano; ahora pasa por `TextoRico` como en la ficha, así que las menciones también
+    enlazan.
 - Y al mirarlo salió un fallo latente que no lo traía esto: `.panel` no tenía **ni techo ni
   desbordamiento**, así que en horizontal, o con el teclado abierto, el nombre y el botón
   de crear se salían por encima del mapa y no había forma de llegar a ellos. Ahora

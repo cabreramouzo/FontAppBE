@@ -218,7 +218,9 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
         </Typography>
       </Stack>
       {c.rating != null && <StarRating value={c.rating} size={18} />}
-      {c.body && <Typography sx={{ my: 0.5 }}><TextoRico texto={c.body} /></Typography>}
+      {/* Con «ver más» a partir de 300: una reseña larga empuja las siguientes fuera de
+          la pantalla, y esta lista se lee de arriba abajo. */}
+      {c.body && <TextoLargo texto={c.body} sx={{ my: 0.5 }} />}
       {c.image && (
         <Box>
           <ZoomableImage className="review-img" src={assetUrl(c.image)} alt="" />
@@ -1256,7 +1258,7 @@ export function FontDetailPage() {
               // verdad pasan de 600 y empujaban hacia abajo lo que la ficha tiene que
               // contestar primero, que es cómo está el agua.
               // Sin menciones: el servidor no avisa de las que se escriban aquí.
-              <TextoLargo texto={font.description} menciones={false} />
+              <TextoLargo texto={font.description} menciones={false} color="text.secondary" />
             )}
             {(() => {
               const src = sourceInfo(font.source)

@@ -19,6 +19,7 @@ import { timeAgo } from '../lib/time'
 import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
 import { GuardedFonts } from '../components/GuardedFonts'
+import { TextoLargo } from '../components/TextoLargo'
 import { ListaConTope } from '../components/ListaConTope'
 import { FilaDeFuente } from '../components/FilaDeFuente'
 import { TituloDeSeccion } from '../components/TituloDeSeccion'
@@ -199,7 +200,7 @@ export function ProfilePage() {
                   {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${ws.key}`)}`} />}
                   <Typography variant="caption" color="text.secondary">· {c.createdAt ? timeAgo(c.createdAt, t) : ''}</Typography>
                 </Box>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>{c.body}</Typography>
+                  <TextoLargo texto={c.body} variant="body2" sx={{ mt: 0.5 }} />
                 </ListItem>
               )
             }}

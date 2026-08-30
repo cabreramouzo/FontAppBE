@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
+import type { SxProps, Theme } from '@mui/material/styles'
+import type { TypographyProps } from '@mui/material/Typography'
 import { TextoRico } from './RichText'
 import { useI18n } from '../i18n/I18nContext'
 
@@ -38,6 +40,11 @@ export function recorta(texto: string, tope = TOPE): string {
  * caracteres, y esas empujaban hacia abajo todo lo que la ficha tiene que contestar
  * primero: el estado del agua y las reseñas.
  *
+ * Y lo usan también **las reseñas**, por lo mismo: una larga en medio de la lista empuja
+ * las siguientes fuera de la pantalla, y en los perfiles convierte una fila de una lista
+ * en media página. En las tarjetas de novedades **no** hace falta: allí ya se recorta por
+ * líneas con CSS, que es lo que le toca a una tarjeta cuyo trabajo es llevar a la ficha.
+ *
  * ## Y una vez desplegado, no se vuelve a plegar
  *
  * Es lo que hace iOS —la descripción de una app en la App Store, por ejemplo— y la razón
@@ -51,14 +58,21 @@ export function recorta(texto: string, tope = TOPE): string {
  * lector; que la expansión no tenga vuelta es la forma en que sus propias apps cumplen
  * eso, y es la que se copia aquí.
  */
-export function TextoLargo({ texto, menciones = true }: { texto: string; menciones?: boolean }) {
+export function TextoLargo({ texto, menciones = true, variant, color, sx }: {
+  texto: string
+  menciones?: boolean
+  variant?: TypographyProps['variant']
+  /** Se pasa tal cual: cada sitio ya tenía el suyo y esto no debe cambiarlo. */
+  color?: string
+  sx?: SxProps<Theme>
+}) {
   const { t } = useI18n()
   const [entero, setEntero] = useState(false)
   const largo = texto.length > TOPE + MARGEN
 
   return (
     <>
-      <Typography color="text.secondary" component="div" sx={{ whiteSpace: 'pre-wrap' }}>
+      <Typography variant={variant} color={color} component="div" sx={{ whiteSpace: 'pre-wrap', ...sx }}>
         <TextoRico texto={entero || !largo ? texto : `${recorta(texto)}…`} menciones={menciones} />
       </Typography>
       {largo && !entero && (
