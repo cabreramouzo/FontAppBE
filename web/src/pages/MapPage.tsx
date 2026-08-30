@@ -416,6 +416,23 @@ function PlacePicker({ onPick }: { onPick: (pos: LatLng) => void }) {
 
 /** Cuánto hay que mantener el dedo. Medio segundo es el estándar de facto de los mapas. */
 const PULSACION_LARGA_MS = 500
+
+/**
+ * Cuánto se ve el pin **solo**, antes de que salga el formulario.
+ *
+ * Se pidió esto al probar la pulsación larga y en su momento se resolvió de otra manera
+ * —desplazando el mapa para que el pin asomara por encima del formulario (`AsomaElPin`)—,
+ * con el argumento de que dos segundos de espera se pagan en **cada** alta. Reportado otra
+ * vez sobre el terreno, y con razón: en móvil el formulario **tapa el 73 % del mapa**
+ * (medido: 509 px de 699 en una pantalla de 375×812), así que asomar el pin por la franja
+ * que queda no basta para registrar dónde ha caído. Ahora se hacen las dos cosas.
+ *
+ * El pin cae **al instante** con su vibración; lo que espera es el formulario. Los dos
+ * segundos no son tiempo muerto: son el único momento en que se ve el punto exacto que has
+ * marcado sin nada delante, que es lo que hay que comprobar antes de escribir nada.
+ * `AsomaElPin` sigue haciendo falta para lo de después, cuando el formulario ya está.
+ */
+const ESPERA_ANTES_DEL_FORMULARIO_MS = 2000
 /** Si el dedo se mueve más que esto, es un arrastre del mapa y no una pulsación. */
 const TOLERANCIA_PX = 12
 
@@ -1325,6 +1342,17 @@ export function MapPage() {
   const { user, promptLocation, dismissLocationPrompt } = useAuth()
   const { t } = useI18n()
   const [placing, setPlacing] = useState(false)
+  /**
+   * El temporizador que abre el formulario dos segundos después de caer el pin.
+   *
+   * En una `ref` y con limpieza al desmontar: si se sale del mapa dentro de esos dos
+   * segundos —cambiar de pestaña, tocar una fuente—, el formulario no debe abrirse solo
+   * sobre una pantalla que ya no es ésta.
+   */
+  const relojFormulario = useRef<number | null>(null)
+  useEffect(() => () => {
+    if (relojFormulario.current !== null) window.clearTimeout(relojFormulario.current)
+  }, [])
   const [pos, setPos] = useState<LatLng | null>(null)
   const [nonce, setNonce] = useState(0)
   const [me, setMe] = useState<[number, number] | null>(null)
@@ -1670,8 +1698,14 @@ export function MapPage() {
           <LongPressToAdd
             onAdd={(punto) => {
               trackInteraction('map_add_font')
-              setPlacing(true)
+              // El pin primero y solo. El formulario llega después: ver
+              // `ESPERA_ANTES_DEL_FORMULARIO_MS`.
               setPos(punto)
+              if (relojFormulario.current !== null) window.clearTimeout(relojFormulario.current)
+              relojFormulario.current = window.setTimeout(() => {
+                relojFormulario.current = null
+                setPlacing(true)
+              }, ESPERA_ANTES_DEL_FORMULARIO_MS)
             }}
           />
         )}

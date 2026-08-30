@@ -1136,7 +1136,16 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   en ese evento en **Safari móvil** (su `tapHold`), así que en Android Chrome no llegaría
   nunca y encima saldría el menú del navegador. Con `touchstart`/`touchend` va igual en los
   dos. En escritorio se usa el botón derecho, que sí es `contextmenu`.
-  **Y el mapa se desplaza para que el pin se vea** (`AsomaElPin`): el formulario sale de
+  **El pin se ve dos segundos antes de que salga el formulario**
+  (`ESPERA_ANTES_DEL_FORMULARIO_MS`). Esto se pidió al principio, se resolvió de otra
+  manera —desplazando el mapa— y se volvió a reportar: en móvil el formulario **tapa el
+  73 % del mapa** (medido: 509 px de 699 a 375×812), así que asomar el pin por la franja
+  que queda no basta para registrar dónde ha caído. El pin cae **al instante**, con su
+  vibración; lo que espera es el formulario, y esos dos segundos son el único momento en
+  que se ve el punto exacto sin nada delante. El temporizador vive en una `ref` y se
+  limpia al desmontar: salir del mapa dentro de esos dos segundos no debe abrir un
+  formulario sobre otra pantalla.
+  **Y el mapa se desplaza para que el pin se vea** (`AsomaElPin`), que es lo de después: el formulario sale de
   abajo y tapaba el punto que acabas de tocar, justo cuando más falta hace verlo. Se
   propuso enseñar el pin dos segundos y luego el formulario, y hace lo mismo peor —dos
   segundos de espera en cada alta y al final el pin vuelve a estar tapado—; desplazando, se
