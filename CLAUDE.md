@@ -1183,6 +1183,30 @@ Las opciones y principios para financiar el proyecto están en [docs/monetizacio
   y queda así; si algún día molesta, la salida es `L.DomEvent.disableClickPropagation`
   sobre ese contenedor, no tocar la lógica de reponer.
 
+## Reseñar desde el globo del mapa, en un toque
+
+- Tres chips —**sale agua, poca, seca**— dentro del globo, debajo de la tarjeta. Es el
+  camino más corto entre estar delante de una fuente y contarlo: antes había que tocar el
+  pin, tocar el globo, esperar la ficha y buscar el botón. Con 116 reseñas sobre 160.738
+  fuentes, acortar esto es lo único que mueve la aguja.
+- **Los mismos tres de siempre**, y por las mismas razones que el atajo de la foto y los de
+  la lista de la ruta: `unknown` no dice nada viniendo de alguien que está delante, y
+  `gone` es el estado más caro —dos testimonios retiran la fuente del mapa— así que no
+  puede estar a un toque en un globo que se abre sin querer.
+- Van **fuera del `<a>`** de la tarjeta: un botón dentro de un enlace no es HTML válido, y
+  además el clic de la tarjeta se los comería.
+- **Un solo escuchador delegado en el contenedor del mapa, en captura y parando la
+  propagación.** Enganchado al elemento del globo, el clic **sí publicaba** —comprobado en
+  la base: tres reseñas `flowing` sin texto— pero el globo **se cerraba en el mismo gesto**,
+  porque `L.DomEvent.disableClickPropagation` no impidió que el clic llegara al mapa y
+  `cerrarAMano` lo cerrara. Desde fuera parecía que no hacía nada: la confirmación se
+  escribía en un nodo ya desprendido. Delegando se para el evento antes de que llegue a
+  nadie, y el id de la fuente viaja en el HTML (`data-font`) en vez de en una clausura.
+- El pin **cambia de color al momento** (`setIcon`): sin eso hay que esperar a que el mapa
+  se recargue solo para ver que ha servido de algo.
+- Sin cobertura va a la bandeja de salida, como el resto de reseñas. Sin sesión no se
+  pintan los chips: no hay nada que hacer si no puedes aportar.
+
 ## Capas del mapa
 - Cinco capas elegibles (`web/src/lib/mapLayers.ts`, selector en `BaseLayers.tsx`, usado
   tanto en el mapa principal como en el de reubicar): OSM, OpenTopoMap, satélite de Esri

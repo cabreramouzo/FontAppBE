@@ -1271,6 +1271,9 @@ const ca: Dict = {
   // Popup del mapa
   'popup.updated': 'Actualitzat {when}',
   'popup.detail': 'Veure detall →',
+  'popup.howIsIt': 'Com està ara?',
+  'popup.sending': 'Enviant…',
+  'popup.thanks': 'Gràcies! Ja ho saben els altres.',
   'nearby.goAria': 'Veure detall de {name}',
 
   // Idioma
@@ -2519,6 +2522,9 @@ const es: Dict = {
 
   'popup.updated': 'Actualizado {when}',
   'popup.detail': 'Ver detalle →',
+  'popup.howIsIt': '¿Cómo está ahora?',
+  'popup.sending': 'Enviando…',
+  'popup.thanks': '¡Gracias! Ya lo saben los demás.',
   'nearby.goAria': 'Ver detalle de {name}',
 
   'lang.label': 'Idioma',
@@ -3766,6 +3772,9 @@ const it: Dict = {
 
   'popup.updated': 'Aggiornato {when}',
   'popup.detail': 'Vedi la scheda →',
+  'popup.howIsIt': 'Com’è adesso?',
+  'popup.sending': 'Invio…',
+  'popup.thanks': 'Grazie! Ora lo sanno gli altri.',
   'nearby.goAria': 'Vedi la scheda di {name}',
 
   'lang.label': 'Lingua',
@@ -5013,6 +5022,9 @@ const gl: Dict = {
 
   'popup.updated': 'Actualizado {when}',
   'popup.detail': 'Ver detalle →',
+  'popup.howIsIt': 'Como está agora?',
+  'popup.sending': 'Enviando…',
+  'popup.thanks': 'Grazas! Xa o saben os demais.',
   'nearby.goAria': 'Ver detalle de {name}',
 
   'lang.label': 'Idioma',
@@ -6260,6 +6272,9 @@ const eu: Dict = {
 
   'popup.updated': 'Eguneratua {when}',
   'popup.detail': 'Ikusi xehetasunak →',
+  'popup.howIsIt': 'Nola dago orain?',
+  'popup.sending': 'Bidaltzen…',
+  'popup.thanks': 'Eskerrik asko! Besteek badakite jada.',
   'nearby.goAria': 'Ikusi {name}(r)en xehetasunak',
 
   'lang.label': 'Hizkuntza',
@@ -7507,6 +7522,9 @@ const en: Dict = {
 
   'popup.updated': 'Updated {when}',
   'popup.detail': 'View details →',
+  'popup.howIsIt': 'How is it right now?',
+  'popup.sending': 'Sending…',
+  'popup.thanks': 'Thanks! Everyone else knows now.',
   'nearby.goAria': 'View details of {name}',
 
   'lang.label': 'Language',
@@ -8729,6 +8747,9 @@ const fr: Dict = {
   'time.days': "{n} il y a jours",
   'popup.updated': "{when} mis à jour",
   'popup.detail': "Voir les détails →",
+  'popup.howIsIt': 'Comment est-elle maintenant ?',
+  'popup.sending': 'Envoi…',
+  'popup.thanks': 'Merci ! Les autres le savent déjà.',
   'nearby.goAria': "Voir les détails de {name}",
   'lang.label': "Langue",
 }
@@ -9949,6 +9970,9 @@ const pt: Dict = {
   'time.days': 'há {n} dias',
   'popup.updated': 'Atualizado {when}',
   'popup.detail': 'Ver detalhe →',
+  'popup.howIsIt': 'Como está agora?',
+  'popup.sending': 'A enviar…',
+  'popup.thanks': 'Obrigado! Já os outros sabem.',
   'nearby.goAria': 'Ver detalhe de {name}',
   'lang.label': 'Idioma',
 }

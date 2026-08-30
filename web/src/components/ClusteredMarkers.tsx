@@ -13,7 +13,19 @@ import { drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 import { nombreFuente } from '../lib/fontName'
 import { CONFIDENCE_EMOJI, confidenceDetailKey, confidenceLabelKey, confidenceOf } from '../lib/confidence'
-import { trackInteraction } from '../api/client'
+import { createComment, describeError, trackInteraction } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
+import { enqueue, isOffline } from '../lib/outbox'
+
+/**
+ * Los estados que se pueden decir de un toque desde el globo del mapa.
+ *
+ * Los mismos tres que el atajo de después de la foto y los de la lista de la ruta, y por
+ * las mismas razones: **`unknown` no dice nada** viniendo de alguien que está delante, y
+ * **`gone` es el estado más caro** —dos testimonios retiran la fuente del mapa—, así que
+ * no puede estar a un toque en un globo que se abre sin querer. Para eso está la ficha.
+ */
+const ESTADOS_RAPIDOS = ['flowing', 'trickle', 'dry'] as const
 
 const HEATMAP_MAX_ZOOM = 6
 
@@ -34,6 +46,7 @@ export function ClusteredMarkers({
   const map = useMap()
   const navigate = useNavigate()
   const { t } = useI18n()
+  const { user } = useAuth()
   // Fuente cuyo popup ha cerrado el usuario a mano. Los marcadores se reconstruyen con
   // cada movimiento del mapa, y sin esto el popup volvía a salir una y otra vez.
   const cerradoPorElUsuario = useRef<string | null>(null)
@@ -55,6 +68,57 @@ export function ClusteredMarkers({
       popupAbierto.current = null
     }
     map.on('click', cerrarAMano)
+
+    /**
+     * Decir cómo está la fuente de un toque, sin salir del mapa.
+     *
+     * Es el camino más corto entre estar delante de una fuente y contarlo: antes había que
+     * tocar el pin, tocar el globo, esperar la ficha y buscar el botón. Con 116 reseñas
+     * sobre 160.738 fuentes, acortar esto es lo único que mueve la aguja.
+     *
+     * **Un solo escuchador delegado en el contenedor, en captura y parando la
+     * propagación.** Enganchado al elemento del globo, el clic sí publicaba —comprobado en
+     * la base— pero el globo **se cerraba en el mismo gesto**: `L.DomEvent
+     * .disableClickPropagation` no bastó, el clic llegó al mapa y `cerrarAMano` lo cerró.
+     * Desde fuera parecía que no hacía nada, porque la confirmación se escribía en un nodo
+     * ya desprendido del documento.
+     *
+     * Delegando se para el evento antes de que llegue a nadie, y de paso da igual qué
+     * instancia del nodo del globo esté viva: el id de la fuente viaja en el propio HTML
+     * (`data-font`) en vez de en una clausura.
+     */
+    const alTocarChip = (ev: Event) => {
+      const boton = (ev.target as Element | null)?.closest?.('.popup-quick button[data-estado]')
+      if (!boton) return
+      const caja = boton.closest('.popup-quick') as HTMLElement | null
+      const fontID = caja?.dataset.font
+      if (!caja || !fontID) return
+      ev.preventDefault()
+      ev.stopPropagation()
+      const estado = boton.getAttribute('data-estado')!
+      caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.sending'))}</span>`
+      void (async () => {
+        try {
+          await createComment(fontID, { waterStatus: estado })
+          caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.thanks'))}</span>`
+          // El pin cambia de color al momento: es la prueba de que ha servido de algo, y
+          // sin ella hay que esperar a que el mapa se recargue solo.
+          porID.get(fontID)?.setIcon(statusIcon(estado, fontID === selectedID))
+          trackInteraction('map_quick_review')
+        } catch (e) {
+          if (isOffline(e)) {
+            // En el monte, que es donde se sabe cómo está la fuente, no hay cobertura.
+            await enqueue({ kind: 'comment', fontID, data: { waterStatus: estado } })
+            caja.innerHTML = `<span class="muted small">${escapeHtml(t('offline.savedUpdate'))}</span>`
+            porID.get(fontID)?.setIcon(statusIcon(estado, fontID === selectedID))
+          } else {
+            caja.innerHTML = `<span class="muted small">${escapeHtml(describeError(e, t))}</span>`
+          }
+        }
+      })()
+    }
+    const contenedorMapa = map.getContainer()
+    contenedorMapa.addEventListener('click', alTocarChip, true)
 
     for (const f of fonts) {
       const isSelected = !!f.id && f.id === selectedID
@@ -83,11 +147,21 @@ export function ClusteredMarkers({
           <div class="muted small" title="${escapeHtml(t(confidenceDetailKey(confidence)))}">${CONFIDENCE_EMOJI[confidence]} ${escapeHtml(t(confidenceLabelKey(confidence)))}</div>
           ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
           <span class="popup-link">${t('popup.detail')}</span>
-        </a>`
+        </a>
+        ${user ? `<div class="popup-quick" data-font="${f.id}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
+          <span class="muted small">${escapeHtml(t('popup.howIsIt'))}</span>
+          <div class="popup-quick-row">
+            ${ESTADOS_RAPIDOS.map((e) => {
+              const info = waterStatusInfo(e)
+              return `<button type="button" data-estado="${e}" title="${escapeHtml(t(`status.${e}`))}">${info?.emoji ?? ''} ${escapeHtml(t(`status.${e}`))}</button>`
+            }).join('')}
+          </div>
+        </div>` : ''}`
       el.querySelector('.popup-card')?.addEventListener('click', (e) => {
         e.preventDefault()
         navigate(`/fonts/${f.id}`)
       })
+
       // autoPan off: al enfocar centramos el pin nosotros (arriba, sobre la lista);
       // el autoPan de Leaflet lo recentraba y quedaba tapado por el bottom-sheet.
       marker.bindPopup(el, { autoPan: false })
@@ -226,6 +300,7 @@ export function ClusteredMarkers({
 
     return () => {
       map.off('click', cerrarAMano)
+      contenedorMapa.removeEventListener('click', alTocarChip, true)
       map.off('click', zoomIntoHeat)
       map.off('move zoom resize', scheduleHeatmap)
       map.off('zoomend', syncDensityMode)

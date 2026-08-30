@@ -810,6 +810,41 @@ select:not([class*="Mui"]) {
   outline-offset: 2px;
 }
 
+/* Decir cómo está la fuente sin salir del mapa.
+   Va FUERA del enlace de la tarjeta: un botón dentro de un `<a>` no es HTML válido y
+   además el clic de la tarjeta se lo comería. */
+.popup-quick {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border, rgba(128, 128, 128, 0.25));
+}
+
+.popup-quick-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.leaflet-container .popup-quick button {
+  flex: 1;
+  /* 40 px: esto se toca con el pulgar sobre un mapa en movimiento. Menos de eso es el
+     objetivo pequeño que ya obligó a hacer pulsable la tarjeta entera. */
+  min-height: 40px;
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 1.15;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.35));
+  border-radius: 999px;
+  /* Fondo OPACO: lo de siempre con lo que flota sobre el mapa —un botón translúcido se
+     lee fatal sobre el bosque y sobre el mar. */
+  background: var(--bg, #fff);
+  color: var(--fg, #111);
+  cursor: pointer;
+}
+
+.leaflet-container .popup-quick button:hover { filter: brightness(0.94); }
+.leaflet-container .popup-quick button:active { filter: brightness(0.88); }
+
 @media (prefers-reduced-motion: reduce) {
   .popup-card .popup-link { transition: none; }
 }
