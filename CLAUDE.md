@@ -3,7 +3,8 @@
 App para localizar **fuentes de agua** cercanas por geolocalización ("font" = fuente,
 no tipografía), con usuarios, incidencias y reseñas de estado (estrellas / estado del agua / foto).
 El contrato real de la API está en [docs/api.md](docs/api.md); el brief original en [definitions.md](definitions.md).
-Las opciones y principios para financiar el proyecto están en [docs/monetizacion.md](docs/monetizacion.md).
+Las opciones y principios para financiar el proyecto están en [docs/monetizacion.md](docs/monetizacion.md);
+el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayuntamientos.md](docs/ayuntamientos.md).
 
 ## Stack
 - **Backend:** Swift 6.3 · Vapor 4 · Fluent + PostgreSQL · SwiftPM (sin proyecto Xcode).

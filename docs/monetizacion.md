@@ -104,6 +104,9 @@ No se debe fijar una tarifa hasta entender el proceso de contratación. Puede ha
 plan anual pequeño, uno territorial mayor y servicios iniciales de inventario o limpieza,
 pero los importes deben salir de las entrevistas y no de una tabla inventada.
 
+El plan detallado de esta vía —qué se puede vender hoy medido contra los datos reales,
+en qué orden construirlo y qué no hacer— está en [docs/ayuntamientos.md](ayuntamientos.md).
+
 ## 3. Servicios de datos y consultoría
 
 Mientras el producto institucional madura, FontApp puede ofrecer trabajos con alcance y
