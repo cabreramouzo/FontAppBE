@@ -13,7 +13,7 @@ struct InteractionAnalyticsController: RouteCollection {
         "page_map", "page_fountain", "page_activity", "page_zones", "page_gamification",
         "page_profile", "page_support", "page_install", "page_login", "page_register",
         "nav_map", "nav_activity", "nav_zones", "nav_profile", "nav_login",
-        "map_filters", "map_missions", "map_locate", "map_add_font", "map_add_font_signed_out", "map_export_gpx", "map_gpx",
+        "map_filters", "map_missions", "map_locate", "map_add_font", "map_add_font_signed_out", "map_long_press_signed_out", "map_export_gpx", "map_gpx",
         "map_offline",
         // Reseñar de un toque desde el globo del mapa, y la foto que se ofrece justo
         // después cuando la fuente no tiene ninguna. Los dos son la única forma de saber

@@ -463,6 +463,16 @@ const PULSACION_LARGA_MS = 500
  * pin, que es lo único que hacía falta.
  */
 const ESPERA_ANTES_DEL_FORMULARIO_MS = 500
+
+/**
+ * Cuánto se queda la invitación a crear cuenta tras una pulsación larga sin sesión.
+ *
+ * Seis segundos y no los 2,6 del toast de la app: aquí no se anuncia algo que ya ha
+ * pasado, se pide una decisión y hay que leer una línea, entenderla y llegar al enlace.
+ * Con el plazo del toast, tocarlo sería una carrera. Y se va sola porque nadie tiene que
+ * cerrar un aviso que él no pidió.
+ */
+const INVITACION_MS = 6000
 /** Si el dedo se mueve más que esto, es un arrastre del mapa y no una pulsación. */
 const TOLERANCIA_PX = 12
 
@@ -1382,6 +1392,7 @@ export function MapPage() {
   const relojFormulario = useRef<number | null>(null)
   useEffect(() => () => {
     if (relojFormulario.current !== null) window.clearTimeout(relojFormulario.current)
+    if (relojInvita.current !== null) window.clearTimeout(relojInvita.current)
   }, [])
   const [pos, setPos] = useState<LatLng | null>(null)
   const [nonce, setNonce] = useState(0)
@@ -1419,6 +1430,11 @@ export function MapPage() {
   const [place, setPlace] = useState<Place | null>(null)
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
+  // La invitación a crear cuenta tras una pulsación larga sin sesión. El reloj vive en una
+  // `ref` y se limpia al desmontar, por lo mismo que el del formulario: salir del mapa
+  // dentro de esos segundos no debe tocar el estado de una pantalla que ya no está.
+  const [invita, setInvita] = useState(false)
+  const relojInvita = useRef<number | null>(null)
   // Vista inicial: la última guardada (al volver del detalle) o la península por defecto.
   // Al montar: la vista de esta sesión si la hay y, si no, la última conocida. Solo la
   // primera desactiva la ubicación automática (ver el comentario de VIEW_KEY).
@@ -1722,12 +1738,30 @@ export function MapPage() {
         {me && <MeMarker pos={me} heading={heading} bearing={bearing} />}
         {placing && <PlacePicker onPick={setPos} />}
         <AsomaElPin pos={pos} activo={placing} />
-        {/* Añadir con una pulsación larga. Solo con sesión —sin ella no se puede crear
-            nada— y solo cuando no se está colocando ya: durante la colocación el mapa
-            responde al toque simple, y dos gestos para lo mismo se estorban. */}
-        {!placing && user && (
+        {/* Añadir con una pulsación larga. **También sin sesión**: el gesto es deliberado
+            —medio segundo sin moverse— y no responder nada es el mismo error que tenía el
+            botón, que la app sabe lo que quieres hacer y se calla. Lo que NO se hace es
+            abrir el login: eso te saca del mapa por un gesto que puede ser un roce. Cae el
+            pin, se dice qué falta y se ofrece crear la cuenta, sin moverte de sitio.
+            Solo cuando no se está colocando ya: durante la colocación el mapa responde al
+            toque simple, y dos gestos para lo mismo se estorban. */}
+        {!placing && (
           <LongPressToAdd
             onAdd={(punto) => {
+              if (!user) {
+                trackInteraction('map_long_press_signed_out')
+                // El pin cae igual: enseña DÓNDE habría quedado, que es la mitad de lo
+                // que se acaba de pedir. Sin él la invitación no se entiende.
+                setPos(punto)
+                setInvita(true)
+                if (relojInvita.current !== null) window.clearTimeout(relojInvita.current)
+                relojInvita.current = window.setTimeout(() => {
+                  relojInvita.current = null
+                  setInvita(false)
+                  setPos(null)
+                }, INVITACION_MS)
+                return
+              }
               trackInteraction('map_add_font')
               // El pin primero y solo. El formulario llega después: ver
               // `ESPERA_ANTES_DEL_FORMULARIO_MS`.
@@ -1908,6 +1942,11 @@ export function MapPage() {
                }}>
             <AddIcon sx={{ mr: 1 }} /> {noEmoji(t('map.addFont'))}
           </Fab>
+        </div>
+      )}
+      {invita && (
+        <div className="hint">
+          {t('map.signUpToAdd')} · <button className="link" onClick={() => navigate('/register')}>{t('login.register')}</button>
         </div>
       )}
       {placing && !pos && (

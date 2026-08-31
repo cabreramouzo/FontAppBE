@@ -1194,11 +1194,23 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   de que eso se hace aquí. La regla ya estaba escrita dos veces y a este botón no se le
   había aplicado: los chips de la lista del GPX se dicen sin sesión «en vez de no pintar
   nada», y «una pestaña que da 401 no es una pestaña».
-  La **pulsación larga se queda detrás de `user`**: un gesto oculto que te saca a una
-  pantalla de acceso es peor que no tenerlo, y encima se dispara sin querer.
   Lleva su propio evento (`map_add_font_signed_out`, en la lista cerrada y traducido en
   los ocho idiomas): sin separarlo no habría forma de saber si esto trae cuentas nuevas
   o solo clics que rebotan.
+- **Y la pulsación larga sin sesión invita a registrarse, sin sacarte del mapa.** Primero
+  se dejó detrás de `user` con el argumento de que un gesto oculto que abre el login es
+  peor que nada; el argumento en contra es mejor y es el que manda: **medio segundo sin
+  moverse es deliberado**, no un roce, así que callarse es el mismo error que tenía el
+  botón. Lo que no se hace es **abrir el login**, que te saca de la pantalla por un gesto
+  que aún puede ser accidental. Cae el pin —enseña **dónde** habría quedado, que es la
+  mitad de lo que acabas de pedir—, sale el aviso en la misma caja `.hint` que usa el modo
+  colocar y se ofrece crear la cuenta. Se va solo a los **6 s** y se lleva el pin: no son
+  los 2,6 s del toast de la app porque aquí no se anuncia algo que ya pasó, se pide una
+  decisión, y con ese plazo tocar el enlace sería una carrera.
+  El rótulo reutiliza `login.register`, que ya estaba en los ocho idiomas — misma regla
+  que `guard.showAll`. Evento propio, `map_long_press_signed_out`: separado del botón
+  porque son dos intenciones distintas y mezclarlas es justo lo que hoy impide leer el
+  embudo de `map_add_font`.
 - **Añadir respeta la intención del mapa.** Si el centro visible está a 250 m o menos
   del GPS, el pin nace en la persona: estar delante de la fuente sigue siendo el camino
   principal. Si ha buscado o desplazado el mapa más lejos, nace en el centro visible y
