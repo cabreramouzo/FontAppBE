@@ -210,9 +210,23 @@ struct ImportGeoJSONCommand: AsyncCommand {
                 let rest = String(w[w.index(after: apos)...])
                 return prefix + rest.prefix(1).uppercased() + rest.dropFirst()
             }
+            // Los ordinales romanos se quedan en mayúsculas: los inventarios numeran así
+            // los manantiales de un mismo paraje («PEÑA I», «PEÑA II»), y en Tipo Título
+            // salían «Peña Ii» y «Chokoa i», que no es un topónimo sino una errata. Son
+            // **1.909 de 8.473** en la capa de manantiales de Navarra, o sea uno de cada
+            // cuatro. Se compara contra la palabra ya en minúsculas y se compara entera,
+            // así que un topónimo real de esas letras —«Vi», «Ix»— no se ve afectado
+            // salvo que consista solo en ellas.
+            if Self.romanos.contains(w) { return w.uppercased() }
             return w.prefix(1).uppercased() + w.dropFirst()
         }.joined(separator: " ")
     }
+
+    /// Hasta X, que es donde llegan estas numeraciones. `i` NO está: es conjunción
+    /// catalana («Sant Pere i Sant Pau») y ya sale en `minor`, donde debe quedarse en
+    /// minúscula; que un manantial suelto se llame «Chokoa I» es el precio, y es mucho
+    /// menor que romper todos los topónimos con «i» del ICGC.
+    private static let romanos: Set<String> = ["ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"]
 
     /// Nombres genéricos que conviene sustituir por un topónimo más específico.
     /// Incluye los valores por defecto que pone el import de OSM a nodos sin nombre.

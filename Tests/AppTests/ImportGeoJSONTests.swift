@@ -12,6 +12,16 @@ final class ImportGeoJSONTests: XCTestCase {
         XCTAssertEqual(ImportGeoJSONCommand.titleCased("LA FONT GRAN"), "La Font Gran")
         // Si alguien ya lo escribió bien, no se toca.
         XCTAssertEqual(ImportGeoJSONCommand.titleCased("Font de la Quintana"), "Font de la Quintana")
+        // Los inventarios numeran con romanos los manantiales de un mismo paraje. En Tipo
+        // Título salían «Peña Ii», que no es un topónimo sino una errata: uno de cada
+        // cuatro nombres de la capa de Navarra (1.909 de 8.473).
+        XCTAssertEqual(ImportGeoJSONCommand.titleCased("PEÑA II"), "Peña II")
+        XCTAssertEqual(ImportGeoJSONCommand.titleCased("ARICHULEGUI III"), "Arichulegui III")
+        XCTAssertEqual(ImportGeoJSONCommand.titleCased("IRATI IV"), "Irati IV")
+        // Pero la «i» catalana NO es un ordinal: es conjunción y se queda en minúscula.
+        // Se paga que un «CHOKOA I» suelto salga «Chokoa i», que es mucho menos malo que
+        // romper todos los topónimos con «i» del ICGC.
+        XCTAssertEqual(ImportGeoJSONCommand.titleCased("SANT PERE I SANT PAU"), "Sant Pere i Sant Pau")
     }
 }
 

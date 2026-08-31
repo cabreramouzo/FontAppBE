@@ -926,6 +926,69 @@ Moianès, así que Moià sale con un 91,8 % de fuentes comprobadas cuando en pro
 cobertura de estado de toda la base es del orden del 0,2 %. Un informe que se enseñe fuera
 tiene que salir de producción.
 
+## Otros orígenes oficiales: IDE autonómicas y ayuntamientos (`shp-a-geojson.py`)
+
+Después de la ACA se buscó lo mismo en el resto de España. **No existe:** ninguna otra
+agencia autonómica inventaría fuentes de beber. Lo que hay son datos **municipales**
+(Madrid, Zaragoza, València, Málaga, Barcelona, Donostia, Vitoria, Pamplona…) y, como única
+excepción autonómica, **IDENA (Navarra)**.
+
+**Y medido, la cantidad no es el motivo para importarlos**: en València teníamos 937 y su
+capa 832; en Málaga 381 contra 350; en Navarra 4.433 contra 169. OSM ya cubre mejor las
+ciudades, que es donde publican los ayuntamientos. La ACA fue distinta porque era montaña.
+Lo que sí aportan es **nombre** —y a veces potabilidad, donde estamos al 95 % en blanco—,
+así que la importación vale por los **renombrados**, no por las altas.
+
+### Navarra (IDENA), hecho el 31/08/2026
+
+```bash
+curl -O https://idena.navarra.es/descargas/GEOLOG_Sym_Manantiales.zip   # 9.323 manantiales
+unzip GEOLOG_Sym_Manantiales.zip -d man
+python3 scripts/shp-a-geojson.py man/GEOLOG_Sym_Manantiales.shp --out nav.geojson   # UTM 30N → WGS84
+python3 scripts/navarra-idena.py manantiales nav.geojson nav-limpio.geojson         # 9.323 → 8.473
+
+export NEON_URL=$(cat ~/.config/fontapp/neon_url)
+pg_dump "$NEON_URL" -Fc -f ~/fontapp-antes-navarra-$(date +%Y%m%d).dump
+DATABASE_URL="$NEON_URL" swift run App import-geojson nav-limpio.geojson \
+  --name-field MANANTIAL --source spring --dedupe 50 --titlecase \
+  --attribution "© Gobierno de Navarra (IDENA)" --dry-run
+# 8.051 altas · 76 renombradas · 346 saltadas  → sin --dry-run
+DATABASE_URL="$NEON_URL" swift run App populate-regions fronteras-es-fr.geojson
+DATABASE_URL="$NEON_URL" swift run App populate-municipalities municipios-es.geojson
+```
+
+**Los dos `populate-*` del final no son opcionales.** `import-geojson` deja `country`,
+`region` y `municipality` **nulos**, así que sin ellos las 8.051 nuevas no cuentan en
+`/zones`, no salen con su sitio en el buscador y no aparecen en la página de su municipio.
+Se olvidó y se vio al comprobar: 8.138 sin demarcación. Después, 27.
+
+Lo que **no** se importó de Navarra y por qué: la capa «Fuentes públicas» (169 puntos) trae
+en `FUENTE` **dónde está la fuente**, no cómo se llama — «Escuela», «Cementerio», «Frontón»,
+«Plaza Ayuntamiento», repetidos entre municipios. Meter eso como nombre reintroduce los
+rellenos que `clear-placeholder-names` vino a borrar, y con `--dedupe` habría **pisado**
+nombres buenos con ellos. Lo valioso de esa capa es `POTABLE` (147 «Sí», 17 «No»), que
+`import-geojson` no sabe escribir: es trabajo aparte.
+
+### Málaga, mismo día
+
+```bash
+curl -O https://datosabiertos.malaga.eu/recursos/ambiente/fuentesaguapotable/da_medioAmbiente_fuentes-4326.csv
+# CSV con WKT en 4326: se convierte a GeoJSON con cuatro líneas de Python (ver scratchpad)
+DATABASE_URL="$NEON_URL" swift run App import-geojson malaga.geojson \
+  --name-field nombre --source tap --dedupe 50 --titlecase \
+  --attribution "© Ayuntamiento de Málaga"
+# 10 altas · 326 RENOMBRADAS · 14 saltadas
+```
+
+Ahí se ve el patrón: **10 altas y 326 renombrados**. En ciudad no faltan puntos, faltan
+nombres. Málaga pasó de tener casi todas sin nombre a 130 de 467.
+
+Sus nombres también son ubicaciones («Plaza de la Inmaculada», «Mirador de Gibralfaro»),
+pero a diferencia de los de Navarra son **específicos**, así que dicen algo: para una fuente
+urbana es como se refiere a ella la gente, y es mejor que «fuente sin nombre». Vienen con
+sus erratas de origen («Doña Trnidad», «Isidoro Gallgo»), que no se corrigen: son el dato
+oficial.
+
 ## Contornos municipales (`import-municipal-boundaries`)
 
 Los necesita el mapa de `/municipalities/:ine` para recortar el municipio sobre el resto

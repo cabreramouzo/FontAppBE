@@ -1996,6 +1996,39 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - El `--dedupe 50` del importador **está medido, no elegido a ojo**: en la banda 25–50 m el
   80 % de los puntos son la misma fuente registrada dos veces. Antes de bajarlo, lee el
   porqué en DEPLOY.md. Las vecinas que sí eran distintas (80) se rescataron a mano.
+- **Otras IDE oficiales, y lo que se aprendió buscándolas:** ninguna otra agencia
+  autonómica hace lo que la ACA. Solo hay datos **municipales** y, como excepción,
+  **IDENA (Navarra)**. Y **la cantidad no es el motivo**: medido antes de importar, en
+  València teníamos 937 contra sus 832, en Málaga 381 contra 350 y en Navarra 4.433 contra
+  169 — OSM ya cubre mejor **la ciudad**, que es donde publican los ayuntamientos. La ACA
+  fue distinta porque era montaña. Lo que aportan es **nombre**: Málaga dio **10 altas y
+  326 renombrados**. Navarra (capa geológica de manantiales) dio 8.051 altas porque ahí sí
+  hay monte. Runbook completo en DEPLOY.md.
+  · `scripts/shp-a-geojson.py` convierte shapefiles de puntos a GeoJSON y reproyecta de
+    UTM (las IDE publican en EPSG:25830), sin dependencias. Solo puntos: con otra
+    geometría se planta en vez de inventarse un centroide.
+    La reproyección se verificó contra el municipio que declara cada punto —11 de 14 caen
+    en el que dicen y los otros 3 a menos de 1,2 km de un límite—, porque un error de
+    proyección **no da excepción**: da coordenadas plausibles en otro sitio.
+  · `scripts/navarra-idena.py` filtra lo que no es una fuente: `Regata` (73, es un arroyo),
+    `APROXIMADA=1` (328, el propio origen dice que no sabe dónde está — en una app que te
+    guía los últimos metros eso es peor que no tenerlo) y las que no traen topónimo (449,
+    si no se llamarían «Font» todas).
+  · **Cuidado con el nombre que trae cada capa.** La de «Fuentes públicas» de Navarra pone
+    en `FUENTE` **dónde está** —«Escuela», «Cementerio», «Frontón»—, no cómo se llama; con
+    `--dedupe` habría **pisado** nombres buenos con esos rellenos, así que **no se
+    importó**. Los de Málaga también son ubicaciones pero **específicas** («Plaza de la
+    Inmaculada»), que para una fuente urbana sí dicen algo.
+  · **Los `populate-*` del final no son opcionales**: `import-geojson` deja `country`,
+    `region` y `municipality` **nulos**, así que sin ellos lo importado no cuenta en
+    `/zones`, no sale con su sitio en el buscador ni aparece en la página de su municipio.
+    Se olvidó en Navarra y se vio comprobando: 8.138 sin demarcación, y 27 después.
+  · `--titlecase` conserva los **ordinales romanos**: los inventarios numeran así los
+    manantiales de un mismo paraje y salían «Peña Ii» y «Chokoa i», que no es un topónimo
+    sino una errata — **1.909 de 8.473** en Navarra. La `i` sola se queda en minúscula a
+    propósito: es conjunción catalana («Sant Pere i Sant Pau»), y romper todos los
+    topónimos del ICGC por un manantial suelto sería mal negocio. Hay test de las dos
+    mitades.
 - `scripts/fonts-import-tools.py` (Python sin dependencias): `filtra` lo que no son fuentes
   de beber, `llindar` mide en qué metro poner el `--dedupe`, y `rescata` saca las vecinas
   que sí eran fuentes distintas. Sirve para cualquier dataset nuevo, no solo el de la ACA.
