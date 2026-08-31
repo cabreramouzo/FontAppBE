@@ -170,6 +170,8 @@ export interface ReportResponse {
   isIncident: boolean
   incidentKind: IncidentKind | null
   createdAt: string
+  /** Cuándo se corrigió el texto, o nulo si no se ha tocado. La ficha lo pinta como «editado». */
+  editedAt?: string | null
   /** Nulo = sigue abierta. Se cierra, no se borra: la avería es parte de la historia. */
   resolvedAt: string | null
   resolvedBy: string | null

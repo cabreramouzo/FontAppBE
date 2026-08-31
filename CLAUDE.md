@@ -3575,6 +3575,25 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   existe porque sin él la gente mete lo que sea en la categoría que más se le parece y la
   clasificación deja de valer — el mismo problema que la bandera viene a arreglar, un
   nivel más abajo.
+- **Un comentario se puede corregir durante la primera hora** (`PUT /fonts/:id/report/:rid`,
+  `FontReportController.editWindow`), y queda dicho: la ficha pinta **cuándo se escribió y
+  «editado»** si se tocó. Solo el autor y solo el texto — marcar como incidencia y ponerle
+  tipo siguen en su propia ruta, porque son otra decisión y con otros permisos.
+  La ventana es de una hora y no «siempre» por lo que un comentario significa aquí: otras
+  personas lo leen para decidir si se desvían, y algunos llevan respuesta debajo. Poder
+  reescribirlo a los tres días deja conversaciones que no se entienden. Una hora cubre la
+  errata y el dedo en el móvil, que es lo que de verdad se pide.
+  **`edited_at` es columna propia y no un `updated_at`**: Fluent pone el timestamp de
+  actualización también al crear, así que «editado» habría que adivinarlo comparando dos
+  fechas casi iguales — y eso falla en silencio el día que otra escritura (marcar como
+  incidencia, resolver) toque la fila.
+  **Editar no vuelve a avisar de las menciones.** Al crear sí; al editar no, o sería una
+  forma gratuita de darle un toque a alguien tantas veces como quieras. Precio asumido:
+  una mención añadida al corregir no le llega a nadie.
+  La fecha la pinta `timeAgo`, que ya hace lo correcto: relativo mientras es reciente y
+  **fecha absoluta pasados 30 días**, donde «hace 8 meses» ya no sitúa nada.
+  El cliente decide si pinta el botón con `lib/reportEdit.ts` (con tests), pero **quien
+  manda es el servidor**: pasado el plazo responde 403 `report.editWindowOver`.
 - **`/admin/reports`** (solo admin) lista todo lo escrito con su interruptor en cada fila.
   Existe porque la marca llegó **después que los datos**: hay que poder repasarlos de una
   sentada, y ficha por ficha eso es imposible. Escribe por la **misma ruta** que la ficha,

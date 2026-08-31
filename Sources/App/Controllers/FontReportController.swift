@@ -17,6 +17,7 @@ struct FontReportController: RouteCollection {
             .get(use: adminIndex)
         auth.group(":reportID") { r in
             r.delete(use: destroy)
+            r.put(use: update)
             // Cerrar y reabrir. Reabrir es lo que hace que cerrar se pueda conceder por
             // nivel: si no hubiera vuelta atrás, una incidencia legítima podría quedar
             // silenciada por alguien que se equivocó.
@@ -24,6 +25,49 @@ struct FontReportController: RouteCollection {
             r.delete("resolve", use: reopen)
             r.patch("incident", use: setIncident)
         }
+    }
+
+    /// Cuánto tiempo se puede corregir lo que uno escribió.
+    ///
+    /// Una hora, y es una ventana y no «siempre» por lo que un comentario significa aquí:
+    /// otras personas lo leen para decidir si se desvían, y algunos llevan respuesta
+    /// debajo. Poder reescribirlo a los tres días deja conversaciones que no se entienden
+    /// y avisos que ya no dicen lo que alguien contestó. Una hora cubre lo que de verdad
+    /// se pide —la errata, el «quería decir la otra fuente», el dedo en el móvil— sin
+    /// abrir eso.
+    static let editWindow: TimeInterval = 60 * 60
+
+    /// PUT /fonts/:fontID/report/:reportID — corrige el texto durante la primera hora.
+    ///
+    /// **Solo el texto.** Marcar como incidencia y ponerle tipo tienen su propia ruta
+    /// (`PATCH .../incident`) porque son decisiones distintas y con otros permisos: el
+    /// texto es tuyo y solo tuyo, y lo otro lo puede tocar un moderador.
+    ///
+    /// **No vuelve a avisar de las menciones.** Al crear sí se avisa; al editar no, o
+    /// editar sería una forma gratuita de darle un toque a alguien tantas veces como
+    /// quieras. El precio asumido: añadir una mención al corregir no le llega a nadie.
+    @Sendable func update(req: Request) async throws -> ReportResponse {
+        let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
+        guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {
+            throw AppError(.notFound, "report.notFound", "No se ha encontrado el comentario")
+        }
+        guard report.$user.id == (try user.requireID()) else {
+            throw AppError(.forbidden, "report.selfOnly", "Solo puedes editar tus comentarios")
+        }
+        guard let creado = report.createdAt,
+              Date().timeIntervalSince(creado) <= Self.editWindow else {
+            throw AppError(.forbidden, "report.editWindowOver",
+                           "El plazo para editar este comentario ha terminado")
+        }
+        try CreateReportDTO.validate(content: req)
+        let dto = try req.content.decode(CreateReportDTO.self)
+        report.message = dto.message
+        report.editedAt = Date()
+        try await report.save(on: req.db)
+        let autores = try await User.authors(for: report.$user.id.map { [$0] } ?? [], on: req.db)
+        let quien = report.$user.id.flatMap { autores[$0] }
+        return ReportResponse(report, username: quien?.username, staff: quien?.staff)
     }
 
     /// GET /fonts/:fontID/report — lista los problemas reportados en la fuente.
@@ -343,6 +387,9 @@ struct ReportResponse: Content {
     let isIncident: Bool
     let incidentKind: IncidentKind?
     let createdAt: Date?
+    /// Cuándo se corrigió el texto, o nulo si no se ha tocado. El cliente lo pinta como
+    /// «editado» y le sirve además para saber si aún queda plazo.
+    let editedAt: Date?
     /// Nulo = sigue abierta. Explícito en el JSON, como el resto de opcionales de esta
     /// API: omitido llega como `undefined` y «resuelta» se distingue de «no lo sé».
     let resolvedAt: Date?
@@ -358,6 +405,7 @@ struct ReportResponse: Content {
         self.isIncident = report.isIncident
         self.incidentKind = report.incidentKind
         self.createdAt = report.createdAt
+        self.editedAt = report.editedAt
         self.resolvedAt = report.resolvedAt
         self.resolvedBy = resolverName
     }
@@ -376,6 +424,7 @@ struct ReportResponse: Content {
         try c.encode(isIncident, forKey: .isIncident)
         try c.encode(incidentKind, forKey: .incidentKind)
         try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(editedAt, forKey: .editedAt)
         try c.encode(resolvedAt, forKey: .resolvedAt)
         try c.encode(resolvedBy, forKey: .resolvedBy)
     }

@@ -25,6 +25,9 @@ final class FontReport: Model, Content, @unchecked Sendable {
     /// Qué clase de avería, si lo es. Ver `IncidentKind`.
     @OptionalField(key: "incident_kind") var incidentKind: IncidentKind?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
+    /// Cuándo se corrigió el texto, si se corrigió. Ver `AddEditedAtToFontReport`: es una
+    /// columna propia y no un `updated_at`, para que signifique **solo** eso.
+    @OptionalField(key: "edited_at") var editedAt: Date?
     /// Cuándo se dio por resuelta, y quién. Nulo = sigue abierta.
     ///
     /// Resolver en vez de borrar: que la fuente estuvo rota y se arregló es parte de su

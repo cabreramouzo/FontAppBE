@@ -54,6 +54,7 @@ import {
   deleteReport,
   resolveReport,
   setReportIncident,
+  updateReport,
   describeError,
   getFavoriteStatus,
   getFontPhotoAuthor,
@@ -101,6 +102,7 @@ import { freshnessOf } from '../lib/freshness'
 import { FontBadges } from '../components/FontBadges'
 import { FichaTecnica } from '../components/FichaTecnica'
 import { Autor } from '../components/AuthorLine'
+import { puedeEditar } from '../lib/reportEdit'
 import { TextoRico } from '../components/RichText'
 import { TextoLargo } from '../components/TextoLargo'
 import { FontHiddenNotice, FontMaintenance } from '../components/FontMaintenance'
@@ -667,6 +669,10 @@ export function FontDetailPage() {
   const navigate = useNavigate()
   const [font, setFont] = useState<Font | null>(null)
   const [reports, setReports] = useState<ReportResponse[]>([])
+  /** Qué comentario se está corrigiendo, y con qué texto. Ver `lib/reportEdit.ts`. */
+  const [editando, setEditando] = useState<string | null>(null)
+  const [borradorEdicion, setBorradorEdicion] = useState('')
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false)
   const [comments, setComments] = useState<CommentResponse[]>([])
   const [error, setError] = useState('')
   /** La ficha viene de la zona guardada: sin reseñas ni incidencias, y hay que decirlo. */
@@ -935,6 +941,22 @@ export function FontDetailPage() {
   /// que ordena toda la escalera de capacidades.
   function puedeMarcar(r: ReportResponse): boolean {
     return !!user && (user.id === r.userID || !!user.isAdmin)
+  }
+
+  async function guardaEdicion(r: ReportResponse) {
+    if (!id) return
+    setGuardandoEdicion(true)
+    try {
+      const actualizado = await updateReport(id, r.id, borradorEdicion.trim())
+      setReports((rs) => rs.map((x) => (x.id === r.id ? actualizado : x)))
+      setEditando(null)
+    } catch (e) {
+      // Pasada la hora el servidor dice que no, y eso se enseña: es la única forma de
+      // entender por qué el botón estaba ahí y no ha funcionado.
+      toast.show(describeError(e, t), 'error')
+    } finally {
+      setGuardandoEdicion(false)
+    }
   }
 
   async function cambiaIncidencia(r: ReportResponse, esIncidencia: boolean) {
@@ -1511,9 +1533,29 @@ export function FontDetailPage() {
                   {/* Firma con distintivo si es del equipo, y el texto con sus menciones
                       enlazadas: un aviso de moderación suele nombrar a quien afecta, y
                       ese @nombre era texto muerto. */}
-                  <Typography variant="body2" sx={{ ...(r.resolvedAt && { color: 'text.secondary' }) }}>
-                    <Autor username={r.username} staff={r.staff} />: <TextoRico texto={r.message} />
-                  </Typography>
+                  {editando === r.id ? (
+                    // Corregir en el sitio, sin sacar a nadie de la ficha: lo que se
+                    // arregla aquí es una errata, no se reescribe un texto largo.
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, my: 0.5 }}>
+                      <TextField
+                        value={borradorEdicion}
+                        onChange={(e) => setBorradorEdicion(e.target.value)}
+                        multiline minRows={2} maxRows={6} size="small" fullWidth autoFocus
+                      />
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button size="small" variant="contained" disableElevation
+                                disabled={guardandoEdicion || !borradorEdicion.trim()}
+                                onClick={() => void guardaEdicion(r)}>
+                          {t('form.save')}
+                        </Button>
+                        <Button size="small" onClick={() => setEditando(null)}>{t('form.cancel')}</Button>
+                      </Box>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" sx={{ ...(r.resolvedAt && { color: 'text.secondary' }) }}>
+                      <Autor username={r.username} staff={r.staff} />: <TextoRico texto={r.message} />
+                    </Typography>
+                  )}
                   {/* La marca se ve y se puede cambiar desde aquí. Marcar es la red de
                       seguridad del interruptor apagado por defecto —una avería real
                       escrita como comentario la asciende cualquiera de los dos que
@@ -1525,6 +1567,25 @@ export function FontDetailPage() {
                         label={r.incidentKind ? t(`incident.${r.incidentKind}`) : t('comment.isIncident')}
                       />
                     </Box>
+                  )}
+                  {/* Cuándo se escribió, y si se ha tocado. `timeAgo` ya hace lo que hay
+                      que hacer: relativo mientras es reciente —«hace 3 días», que es lo
+                      que se lee de un vistazo— y **fecha absoluta** pasados 30 días, donde
+                      «hace 8 meses» ya no sitúa nada.
+                      «Editado» va sin fecha a propósito: lo que importa es que el texto no
+                      es exactamente el que se publicó, no a qué hora se corrigió. El dato
+                      completo viaja en `editedAt` por si algún día hace falta. */}
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                    {timeAgo(r.createdAt, t)}{r.editedAt ? ` · ${t('report.edited')}` : ''}
+                  </Typography>
+                  {/* Solo el autor y solo durante la primera hora. La decisión vive en
+                      `lib/reportEdit.ts` con sus tests, y el servidor es quien manda: si
+                      el plazo se pasa mientras la ficha está abierta, responde 403. */}
+                  {editando !== r.id && puedeEditar(r, user?.id) && (
+                    <Button size="small" onClick={() => { setEditando(r.id); setBorradorEdicion(r.message) }}
+                            sx={{ textTransform: 'none', ml: -1, mr: 1 }}>
+                      {t('detail.edit')}
+                    </Button>
                   )}
                   {puedeMarcar(r) && (
                     <Button size="small" onClick={() => cambiaIncidencia(r, !r.isIncident)} sx={{ textTransform: 'none', ml: -1, mr: 1 }}>

@@ -469,6 +469,20 @@ export async function resolveReport(fontID: string, reportID: string, on: boolea
   })
 }
 
+/**
+ * Corrige el texto de un comentario propio. Solo el texto: la marca de incidencia y su
+ * tipo tienen su propia ruta, porque son otra decisión y con otros permisos.
+ *
+ * Pasada la hora el servidor responde 403 `report.editWindowOver`; el cliente decide con
+ * `lib/reportEdit.ts` si llega a pintar el botón.
+ */
+export async function updateReport(fontID: string, reportID: string, message: string): Promise<ReportResponse> {
+  return apiFetch<ReportResponse>(`/fonts/${fontID}/report/${reportID}`, {
+    method: 'PUT',
+    body: JSON.stringify({ message }),
+  })
+}
+
 export async function deleteReport(fontID: string, reportID: string): Promise<void> {
   await apiFetch(`/fonts/${fontID}/report/${reportID}`, { method: 'DELETE' })
 }
