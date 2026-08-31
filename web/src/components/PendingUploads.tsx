@@ -148,7 +148,18 @@ export function PendingUploads() {
         icon={pendiente ? <SyncProblemIcon fontSize="small" /> : <CloudOffIcon fontSize="small" />}
         label={title}
         onClick={() => { setEncogido(false); setExpandidoEn(Date.now()) }}
-        sx={{ alignSelf: 'flex-start', ...(pendiente ? {} : { bgcolor: 'background.paper' }), boxShadow: 2 }}
+        sx={{
+          // **`pointerEvents: 'auto'` no es opcional.** `FranjaDeAvisos` lleva
+          // `pointerEvents: 'none'` para no comerse los toques del mapa por los lados de
+          // las tarjetas, y quien los vuelve a activar es `TarjetaDeAviso`. El chip se
+          // pinta suelto, sin esa caja, así que sin esto **se ve pero no se puede tocar**:
+          // se encogía y ya no había forma de volver a desplegarlo. Reportado probándolo
+          // en el móvil.
+          pointerEvents: 'auto',
+          alignSelf: 'flex-start',
+          ...(pendiente ? {} : { bgcolor: 'background.paper' }),
+          boxShadow: 2,
+        }}
       />
     )
   }

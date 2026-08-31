@@ -85,6 +85,13 @@ export function FranjaDeAvisos({ children }: { children: ReactNode }) {
         gap: 1,
         // La franja ocupa todo el ancho aunque esté vacía: sin esto se comería los
         // toques del mapa por los lados de las tarjetas.
+        //
+        // **Ojo, es una trampa para lo que se meta aquí dentro:** lo que no vaya envuelto
+        // en `TarjetaDeAviso` —que es quien vuelve a poner `pointerEvents: 'auto'`— se ve
+        // pero **no se puede tocar**. Le pasó al chip de `PendingUploads`, que se pinta
+        // suelto: se encogía y ya no había forma de desplegarlo. No da ningún error y en
+        // el navegador **no se ve** si se prueba disparando el clic por código, porque eso
+        // se salta la comprobación de qué hay debajo del dedo.
         pointerEvents: 'none',
       }}
     >

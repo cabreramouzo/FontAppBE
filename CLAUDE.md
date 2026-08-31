@@ -2620,6 +2620,13 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   nunca, si lo pendiente es de otra cuenta—, y esa tarjeta **tapa un tercio del mapa** todo
   ese rato. Un aviso que no se va deja de leerse; el chip dice **lo mismo** —lleva el
   título entero, recuento incluido— y va en naranja cuando hay algo pendiente.
+  **Ojo con la franja: `FranjaDeAvisos` lleva `pointerEvents: 'none'`** para no comerse
+  los toques del mapa por los lados, y quien los vuelve a activar es `TarjetaDeAviso`. El
+  chip se pinta **suelto**, así que necesita su propio `pointerEvents: 'auto'`: sin él se
+  ve pero **no se puede tocar**, o sea que se encogía y ya no había forma de desplegarlo.
+  Y no se ve probándolo con un `.click()` desde la consola —eso ejecuta el manejador
+  saltándose la comprobación de qué hay bajo el dedo—; hay que tocarlo, o comprobar con
+  `elementFromPoint` que el punto central del chip devuelve el chip.
   El temporizador **se rearma con cada cambio de estado de verdad** (se corta la red,
   cambia el número de pendientes, caduca la sesión), así que lo que es noticia se ve
   entero; y **al tocar el chip se despliega y vuelve a encogerse solo**, sin tener que
