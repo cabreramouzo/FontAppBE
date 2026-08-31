@@ -1087,11 +1087,23 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - Aparece **solo por debajo de 150 m**, arriba de la columna izquierda de la ficha. Más
   lejos una flecha en línea recta te manda contra un río, y una tarjeta permanente que casi
   nunca sirve se vuelve decorado que se deja de ver.
-- **Y deja de apuntar cuando apuntar sería mentir.** Es lo que hace honesta la función: el
-  corte de llegada **no es fijo**, sale del margen que declara el propio GPS
-  (`coords.accuracy`). A 30 m con ±40 m de margen la flecha apunta al ruido — gira sola
+- **Y deja de apuntar cuando apuntar sería mentir.** Es lo que hace honesta la función: a
+  30 m con ±40 m de margen (`coords.accuracy`) la flecha apunta al ruido — gira sola
   estando quieto y te manda en círculos, que es peor que no decir nada. Con ±6 m, esos
   mismos 30 m sí se apuntan. Hay test de las dos mitades.
+- **Pero dejar de apuntar NO es haber llegado**, y durante un tiempo lo decidía un solo
+  número (`max(suelo, accuracy)`). Bajo copa el móvil declara ±30 o ±40 m, así que la app
+  daba por llegado a alguien que estaba **a cuarenta metros**. Reportado desde el bosque.
+  Y **bajar el suelo no lo arregla** —que es lo primero que apetece, y lo que se pidió—:
+  en ese caso el suelo no manda, manda `accuracy`; además 1 m está por debajo de lo que
+  resuelve un GPS de móvil, así que la llegada no aparecería nunca.
+  Son dos preguntas distintas y hoy se contestan por separado: **¿he llegado?** es una
+  distancia real (`RADIO_LLEGADA_M`, 5 m) y no depende de lo que el aparato sepa de sí
+  mismo —con mala señal sabes **menos**, así que hay que ser más prudente al afirmarlo, no
+  menos—; **¿puedo apuntar?** sí depende de `accuracy`. Entre las dos aparece la fase
+  **`cerca`**: cerca, sin flecha y **sin decir que has llegado**, mandando a la foto de la
+  ficha, que es lo único que resuelve esos metros. Sin verde y sin marca de verificación.
+  Verificado devolviendo el corte único: tres tests en rojo.
 - **El suelo bajó de 15 m a 5 m, y lo corrigió el terreno.** 15 salió de un razonamiento
   —«es el orden del error de un GPS de móvil»— y al probarlo andando resultó demasiado
   pronto: a 15 m de una fuente todavía no la has visto (es el ancho de una plaza) y la app
