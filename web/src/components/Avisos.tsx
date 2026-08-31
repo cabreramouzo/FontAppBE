@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { createContext, forwardRef, type ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useRef } from 'react'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 
@@ -100,6 +100,41 @@ export function FranjaDeAvisos({ children }: { children: ReactNode }) {
     </Medir.Provider>
   )
 }
+
+/**
+ * La caja de un aviso **encogido**, para lo que no es una tarjeta.
+ *
+ * Existe porque estar dentro de la franja obliga a dos cosas que no se deducen de nada, y
+ * el chip de `PendingUploads` se saltó las dos por pintarse suelto:
+ *
+ * 1. **`pointerEvents: 'auto'`.** La franja los tiene en `none` para no comerse los toques
+ *    del mapa por los lados; sin esto el chip se ve pero no se puede tocar — se encogía y
+ *    ya no había forma de desplegarlo.
+ * 2. **Medirse.** La franja publica su alto en `--alto-avisos` y de ahí cuelgan el
+ *    buscador, los controles del mapa y la tarjeta de cercanas. Solo medía
+ *    `TarjetaDeAviso`, así que nada volvía a medir cuando el chip cambia de tamaño — y
+ *    cambia: el rótulo lleva el recuento, y en alemán o en euskera puede pasar a dos
+ *    líneas. Hoy no se nota porque el chip cabe siempre en una, o sea que esto es
+ *    prevención y no un fallo observado; lo que sí estaba roto era lo de arriba.
+ *
+ * Lo primero falla **en silencio** y ni siquiera se ve probándolo con un `.click()` desde
+ * la consola: eso ejecuta el manejador saltándose la comprobación de qué hay bajo el dedo.
+ */
+export const ChipDeAviso = forwardRef<HTMLDivElement, { children: ReactNode }>(
+  function ChipDeAviso({ children, ...resto }, ref) {
+    const mide = useContext(Medir)
+    useLayoutEffect(() => {
+      mide()
+      return () => { queueMicrotask(mide) }
+    })
+    // **`ref` y `resto` no son adorno.** Las transiciones de MUI (`Grow`, `Fade`…) clonan
+    // su hijo directo para pasarle un `ref` y un `style` con el que animarlo. Un
+    // componente que no los reenvíe deja el `ref` en `null` y la transición revienta por
+    // dentro con un «Cannot read properties of null (reading 'scrollTop')», que no dice
+    // nada de dónde está el problema. Pasó al envolver el chip.
+    return <Box ref={ref} {...resto} sx={{ pointerEvents: 'auto', alignSelf: 'flex-start' }}>{children}</Box>
+  },
+)
 
 /** La caja de un aviso. Compartida para que los dos no se separen con el tiempo. */
 export function TarjetaDeAviso({ children }: { children: ReactNode }) {

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
+import Collapse from '@mui/material/Collapse'
+import Grow from '@mui/material/Grow'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Typography from '@mui/material/Typography'
@@ -9,7 +12,7 @@ import CloudDoneIcon from '@mui/icons-material/CloudDone'
 import SyncProblemIcon from '@mui/icons-material/SyncProblem'
 import { descartaPendientes, flushOutbox, isOutboxSyncing, onOutboxChanged, onOutboxSyncState, pendingStatus } from '../lib/outbox'
 import { useI18n } from '../i18n/I18nContext'
-import { TarjetaDeAviso } from './Avisos'
+import { ChipDeAviso, TarjetaDeAviso } from './Avisos'
 
 /**
  * Cuánto tarda el aviso en encogerse a un chip.
@@ -39,6 +42,9 @@ export function PendingUploads() {
   const [syncTried, setSyncTried] = useState(false)
   /** Cambia al tocar el chip: rearma el temporizador para que vuelva a encogerse solo. */
   const [expandidoEn, setExpandidoEn] = useState(0)
+  // Quien ha pedido menos movimiento no lo tiene: el cambio es instantáneo.
+  const sinMovimiento = useMediaQuery('(prefers-reduced-motion: reduce)')
+  const duracion = sinMovimiento ? 0 : 220
 
   const refresh = useCallback(() => {
     void pendingStatus().then(({ count, needsAuth, ajenas }) => {
@@ -139,9 +145,9 @@ export function PendingUploads() {
   // con cosas pendientes sale «Pendientes de enviar: 3» y en naranja, que es el color que
   // esta app ya usa para «esto no está resuelto». Solo informativo —sin cobertura y sin
   // nada pendiente— va neutro, para no gritar por algo que no pide nada de ti.
-  if (encogido) {
-    const pendiente = count > 0
-    return (
+  const pendiente = count > 0
+  const chip = (
+    <ChipDeAviso>
       <Chip
         size="small"
         color={pendiente ? 'warning' : 'default'}
@@ -156,15 +162,14 @@ export function PendingUploads() {
           // se encogía y ya no había forma de volver a desplegarlo. Reportado probándolo
           // en el móvil.
           pointerEvents: 'auto',
-          alignSelf: 'flex-start',
           ...(pendiente ? {} : { bgcolor: 'background.paper' }),
           boxShadow: 2,
         }}
       />
-    )
-  }
+    </ChipDeAviso>
+  )
 
-  return (
+  const tarjeta = (
     <TarjetaDeAviso>
       {icon}
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -219,5 +224,30 @@ export function PendingUploads() {
         </Button>
       ) : null}
     </TarjetaDeAviso>
+  )
+
+  // ## El paso entre los dos estados va con transición
+  //
+  // Encogerse de golpe se lee como un fallo de pintado, no como una decisión. La tarjeta
+  // se pliega por alto (`Collapse`, que es lo único que anima bien un alto automático) y
+  // el chip entra creciendo (`Grow`).
+  //
+  // **Sin animar el alto de la franja.** `FranjaDeAvisos` publica su alto en
+  // `--alto-avisos` y de ahí cuelgan el buscador, los controles del mapa y la tarjeta de
+  // cercanas. Esa medida se toma al montar y desmontar, no durante la animación, así que
+  // con `unmountOnExit` los overlays se recolocan en los extremos del movimiento y no
+  // fotograma a fotograma — que además de ser correcto evita medir cien veces por segundo.
+  //
+  // Con `prefers-reduced-motion` el cambio es instantáneo, como el confeti.
+  return (
+    <>
+      <Collapse in={!encogido} timeout={duracion} unmountOnExit
+                sx={{ width: '100%', maxWidth: 460 }}>
+        {tarjeta}
+      </Collapse>
+      <Grow in={encogido} timeout={duracion} unmountOnExit style={{ transformOrigin: 'left center' }}>
+        {chip}
+      </Grow>
+    </>
   )
 }

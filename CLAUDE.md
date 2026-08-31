@@ -2627,6 +2627,14 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   Y no se ve probándolo con un `.click()` desde la consola —eso ejecuta el manejador
   saltándose la comprobación de qué hay bajo el dedo—; hay que tocarlo, o comprobar con
   `elementFromPoint` que el punto central del chip devuelve el chip.
+  **El paso entre los dos estados va con transición** (`Collapse` para la tarjeta, `Grow`
+  para el chip, 220 ms, instantáneo con `prefers-reduced-motion`): encogerse de golpe se
+  lee como un fallo de pintado y no como una decisión.
+  Dos trampas de meter algo en la franja, y por eso existe `ChipDeAviso`: el hijo directo
+  de una transición de MUI **tiene que reenviar `ref` y `style`** —si no, la transición
+  revienta por dentro con «Cannot read properties of null (reading 'scrollTop')», que no
+  dice dónde está el problema—, y todo lo que no sea `TarjetaDeAviso` necesita su propio
+  `pointerEvents: 'auto'` y medirse.
   El temporizador **se rearma con cada cambio de estado de verdad** (se corta la red,
   cambia el número de pendientes, caduca la sesión), así que lo que es noticia se ve
   entero; y **al tocar el chip se despliega y vuelve a encogerse solo**, sin tener que
