@@ -1186,6 +1186,19 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   eventos táctiles: 700 ms abren el formulario en el punto tocado, un arrastre de 40 px no,
   un toque a 573 px deja el pin en 95 —por encima del formulario, que empieza en 189— y uno
   a 90 px no mueve el mapa.
+- **El botón de añadir se pinta SIN sesión**, y sin sesión lleva a entrar. Estaba detrás
+  de `user &&`, así que a quien no ha entrado no le salía **nada**: ni el botón ni una
+  explicación. Medido: **438 sesiones anónimas contra 48 cuentas**, o sea que la acción
+  principal de la app era invisible en nueve de cada diez visitas — incluida la de quien
+  escanea el QR de un cartel, ve que falta la fuente de su plaza y no puede ni enterarse
+  de que eso se hace aquí. La regla ya estaba escrita dos veces y a este botón no se le
+  había aplicado: los chips de la lista del GPX se dicen sin sesión «en vez de no pintar
+  nada», y «una pestaña que da 401 no es una pestaña».
+  La **pulsación larga se queda detrás de `user`**: un gesto oculto que te saca a una
+  pantalla de acceso es peor que no tenerlo, y encima se dispara sin querer.
+  Lleva su propio evento (`map_add_font_signed_out`, en la lista cerrada y traducido en
+  los ocho idiomas): sin separarlo no habría forma de saber si esto trae cuentas nuevas
+  o solo clics que rebotan.
 - **Añadir respeta la intención del mapa.** Si el centro visible está a 250 m o menos
   del GPS, el pin nace en la persona: estar delante de la fuente sigue siendo el camino
   principal. Si ha buscado o desplazado el mapa más lejos, nace en el centro visible y

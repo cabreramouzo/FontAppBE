@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Chip from '@mui/material/Chip'
 import Fab from '@mui/material/Fab'
 import Badge from '@mui/material/Badge'
@@ -1418,6 +1418,7 @@ export function MapPage() {
   const [missionsOpen, setMissionsOpen] = useState(false)
   const [place, setPlace] = useState<Place | null>(null)
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   // Vista inicial: la última guardada (al volver del detalle) o la península por defecto.
   // Al montar: la vista de esta sesión si la hay y, si no, la última conocida. Solo la
   // primera desactiva la ubicación automática (ver el comentario de VIEW_KEY).
@@ -1885,11 +1886,28 @@ export function MapPage() {
           <Fab size="medium" onClick={() => { trackInteraction('map_locate'); locate(false) }} title={t('map.recenter')} aria-label={t('map.recenter')} sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}>
             <NearMeIcon />
           </Fab>
-          {user && (
-            <Fab variant="extended" color="primary" onClick={() => { trackInteraction('map_add_font'); startPlacing() }}>
-              <AddIcon sx={{ mr: 1 }} /> {noEmoji(t('map.addFont'))}
-            </Fab>
-          )}
+          {/* ## Se pinta SIEMPRE, también sin sesión
+              Estaba detrás de `user &&`, así que sin sesión no salía nada: ni el botón ni
+              una explicación. Medido: **438 sesiones anónimas contra 48 cuentas**, o sea
+              que la acción principal de la app era invisible para nueve de cada diez
+              visitas — incluida la de quien escanea el QR de un cartel, ve que falta la
+              fuente de su plaza y no tiene forma de enterarse de que eso se puede hacer.
+
+              La regla ya estaba escrita en dos sitios y a este botón no se le aplicó: los
+              chips de reseña de la lista del GPX se dicen sin sesión «en vez de no pintar
+              nada», y en la tab bar «una pestaña que da 401 no es una pestaña».
+
+              Sin sesión lleva a entrar, exactamente como hace «Yo». La **pulsación larga
+              se queda detrás de `user`**: un gesto oculto que te saca a una pantalla de
+              acceso es peor que no tenerlo, y encima puede dispararse sin querer. */}
+          <Fab variant="extended" color="primary"
+               onClick={() => {
+                 trackInteraction(user ? 'map_add_font' : 'map_add_font_signed_out')
+                 if (!user) { navigate('/login'); return }
+                 startPlacing()
+               }}>
+            <AddIcon sx={{ mr: 1 }} /> {noEmoji(t('map.addFont'))}
+          </Fab>
         </div>
       )}
       {placing && !pos && (
