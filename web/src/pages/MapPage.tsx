@@ -1762,7 +1762,11 @@ export function MapPage() {
                 }, INVITACION_MS)
                 return
               }
-              trackInteraction('map_add_font')
+              // Separado del botón a propósito: son dos intenciones distintas y hasta hoy
+              // compartían evento, así que las 84 pulsaciones registradas mezclan las dos
+              // y no se puede leer por qué solo 19 acaban en alta. `map_add_font` sigue
+              // aceptándose porque las apps instaladas lo seguirán mandando unos días.
+              trackInteraction('map_add_font_long_press')
               // El pin primero y solo. El formulario llega después: ver
               // `ESPERA_ANTES_DEL_FORMULARIO_MS`.
               setPos(punto)
@@ -1936,7 +1940,7 @@ export function MapPage() {
               acceso es peor que no tenerlo, y encima puede dispararse sin querer. */}
           <Fab variant="extended" color="primary"
                onClick={() => {
-                 trackInteraction(user ? 'map_add_font' : 'map_add_font_signed_out')
+                 trackInteraction(user ? 'map_add_font_button' : 'map_add_font_signed_out')
                  if (!user) { navigate('/login'); return }
                  startPlacing()
                }}>

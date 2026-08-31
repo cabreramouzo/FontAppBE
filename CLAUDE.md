@@ -1211,6 +1211,16 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   que `guard.showAll`. Evento propio, `map_long_press_signed_out`: separado del botón
   porque son dos intenciones distintas y mezclarlas es justo lo que hoy impide leer el
   embudo de `map_add_font`.
+- **El botón y el gesto cuentan por separado** (`map_add_font_button` y
+  `map_add_font_long_press`, más `map_add_font_signed_out` y `map_long_press_signed_out`
+  sin sesión). Compartían evento, así que las **84 pulsaciones registradas contra 19 altas**
+  mezclan dos intenciones distintas y no hay forma de leer dónde se cae la gente: una larga
+  accidental que abre el formulario y se cancela cuenta igual que alguien que pulsó el
+  botón a propósito.
+  `map_add_font` **se sigue aceptando** y no se reutiliza para ninguno de los dos: las apps
+  instaladas lo seguirán mandando unos días, y si el botón heredara el nombre, la serie
+  histórica caería sin motivo aparente el día del despliegue. Su rótulo dice ahora que es
+  la vieja y mezclada, para que nadie la lea como «el botón».
 - **Añadir respeta la intención del mapa.** Si el centro visible está a 250 m o menos
   del GPS, el pin nace en la persona: estar delante de la fuente sigue siendo el camino
   principal. Si ha buscado o desplazado el mapa más lejos, nace en el centro visible y
