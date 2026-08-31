@@ -2635,6 +2635,21 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   timeout, `fetch` puede quedarse colgado varios MINUTOS») y no se había aplicado aquí.
   Y ojo al escribir su test: sin el `signal`, el test no falla — **se cuelga para
   siempre**, que es exactamente el fallo que cubre.
+- **Leer y escribir no esperan lo mismo** (`api/client.ts`): lecturas **5 s**, escrituras
+  **12 s**, subidas de foto 45 s. La razón es la vuelta atrás: una lectura se reintenta
+  gratis y tiene plan B —cae a la zona guardada y enseña algo—, así que esperar doce
+  segundos mirando un mapa sin puntos es peor que enseñar lo guardado a los cinco. Una
+  escritura no: cortarla pronto **no la cancela en el servidor**, puede haber llegado
+  igual, y lo que hace la app es encolarla para reintentarla — o sea arriesgar un duplicado
+  por ahorrar segundos.
+  Los 5 s están medidos contra lo que de verdad se pide, no elegidos a ojo: en producción
+  `/fonts/map` tarda **0,18–0,45 s** (4–257 KB según la zona), `/zones` 0,25 s y
+  `/activity` 1,0 s. Los **3,1 s** que aparecen más arriba son de `/fonts/in-bounds`, la
+  ruta vieja que solo se usa si `/map` responde 404.
+  `scripts/api-timeouts.test.ts` lo fija sobre el fichero —`client.ts` lee
+  `import.meta.env` y no se puede importar desde un test de Node— porque unificar los tres
+  plazos «para simplificar» no rompe nada visible: deja las escrituras cortándose a los 5 s
+  o las lecturas esperando 12.
 - **La navegación también, y ahí está la pantalla en blanco** (`NAV_TIMEOUT_MS`, 6 s). Iba
   *network-first* con un `fetch(req)` a pelo: con cobertura mala no falla, se queda colgado
   y `respondWith` no resuelve nunca, así que el navegador enseña **la app entera en

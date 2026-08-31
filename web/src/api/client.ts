@@ -55,12 +55,32 @@ async function parse(res: Response) {
 // conexión se abre pero no avanza), y la app se queda en "enviando…" para siempre.
 // Cortamos pronto para poder avisar o encolar. Las subidas de foto van por multipart
 // y son legítimamente más lentas, así que tienen más margen.
+//
+// ## Leer y escribir no esperan lo mismo, y la razón es la vuelta atrás
+//
+// **Una lectura se puede reintentar gratis y tiene plan B**: si se agota, la app cae a la
+// zona guardada en el móvil y enseña algo. Esperar doce segundos mirando un mapa sin
+// puntos es peor que enseñar lo guardado a los cinco — lo reportó quien lo vivió con una
+// raya de 3G.
+//
+// **Una escritura no.** Cortarla pronto no la cancela en el servidor: puede haber llegado
+// igual, y lo que hacemos aquí es encolarla para reintentarla, o sea arriesgar un duplicado
+// por ahorrar segundos. Se quedan en doce.
+//
+// El corte de 5 s está medido contra lo que de verdad se pide: `/fonts/map` tarda entre
+// **0,18 y 0,45 s** y pesa entre 4 y 257 KB (medido en producción sobre Barcelona, el
+// Moianès y una comarca entera). Los 3,1 s que aparecen en CLAUDE.md son de
+// `/fonts/in-bounds`, la ruta vieja que solo se usa si `/map` responde 404.
+const READ_TIMEOUT_MS = 5_000
 const REQUEST_TIMEOUT_MS = 12_000
 const UPLOAD_TIMEOUT_MS = 45_000
 
 /** fetch con timeout; cualquier fallo de red (o corte por tiempo) es ApiError(0). */
 async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
   const isUpload = init?.body instanceof FormData
+  // Sin `method` es un GET: así lo llama `fetch`, y así lo llaman casi todas las lecturas
+  // de este fichero.
+  const isRead = (init?.method ?? 'GET').toUpperCase() === 'GET'
   const controller = new AbortController()
   // El mapa invalida una petición al cambiar de vista. Enlazamos esa cancelación con
   // nuestro timeout; si la ignorásemos, cada zoom dejaría una consulta vieja trabajando
@@ -69,7 +89,8 @@ async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
   const abortFromCaller = () => controller.abort()
   if (externalSignal?.aborted) controller.abort()
   else externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
-  const timer = setTimeout(() => controller.abort(), isUpload ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS)
+  const espera = isUpload ? UPLOAD_TIMEOUT_MS : isRead ? READ_TIMEOUT_MS : REQUEST_TIMEOUT_MS
+  const timer = setTimeout(() => controller.abort(), espera)
   try {
     return await fetch(input, { ...init, signal: controller.signal })
   } catch {
