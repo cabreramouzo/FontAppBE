@@ -2263,6 +2263,16 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   tiene a quién enrutar y las lecturas del mapa devuelven **500**. En la web eso se ve
   como «falla la carga del GPX», que es donde se reportó, y manda a buscar el problema al
   sitio equivocado.
+- **El paso de despliegue reintenta una vez, y solo una.** El builder remoto de Fly falla
+  de vez en cuando **antes de construir nada** («timed out connecting to machine»,
+  «failed to list workers», «authentication handshake failed: EOF»); pasó el 31/08/2026.
+  Cuando ocurre **no se rompe producción** —la release anterior se queda sirviendo, y se
+  comprobó que la app seguía dando 200—, así que lo único que se pierde es el despliegue,
+  y hasta que alguien mira el rojo y lo relanza a mano puede pasar un día. Reintentar es
+  seguro porque un `deploy` que ya publicó no encuentra nada que cambiar. **Uno** y no
+  tres: un fallo de verdad —Dockerfile roto, health check que no pasa— falla las dos veces
+  y el job sigue saliendo en rojo, que es lo que no se puede perder; con más reintentos,
+  reconocerlo costaría una hora.
 - **CI solo despliega el backend si el backend cambia.** Antes `deploy-backend` solo miraba
   la rama, así que un commit de front desplegaba igual: 22 minutos medidos para no cambiar
   nada, un reinicio que se lleva el rate limit y las cachés en memoria, y —lo caro— volver

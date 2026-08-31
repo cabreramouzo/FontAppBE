@@ -119,6 +119,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
+      # Un reintento, y solo uno.
+      #
+      # El builder remoto de Fly falla de vez en cuando **antes de construir nada**, con
+      # errores suyos y no nuestros: «timed out connecting to machine», «failed to list
+      # workers», «authentication handshake failed: EOF». Pasó el 31/08/2026. Cuando
+      # ocurre, la release anterior se queda sirviendo tal cual —comprobado: la app
+      # seguía en 200— así que lo único que se pierde es el despliegue, y hasta que
+      # alguien mira el rojo de CI y lo relanza a mano puede pasar un día.
+      #
+      # Reintentar un `deploy` es seguro: si la primera pasada llegó a publicar, la
+      # segunda no encuentra nada que cambiar; si no llegó, construye. Y un fallo real
+      # —Dockerfile roto, health check que no pasa— falla las dos veces y el job sigue
+      # saliendo en rojo, que es lo que no se puede perder. Por eso **uno** y no tres:
+      # con más, un fallo de verdad tarda una hora en reconocerse.
+      - name: Deploy (con un reintento si el builder de Fly falla)
+        run: flyctl deploy --remote-only || (echo "Primer intento fallido; reintento" && sleep 30 && flyctl deploy --remote-only)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
