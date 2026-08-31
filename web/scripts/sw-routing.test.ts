@@ -24,7 +24,7 @@ function cargaSW(hrefDelSW: string) {
     registration: {},
   }
   const fn = new Function('self', 'caches', 'fetch', 'Response', 'clients',
-    `${codigo}\n;return { isTile, isAPI, API_ORIGIN, peticionDeSalida, imagenDe };`)
+    `${codigo}\n;return { isTile, isAPI, API_ORIGIN, peticionDeSalida, imagenDe, fetchConTimeout };`)
   return fn(self, {}, () => {}, class {}, {})
 }
 
@@ -132,6 +132,38 @@ test('el service worker reenvía la aportación entera, incluidos los campos que
     url: '/api/fonts/F3/comments',
     body: { waterStatus: 'flowing', confirmIfUnchanged: true, loQueVenga: 42, image: undefined },
   })
+})
+
+/**
+ * Una tesela que no llega no puede colgar la app.
+ *
+ * Con cobertura mala `fetch` no falla: la conexión se abre y no avanza, así que la promesa
+ * se queda **minutos** sin resolver ni rechazar. Reportado desde una ruta en bici: con 3G
+ * el mapa no cargaba. Y no es solo la tesela que falta — el navegador permite unas seis
+ * conexiones por dominio, así que decenas de teselas colgadas le hacen cola a todo lo
+ * demás, incluidas las fuentes.
+ *
+ * La misma lección estaba aprendida y escrita en `api/client.ts` desde hace tiempo; aquí
+ * no se había aplicado.
+ */
+test('una petición que no avanza se corta en vez de colgarse para siempre', async () => {
+  const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+  const self = {
+    location: { href: 'https://fontapp.net/sw.js', origin: 'https://fontapp.net' },
+    addEventListener: () => {}, skipWaiting: () => {}, clients: { claim: () => {} }, registration: {},
+  }
+  // Un `fetch` que no resuelve nunca, que es justo lo que hace una red muerta.
+  let abortada = false
+  const colgado = (_req: unknown, init?: { signal?: AbortSignal }) =>
+    new Promise((_res, rej) => {
+      init?.signal?.addEventListener('abort', () => { abortada = true; rej(new Error('AbortError')) })
+    })
+  const fn = new Function('self', 'caches', 'fetch', 'Response', 'clients',
+    `${codigo}\n;return { fetchConTimeout };`)
+  const sw = fn(self, {}, colgado, class {}, {})
+
+  await assert.rejects(() => sw.fetchConTimeout({}, 20))
+  assert.equal(abortada, true, 'tiene que abortar la petición, no solo dejar de esperarla')
 })
 
 // --- Teselas: tope alto y caducidad ------------------------------------------------

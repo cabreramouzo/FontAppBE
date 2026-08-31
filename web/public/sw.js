@@ -132,11 +132,39 @@ async function buscaFijadoPrimero(req, cacheName) {
   return { hit: await cache.match(req), destino: cacheName }
 }
 
+/**
+ * Cuánto se espera a una tesela o una foto antes de darla por perdida.
+ *
+ * Sin esto, `fetch` se queda colgado **minutos** con cobertura mala: la conexión se abre y
+ * no avanza, así que la promesa ni resuelve ni falla. La lección ya estaba aprendida en
+ * `api/client.ts` —«sin timeout, fetch puede quedarse colgado varios MINUTOS»— y no se
+ * había aplicado aquí.
+ *
+ * Y no es solo que falte una tesela: el navegador permite unas seis conexiones por
+ * dominio, así que decenas de teselas colgadas **le hacen cola a todo lo demás**. Cortar
+ * pronto libera esas conexiones.
+ *
+ * Cuatro segundos: una tesela que tarda más ya no sirve para nada —el mapa se ha movido—
+ * y lo que hay debajo es el fondo gris de siempre, no un error.
+ */
+const FETCH_TIMEOUT_MS = 4000
+
+/** `fetch` que se rinde en vez de colgarse. Ver `FETCH_TIMEOUT_MS`. */
+async function fetchConTimeout(req, ms = FETCH_TIMEOUT_MS) {
+  const ctrl = new AbortController()
+  const reloj = setTimeout(() => ctrl.abort(), ms)
+  try {
+    return await fetch(req, { signal: ctrl.signal })
+  } finally {
+    clearTimeout(reloj)
+  }
+}
+
 async function cacheFirst(req, cacheName, { limit } = {}) {
   const { hit } = await buscaFijadoPrimero(req, cacheName)
   const cache = await caches.open(cacheName)
   if (hit) return hit
-  const res = await sinRedirecciones(await fetch(req))
+  const res = await sinRedirecciones(await fetchConTimeout(req))
   // Cacheamos respuestas OK y opacas (las teselas <img> son cross-origin/opacas).
   if (res && (res.ok || res.type === 'opaque')) {
     await cache.put(req, res.clone())
