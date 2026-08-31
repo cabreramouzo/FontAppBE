@@ -23,6 +23,11 @@
  *
  * Y ahí, precisamente, es donde la foto y la descripción de la ficha valen más que
  * cualquier flecha: «junto a la pista de petanca» resuelve lo que el GPS ya no puede.
+ *
+ * **Dejar de apuntar no es haber llegado**, y durante un tiempo se dijeron con el mismo
+ * número: bajo arbolado, con ±40 m declarados, la app daba por llegado a alguien que
+ * estaba a cuarenta metros. Son dos preguntas distintas y hoy se contestan por separado;
+ * el porqué está en `guia()`.
  */
 
 /** Desde dónde empieza a guiar. */
@@ -37,10 +42,12 @@ export const RADIO_GUIA_M = 150
  * app ya decía «ya estás» y dejaba de apuntar justo cuando aún hacía falta.
  *
  * El fallo del razonamiento es que 15 era **una suposición** puesta como suelo por encima
- * de un dato medido. Con 5, el suelo casi nunca manda: el corte lo decide `accuracy`, que
- * es lo que el aparato dice de sí mismo en ese momento y ahí, bajo arbolado o entre
- * edificios, sí se dispara. El suelo se queda solo para el caso en que el móvil declara un
- * margen sospechosamente optimista.
+ * de un dato medido.
+ *
+ * Ojo, esto ya no es un suelo sobre `accuracy`: desde que llegar y poder apuntar son dos
+ * decisiones distintas (ver `guia()`), **este número decide la llegada él solo**. Es una
+ * distancia real —a cinco metros de una fuente la estás viendo— y no depende de lo que el
+ * aparato diga de sí mismo, precisamente porque con mala señal sabes menos.
  */
 export const RADIO_LLEGADA_M = 5
 
@@ -49,6 +56,11 @@ export type Guia =
   | { fase: 'lejos' }
   /** Estás encima. No se apunta: a esta distancia la flecha sería ruido del GPS. */
   | { fase: 'llegando' }
+  /**
+   * Cerca, pero **no se puede apuntar**: el margen que declara el GPS se come la distancia
+   * que queda. No es lo mismo que haber llegado y no se dice como si lo fuera.
+   */
+  | { fase: 'cerca'; distanciaM: number }
   /**
    * Guiando. `giro` son los grados que hay que girar **desde donde miras**: 0 al frente,
    * 90 a la derecha, 180 detrás. Es `null` cuando no hay brújula fiable — entonces se
@@ -88,10 +100,25 @@ export function guia(
 ): Guia {
   if (!Number.isFinite(distanciaM) || distanciaM > RADIO_GUIA_M) return { fase: 'lejos' }
 
-  // El corte de llegada lo manda el peor de los dos: el suelo fijo o lo que declare el
-  // aparato. Con ±40 m de margen, «a 30 m hacia allá» es una dirección inventada.
-  const llegada = Math.max(RADIO_LLEGADA_M, precisionM ?? 0)
-  if (distanciaM <= llegada) return { fase: 'llegando' }
+  // ## Dos preguntas distintas, y antes las contestaba un solo número
+  //
+  // El corte era `max(suelo, precisión)` para las dos cosas, así que bajo copa —donde el
+  // móvil declara ±30 o ±40 m— la app decía **«ya estás» estando a cuarenta metros**.
+  // Reportado desde el bosque. Y bajar el suelo no lo arregla: en ese caso el suelo no
+  // manda, manda `precisionM`.
+  //
+  // Lo que hay que separar es:
+  //
+  // - **¿He llegado?** Es una distancia real y no depende de lo que el aparato sepa de sí
+  //   mismo. Con mala señal sabes **menos**, así que hay que ser MÁS prudente al afirmar
+  //   que has llegado, no menos. Va contra el suelo fijo y nada más.
+  // - **¿Puedo apuntar?** Ahí sí manda `precisionM`: si lo que queda cabe dentro del
+  //   margen, la flecha gira sola estando quieto y te manda en círculos.
+  //
+  // Entre las dos aparece el caso del bosque: cerca, sin poder apuntar, y **sin haber
+  // llegado**. Es justo donde la foto y la descripción valen más que cualquier flecha.
+  if (distanciaM <= RADIO_LLEGADA_M) return { fase: 'llegando' }
+  if (distanciaM <= (precisionM ?? 0)) return { fase: 'cerca', distanciaM }
 
   if (heading === null) return { fase: 'guiando', giro: null }
   return { fase: 'guiando', giro: ((rumboFuente - heading) % 360 + 360) % 360 }

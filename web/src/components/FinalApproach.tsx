@@ -137,9 +137,14 @@ export function FinalApproach({ lat, long, tieneFoto }: { lat: number; long: num
         <Typography variant="body2" color="text.secondary">
           {estado.fase === 'llegando'
             ? t(tieneFoto ? 'approach.hereWithPhoto' : 'approach.hereNoPhoto')
-            : estado.giro === null
-              ? t('approach.noCompass')
-              : t('approach.follow')}
+            // Cerca pero sin poder apuntar: lo que queda cabe dentro del margen del GPS.
+            // Se dice **eso**, no «ya estás» — que era el fallo reportado desde el bosque —
+            // y se manda a lo que sí puede resolverlo, que es la foto de la ficha.
+            : estado.fase === 'cerca'
+              ? t(tieneFoto ? 'approach.nearWithPhoto' : 'approach.nearNoPhoto')
+              : estado.giro === null
+                ? t('approach.noCompass')
+                : t('approach.follow')}
         </Typography>
         {estado.fase === 'guiando' && estado.giro === null && (
           // iOS solo concede el sensor si la petición sale de un gesto; éste lo es.
