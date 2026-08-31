@@ -2633,12 +2633,22 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   por dominio**, así que decenas de teselas colgadas le hacen cola a todo lo demás,
   incluidas las fuentes. La lección estaba aprendida y escrita en `api/client.ts` («sin
   timeout, `fetch` puede quedarse colgado varios MINUTOS») y no se había aplicado aquí.
-  Ojo con lo que esto **no** explica: se reportó que en modo avión se veían todas las
-  teselas y con 3G no. Una tesela cacheada la sirve `cacheFirst` sin tocar la red en los
-  dos casos, así que ahí falta una causa por encontrar; el timeout arregla las que **no**
-  están guardadas.
   Y ojo al escribir su test: sin el `signal`, el test no falla — **se cuelga para
   siempre**, que es exactamente el fallo que cubre.
+- **La navegación también, y ahí está la pantalla en blanco** (`NAV_TIMEOUT_MS`, 6 s). Iba
+  *network-first* con un `fetch(req)` a pelo: con cobertura mala no falla, se queda colgado
+  y `respondWith` no resuelve nunca, así que el navegador enseña **la app entera en
+  blanco**. Se reportó desde una ruta con **una raya de 3G**: primero el mapa blanco,
+  después la pantalla entera, y **al matar la app y poner modo avión todo funcionó**.
+  Esa asimetría es la prueba y conviene tenerla presente: **sin red va mejor que con red
+  mala**, porque sin red el `fetch` falla al instante y entra el respaldo que sirve el
+  shell guardado; con red mala no hay fallo, solo espera. Cualquier `fetch` del service
+  worker sin timeout tiene esta misma trampa.
+  Lo que probablemente dispara esa navegación es el auto-recargar de `lib/staleChunk.ts`:
+  un trozo diferido no llega, `navigator.onLine` dice `true` —una raya de 3G cuenta como
+  online—, se clasifica como «la app se ha actualizado» y recarga. Con el timeout puesto
+  esa recarga ya no acaba en blanco: a los 6 s sirve el shell. **Queda por decidir** si
+  además conviene no recargar cuando la red no da, que es harina de otro costal.
 - **Las teselas del mapa también se guardan** (`lib/teselas.ts` + tope y caducidad en
   `sw.js`), y son dos cosas distintas:
   · **El caché normal pasó de 700 a 3.000 teselas, con caducidad de 30 días.** Guardar

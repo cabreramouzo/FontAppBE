@@ -166,6 +166,29 @@ test('una petición que no avanza se corta en vez de colgarse para siempre', asy
   assert.equal(abortada, true, 'tiene que abortar la petición, no solo dejar de esperarla')
 })
 
+/**
+ * La navegación no puede quedarse en blanco esperando a una red que no responde.
+ *
+ * Es el mismo fallo que el de arriba, pero en el sitio donde duele: sin timeout, una
+ * navegación con cobertura mala deja `respondWith` sin resolver y el navegador enseña la
+ * **app entera en blanco**. Se reportó con una raya de 3G — y al poner modo avión todo
+ * funcionó, que es la prueba: sin red el `fetch` falla al instante y se sirve el shell
+ * guardado; con red mala no falla, solo espera.
+ *
+ * Se comprueba sobre el código, que es donde está la decisión: montar un `FetchEvent` de
+ * mentira para provocarlo pediría media API del navegador simulada.
+ */
+test('la navegación se sirve con timeout, no con un fetch a pelo', () => {
+  const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+  const i = codigo.indexOf("req.mode === 'navigate'")
+  assert.notEqual(i, -1, 'ya no existe la rama de navegación')
+  const rama = codigo.slice(i, i + 1600)
+  assert.match(rama, /fetchConTimeout\(req, NAV_TIMEOUT_MS\)/,
+    'la navegación tiene que ir con timeout: sin él, con cobertura mala la app se queda en blanco')
+  assert.doesNotMatch(rama, /respondWith\(\s*fetch\(req\)/,
+    'un `fetch(req)` a pelo aquí es la pantalla en blanco que se reportó')
+})
+
 // --- Teselas: tope alto y caducidad ------------------------------------------------
 
 /** Un Cache API de mentira, lo justo para preguntarle al SW qué borra y qué conserva. */

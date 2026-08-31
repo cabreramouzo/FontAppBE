@@ -149,6 +149,13 @@ async function buscaFijadoPrimero(req, cacheName) {
  */
 const FETCH_TIMEOUT_MS = 4000
 
+/**
+ * Y lo mismo para la navegación, con más margen: cargar la app es legítimamente más lento
+ * que una tesela, pero por encima de esto lo que hay guardado es mejor que una pantalla en
+ * blanco. Ver el porqué entero donde se usa.
+ */
+const NAV_TIMEOUT_MS = 6000
+
 /** `fetch` que se rinde en vez de colgarse. Ver `FETCH_TIMEOUT_MS`. */
 async function fetchConTimeout(req, ms = FETCH_TIMEOUT_MS) {
   const ctrl = new AbortController()
@@ -507,7 +514,21 @@ self.addEventListener('fetch', (event) => {
   // Navegación SPA: network-first, respaldo en el shell.
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
+      // **Con timeout, y esto es lo que arregla la pantalla en blanco.**
+      //
+      // Sin él, con cobertura mala el `fetch` de la navegación no falla: se queda colgado
+      // minutos, `respondWith` no resuelve nunca y el navegador enseña una página **en
+      // blanco** — la app entera, no solo el mapa. Reportado desde una ruta con una raya
+      // de 3G: pantalla blanca, y al matar la app y poner modo avión todo fue perfecto.
+      //
+      // Esa asimetría es la prueba: sin red el `fetch` **falla al instante** y entra el
+      // `.catch` de aquí abajo, que sirve el shell guardado. Con red mala no hay fallo,
+      // solo espera. O sea que sin cobertura iba mejor que con cobertura mala.
+      //
+      // Seis segundos: pasada esa espera, el shell guardado es estrictamente mejor que
+      // seguir en blanco. No se pierde nada — el shell es la app, y en cuanto arranca
+      // vuelve a pedir sus datos por su cuenta.
+      fetchConTimeout(req, NAV_TIMEOUT_MS)
         .then(async (res) => {
           const limpia = await sinRedirecciones(res)
           if (limpia.ok) {
