@@ -11,6 +11,18 @@ import { descartaPendientes, flushOutbox, isOutboxSyncing, onOutboxChanged, onOu
 import { useI18n } from '../i18n/I18nContext'
 import { TarjetaDeAviso } from './Avisos'
 
+/**
+ * Cuánto tarda el aviso en encogerse a un chip.
+ *
+ * Tres segundos, y los pidió quien lo sufrió: la tarjeta ocupa un tercio del mapa y con
+ * algo pendiente se quedaba ahí indefinidamente. No hacen falta más porque **lo que dice
+ * no se pierde** —el chip lleva el mismo rótulo y el mismo recuento— y porque el aviso
+ * entero vuelve a salir en cuanto cambia algo: se corta la red, cambia el número de
+ * pendientes, caduca la sesión. Se leen tres segundos de algo que ya has leído diez veces
+ * en la misma excursión.
+ */
+const COLAPSA_MS = 3000
+
 // Aviso de aportaciones guardadas sin cobertura. Solo aparece si hay algo pendiente,
 // para que nada parezca perdido, y permite forzar el envío sin esperar.
 export function PendingUploads() {
@@ -22,9 +34,11 @@ export function PendingUploads() {
   const [sending, setSending] = useState(isOutboxSyncing)
   const [online, setOnline] = useState(() => navigator.onLine)
   const [recentlySynced, setRecentlySynced] = useState(false)
-  /** El aviso de «sin conexión» ya se ha leído: pasa a chip. Ver más abajo. */
+  /** El aviso ya se ha leído: pasa a chip. Ver `COLAPSA_MS` más abajo. */
   const [encogido, setEncogido] = useState(false)
   const [syncTried, setSyncTried] = useState(false)
+  /** Cambia al tocar el chip: rearma el temporizador para que vuelva a encogerse solo. */
+  const [expandidoEn, setExpandidoEn] = useState(0)
 
   const refresh = useCallback(() => {
     void pendingStatus().then(({ count, needsAuth, ajenas }) => {
@@ -68,27 +82,32 @@ export function PendingUploads() {
     }
   }
 
-  // Diez segundos: lo que se tarda en leerlo. Se rearma cada vez que se pierde la red, o
-  // sea que el aviso grande vuelve a salir en cada corte y no solo el primero.
+  // El aviso grande se encoge a un chip a los pocos segundos, **también con cosas
+  // pendientes**.
+  //
+  // Antes solo se encogía sin cobertura y sin nada pendiente, con el argumento de que
+  // «tienes 3 aportaciones sin enviar» no es un detalle de contexto. El argumento en
+  // contra es mejor y lo dio quien lo sufrió en una ruta: la cola puede tardar horas en
+  // vaciarse —o no vaciarse nunca, si lo pendiente es de otra cuenta—, y una tarjeta de
+  // tres líneas clavada arriba **tapa un tercio del mapa** todo ese rato. Un aviso que no
+  // se va deja de leerse; el chip sigue diciendo lo mismo y cabe.
+  //
+  // Se rearma con cada cambio de estado de verdad —se pierde la red, cambia el número de
+  // pendientes, caduca la sesión—, así que lo que es noticia se ve entero; y al tocarlo se
+  // despliega y vuelve a encogerse solo, sin tener que cerrarlo.
+  //
+  // NO se encoge mientras se está enviando ni durante la confirmación de «ya está»: las
+  // dos son transitorias y se van solas en cuatro segundos.
+  const transitorio = sending || recentlySynced
   useEffect(() => {
-    if (online) { setEncogido(false); return }
-    const reloj = setTimeout(() => setEncogido(true), 10_000)
+    setEncogido(false)
+    if (online && count === 0) return
+    if (transitorio) return
+    const reloj = setTimeout(() => setEncogido(true), COLAPSA_MS)
     return () => clearTimeout(reloj)
-  }, [online])
+  }, [online, count, needsAuth, ajenas, transitorio, expandidoEn])
 
   if (count === 0 && !recentlySynced && online) return null
-
-  // Sin cobertura y sin nada pendiente, el aviso se encoge a un chip a los 10 segundos.
-  //
-  // El aviso grande está bien la primera vez —hay que enterarse— pero en el monte se pasa
-  // toda la excursión sin cobertura, y una tarjeta de tres líneas colgada del borde de
-  // arriba deja de informar y pasa a estorbar: es lo que se reportó probándolo. Se encoge
-  // en vez de desaparecer porque el estado sigue siendo cierto y explica por qué el mapa
-  // va raro.
-  //
-  // Solo cuando NO hay nada pendiente: «tienes 3 aportaciones sin enviar» es lo contrario
-  // de un detalle de contexto y no debe encogerse nunca.
-  const soloSinCobertura = !online && count === 0
 
   const title = !online
     ? (count > 0 ? t('offline.offlinePending', { n: count }) : t('offline.banner'))
@@ -116,14 +135,20 @@ export function PendingUploads() {
         ? <CloudDoneIcon color="success" fontSize="small" />
         : <SyncProblemIcon color="warning" fontSize="small" />
 
-  if (soloSinCobertura && encogido) {
+  // El chip dice lo mismo que el título de la tarjeta, así que encogerse no esconde nada:
+  // con cosas pendientes sale «Pendientes de enviar: 3» y en naranja, que es el color que
+  // esta app ya usa para «esto no está resuelto». Solo informativo —sin cobertura y sin
+  // nada pendiente— va neutro, para no gritar por algo que no pide nada de ti.
+  if (encogido) {
+    const pendiente = count > 0
     return (
       <Chip
         size="small"
-        icon={<CloudOffIcon fontSize="small" />}
-        label={t('offline.banner')}
-        onClick={() => setEncogido(false)}
-        sx={{ alignSelf: 'flex-start', bgcolor: 'background.paper', boxShadow: 2 }}
+        color={pendiente ? 'warning' : 'default'}
+        icon={pendiente ? <SyncProblemIcon fontSize="small" /> : <CloudOffIcon fontSize="small" />}
+        label={title}
+        onClick={() => { setEncogido(false); setExpandidoEn(Date.now()) }}
+        sx={{ alignSelf: 'flex-start', ...(pendiente ? {} : { bgcolor: 'background.paper' }), boxShadow: 2 }}
       />
     )
   }

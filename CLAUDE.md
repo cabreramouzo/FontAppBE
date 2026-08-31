@@ -2610,13 +2610,35 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   Y **se reintenta al volver la red** (`window.addEventListener('online')`): antes la
   pantalla se quedaba en «sin conexión» para siempre aunque el móvil ya tuviera cobertura,
   y no había forma de recargar sin salir y volver a entrar.
-- **El aviso de sin cobertura se encoge a un chip a los 10 segundos** (`PendingUploads`).
-  La tarjeta grande está bien la primera vez, pero en el monte se pasa la excursión entera
-  sin cobertura y colgada del borde de arriba deja de informar y pasa a estorbar. Se encoge
-  en vez de desaparecer porque el estado sigue siendo cierto y explica por qué el mapa va
-  raro, y el temporizador **se rearma en cada corte**, no solo el primero. Solo cuando no
-  hay nada pendiente: «tienes 3 aportaciones sin enviar» no es un detalle de contexto y no
-  se encoge nunca.
+- **El aviso se encoge a un chip a los 3 segundos** (`PendingUploads`), **también con
+  aportaciones pendientes**. La tarjeta grande está bien la primera vez, pero en el monte
+  se pasa la excursión entera sin cobertura y colgada del borde de arriba deja de informar
+  y pasa a estorbar. Se encoge en vez de desaparecer porque el estado sigue siendo cierto.
+  Antes solo se encogía **sin nada pendiente**, con el argumento de que «tienes 3
+  aportaciones sin enviar» no es un detalle de contexto. El argumento en contra es mejor y
+  lo dio quien lo sufrió en una ruta: la cola puede tardar horas en vaciarse —o no vaciarse
+  nunca, si lo pendiente es de otra cuenta—, y esa tarjeta **tapa un tercio del mapa** todo
+  ese rato. Un aviso que no se va deja de leerse; el chip dice **lo mismo** —lleva el
+  título entero, recuento incluido— y va en naranja cuando hay algo pendiente.
+  El temporizador **se rearma con cada cambio de estado de verdad** (se corta la red,
+  cambia el número de pendientes, caduca la sesión), así que lo que es noticia se ve
+  entero; y **al tocar el chip se despliega y vuelve a encogerse solo**, sin tener que
+  cerrarlo. No se encoge mientras se envía ni durante el «ya está»: las dos son
+  transitorias y se van solas en cuatro segundos.
+- **Nada que pida red puede quedarse colgado** (`FETCH_TIMEOUT_MS` en `sw.js`, 4 s).
+  `cacheFirst` —teselas, fotos y shell— hacía `await fetch(req)` a pelo, y con cobertura
+  mala eso **no falla**: la conexión se abre y no avanza, así que la promesa se queda
+  minutos sin resolver ni rechazar. Reportado desde una ruta en bici: con 3G el mapa no
+  cargaba. Y no es solo la tesela que falta — el navegador permite unas **seis conexiones
+  por dominio**, así que decenas de teselas colgadas le hacen cola a todo lo demás,
+  incluidas las fuentes. La lección estaba aprendida y escrita en `api/client.ts` («sin
+  timeout, `fetch` puede quedarse colgado varios MINUTOS») y no se había aplicado aquí.
+  Ojo con lo que esto **no** explica: se reportó que en modo avión se veían todas las
+  teselas y con 3G no. Una tesela cacheada la sirve `cacheFirst` sin tocar la red en los
+  dos casos, así que ahí falta una causa por encontrar; el timeout arregla las que **no**
+  están guardadas.
+  Y ojo al escribir su test: sin el `signal`, el test no falla — **se cuelga para
+  siempre**, que es exactamente el fallo que cubre.
 - **Las teselas del mapa también se guardan** (`lib/teselas.ts` + tope y caducidad en
   `sw.js`), y son dos cosas distintas:
   · **El caché normal pasó de 700 a 3.000 teselas, con caducidad de 30 días.** Guardar
