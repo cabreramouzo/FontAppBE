@@ -4,7 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { startOutboxAutoFlush } from './lib/outbox'
 import { captureSource } from './lib/campaign'
-import { trackInteraction } from './api/client'
+import { trackCampaignVisit, trackInteraction } from './api/client'
 import { recargaSiEsTrozoCaducado } from './lib/staleChunk'
 
 // PWA (Android/Chromium): captura `beforeinstallprompt` LO ANTES posible. Chrome
@@ -71,7 +71,10 @@ if (import.meta.env.PROD && cfAnalyticsToken) {
 }
 
 // Guarda el código del cartel (?p=…) antes de que nada toque la URL.
-captureSource()
+// El servidor valida el formato del código: la ruta es pública y esto viene de la URL,
+// así que la puerta está allí y no aquí.
+const codigoDeCampana = captureSource()
+if (codigoDeCampana) void trackCampaignVisit(codigoDeCampana)
 
 // Envía lo que quedó guardado sin cobertura: al arrancar y al recuperar la red.
 startOutboxAutoFlush()

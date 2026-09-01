@@ -15,7 +15,7 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import LinearProgress from '@mui/material/LinearProgress'
 import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getInteractionStats, getInterestStats, getNewUsers, getOnlineUsers, getRegionStats, getSourceStats, getStaff, getUserActivityRanking, reviewFontEdit, revertFontEdit, setUserRole, type InteractionSummary, type OnlineUser, type UserActivityRanking } from '../api/client'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getCampaignStats, getInteractionStats, getInterestStats, getNewUsers, getOnlineUsers, getRegionStats, getSourceStats, getStaff, getUserActivityRanking, reviewFontEdit, revertFontEdit, setUserRole, type CampaignSummary, type InteractionSummary, type OnlineUser, type UserActivityRanking } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -58,6 +58,7 @@ export function AdminPage() {
   const [sources, setSources] = useState<{ source: string | null; count: number }[] | null>(null)
   const [interactions, setInteractions] = useState<InteractionSummary[] | null>(null)
   const [analyticsPeriod, setAnalyticsPeriod] = useState<30 | 180 | 'all'>(30)
+  const [campaigns, setCampaigns] = useState<CampaignSummary[] | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -91,6 +92,7 @@ export function AdminPage() {
     if (!isAdminRole(user)) return
     setInteractions(null)
     getInteractionStats(analyticsPeriod).then(setInteractions).catch(() => setInteractions([]))
+    getCampaignStats(analyticsPeriod).then(setCampaigns).catch(() => setCampaigns([]))
   }, [user, analyticsPeriod])
 
   async function changeRole(id: string, role: UserRole) {
@@ -198,6 +200,27 @@ export function AdminPage() {
       {isAdminRole(user) && (
         <Box component="section" sx={{ mt: 3 }}>
           <UserCapabilities />
+        </Box>
+      )}
+
+      {/* Los clics y las altas del mismo código, en la misma fila. Separados hay que
+          cruzarlos a mano y nadie lo hace: así se acaba mirando solo las altas y
+          concluyendo que una campaña no funcionó cuando lo que falló fue el registro. */}
+      {isAdminRole(user) && campaigns && campaigns.length > 0 && (
+        <Box component="section" sx={{ mt: 3 }}>
+          <Typography variant="h6" gutterBottom>📣 {t('campaigns.title')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('campaigns.hint')}</Typography>
+          <List dense>
+            {campaigns.map((c) => (
+              <ListItem key={c.source} disableGutters>
+                <ListItemText
+                  primary={c.source}
+                  secondary={`${c.visits} ${t('campaigns.visits')} · ${c.signups} ${t('campaigns.signups')}${
+                    c.visits > 0 ? ` · ${Math.round(c.signups / c.visits * 100)}%` : ''}`}
+                />
+              </ListItem>
+            ))}
+          </List>
         </Box>
       )}
 

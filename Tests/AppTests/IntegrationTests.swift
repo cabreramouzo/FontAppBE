@@ -2847,6 +2847,82 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Contar el clic de quien llega por un post y **no** se registra, que es el caso
+    /// normal: 12.000 impresiones dejaban 10 altas y ninguna forma de saber cuántos
+    /// llegaron a abrir la web.
+    func testCampaignVisitsAreCountedWithoutAnAccount() async throws {
+        try await withApp { app in
+            let sesion = UUID()
+            struct DTO: Content { let source: String; let session: String }
+            // Sin ninguna cabecera de sesión: quien viene de un post no tiene cuenta.
+            try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                try req.content.encode(DTO(source: "linkedin", session: sesion.uuidString))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
+            // La misma pestaña otra vez no es otra llegada.
+            try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                try req.content.encode(DTO(source: "linkedin", session: sesion.uuidString))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
+            try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                try req.content.encode(DTO(source: "linkedin", session: UUID().uuidString))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
+
+            // Un código con cualquier forma llenaría la tabla: la ruta es pública.
+            try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                try req.content.encode(DTO(source: "https://malo.example/x", session: UUID().uuidString))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .badRequest) })
+
+            let admin = try await register(app, username: "admincamp")
+            try await makeAdmin(app, userID: admin)
+            let token = try await login(app, username: "admincamp")
+            try await app.test(.GET, "/admin/analytics/campaigns",
+                               headers: ["Authorization": "Bearer \(token)"]) { res in
+                XCTAssertEqual(res.status, .ok)
+                let filas = try res.content.decode([CampaignSummary].self)
+                let linkedin = try XCTUnwrap(filas.first { $0.source == "linkedin" })
+                XCTAssertEqual(linkedin.visits, 2, "Dos pestañas distintas, tres peticiones.")
+                XCTAssertEqual(linkedin.hits, 3)
+                XCTAssertEqual(linkedin.signups, 0)
+                XCTAssertFalse(filas.contains { $0.source.contains("malo") })
+            }
+        }
+    }
+
+    /// Las altas del mismo código salen en la misma fila que los clics. Separados hay que
+    /// cruzarlos a mano y nadie lo hace: así se mira solo las altas y se concluye que una
+    /// campaña no funcionó cuando lo que falló fue el registro.
+    func testCampaignRowJoinsClicksAndSignups() async throws {
+        try await withApp { app in
+            struct DTO: Content { let source: String; let session: String }
+            try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                try req.content.encode(DTO(source: "cartel", session: UUID().uuidString))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
+
+            // El alta lleva el código, igual que la manda la app al registrarse.
+            try await app.test(.POST, "users", beforeRequest: { req in
+                try req.content.encode(CreateUserDTO(name: "Test", username: "delcartel",
+                                                     email: "delcartel@example.com",
+                                                     password: "password123", source: "cartel"))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+            let admin = try await register(app, username: "admincamp2")
+            try await makeAdmin(app, userID: admin)
+            let token = try await login(app, username: "admincamp2")
+            try await app.test(.GET, "/admin/analytics/campaigns",
+                               headers: ["Authorization": "Bearer \(token)"]) { res in
+                let fila = try XCTUnwrap(res.content.decode([CampaignSummary].self).first { $0.source == "cartel" })
+                XCTAssertEqual(fila.visits, 1)
+                XCTAssertEqual(fila.signups, 1)
+            }
+            // Y no lo ve cualquiera.
+            let curiosa = try await register(app, username: "curiosacamp")
+            XCTAssertNotNil(curiosa)
+            let suyo = try await login(app, username: "curiosacamp")
+            try await app.test(.GET, "/admin/analytics/campaigns",
+                               headers: ["Authorization": "Bearer \(suyo)"]) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+        }
+    }
+
     /// La foto que le faltaba al panel: por qué esta persona no puede, con los números
     /// delante. Reproduce el caso real —gotas de sobra, días insuficientes— porque es el
     /// que se contestó mal por no poder mirarlo.

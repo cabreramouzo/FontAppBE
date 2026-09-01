@@ -540,6 +540,36 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   cuentas vistas más recientemente y las diez más antiguas o aún no observadas, usando el
   mismo `last_seen_at`. Un valor nulo significa «sin actividad registrada desde que existe
   la medición», no demuestra que la cuenta nunca iniciara sesión antes de desplegarla.
+- **Clics de campaña sin registrarse** (`campaign_visits` + `POST /analytics/visit` →
+  `GET /admin/analytics/campaigns`). El código de `?p=` se guardaba en `localStorage` y
+  **solo llegaba al servidor al crear la cuenta**, así que de un post de LinkedIn con
+  12.000 impresiones se veían las 10 altas y nada más: quien hacía clic, miraba el mapa y
+  se iba era invisible. Medido antes de hacerlo: unas **410 llegadas en once días** contra
+  ~60 cuentas, o sea que casi nadie de quien entra se registra — que es el dato que
+  faltaba para saber si el problema es el canal o el registro.
+  · **Tabla propia y no un evento más**: `interaction_analytics` es una lista **cerrada**
+    de eventos y los códigos no lo son —cada cartel inventa el suyo—, así que meterlos ahí
+    obligaría a ampliar la lista en cada pueblo o a aceptar nombres arbitrarios, que es
+    justo lo que esa lista existe para impedir.
+  · **Pública y sin sesión a propósito**: quien llega de un post no tiene cuenta, y contar
+    solo a quien la crea es exactamente lo que dejaba ciego el embudo. Guarda código, día
+    y UUID de pestaña; ni usuario, ni IP, ni URL, ni dispositivo. Retención de 180 días,
+    ahí **borrando** en vez de compactar: el total por código y día no dice nada que no
+    diga ya el total del periodo, y una tabla menos es una tabla menos que envejece.
+  · **El formato del código lo valida el servidor** (`sourceFormat`), y es la única
+    defensa: la ruta es pública y el valor viene de la URL, así que sin eso cualquiera
+    llena la tabla. No puede ser una lista cerrada —cada cartel trae su código— pero sí
+    acota forma y largo. Hay test, verificado quitando el filtro.
+  · **Los clics y las altas van en la misma fila**, cruzando `campaign_visits` con
+    `users.signup_source`. Separados hay que cruzarlos a mano y nadie lo hace: así se
+    acaba mirando solo las altas y concluyendo que una campaña no funcionó cuando lo que
+    falló fue el registro.
+  · Se cuenta **la llegada** —solo cuando la URL trae el parámetro, o sea el clic en el
+    enlace— y una vez por pestaña, no cada visita posterior de quien ya vino.
+  · Ojo con el ciclo de módulos: `api/client.ts` ya importaba `storedSource` de
+    `lib/campaign.ts`, así que llamar allí a `trackCampaignVisit` cerraba el círculo.
+    Compila, arranca y falla el día que cambie el orden de evaluación. `captureSource()`
+    **devuelve** el código y lo cuenta quien llama.
 - **Los tres eventos de instalación son ciegos en iOS, y los rótulos lo dicen.**
   `install_available` no es una acción de nadie: lo dispara el navegador al lanzar
   `beforeinstallprompt`, o sea cuando **Chromium** decide que la web cumple para

@@ -38,9 +38,82 @@ struct InteractionAnalyticsController: RouteCollection {
         routes.grouped(UserToken.authenticator())
             .grouped(RateLimitMiddleware(scope: "interaction-analytics", max: 120, window: 5 * 60))
             .post("analytics", use: record)
+        routes.grouped(RateLimitMiddleware(scope: "campaign-visit", max: 60, window: 5 * 60))
+            .post("analytics", "visit", use: visit)
         routes.grouped("admin", "analytics")
             .grouped(UserToken.authenticator(), User.guardMiddleware())
             .get(use: summary)
+        routes.grouped("admin", "analytics", "campaigns")
+            .grouped(UserToken.authenticator(), User.guardMiddleware())
+            .get(use: campaigns)
+    }
+
+    /// Formato de un código de campaña. Es la puerta que impide que esta tabla se llene
+    /// de basura: la ruta es pública y el código viene de la URL, así que sin esto
+    /// cualquiera puede inventarse filas nuevas a voluntad. No es una lista cerrada
+    /// porque no puede serlo —cada cartel nuevo trae su código— pero sí acota la forma y
+    /// el largo, igual que ya hace `users.signup_source` al recortar a 40.
+    static let sourceFormat = "^[a-z0-9][a-z0-9_-]{0,39}$"
+
+    /// POST /analytics/visit — «alguien llegó con este código y no se ha registrado».
+    ///
+    /// Pública y sin sesión **a propósito**: quien llega de un post de LinkedIn no tiene
+    /// cuenta, y contar solo a quien la crea es exactamente lo que dejaba ciego el
+    /// embudo. Guarda código, día y UUID de pestaña; nada más.
+    @Sendable func visit(req: Request) async throws -> HTTPStatus {
+        struct DTO: Content { let source: String; let session: String }
+        let dto = try req.content.decode(DTO.self)
+        let source = dto.source.lowercased()
+        guard source.range(of: Self.sourceFormat, options: .regularExpression) != nil,
+              let sessionID = UUID(uuidString: dto.session),
+              let sql = req.db as? SQLDatabase else { throw Abort(.badRequest) }
+        try await sql.raw("""
+            INSERT INTO campaign_visits (id, source, day, session_id, hits)
+            VALUES (\(bind: UUID()), \(bind: source), CURRENT_DATE, \(bind: sessionID), 1)
+            ON CONFLICT (source, day, session_id)
+            DO UPDATE SET hits = campaign_visits.hits + 1
+            """).run()
+        // Misma retención que el resto de la analítica de sesión. Aquí se BORRA en vez de
+        // compactar: el total por código y día no aporta nada que no diga ya el total del
+        // periodo, y una tabla menos que mantener es una tabla menos que se queda vieja.
+        try await sql.raw("DELETE FROM campaign_visits WHERE day < CURRENT_DATE - 180").run()
+        return .noContent
+    }
+
+    /// GET /admin/analytics/campaigns?days= — clics y altas del mismo código, juntos.
+    ///
+    /// **En la misma fila a propósito.** Los clics viven en `campaign_visits` y las altas
+    /// en `users.signup_source`; separados hay que cruzarlos a mano y nadie lo hace, que
+    /// es como se acaba mirando solo las altas y concluyendo que una campaña no funcionó
+    /// cuando lo que falló fue el registro.
+    @Sendable func campaigns(req: Request) async throws -> [CampaignSummary] {
+        let user = try req.auth.require(User.self)
+        guard user.isAdmin, let sql = req.db as? SQLDatabase else { throw Abort(.forbidden) }
+        let requested = req.query[Int.self, at: "days"]
+        guard requested == nil || requested == 30 || requested == 180 else { throw Abort(.badRequest) }
+        // Sin `days` es todo el histórico; un `days` nulo en el bind se compara contra
+        // `IS NULL` en el SQL para no repetir la consulta entera dos veces.
+        let days = requested.map { $0 - 1 }
+        return try await sql.raw("""
+            WITH clics AS (
+                SELECT source, COUNT(DISTINCT session_id)::int AS visits, SUM(hits)::int AS hits
+                FROM campaign_visits
+                WHERE \(bind: days)::int IS NULL OR day >= CURRENT_DATE - \(bind: days)::int
+                GROUP BY source
+            ), altas AS (
+                SELECT signup_source AS source, COUNT(*)::int AS signups
+                FROM users
+                WHERE signup_source IS NOT NULL
+                  AND (\(bind: days)::int IS NULL OR created_at >= CURRENT_DATE - \(bind: days)::int)
+                GROUP BY signup_source
+            )
+            SELECT COALESCE(clics.source, altas.source) AS source,
+                   COALESCE(clics.visits, 0) AS visits,
+                   COALESCE(clics.hits, 0) AS hits,
+                   COALESCE(altas.signups, 0) AS signups
+            FROM clics FULL OUTER JOIN altas ON altas.source = clics.source
+            ORDER BY visits DESC, signups DESC
+            """).all(decoding: CampaignSummary.self)
     }
 
     @Sendable func record(req: Request) async throws -> HTTPStatus {
@@ -119,3 +192,9 @@ struct InteractionAnalyticsController: RouteCollection {
 
 struct InteractionDTO: Content { let event: String; let session: String }
 struct InteractionSummary: Content { let event: String; let clicks: Int; let sessions: Int }
+
+/// Un código de campaña con sus dos mitades: quién llegó y quién se quedó.
+///
+/// `visits` son **sesiones de pestaña distintas**, no personas: quien abra el enlace tres
+/// días cuenta tres. Sirve para comparar campañas entre sí, nunca para contar gente.
+struct CampaignSummary: Content { let source: String; let visits: Int; let hits: Int; let signups: Int }

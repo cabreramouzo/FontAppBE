@@ -131,6 +131,8 @@ export async function googleLoginRequest(credential: string): Promise<LoginRespo
 
 export interface PasskeySummary { id: string; label: string; createdAt?: string; lastUsedAt?: string }
 export interface InteractionSummary { event: string; clicks: number; sessions: number }
+/** `visits` son sesiones de pestaña, no personas: quien abra el enlace tres días cuenta tres. */
+export interface CampaignSummary { source: string; visits: number; hits: number; signups: number }
 export interface OnlineUser { id: string; username: string; lastSeenAt: string }
 export interface UserActivityRankRow { id: string; username: string; createdAt: string | null; lastSeenAt: string | null }
 export interface UserActivityRanking { mostRecent: UserActivityRankRow[]; leastRecent: UserActivityRankRow[]; untrackedCount: number }
@@ -142,6 +144,17 @@ function analyticsSession(): string {
     if (!value) { value = crypto.randomUUID(); sessionStorage.setItem(ANALYTICS_SESSION, value) }
     return value
   } catch { return crypto.randomUUID() }
+}
+
+/**
+ * «Alguien ha llegado con este código de campaña.» Público y sin sesión: quien viene de
+ * un post no tiene cuenta, y contar solo a quien la crea es lo que dejaba el embudo a
+ * ciegas. Comparte el UUID de pestaña con el resto de la analítica.
+ */
+export function trackCampaignVisit(source: string) {
+  return apiFetch<void>('/analytics/visit', {
+    method: 'POST', body: JSON.stringify({ source, session: analyticsSession() }),
+  }).catch(() => {})
 }
 
 /** Best-effort: la analítica nunca debe bloquear ni mostrar un error al visitante. */
@@ -169,6 +182,9 @@ export function trackPlatformOnce() {
     || (navigator as Navigator & { standalone?: boolean }).standalone === true
   void Promise.all([trackInteraction(platform), trackInteraction(standalone ? 'platform_mode_pwa' : 'platform_mode_browser')])
 }
+
+export const getCampaignStats = (days: 30 | 180 | 'all' = 30) =>
+  apiFetch<CampaignSummary[]>(`/admin/analytics/campaigns${days === 'all' ? '' : `?days=${days}`}`)
 
 export const getInteractionStats = (days: 30 | 180 | 'all' = 30) =>
   apiFetch<InteractionSummary[]>(`/admin/analytics${days === 'all' ? '' : `?days=${days}`}`)
