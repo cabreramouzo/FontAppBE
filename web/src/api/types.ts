@@ -426,3 +426,28 @@ export interface ZoneRanking {
   month: string
   rows: ZoneRankingRow[]
 }
+
+/**
+ * Qué puede y qué no puede hacer una persona, para el panel de administración.
+ * Solo admin. No lleva ningún dato personal: habla del mapa, no de quién es.
+ */
+export type UserCapabilityReport = {
+  username: string
+  role: UserRole
+  /** Nivel alcanzado con las gotas **liquidadas**, que es lo que miran las capacidades. */
+  level: string
+  gotes: number
+  /** Lo que sigue en las 72 h. Explica el «he aportado y no me ha subido nada». */
+  pendingGotes: number
+  activeDays: number
+  requiredActiveDays: number
+  blockedBy: string[]
+  granted: string[]
+  missing: { key: string; level: string; gotes: number; missingGotes: number }[]
+  gamificationOptOut: boolean
+  postingRestrictedUntil?: string | null
+  recentVoids: { reason: string; count: number; misconduct: boolean; lastAt?: string | null }[]
+  /** Del sistema, no de la persona: sin esto «no puede nada» se lee como un castigo. */
+  capabilitiesEnabled: boolean
+  definitivePoints: boolean
+}

@@ -2847,6 +2847,62 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// La foto que le faltaba al panel: por qué esta persona no puede, con los números
+    /// delante. Reproduce el caso real —gotas de sobra, días insuficientes— porque es el
+    /// que se contestó mal por no poder mirarlo.
+    func testAdminCanSeeWhyAUserCannotDoSomething() async throws {
+        try await withApp { app in
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+
+            let mirado = try await register(app, username: "mirado")
+            try await grantGotes(mirado, 3_949, days: 2, on: app.db)
+            try await grantGotes(mirado, 10, days: 1, on: app.db, status: .void,
+                                 voidReason: VoidReason.disappeared)
+            let admin = try await register(app, username: "adminque")
+            try await makeAdmin(app, userID: admin)
+            let token = try await login(app, username: "adminque")
+
+            // Se pide por NOMBRE, que es lo que trae quien viene de un correo de soporte.
+            try await app.test(.GET, "/users/mirado/capabilities",
+                               headers: ["Authorization": "Bearer \(token)"]) { res in
+                XCTAssertEqual(res.status, .ok)
+                let r = try res.content.decode(UserCapabilityReport.self)
+                XCTAssertEqual(r.level, "river", "3.949 gotas son de sobra para brook.")
+                XCTAssertEqual(r.activeDays, 2)
+                XCTAssertEqual(r.requiredActiveDays, Capabilities.requiredActiveDays)
+                XCTAssertEqual(r.blockedBy, ["activeDays"])
+                XCTAssertTrue(r.granted.isEmpty)
+                // Lo que hacía imposible entenderlo: le sobran las gotas para la que pide
+                // y aun así no la tiene.
+                let foto = try XCTUnwrap(r.missing.first { $0.key == "addSecondaryPhoto" })
+                XCTAssertEqual(foto.missingGotes, 0)
+                // Y la anulación se ve, diciendo que NO cuenta como mala conducta.
+                let anulacion = try XCTUnwrap(r.recentVoids.first)
+                XCTAssertEqual(anulacion.reason, VoidReason.disappeared)
+                XCTAssertFalse(anulacion.misconduct)
+            }
+        }
+    }
+
+    /// Es de admin y no de owner —no lleva ni un dato personal— pero de admin **de
+    /// verdad**: un usuario normal no mira el expediente de nadie.
+    func testCapabilityReportIsAdminOnly() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "mirada")
+            _ = try await register(app, username: "curiosa")
+            let token = try await login(app, username: "curiosa")
+            try await app.test(.GET, "/users/mirada/capabilities",
+                               headers: ["Authorization": "Bearer \(token)"]) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+            try await app.test(.GET, "/users/mirada/capabilities") { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            }
+        }
+    }
+
     /// `blockedBy: ["activeDays"]` dice cuál es el requisito que falla; los días dicen a
     /// qué distancia estás. Sin ellos la interfaz solo puede decir «todavía no».
     func testGrantReportsHowManyActiveDaysYouHave() async throws {

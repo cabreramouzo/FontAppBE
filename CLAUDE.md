@@ -3168,6 +3168,46 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   decir a qué lado cae, en vez de nacer clasificado como mala conducta sin que nadie lo
   decida. Hay test y está verificado devolviendo la exclusión: sale en rojo.
 
+## El expediente de permisos de una cuenta (`GET /users/:id/capabilities`)
+
+- La continuación del caso de arriba: el aviso mentía, pero **desde el panel tampoco se
+  podía comprobar**. Los dos requisitos que de verdad bloqueaban a esa persona —los días
+  distintos con aportación y una anulación contada como mala conducta— solo se veían
+  entrando por SSH y abriendo `psql`. Contestar a un usuario con datos costaba diez
+  minutos, así que en la práctica se contestaba de memoria, y se contestó mal.
+- **Es de `admin` y no de `owner`, y la línea es qué contiene.** No lleva ni un dato
+  personal: ni correo, ni ubicación de registro, ni IP. Habla de lo que alguien puede
+  hacer **sobre el mapa**, que es la misma frontera que ordena la escalera de
+  capacidades. `/users/admin` sí expone PII y por eso sigue siendo de owner; meter esto
+  ahí lo habría dejado detrás de una puerta que no le toca — y el owner es una persona,
+  mientras que quien contesta los correos puede ser otra.
+- Resuelve **por username además de por UUID**, como el resto de `/users/:id`: quien lo
+  abre viene de un correo de soporte con un nombre delante, no con un identificador.
+- **Los días se recalculan aquí y no se leen de `Grant`.** `Capabilities.of` sale por la
+  puerta de atrás para un admin, para quien está restringido y con el sistema apagado, y
+  en esos tres casos devuelve 0. Un informe que dice «0 días» sobre alguien que lleva
+  veinte es exactamente el error que este panel existe para no repetir.
+- Lo que enseña está elegido por la pregunta, no por lo que había a mano:
+  · **el nivel y las gotas liquidadas**, más las pendientes — que explican la queja más
+    común, «he aportado y no me ha subido nada»;
+  · **los días, en color cuando faltan**, porque son la mitad del requisito que nadie
+    miraba;
+  · **chips de lo que puede** (llenos) y **de lo que no** (con candado), y estos últimos
+    dicen si le faltan gotas **o si le sobran y falla otro requisito** — que es
+    literalmente el caso que nadie sabía leer;
+  · **las anulaciones de los últimos 90 días diciendo cuáles cuentan** como mala
+    conducta y cuáles no;
+  · y **el estado del sistema** antes que el de la persona: con las capacidades apagadas,
+    «no puede nada» no dice nada de ella.
+- Los nombres de las capacidades y de los niveles **se reutilizan** (`game.can.*`,
+  `game.level.*`): ya estaban en los ocho idiomas y son el mismo vocabulario que ve el
+  usuario, así que el panel y su pantalla hablan igual.
+- El **motivo de la anulación sale en castellano**, tal cual está guardado. Es a
+  propósito: es la cadena que también imprime `gamification-sync`, y traducirla obligaría
+  a mantener un diccionario paralelo de algo que solo lee quien administra.
+- Vive en la sección de roles de `/admin` porque son la misma pregunta por los dos lados:
+  qué le hemos **dado** a alguien y qué se ha **ganado**.
+
 ## El aviso de fuente duplicada la NOMBRA
 
 - El mismo usuario: «la Font de La Vall a Castellcir està triplicada… quan la vaig crear,

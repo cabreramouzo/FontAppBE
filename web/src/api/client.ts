@@ -1,7 +1,7 @@
 import type { PhotoUploadMeta } from '../lib/image'
 import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
 import { storedSource } from '../lib/campaign'
-import type { AdminUser, IncidentKind, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
+import type { AdminUser, IncidentKind, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserCapabilityReport, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -950,6 +950,16 @@ export async function getUserComments(id: string): Promise<MyComment[]> {
 export async function getGamification(): Promise<GamificationProfile | null> {
   // 204 (apagada) llega como `undefined` desde apiFetch; se normaliza a null.
   return (await apiFetch<GamificationProfile | undefined>('/gamification/me')) ?? null
+}
+
+/**
+ * Qué puede hacer una persona y por qué no puede el resto. Solo admin.
+ *
+ * Acepta nombre de usuario además de UUID: quien lo abre viene de un correo de soporte
+ * con un nombre delante, no con un identificador.
+ */
+export async function getUserCapabilities(idOrUsername: string): Promise<UserCapabilityReport> {
+  return apiFetch<UserCapabilityReport>(`/users/${encodeURIComponent(idOrUsername)}/capabilities`)
 }
 
 /** Rutas propuestas alrededor de un punto. Lectura pública. */

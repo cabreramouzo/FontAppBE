@@ -23,6 +23,7 @@ import { EditsTable } from '../components/EditsTable'
 import { RolesHelpButton } from '../components/RolesHelp'
 import { timeAgo } from '../lib/time'
 import { canModerate, isAdminRole, isOwner } from '../lib/roles'
+import { UserCapabilities } from '../components/UserCapabilities'
 import { WeeklyDigestPanel } from '../components/WeeklyDigestPanel'
 import { ActivityFeed } from '../components/ActivityFeed'
 import { lastSeenAt, markUsersSeen } from '../lib/newUsers'
@@ -190,6 +191,15 @@ export function AdminPage() {
           ))}
         </List>
       </Box>
+
+      {/* Va junto a los roles porque son la misma pregunta vista por los dos lados: qué
+          le hemos dado a alguien y qué se ha ganado. Es de admin y no de owner —no lleva
+          ningún dato personal—, al revés que la gestión de cuentas de más abajo. */}
+      {isAdminRole(user) && (
+        <Box component="section" sx={{ mt: 3 }}>
+          <UserCapabilities />
+        </Box>
+      )}
 
       {isOwner(user) && (
         <Box component="section" sx={{ mt: 3 }}>

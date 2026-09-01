@@ -29,6 +29,7 @@ struct UserController: RouteCollection {
         protected.post("source-limit-exemption-request", use: requestSourceLimitExemption)
         protected.get("staff", use: staff)                   // owner: moderadores/admins
         protected.get("admin", use: adminList)               // owner: listado completo paginado
+        protected.get(":userID", "capabilities", use: capabilities) // admin: qué puede hacer
         protected.group(":userID") { user in
             user.put(use: update)
             user.delete(use: destroy)
@@ -173,6 +174,21 @@ struct UserController: RouteCollection {
         return Page(items: page.items.map {
             AdminUser($0, support: $0.id.flatMap { supportByUser[$0] } ?? [:])
         }, metadata: page.metadata)
+    }
+
+    /// GET /users/:userID/capabilities — qué puede y qué no puede hacer esta persona.
+    ///
+    /// **Admin y no owner**: no devuelve ningún dato personal, solo lo que alguien puede
+    /// hacer sobre el mapa y por qué. `/users/admin` sí expone correo y ubicación de
+    /// registro, y por eso está más cerrado; mezclar las dos cosas habría dejado esto
+    /// detrás de una puerta que no le corresponde.
+    ///
+    /// Resuelve por username además de por UUID, como el resto de `/users/:id`: quien
+    /// llega aquí viene de un correo de soporte y tiene un nombre, no un identificador.
+    @Sendable func capabilities(req: Request) async throws -> UserCapabilityReport {
+        let me = try req.auth.require(User.self)
+        guard me.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
+        return try await UserCapabilityReport.of(try await find(req), on: req.db)
     }
 
     /// PUT /users/:userID/role — cambia el rol de un usuario (solo owner).
