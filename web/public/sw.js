@@ -150,6 +150,34 @@ async function buscaFijadoPrimero(req, cacheName) {
 const FETCH_TIMEOUT_MS = 4000
 
 /**
+ * ## Y cuatro segundos era demasiado poco para lo que va por `cacheFirst`
+ *
+ * El timeout se puso para que nada se colgara **minutos** con cobertura mala, y eso sigue
+ * siendo necesario. Pero se aplicó igual a las teselas, a las fotos y al shell, y cuatro
+ * segundos ahí no se rinde: **mata peticiones que iban a llegar**. Reportado dos días
+ * después: «le cuesta más pintar el mapa, tarda más al hacer zoom desde el móvil».
+ *
+ * Lo que no se vio al ponerlo: **el reloj arranca al llamar a `fetch`, no al abrirse la
+ * conexión**. El navegador permite unas seis conexiones por dominio y un zoom pide veinte
+ * teselas de golpe, así que las de la cola se gastan su presupuesto **esperando turno**.
+ * En un móvil con 4G flojo eso son los cuatro segundos enteros sin haber pedido nada.
+ *
+ * Y cuando salta, la tesela no llega y **tampoco se guarda**: queda un cuadro en blanco
+ * hasta que muevas el mapa. Antes llegaba tarde; ahora no llegaba.
+ *
+ * Por eso cada uno tiene el suyo, y el número sale de lo que transporta:
+ * - **teselas**: ~7 KB cada una pero **veinte a la vez** y en cola;
+ * - **fotos**: 386 KB de media (medido en producción), una sola y con alguien mirándola;
+ * - **shell**: bloquea el arranque de la app, así que se rinde antes para servir lo
+ *   guardado.
+ *
+ * El de 4 s se queda para lo que no pasa por aquí.
+ */
+const TILE_TIMEOUT_MS = 12_000
+const PHOTO_TIMEOUT_MS = 20_000
+const SHELL_TIMEOUT_MS = 10_000
+
+/**
  * Y lo mismo para la navegación, con más margen: cargar la app es legítimamente más lento
  * que una tesela, pero por encima de esto lo que hay guardado es mejor que una pantalla en
  * blanco. Ver el porqué entero donde se usa.
@@ -167,11 +195,11 @@ async function fetchConTimeout(req, ms = FETCH_TIMEOUT_MS) {
   }
 }
 
-async function cacheFirst(req, cacheName, { limit } = {}) {
+async function cacheFirst(req, cacheName, { limit, timeout = FETCH_TIMEOUT_MS } = {}) {
   const { hit } = await buscaFijadoPrimero(req, cacheName)
   const cache = await caches.open(cacheName)
   if (hit) return hit
-  const res = await sinRedirecciones(await fetchConTimeout(req))
+  const res = await sinRedirecciones(await fetchConTimeout(req, timeout))
   // Cacheamos respuestas OK y opacas (las teselas <img> son cross-origin/opacas).
   if (res && (res.ok || res.type === 'opaque')) {
     await cache.put(req, res.clone())
@@ -477,14 +505,14 @@ self.addEventListener('fetch', (event) => {
 
   // Teselas del mapa (otro dominio): cache-first con tope.
   if (isTile(url)) {
-    event.respondWith(cacheFirst(req, TILE_CACHE, { limit: TILE_LIMIT }))
+    event.respondWith(cacheFirst(req, TILE_CACHE, { limit: TILE_LIMIT, timeout: TILE_TIMEOUT_MS }))
     return
   }
 
   // Fotos subidas, vengan del disco local o de R2 (otro dominio). Se mira la ruta y no
   // el servidor a propósito: así vale para los dos sitios sin apuntar ninguno.
   if (url.pathname.includes('/uploads/')) {
-    event.respondWith(cacheFirst(req, PHOTO_CACHE, { limit: PHOTO_LIMIT }))
+    event.respondWith(cacheFirst(req, PHOTO_CACHE, { limit: PHOTO_LIMIT, timeout: PHOTO_TIMEOUT_MS }))
     return
   }
 
@@ -552,7 +580,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Assets propios: cache-first.
-  event.respondWith(cacheFirst(req, SHELL_CACHE))
+  event.respondWith(cacheFirst(req, SHELL_CACHE, { timeout: SHELL_TIMEOUT_MS }))
 })
 
 // ---------------------------------------------------------------------------

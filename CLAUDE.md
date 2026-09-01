@@ -2764,6 +2764,29 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   entero; y **al tocar el chip se despliega y vuelve a encogerse solo**, sin tener que
   cerrarlo. No se encoge mientras se envía ni durante el «ya está»: las dos son
   transitorias y se van solas en cuatro segundos.
+- **Pero cuatro segundos era demasiado poco, y se notó a los dos días.** Ese plazo se
+  aplicó igual a **teselas, fotos y shell**, que es todo lo que pasa por `cacheFirst`, y
+  ahí no se rinde: **mata peticiones que iban a llegar**. Reportado con la medida delante:
+  «ha tardado unos 30 segundos en pintarse todas las teselas», y más lento al hacer zoom
+  desde el móvil.
+  · Lo que no se vio al ponerlo: **el reloj arranca al llamar a `fetch`, no al abrirse la
+    conexión**. El navegador permite unas seis conexiones por dominio y un zoom pide
+    veinte teselas de golpe, así que las de la cola se gastan el presupuesto entero
+    **esperando turno**, sin haber pedido nada todavía.
+  · Y cuando salta, la tesela no llega **ni se guarda**: queda un cuadro en blanco hasta
+    que Leaflet la vuelve a pedir en el siguiente movimiento. Antes llegaba tarde; con el
+    timeout no llegaba, y de ahí los 30 segundos — son varias rondas de reintentos.
+  · Ahora cada uno tiene el suyo y el número sale de lo que transporta: **teselas 12 s**
+    (~7 KB pero veinte a la vez y en cola), **fotos 20 s** (386 KB de media, medido, y
+    con alguien mirándolas), **shell 10 s** (bloquea el arranque y tiene plan B). El de
+    4 s se queda para lo que no pasa por `cacheFirst`.
+  · `scripts/sw-timeouts.test.ts` lo fija sobre el fichero, y **no es un test de
+    constantes por gusto**: volver a un solo plazo no rompe nada visible aquí — deja el
+    mapa medio pintado en el móvil de otra persona. Verificado devolviendo el 4000.
+  · **No se sube `fontapp-shell-vN`** aunque la regla de más abajo lo pida: aquí no cambia
+    nada de lo cacheado, y subirla tiraría el shell que ya funciona en todos los móviles a
+    cambio de nada. El `skipWaiting()` + `clients.claim()` ya entregan el SW nuevo en la
+    siguiente apertura.
 - **Nada que pida red puede quedarse colgado** (`FETCH_TIMEOUT_MS` en `sw.js`, 4 s).
   `cacheFirst` —teselas, fotos y shell— hacía `await fetch(req)` a pelo, y con cobertura
   mala eso **no falla**: la conexión se abre y no avanza, así que la promesa se queda
