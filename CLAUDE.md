@@ -2801,29 +2801,28 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   entero; y **al tocar el chip se despliega y vuelve a encogerse solo**, sin tener que
   cerrarlo. No se encoge mientras se envía ni durante el «ya está»: las dos son
   transitorias y se van solas en cuatro segundos.
-- **Pero cuatro segundos era demasiado poco, y se notó a los dos días.** Ese plazo se
-  aplicó igual a **teselas, fotos y shell**, que es todo lo que pasa por `cacheFirst`, y
-  ahí no se rinde: **mata peticiones que iban a llegar**. Reportado con la medida delante:
-  «ha tardado unos 30 segundos en pintarse todas las teselas», y más lento al hacer zoom
-  desde el móvil.
-  · Lo que no se vio al ponerlo: **el reloj arranca al llamar a `fetch`, no al abrirse la
-    conexión**. El navegador permite unas seis conexiones por dominio y un zoom pide
-    veinte teselas de golpe, así que las de la cola se gastan el presupuesto entero
-    **esperando turno**, sin haber pedido nada todavía.
-  · Y cuando salta, la tesela no llega **ni se guarda**: queda un cuadro en blanco hasta
-    que Leaflet la vuelve a pedir en el siguiente movimiento. Antes llegaba tarde; con el
-    timeout no llegaba, y de ahí los 30 segundos — son varias rondas de reintentos.
-  · Ahora cada uno tiene el suyo y el número sale de lo que transporta: **teselas 12 s**
-    (~7 KB pero veinte a la vez y en cola), **fotos 20 s** (386 KB de media, medido, y
-    con alguien mirándolas), **shell 10 s** (bloquea el arranque y tiene plan B). El de
-    4 s se queda para lo que no pasa por `cacheFirst`.
-  · `scripts/sw-timeouts.test.ts` lo fija sobre el fichero, y **no es un test de
-    constantes por gusto**: volver a un solo plazo no rompe nada visible aquí — deja el
-    mapa medio pintado en el móvil de otra persona. Verificado devolviendo el 4000.
-  · **No se sube `fontapp-shell-vN`** aunque la regla de más abajo lo pida: aquí no cambia
-    nada de lo cacheado, y subirla tiraría el shell que ya funciona en todos los móviles a
-    cambio de nada. El `skipWaiting()` + `clients.claim()` ya entregan el SW nuevo en la
-    siguiente apertura.
+- **Y las teselas acabaron SIN tope, después de dos intentos fallidos.** El argumento
+  para ponérselo era «el navegador permite unas seis conexiones por dominio, así que
+  decenas de teselas colgadas le hacen cola a todo lo demás, incluidas las fuentes».
+  **Es falso**: el límite es por **host**, y las teselas salen de `tile.openstreetmap.org`,
+  `ign.es` o `arcgisonline.com` mientras que la API está en `fontapp.fly.dev` — colas
+  distintas. El tope nunca protegió nada.
+  · Y sí hacía daño, porque **abortar una tesela es definitivo**: al rechazar la promesa,
+    `respondWith` le da un error de red al `<img>`, Leaflet marca el cuadro como fallido y
+    **no lo vuelve a pedir** hasta que sale y vuelve a entrar en la vista. Antes llegaba
+    tarde; con el tope no llegaba nunca.
+  · **Subirlo de 4 s a 12 s lo empeoró**, y así se reportó: «se quedan muchas teselas en
+    gris y no se cargan nunca». Una tesela condenada ocupa una de las seis conexiones **el
+    triple de tiempo**, así que se intentan menos por minuto. El número no era el
+    problema; el mecanismo sí, y afinarlo fue perder un intento.
+  · **La regla que queda, y vale para lo que venga: un tope solo tiene sentido donde hay
+    plan B.** Shell → lo guardado (10 s). Fotos → `ZoomableImage` pinta el hueco explicado
+    y reintenta con `online` (20 s; 386 KB de media, medido). Teselas → no hay plan B y
+    nadie reintenta, así que **sin tope**.
+  · Ojo con la implementación: `timeout: null` tiene que **cortocircuitar** en
+    `fetchConTimeout`. Sin esa línea, `setTimeout(fn, null)` dispara **a los 0 ms** y no
+    carga ni una tesela — mucho peor que el fallo original. Hay test y está verificado
+    quitándola.
 - **Nada que pida red puede quedarse colgado** (`FETCH_TIMEOUT_MS` en `sw.js`, 4 s).
   `cacheFirst` —teselas, fotos y shell— hacía `await fetch(req)` a pelo, y con cobertura
   mala eso **no falla**: la conexión se abre y no avanza, así que la promesa se queda

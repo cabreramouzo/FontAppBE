@@ -150,30 +150,37 @@ async function buscaFijadoPrimero(req, cacheName) {
 const FETCH_TIMEOUT_MS = 4000
 
 /**
- * ## Y cuatro segundos era demasiado poco para lo que va por `cacheFirst`
+ * ## Las teselas NO llevan tope, y esto costó dos intentos
  *
- * El timeout se puso para que nada se colgara **minutos** con cobertura mala, y eso sigue
- * siendo necesario. Pero se aplicó igual a las teselas, a las fotos y al shell, y cuatro
- * segundos ahí no se rinde: **mata peticiones que iban a llegar**. Reportado dos días
- * después: «le cuesta más pintar el mapa, tarda más al hacer zoom desde el móvil».
+ * El timeout se puso para que nada se colgara **minutos** con cobertura mala. Se aplicó
+ * también a las teselas con este argumento: «el navegador permite unas seis conexiones
+ * por dominio, así que decenas de teselas colgadas le hacen cola a todo lo demás,
+ * incluidas las fuentes».
  *
- * Lo que no se vio al ponerlo: **el reloj arranca al llamar a `fetch`, no al abrirse la
- * conexión**. El navegador permite unas seis conexiones por dominio y un zoom pide veinte
- * teselas de golpe, así que las de la cola se gastan su presupuesto **esperando turno**.
- * En un móvil con 4G flojo eso son los cuatro segundos enteros sin haber pedido nada.
+ * **Ese argumento es falso.** El límite es por **host**, y las teselas salen de
+ * `tile.openstreetmap.org`, `ign.es`, `arcgisonline.com`… mientras que la API está en
+ * `fontapp.fly.dev`. Son colas distintas: una tesela colgada no puede robarle turno a una
+ * consulta de fuentes. El tope nunca protegió nada.
  *
- * Y cuando salta, la tesela no llega y **tampoco se guarda**: queda un cuadro en blanco
- * hasta que muevas el mapa. Antes llegaba tarde; ahora no llegaba.
+ * Y sí hacía daño, porque **abortar una tesela es definitivo**: al rechazar la promesa,
+ * `respondWith` le da un error de red al `<img>`, Leaflet marca el cuadro como fallido y
+ * **no lo vuelve a pedir** hasta que la tesela sale y vuelve a entrar en la vista. Antes
+ * llegaba tarde; con el tope no llegaba nunca.
  *
- * Por eso cada uno tiene el suyo, y el número sale de lo que transporta:
- * - **teselas**: ~7 KB cada una pero **veinte a la vez** y en cola;
- * - **fotos**: 386 KB de media (medido en producción), una sola y con alguien mirándola;
- * - **shell**: bloquea el arranque de la app, así que se rinde antes para servir lo
- *   guardado.
+ * Subirlo de 4 s a 12 s lo empeoró todavía más, y así se reportó: una tesela condenada
+ * ocupa una de las seis conexiones **el triple de tiempo**, así que se intentan menos por
+ * minuto y quedan más cuadros grises. El número no era el problema; el mecanismo sí.
  *
- * El de 4 s se queda para lo que no pasa por aquí.
+ * ## La regla, para lo que venga
+ *
+ * Un tope solo tiene sentido donde **hay plan B**:
+ * - **shell**: si no llega, se sirve el guardado → tope de 10 s;
+ * - **fotos**: si no llegan, `ZoomableImage` pinta el hueco explicado y reintenta con el
+ *   evento `online` → tope de 20 s (386 KB de media, medido);
+ * - **teselas**: no hay plan B y **nadie reintenta** → sin tope.
  */
-const TILE_TIMEOUT_MS = 12_000
+/** `null` = sin abortar. Ver arriba: no hay plan B y nadie reintenta. */
+const TILE_TIMEOUT_MS = null
 const PHOTO_TIMEOUT_MS = 20_000
 const SHELL_TIMEOUT_MS = 10_000
 
@@ -186,6 +193,9 @@ const NAV_TIMEOUT_MS = 6000
 
 /** `fetch` que se rinde en vez de colgarse. Ver `FETCH_TIMEOUT_MS`. */
 async function fetchConTimeout(req, ms = FETCH_TIMEOUT_MS) {
+  // `null` es «sin tope» a propósito, y no un descuido: hay sitios donde rendirse es peor
+  // que esperar porque nadie va a reintentar. Ver el bloque de arriba.
+  if (ms == null) return fetch(req)
   const ctrl = new AbortController()
   const reloj = setTimeout(() => ctrl.abort(), ms)
   try {

@@ -3,54 +3,54 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
 /**
- * Cada cosa que baja el service worker espera lo suyo.
+ * Un tope solo tiene sentido donde hay plan B.
  *
- * El timeout se puso para que nada se colgara **minutos** con cobertura mala, y eso hacía
- * falta. Pero cuatro segundos se aplicaron igual a las teselas, a las fotos y al shell, y
- * ahí no se rinde: **mata peticiones que iban a llegar**. Reportado dos días después —
- * «ha tardado unos 30 segundos en pintarse todas las teselas»—, porque una tesela abortada
- * no llega **ni se guarda**, así que el cuadro se queda en blanco hasta que Leaflet la
- * vuelve a pedir en el siguiente movimiento.
+ * El timeout del service worker se puso para que nada se colgara **minutos** con
+ * cobertura mala, y se aplicó también a las teselas con este argumento: «el navegador
+ * permite unas seis conexiones por dominio, así que decenas de teselas colgadas le hacen
+ * cola a todo lo demás, incluidas las fuentes».
  *
- * Lo que no se vio al ponerlo: **el reloj arranca al llamar a `fetch`, no al abrirse la
- * conexión**. El navegador permite unas seis conexiones por dominio y un zoom pide veinte
- * teselas de golpe, así que las de la cola se gastan el presupuesto esperando turno.
+ * **Ese argumento es falso**: el límite es por host, y las teselas salen de
+ * `tile.openstreetmap.org` o `ign.es` mientras que la API está en `fontapp.fly.dev`. Son
+ * colas distintas. El tope no protegía nada y sí hacía daño, porque **abortar una tesela
+ * es definitivo**: Leaflet recibe un error de imagen y no vuelve a pedir ese cuadro hasta
+ * que sale y vuelve a entrar en la vista. Subirlo de 4 s a 12 s lo empeoró —una tesela
+ * condenada ocupa una conexión el triple de tiempo—, que es como se reportó: «se quedan
+ * muchas teselas en gris y no se cargan nunca».
  *
- * Se fija sobre el fichero porque `sw.js` es un script de service worker que no se puede
- * importar desde Node sin un `self` de mentira, y porque lo que se rompe aquí **no falla
- * ningún test ni da ningún error**: volver a un único plazo deja el mapa medio pintado en
- * el móvil de otra persona, que es donde no llega nada de esto.
+ * Lo que se fija aquí es la **regla**, no los números: hay plan B para el shell (lo
+ * guardado) y para las fotos (`ZoomableImage` pinta el hueco y reintenta con `online`);
+ * para una tesela no hay ninguno.
  */
 const src = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
 
-const numero = (nombre: string): number => {
-  const m = src.match(new RegExp(`const ${nombre} = ([0-9_]+)`))
+const valor = (nombre: string): string => {
+  const m = src.match(new RegExp(`const ${nombre} = ([A-Za-z0-9_]+)`))
   assert.ok(m, `falta ${nombre}`)
-  return Number(m![1].replace(/_/g, ''))
+  return m![1]
 }
+const numero = (nombre: string): number => Number(valor(nombre).replace(/_/g, ''))
 
-test('las teselas y las fotos esperan más que el plazo base', () => {
-  // Cuatro segundos es lo que se demostró demasiado corto para las dos.
-  assert.ok(numero('TILE_TIMEOUT_MS') >= 10_000, 'una tesela en cola gasta segundos sin pedir nada')
-  assert.ok(numero('PHOTO_TIMEOUT_MS') >= 15_000, 'una foto son 386 KB de media, medido en producción')
-  assert.ok(numero('TILE_TIMEOUT_MS') > numero('FETCH_TIMEOUT_MS'))
-  assert.ok(numero('PHOTO_TIMEOUT_MS') > numero('TILE_TIMEOUT_MS'))
+test('las teselas no llevan tope: nadie las reintenta', () => {
+  assert.equal(valor('TILE_TIMEOUT_MS'), 'null',
+    'Un tope aquí convierte una tesela lenta en un cuadro gris para siempre.')
 })
 
-test('el shell se rinde antes: tiene plan B y bloquea el arranque', () => {
-  assert.ok(numero('SHELL_TIMEOUT_MS') < numero('TILE_TIMEOUT_MS'))
+test('y `fetchConTimeout` entiende esa ausencia en vez de abortar al instante', () => {
+  // Sin esta línea, `null` haría `setTimeout(…, null)` → aborta a los 0 ms y NO carga
+  // ninguna tesela. Es el fallo que convertiría el arreglo en algo mucho peor.
+  assert.match(src, /if \(ms == null\) return fetch\(req\)/)
+})
+
+test('donde sí hay plan B, el tope se queda', () => {
+  assert.ok(numero('PHOTO_TIMEOUT_MS') >= 15_000, 'una foto son 386 KB de media, medido')
+  assert.ok(numero('SHELL_TIMEOUT_MS') >= 5_000)
+  assert.ok(numero('SHELL_TIMEOUT_MS') < numero('PHOTO_TIMEOUT_MS'), 'el shell tiene lo guardado')
+  assert.ok(numero('PHOTO_TIMEOUT_MS') <= 30_000, 'tan alto que vuelve a ser un cuelgue')
 })
 
 test('cada uso de cacheFirst pasa su propio plazo', () => {
-  // Sin esto los tres vuelven al valor por defecto sin que nadie lo note.
   for (const t of ['TILE_TIMEOUT_MS', 'PHOTO_TIMEOUT_MS', 'SHELL_TIMEOUT_MS']) {
     assert.match(src, new RegExp(`cacheFirst\\(req,[^)]*timeout: ${t}`), `cacheFirst sin ${t}`)
-  }
-})
-
-test('y sigue habiendo un tope: rendirse tarde es mejor que no rendirse', () => {
-  // El fallo original era colgarse minutos y hacerle cola a todo lo demás.
-  for (const t of ['TILE_TIMEOUT_MS', 'PHOTO_TIMEOUT_MS', 'SHELL_TIMEOUT_MS']) {
-    assert.ok(numero(t) <= 30_000, `${t} tan alto que vuelve a ser un cuelgue`)
   }
 })
