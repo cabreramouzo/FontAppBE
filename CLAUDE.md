@@ -457,18 +457,26 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   descartó y por qué—; lo que cambia es el idioma, no la exigencia.
   Ojo: **los commits anteriores a esta línea están en castellano** y no se reescriben.
 - **El código nuevo va en inglés** (nombres y comentarios), decidido por el autor el
-  02/09/2026. Antes se escribía en catalán/castellano y **casi todo el repo sigue así**:
-  `nombreFuente`, `cercanasEn`, `tamanoAproximado` y compañía se quedan — reescribir en
-  cascada es churn masivo, rompe `blame` y arriesga bugs a cambio de nada. Reglas:
-  · lo existente **no se traduce**; una función nueva que llama a `nombreFuente` la sigue
-    llamando así, no hay alternativa sin renombrar el original;
+  02/09/2026. Antes se escribía en catalán/castellano y **casi todo el repo sigue así**.
   · un fichero, componente o módulo **nuevo** va entero en inglés;
-  · al extender uno viejo muy en castellano, manda «que se lea como el código de al lado»
-    dentro de una misma función, para no dejar un Frankenstein a media línea — pero lo que
-    sea claramente nuevo (un helper aparte, un tipo) va en inglés.
-  El resultado será un repo **mixto** una temporada, y es lo aceptado a propósito: la
-  alternativa —traducir 100 ficheros de golpe— es peor que la mezcla. Con el usuario se
-  habla en castellano; solo cambia el idioma del código.
+  · **no hay reescritura masiva**: nadie traduce 100 ficheros de golpe, eso es churn
+    enorme, rompe `blame` y arriesga bugs a cambio de nada;
+  · **pero al tocar un trozo por otro motivo, se aprovecha y se traduce** (criterio boy
+    scout, decidido el 02/09/2026): comentarios siempre, y los nombres **internos**
+    —variables locales, funciones y tipos privados— al inglés. Si un símbolo interno se
+    usa en varios sitios se renombra entero en el mismo cambio (`swift build` y `tsc`
+    cazan todos los usos, así que es seguro).
+  · **La línea que NO se cruza: los nombres que son contrato no se renombran por
+    estética.** Su nombre es el cable, no una etiqueta: claves de i18n
+    (`profile.usernameRules`), códigos de error (`user.emailTaken`), rawValues de enum que
+    viajan en JSON (`Drinkable.untreated`, `capability.retireFont`), columnas de BD
+    (`duplicate_of` — exige migración), rutas y eventos de analítica de la lista cerrada.
+    Renombrarlos rompe clientes viejos, diccionarios o el esquema. Es la misma regla que
+    ya repite este documento («renombrar en siete diccionarios no arregla nada»).
+  · Si el renombrado **infla el diff** mucho más que el cambio real, va en su propio
+    commit de rename, para no ahogar el review mezclando traducción con lógica.
+  El resultado será un repo **mixto** una temporada que se va aclarando al ritmo de lo que
+  se toca. Con el usuario se habla en castellano; solo cambia el idioma del código.
 - Todo `async/await`; nada de `EventLoopFuture` en código nuevo.
 - Un `RouteCollection` por recurso, registrado en `routes.swift`.
 - Config sensible sólo vía `Environment.get(...)`, nunca hardcodeada.
