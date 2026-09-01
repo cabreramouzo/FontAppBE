@@ -50,6 +50,7 @@ struct FontController: RouteCollection {
         // para que "edits" no se interprete como un id de fuente.
         protected.get("edits", use: edits)
         protected.get("moderation", "queue", use: moderationQueue)
+        protected.get("moderation", "duplicates", use: duplicateSuggestions)
         protected.post("edits", ":editID", "revert", use: revertEdit)
         protected.post("edits", ":editID", "review", use: reviewEdit)
         protected.group(":fontID") { font in
@@ -434,6 +435,41 @@ struct FontController: RouteCollection {
                                  action: "restore", reason: previousReason)
         }
         return font
+    }
+
+    /// GET /fonts/moderation/duplicates — «esta es la misma que aquella», pendientes.
+    ///
+    /// Existe porque sin esto la sugerencia **no llegaba a ninguna parte**: quien ve el
+    /// duplicado casi nunca es quien puede marcarlo (medido: 7 personas llegan al nivel y
+    /// solo 1 a los ocho días), así que el comentario se quedaba en la ficha esperando a
+    /// que alguien pasara por allí a leerlo. Con una fuente triplicada en Castellcir, lo
+    /// que pasó de verdad es que el vecino mandó un correo.
+    ///
+    /// **La cola se vacía sola** cuando la fuente acaba marcada como duplicada: no hay
+    /// estado nuevo que mantener, se mira `fonts.duplicate_of`. Lo que sí necesita un
+    /// gesto es descartar la sugerencia equivocada, y para eso está `resolve`.
+    @Sendable func duplicateSuggestions(req: Request) async throws -> [DuplicateSuggestion] {
+        let actor = try req.auth.require(User.self)
+        guard actor.canModerate else { throw Abort(.forbidden) }
+        guard let sql = req.db as? SQLDatabase else { throw Abort(.internalServerError) }
+        return try await sql.raw("""
+            SELECT r.id, r.message, r.created_at AS "createdAt",
+                   u.username,
+                   f.id AS "fontID", f.name AS "fontName",
+                   g.id AS "otherID", g.name AS "otherName",
+                   (SELECT count(*) FROM font_comments c WHERE c.font_id = f.id)::int AS "fontComments",
+                   (SELECT count(*) FROM font_comments c WHERE c.font_id = g.id)::int AS "otherComments"
+            FROM font_reports r
+            JOIN fonts f ON f.id = r.font_id
+            JOIN fonts g ON g.id = r.duplicate_of
+            LEFT JOIN users u ON u.id = r.user_id
+            WHERE r.duplicate_of IS NOT NULL
+              AND r.resolved_at IS NULL
+              -- Ya decidido: la ficha está marcada, así que no hay nada que atender.
+              AND f.duplicate_of IS NULL
+            ORDER BY r.created_at DESC
+            LIMIT 100
+            """).all(decoding: DuplicateSuggestion.self)
     }
 
     /// GET /fonts/moderation/queue — altas recientes hechas por cuentas que aún no
@@ -1210,4 +1246,22 @@ extension NearQuery: Validatable {
         validations.add("long", as: Double.self, is: .range(-180...180))
         validations.add("quantity", as: Int.self, is: .range(1...), required: false)
     }
+}
+
+/// Una sugerencia de duplicado pendiente de atender, con lo justo para decidir.
+///
+/// Lleva **el recuento de reseñas de las dos** porque es lo que ordena la decisión: la que
+/// tiene historia detrás es casi siempre la que hay que conservar, y marcarla al revés
+/// esconde el trabajo de gente que sí pasó por allí.
+struct DuplicateSuggestion: Content, Decodable {
+    let id: UUID
+    let message: String
+    let createdAt: Date?
+    let username: String?
+    let fontID: UUID
+    let fontName: String?
+    let otherID: UUID
+    let otherName: String?
+    let fontComments: Int
+    let otherComments: Int
 }

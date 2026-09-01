@@ -110,6 +110,7 @@ import { agrupaEnHilos } from '../lib/reportThread'
 import { TextoRico } from '../components/RichText'
 import { TextoLargo } from '../components/TextoLargo'
 import { FontHiddenNotice, FontMaintenance } from '../components/FontMaintenance'
+import { SugerirDuplicado } from '../components/SugerirDuplicado'
 import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 import { ConfidenceChip } from '../components/ConfidenceChip'
@@ -1780,6 +1781,13 @@ export function FontDetailPage() {
       </Box>
 
       <FontMaintenance font={font} onChanged={() => { load().catch(() => {}) }} />
+
+      {/* Señalar un duplicado lo puede hacer cualquiera; decidirlo sigue siendo del nivel
+          5. Hasta ahora quien veía el duplicado —el vecino que conoce el pueblo— no tenía
+          botón ninguno y acababa escribiendo un correo: pasó con una fuente triplicada en
+          Castellcir. Y la capacidad de verdad la alcanza hoy una sola persona que no sea
+          del equipo, así que esperar a que la vea es esperar sentado. */}
+      <SugerirDuplicado font={font} onPosted={() => { load().catch(() => {}) }} />
 
       {user && user.id !== font.creator?.id && (
         <Button size="small" color="inherit" startIcon={<OutlinedFlagIcon />} sx={{ mt: 2, color: 'text.secondary' }}

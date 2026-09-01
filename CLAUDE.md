@@ -3859,6 +3859,51 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   lección de siempre y van dos veces: **la suite entera antes de subir**, no la filtrada,
   justo cuando se cambia el significado por defecto de algo.
 
+## Señalar un duplicado lo puede hacer cualquiera; decidirlo, no
+
+- **El hueco**: marcar una fuente como duplicada es del nivel 5 (`markDuplicate`) y hoy
+  lo alcanza **una sola persona que no sea del equipo** — medido: 7 llegan a las gotas de
+  Riachuelo y solo 1 a los ocho días. Quien ve el duplicado casi nunca es esa persona: es
+  el vecino que conoce el pueblo, que no tenía botón ninguno. Lo que pasó de verdad, con
+  la Font de La Vall triplicada en Castellcir, es que mandó un correo.
+- Ahora `POST /fonts/:id/report` acepta `duplicateOf`, y eso es **una sugerencia, no una
+  decisión**: no esconde nada del mapa. La asimetría es la misma de siempre —añadir donde
+  no había nada solo puede mejorar; retirar un punto de la vista de todo el mundo no
+  debería ser la opinión de uno.
+- **Nunca es una incidencia, y lo fuerza el servidor** aunque el cliente marque las dos
+  cosas. De `is_incident` cuelgan las gotas, las novedades, el correo semanal, los avisos
+  urgentes y el recuento de averías abiertas de un municipio: un duplicado no es una
+  fuente rota, y colarlo ahí le enseñaría a un ayuntamiento averías que no existen — que
+  es justo lo que la bandera de incidencias vino a arreglar. Hay test, verificado
+  quitando la condición.
+- **Una columna y no una tabla ni un `IncidentKind`.** Un `IncidentKind` nuevo era lo
+  cómodo y contaminaba el recuento; una tabla propia obligaba a duplicar autor, texto,
+  fecha, edición, borrado y moderación para añadir un UUID. Con la fila sin marcar como
+  incidencia nace inerte para los seis consumidores.
+- Rechaza señalarse a sí misma y **apuntar a una que ya es duplicada** —una cadena que
+  nadie sabe seguir—, la misma guarda que ya tenía `markDuplicate`. Y una respuesta no
+  puede señalar nada.
+- **Carril propio en `/admin/moderation`** (`GET /fonts/moderation/duplicates`), no una
+  tarjeta de denuncia: aquí no hay nada que sancionar, hay que decidir **cuál de las dos
+  fichas se queda**. Por eso la fila lleva el **recuento de reseñas de las dos**: la que
+  tiene historia detrás es casi siempre la buena, y marcarla al revés esconde el trabajo
+  de gente que sí pasó por allí.
+- **La cola se vacía sola** cuando la ficha acaba marcada: se mira `fonts.duplicate_of`,
+  sin estado nuevo que mantener. Lo que sí necesita un gesto es descartar la sugerencia
+  equivocada, y para eso `resolve` acepta ahora también las de duplicado — sin eso una
+  sugerencia errónea se quedaría en la cola para siempre.
+- Confirmar desde el panel usa **la misma ruta** que el botón de la ficha, no una de
+  administración aparte: dos puertas con reglas distintas para lo mismo es como se acaba
+  teniendo dos comportamientos.
+- El selector de fuente vecina se **extrajo** a `ElegirFuenteCercana` en vez de copiarlo:
+  los metros, el orden por distancia, el filtro y el «no hay vecinas» tienen que decir lo
+  mismo en las dos puertas, porque son la misma pregunta hecha por dos personas distintas.
+- Quien **sí** puede marcarlo no ve el botón de sugerir: ya tiene el suyo en el bloque de
+  mantenimiento, y dos botones parecidos que hacen cosas distintas es peor que uno.
+- Aviso de siempre, y van tres: añadir `duplicateOf` a `CreateReportDTO` rompió **siete
+  llamadas** en los tests y el compilador las cazó todas. Por eso ese DTO no lleva un
+  init con valores por defecto.
+
 ## Confianza del estado de una fuente
 
 - Es una categoría explicable, no una puntuación opaca: **confirmada**, **informe

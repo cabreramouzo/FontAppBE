@@ -25,6 +25,13 @@ final class FontReport: Model, Content, @unchecked Sendable {
     /// nivel, y al borrar el padre la respuesta se queda suelta en vez de desaparecer.
     @OptionalParent(key: "parent_id") var parent: FontReport?
     @Field(key: "is_incident") var isIncident: Bool
+    /// A qué otra fuente se parece, si alguien lo ha sugerido. Ver
+    /// `AddDuplicateSuggestionToFontReport`.
+    ///
+    /// **Es una sugerencia, no una decisión.** Quien la escribe no esconde nada del mapa;
+    /// eso sigue siendo `Capabilities.markDuplicate`, y con razón: retirar un punto de la
+    /// vista de todo el mundo no debería ser la opinión de uno.
+    @OptionalParent(key: "duplicate_of") var duplicateOf: Font?
     /// Qué clase de avería, si lo es. Ver `IncidentKind`.
     @OptionalField(key: "incident_kind") var incidentKind: IncidentKind?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
@@ -41,7 +48,8 @@ final class FontReport: Model, Content, @unchecked Sendable {
     init() {}
 
     init(id: UUID? = nil, fontID: UUID, userID: UUID? = nil, message: String,
-         isIncident: Bool = true, incidentKind: IncidentKind? = nil, parentID: UUID? = nil) {
+         isIncident: Bool = true, incidentKind: IncidentKind? = nil, parentID: UUID? = nil,
+         duplicateOf: UUID? = nil) {
         self.id = id
         self.$font.id = fontID
         self.$user.id = userID
@@ -49,6 +57,7 @@ final class FontReport: Model, Content, @unchecked Sendable {
         self.isIncident = isIncident
         self.incidentKind = incidentKind
         self.$parent.id = parentID
+        self.$duplicateOf.id = duplicateOf
     }
 }
 

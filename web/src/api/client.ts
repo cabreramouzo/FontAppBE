@@ -133,6 +133,14 @@ export interface PasskeySummary { id: string; label: string; createdAt?: string;
 export interface InteractionSummary { event: string; clicks: number; sessions: number }
 /** `visits` son sesiones de pestaña, no personas: quien abra el enlace tres días cuenta tres. */
 export interface CampaignSummary { source: string; visits: number; hits: number; signups: number }
+/** Una sugerencia de duplicado pendiente. `*Comments` decide cuál conservar: la que tiene
+ *  historia detrás es casi siempre la buena. */
+export interface DuplicateSuggestion {
+  id: string; message: string; createdAt?: string; username?: string | null
+  fontID: string; fontName?: string | null
+  otherID: string; otherName?: string | null
+  fontComments: number; otherComments: number
+}
 export interface OnlineUser { id: string; username: string; lastSeenAt: string }
 export interface UserActivityRankRow { id: string; username: string; createdAt: string | null; lastSeenAt: string | null }
 export interface UserActivityRanking { mostRecent: UserActivityRankRow[]; leastRecent: UserActivityRankRow[]; untrackedCount: number }
@@ -458,6 +466,24 @@ export async function createReport(fontID: string, message: string, kind?: Incid
     body: JSON.stringify({ message, isIncident: !!kind, incidentKind: kind, parentID }),
   })
 }
+
+/**
+ * «Esta fuente es la misma que aquella.» Lo puede decir cualquiera con sesión.
+ *
+ * Es una **sugerencia**: no esconde nada del mapa —eso sigue siendo del nivel 5— y viaja
+ * como comentario, así que no cuenta como avería abierta en ninguna parte. El servidor lo
+ * fuerza; el cliente no puede convertirlo en incidencia aunque lo intente.
+ */
+export async function suggestDuplicate(fontID: string, of: string, message: string): Promise<ReportResponse> {
+  return apiFetch<ReportResponse>(`/fonts/${fontID}/report`, {
+    method: 'POST',
+    body: JSON.stringify({ message, duplicateOf: of }),
+  })
+}
+
+/** Sugerencias de duplicado pendientes de atender. Moderador o superior. */
+export const getDuplicateSuggestions = () =>
+  apiFetch<DuplicateSuggestion[]>('/fonts/moderation/duplicates')
 
 /** Marca o desmarca un comentario como incidencia. Autor o moderador+. */
 export async function setReportIncident(

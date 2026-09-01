@@ -72,7 +72,8 @@ final class ReportThreadTests: XCTestCase {
             try req.content.encode(CreateReportDTO(message: texto,
                                                    isIncident: comoIncidencia ? true : nil,
                                                    incidentKind: comoIncidencia ? .broken : nil,
-                                                   parentID: try padre.requireID()))
+                                                   parentID: try padre.requireID(),
+                                                   duplicateOf: nil))
         }, afterResponse: espera)
     }
 
@@ -274,6 +275,84 @@ final class ReportThreadTests: XCTestCase {
                 let lista = try res.content.decode([FontReportController.AdminReport].self)
                 XCTAssertEqual(lista.count, 1, "solo el comentario, no su respuesta")
             }
+        }
+    }
+
+    /// Señalar un duplicado es un comentario, **nunca** una incidencia: de esa marca
+    /// cuelgan las gotas, las novedades, el correo semanal, los avisos urgentes y el
+    /// recuento de averías abiertas de un municipio. Un duplicado no es una fuente rota,
+    /// y colarlo ahí le enseñaría a un ayuntamiento averías que no existen.
+    func testSenalarDuplicadoNuncaEsIncidencia() async throws {
+        try await withApp { app in
+            let (_, token) = try await usuario(app, "vecina")
+            let buena = try await fuente(app)
+            let mala = try await fuente(app)
+
+            var reportID: UUID?
+            // Se piden LAS DOS cosas a propósito: aunque el cliente marque incidencia,
+            // señalar un duplicado gana y la fila queda inerte.
+            try await app.test(.POST, "fonts/\(try mala.requireID())/report", headers: bearer(token),
+                               beforeRequest: { req in
+                try req.content.encode(CreateReportDTO(message: "És la mateixa que la del costat",
+                                                       isIncident: true, incidentKind: .broken,
+                                                       parentID: nil, duplicateOf: try buena.requireID()))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .created)
+                let r = try res.content.decode(ReportResponse.self)
+                XCTAssertFalse(r.isIncident, "Un duplicado no es una avería.")
+                XCTAssertNil(r.incidentKind)
+                XCTAssertEqual(r.duplicateOf, try buena.requireID())
+                reportID = r.id
+            })
+            XCTAssertNotNil(reportID)
+
+            // Y llega a la cola, que es lo que faltaba: sin esto la sugerencia se quedaba
+            // en la ficha esperando a que alguien pasara por allí a leerla.
+            let (mod, suyo) = try await usuario(app, "moderadup")
+            mod.role = .moderator
+            try await mod.save(on: app.db)
+            try await app.test(.GET, "fonts/moderation/duplicates", headers: bearer(suyo)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let filas = try res.content.decode([DuplicateSuggestion].self)
+                let fila = try XCTUnwrap(filas.first { $0.fontID == (try? mala.requireID()) })
+                XCTAssertEqual(fila.otherID, try buena.requireID())
+            }
+
+            // Al marcarla de verdad la cola se vacía sola: no hay estado nuevo que
+            // mantener, se mira `fonts.duplicate_of`.
+            mala.$duplicateOf.id = try buena.requireID()
+            try await mala.save(on: app.db)
+            try await app.test(.GET, "fonts/moderation/duplicates", headers: bearer(suyo)) { res in
+                let filas = try res.content.decode([DuplicateSuggestion].self)
+                XCTAssertFalse(filas.contains { $0.fontID == (try? mala.requireID()) })
+            }
+        }
+    }
+
+    /// Señalarse a sí misma no dice nada, y apuntar a una que ya es duplicada deja una
+    /// cadena que nadie sabe seguir. Es la misma guarda que ya tiene `markDuplicate`.
+    func testSenalarDuplicadoRechazaSiMismaYCadenas() async throws {
+        try await withApp { app in
+            let (_, token) = try await usuario(app, "cadena")
+            let a = try await fuente(app)
+            let b = try await fuente(app)
+            let c = try await fuente(app)
+            b.$duplicateOf.id = try a.requireID()
+            try await b.save(on: app.db)
+
+            try await app.test(.POST, "fonts/\(try a.requireID())/report", headers: bearer(token),
+                               beforeRequest: { req in
+                try req.content.encode(CreateReportDTO(message: "sóc jo mateixa", isIncident: nil,
+                                                       incidentKind: nil, parentID: nil,
+                                                       duplicateOf: try a.requireID()))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .badRequest) })
+
+            try await app.test(.POST, "fonts/\(try c.requireID())/report", headers: bearer(token),
+                               beforeRequest: { req in
+                try req.content.encode(CreateReportDTO(message: "és com la b", isIncident: nil,
+                                                       incidentKind: nil, parentID: nil,
+                                                       duplicateOf: try b.requireID()))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .badRequest) })
         }
     }
 }

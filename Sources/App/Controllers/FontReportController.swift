@@ -157,7 +157,13 @@ struct FontReportController: RouteCollection {
         }
         // Un comentario no se «resuelve»: no hay nada que arreglar. Si de verdad lo era,
         // primero se marca como incidencia y después se cierra.
-        guard report.isIncident else {
+        //
+        // La excepción es señalar un duplicado: no es una avería —por eso no cuenta como
+        // tal en ninguna parte— pero sí es algo que alguien tiene que **atender**, y sin
+        // poder darlo por visto una sugerencia equivocada se quedaría en la cola para
+        // siempre. La cola se vacía sola cuando la fuente acaba marcada; esto es para la
+        // otra mitad, cuando la respuesta es «no, son dos fuentes distintas».
+        guard report.isIncident || report.$duplicateOf.id != nil else {
             throw AppError(.badRequest, "report.notAnIncident", "Esto es un comentario, no una incidencia")
         }
         let userID = try user.requireID()
@@ -326,14 +332,44 @@ struct FontReportController: RouteCollection {
             padre = p
         }
 
-        let esIncidencia = padre == nil && (dto.isIncident ?? false)
+        // ## Sugerir un duplicado
+        //
+        // Lo comprueba el servidor por lo mismo que lo anterior: la fila resultante tiene
+        // que quedar **inerte** para el resto del sistema. Se guarda como comentario —
+        // nunca como incidencia— para que no cuente como avería abierta en el informe de
+        // un ayuntamiento; un duplicado no es una fuente rota.
+        if let of = dto.duplicateOf {
+            guard padre == nil else {
+                throw AppError(.badRequest, "report.replyNotDuplicate",
+                               "Una respuesta no puede señalar un duplicado")
+            }
+            guard of != fontID else {
+                throw AppError(.badRequest, "font.duplicateSelf",
+                               "Una fuente no puede ser duplicada de sí misma")
+            }
+            guard let otra = try await Font.find(of, on: req.db) else {
+                throw AppError(.notFound, "font.notFound", "No se ha encontrado esa fuente")
+            }
+            // Apuntar a una que ya es duplicada deja una cadena que nadie sabe seguir, y
+            // es la misma guarda que ya tiene `markDuplicate` al decidirlo de verdad.
+            guard otra.$duplicateOf.id == nil else {
+                throw AppError(.badRequest, "font.duplicateChain",
+                               "Esa fuente ya está marcada como duplicada de otra")
+            }
+        }
+
+        // Señalar un duplicado nunca es una incidencia, aunque el cliente marque las dos
+        // cosas: es la marca que mantiene la fila fuera de las gotas, las novedades, el
+        // correo semanal, los avisos urgentes y el recuento de averías de un municipio.
+        let esIncidencia = padre == nil && dto.duplicateOf == nil && (dto.isIncident ?? false)
         let report = FontReport(fontID: fontID, userID: try user.requireID(), message: dto.message,
                                 isIncident: esIncidencia,
                                 // El tipo solo tiene sentido si es una incidencia: guardarlo
                                 // en un comentario dejaría filas que dicen «rota» sobre algo
                                 // que nadie ha declarado avería.
                                 incidentKind: esIncidencia ? dto.incidentKind : nil,
-                                parentID: padre?.id)
+                                parentID: padre?.id,
+                                duplicateOf: dto.duplicateOf)
         try await report.save(on: req.db)
 
         // A quien escribió el comentario al que respondes. Va con `try?`: perder la
@@ -557,6 +593,9 @@ struct CreateReportDTO: Content {
     /// De qué comentario cuelga, si es una respuesta. Ver `create`: solo un nivel, y una
     /// respuesta **nunca** es incidencia.
     let parentID: UUID?
+    /// «Esta fuente es la misma que aquella.» Sugerencia de cualquiera, no una decisión:
+    /// esconder el punto del mapa sigue siendo `Capabilities.markDuplicate`.
+    let duplicateOf: UUID?
 }
 
 extension CreateReportDTO: Validatable {
@@ -599,6 +638,9 @@ struct ReportResponse: Content {
     let likedByMe: Bool
     /// De qué comentario cuelga, si es una respuesta. El cliente agrupa con esto.
     let parentID: UUID?
+    /// A qué fuente se parece, si alguien lo ha señalado. La ficha lo pinta como enlace
+    /// para poder comparar las dos antes de decidir nada.
+    let duplicateOf: UUID?
 
     init(_ report: FontReport, username: String?, staff: UserRole? = nil, resolverName: String? = nil,
          likes: LikeAgg? = nil) {
@@ -617,6 +659,7 @@ struct ReportResponse: Content {
         self.likes = likes?.count ?? 0
         self.likedByMe = likes?.mine ?? false
         self.parentID = report.$parent.id
+        self.duplicateOf = report.$duplicateOf.id
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -639,5 +682,6 @@ struct ReportResponse: Content {
         try c.encode(likes, forKey: .likes)
         try c.encode(likedByMe, forKey: .likedByMe)
         try c.encode(parentID, forKey: .parentID)
+        try c.encode(duplicateOf, forKey: .duplicateOf)
     }
 }

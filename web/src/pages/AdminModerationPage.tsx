@@ -10,9 +10,10 @@ import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { Flag, ModerationSource } from '../api/types'
+import type { DuplicateSuggestion } from '../api/client'
 import {
   approvePhotoRemoval, approveSourceLimitExemption, assetUrl, deleteComment, deleteSecondaryPhoto, describeError, dismissFlag,
-  getFlags, getModerationSources, hideFontAbuse, restoreFontAbuse,
+  getDuplicateSuggestions, getFlags, getModerationSources, hideFontAbuse, markDuplicate, resolveReport, restoreFontAbuse,
   restrictUserPosting, reviewModerationSource,
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -21,7 +22,7 @@ import { Skeleton } from '../components/Skeleton'
 import { canModerate, isOwner } from '../lib/roles'
 import { timeAgo } from '../lib/time'
 
-type Filter = 'all' | 'reports' | 'new'
+type Filter = 'all' | 'reports' | 'new' | 'dups'
 type Reason = 'fake' | 'spam' | 'abuse'
 
 type FlagGroup = {
@@ -36,6 +37,7 @@ export function AdminModerationPage() {
   const navigate = useNavigate()
   const [flags, setFlags] = useState<Flag[] | null>(null)
   const [sources, setSources] = useState<ModerationSource[] | null>(null)
+  const [dups, setDups] = useState<DuplicateSuggestion[] | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -43,6 +45,7 @@ export function AdminModerationPage() {
   const refresh = () => {
     getFlags().then(setFlags).catch((e) => setError(describeError(e, t)))
     getModerationSources().then(setSources).catch((e) => setError(describeError(e, t)))
+    getDuplicateSuggestions().then(setDups).catch(() => setDups([]))
   }
 
   useEffect(() => {
@@ -52,6 +55,28 @@ export function AdminModerationPage() {
     // `t` cambia al cambiar idioma; recargar por eso no aporta nada.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading, navigate])
+
+  /**
+   * Atender una sugerencia de duplicado: marcarla de verdad, o descartarla.
+   *
+   * Confirmar usa **la misma ruta** que el botón de la ficha (`markDuplicate`), no una de
+   * administración aparte: dos puertas con reglas distintas para lo mismo es como se
+   * acaba teniendo dos comportamientos. Descartar cierra el comentario, que es lo único
+   * que saca de la cola una sugerencia equivocada — la acertada se va sola en cuanto la
+   * ficha queda marcada.
+   */
+  async function resuelveDuplicado(d: DuplicateSuggestion, confirmar: boolean) {
+    setError(''); setBusy(d.id)
+    try {
+      if (confirmar) await markDuplicate(d.fontID, d.otherID)
+      else await resolveReport(d.fontID, d.id, true)
+      refresh()
+    } catch (e) {
+      setError(describeError(e, t))
+    } finally {
+      setBusy(null)
+    }
+  }
 
   const groups = useMemo<FlagGroup[]>(() => {
     const byTarget = new Map<string, Flag[]>()
@@ -134,13 +159,43 @@ export function AdminModerationPage() {
         <Chip clickable color={filter === 'all' ? 'primary' : 'default'} label={`${t('moderation.all')} · ${total}`} onClick={() => setFilter('all')} />
         <Chip clickable color={filter === 'reports' ? 'primary' : 'default'} label={`${t('moderation.reported')} · ${groups.length}`} onClick={() => setFilter('reports')} />
         <Chip clickable color={filter === 'new' ? 'primary' : 'default'} label={`${t('moderation.newAccounts')} · ${sources?.length ?? 0}`} onClick={() => setFilter('new')} />
+        <Chip clickable color={filter === 'dups' ? 'primary' : 'default'} label={`${t('moderation.duplicates')} · ${dups?.length ?? 0}`} onClick={() => setFilter('dups')} />
       </Stack>
 
       {(flags === null || sources === null) && <Skeleton lines={5} />}
       {flags !== null && sources !== null && total === 0 && <Alert severity="success">{t('moderation.empty')}</Alert>}
 
       <Stack spacing={2}>
-        {filter !== 'new' && groups.map((group) => (
+        {/* Carril propio y no una tarjeta de denuncia: aquí no hay nada que sancionar ni
+            nadie a quien avisar, hay que **decidir cuál de las dos fichas se queda**. Y
+            eso lo decide el recuento de reseñas, que por eso va delante: la que tiene
+            historia detrás es casi siempre la buena, y marcarla al revés esconde el
+            trabajo de gente que sí pasó por allí. */}
+        {filter === 'dups' && (dups ?? []).map((d) => (
+          <Box key={d.id} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              {d.username ? `@${d.username}` : t('font.unnamed')} · {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : ''}
+            </Typography>
+            <Typography sx={{ mt: 0.5 }}>
+              <Link component={RouterLink} to={`/fonts/${d.fontID}`}>{d.fontName || t('font.unnamed')}</Link>
+              {' '}<Box component="span" sx={{ color: 'text.secondary' }}>({t('moderation.dupReviews', { n: String(d.fontComments) })})</Box>
+              {' → '}
+              <Link component={RouterLink} to={`/fonts/${d.otherID}`}>{d.otherName || t('font.unnamed')}</Link>
+              {' '}<Box component="span" sx={{ color: 'text.secondary' }}>({t('moderation.dupReviews', { n: String(d.otherComments) })})</Box>
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 1 }}>
+              <Button size="small" variant="outlined" disabled={busy === d.id}
+                      onClick={() => resuelveDuplicado(d, true)}>
+                {t('moderation.dupConfirm')}
+              </Button>
+              <Button size="small" disabled={busy === d.id} onClick={() => resuelveDuplicado(d, false)}>
+                {t('moderation.dupDismiss')}
+              </Button>
+            </Stack>
+          </Box>
+        ))}
+
+        {filter !== 'new' && filter !== 'dups' && groups.map((group) => (
           <ModerationCard
             key={group.key}
             title={group.first.targetText || group.first.fontName || t('font.unnamed')}
@@ -174,7 +229,7 @@ export function AdminModerationPage() {
           />
         ))}
 
-        {filter !== 'reports' && (sources ?? []).map((source) => (
+        {filter !== 'reports' && filter !== 'dups' && (sources ?? []).map((source) => (
           <ModerationCard
             key={`new:${source.id}`}
             title={source.name || t('font.unnamed')}
