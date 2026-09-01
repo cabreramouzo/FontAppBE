@@ -542,6 +542,18 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   es un evento independiente dentro de la misma sesión anónima; las barras comparan
   sesiones del período, no personas ni una conversión causal perfecta. Nunca se guarda
   el texto buscado, coordenadas, filtros concretos, URL, dispositivo ni detalle del error.
+- **`map_nearby`: la lista de cercanas se cuenta aparte del FAB.** Era de lo poco del
+  mapa que no mandaba nada, así que «no la usa nadie» era una intuición y no un dato. Y
+  no puede compartir evento con `map_locate`: el FAB centra **sin** abrir la lista
+  (`locate(false)`) y el chip centra **y** la abre (`locate(true)`), o sea dos intenciones
+  distintas — el mismo error que ya impedía leer el embudo de `map_add_font`.
+  El chip **se queda dentro de la hoja «Filtros»** aunque el rótulo no lo nombre: la
+  pantalla ya lleva diez controles flotantes y sacarlo sería empeorar lo que más se ve
+  para arreglar lo que menos. Decisión del autor, y la medición es justo lo que dirá si
+  vale la pena moverlo o retirarlo.
+  Si se retira algún día, lo que hay que salvar es el `WorthChip`: la lista es uno de los
+  dos únicos sitios donde se ve **antes de decidir a cuál ir** que una fuente olvidada
+  paga catorce veces más, y el mapa no lo enseña.
 - **Presencia de usuarios:** `POST /users/presence` actualiza `last_seen_at` para la propia
   sesión como máximo cada 2 minutos; el cliente lo llama al entrar, volver a primer plano
   y cada 5 minutos mientras está visible. `GET /users/stats/online` es solo admin y devuelve

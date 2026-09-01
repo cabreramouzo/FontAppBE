@@ -16,6 +16,11 @@ struct InteractionAnalyticsController: RouteCollection {
         "map_filters", "map_missions", "map_locate", "map_add_font", "map_add_font_button", "map_add_font_long_press",
         "map_add_font_signed_out", "map_long_press_signed_out", "map_export_gpx", "map_gpx",
         "map_offline",
+        // La lista de cercanas. Es de lo poco del mapa que no mandaba nada, así que «no
+        // la usa nadie» era una intuición y no un dato — y vive dentro de la hoja de
+        // filtros, donde cuesta encontrarla. Sin esta línea el evento se descartaría en
+        // silencio, que es justo lo que le pasó a `map_quick_review` durante semanas.
+        "map_nearby",
         // Reseñar de un toque desde el globo del mapa, y la foto que se ofrece justo
         // después cuando la fuente no tiene ninguna. Los dos son la única forma de saber
         // si el atajo trae reseñas que antes no llegaban o solo las mueve de sitio.

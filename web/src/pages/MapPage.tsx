@@ -1641,8 +1641,11 @@ export function MapPage() {
       : chipSx(activo))
     return (
       <>
+        {/* Cuenta aparte del FAB de «centrar en mí» (`map_locate`), que hace media cosa:
+            centra sin abrir la lista. Mezclarlos impediría leer lo único que se quiere
+            saber aquí — si esta lista, escondida dentro de «Filtros», la usa alguien. */}
         <Chip clickable variant="outlined" icon={<MyLocationIcon />} label={noEmoji(t('map.near'))}
-              onClick={() => { locate(true); if (enHoja) setControlsOpen(false) }} sx={sxChip(false)} />
+              onClick={() => { trackInteraction('map_nearby'); locate(true); if (enHoja) setControlsOpen(false) }} sx={sxChip(false)} />
         <Chip
           clickable
           variant={onlyReliable ? 'filled' : 'outlined'}
