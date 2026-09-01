@@ -359,6 +359,7 @@ const ca: Dict = {
     // Fase 6: què obre el nivell.
   'game.unlocked': 'El teu nivell obre',
   'game.unlockedCount': 'El teu nivell obre {n} accions',
+  'game.needDays': 'Et falten {n} dies diferents amb aportacions perquè el teu nivell obri {acciones} accions. Es compten dies i no aportacions: no és desconfiança, és que aquestes accions toquen la feina d’altri.',
   'game.willUnlock': 'Més endavant obriràs',
   'game.can.addSecondaryPhoto': 'Afegir més fotos a una font',
   'game.can.resolveIncident': 'Donar per resolta una incidència aliena',
@@ -1753,6 +1754,7 @@ const es: Dict = {
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Tu nivel abre',
   'game.unlockedCount': 'Tu nivel abre {n} acciones',
+  'game.needDays': 'Te faltan {n} días distintos con aportaciones para que tu nivel abra {acciones} acciones. Se cuentan días y no aportaciones: no es desconfianza, es que estas acciones tocan el trabajo de otros.',
   'game.willUnlock': 'Más adelante abrirás',
   'game.can.addSecondaryPhoto': 'Añadir más fotos a una fuente',
   'game.can.resolveIncident': 'Dar por resuelta una incidencia ajena',
@@ -3138,6 +3140,7 @@ const it: Dict = {
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Il tuo livello sblocca',
   'game.unlockedCount': 'Il tuo livello apre {n} azioni',
+  'game.needDays': 'Ti mancano {n} giorni diversi con contributi perché il tuo livello sblocchi {acciones} azioni. Si contano i giorni e non i contributi: non è diffidenza, è che queste azioni toccano il lavoro altrui.',
   'game.willUnlock': 'Più avanti sbloccherai',
   'game.can.addSecondaryPhoto': 'Aggiungere altre foto a una fontana',
   'game.can.resolveIncident': 'Dare per risolta la segnalazione di un altro',
@@ -4523,6 +4526,7 @@ const gl: Dict = {
     // Fase 6: què obre el nivell.
   'game.unlocked': 'O teu nivel abre',
   'game.unlockedCount': 'O teu nivel abre {n} accións',
+  'game.needDays': 'Fáltanche {n} días distintos con achegas para que o teu nivel abra {acciones} accións. Cóntanse días e non achegas: non é desconfianza, é que estas accións tocan o traballo doutros.',
   'game.willUnlock': 'Máis adiante abrirás',
   'game.can.addSecondaryPhoto': 'Engadir máis fotos a unha fonte',
   'game.can.resolveIncident': 'Dar por resolta unha incidencia allea',
@@ -5908,6 +5912,7 @@ const eu: Dict = {
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Zure mailak irekitzen du',
   'game.unlockedCount': 'Zure mailak {n} ekintza irekitzen ditu',
+  'game.needDays': '{n} egun desberdin falta zaizkizu ekarpenekin zure mailak {acciones} ekintza ireki ditzan. Egunak kontatzen dira eta ez ekarpenak: ez da mesfidantza, ekintza hauek besteren lana ukitzen dutela baizik.',
   'game.willUnlock': 'Aurrerago irekiko duzu',
   'game.can.addSecondaryPhoto': 'Gehitu argazki gehiago iturri bati',
   'game.can.resolveIncident': 'Beste baten intzidentzia konpondutzat eman',
@@ -7293,6 +7298,7 @@ const en: Dict = {
     // Fase 6: què obre el nivell.
   'game.unlocked': 'Your level unlocks',
   'game.unlockedCount': 'Your level unlocks {n} actions',
+  'game.needDays': 'You need {n} more separate days with contributions for your level to open {acciones} actions. Days are counted, not contributions: it is not distrust — these actions touch other people\'s work.',
   'game.willUnlock': 'You will unlock later',
   'game.can.addSecondaryPhoto': 'Add more photos to a fountain',
   'game.can.resolveIncident': 'Mark someone else’s incident as resolved',
@@ -8668,6 +8674,7 @@ const fr: Dict = {
   'local.contributors': "{n} de votre part le tiennent à jour.",
   'game.unlocked': "Votre niveau se débloque",
   'game.unlockedCount': 'Votre niveau ouvre {n} actions',
+  'game.needDays': 'Il vous manque {n} jours différents avec des contributions pour que votre niveau ouvre {acciones} actions. On compte les jours et non les contributions : ce n\'est pas de la méfiance, c\'est que ces actions touchent au travail d\'autrui.',
   'game.willUnlock': "Vous débloquerez plus tard",
   'game.can.addSecondaryPhoto': "Ajouter plus de photos à une fontaine",
   'game.can.resolveIncident': "Marquer l'incident de quelqu'un d'autre comme résolu",
@@ -10027,6 +10034,7 @@ const pt: Dict = {
   'local.contributors': 'Mantêm entre {n} pessoas.',
   'game.unlocked': 'O teu nível abre',
   'game.unlockedCount': 'O teu nível abre {n} ações',
+  'game.needDays': 'Faltam-te {n} dias diferentes com contribuições para que o teu nível abra {acciones} ações. Contam-se dias e não contribuições: não é desconfiança, é que estas ações mexem no trabalho de outros.',
   'game.willUnlock': 'Mais tarde abrirás',
   'game.can.addSecondaryPhoto': 'Adicionar mais fotos a uma fonte',
   'game.can.resolveIncident': 'Dar como resolvida uma ocorrência alheia',

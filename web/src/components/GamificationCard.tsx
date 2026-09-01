@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
+import Link from '@mui/material/Link'
 import Button from '@mui/material/Button'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -198,6 +199,31 @@ export function GamificationCard() {
 
           El plural no se dobla porque no hace falta: el primer nivel que abre algo abre
           dos a la vez, así que `n` nunca vale 1. */}
+      {/* ## El caso de quien tiene el nivel y no los días
+          La tarjeta se calla cuando no abres nada, y con razón: listar permisos que no
+          tienes la convierte en una pantalla de bloqueos. Pero eso dejaba mudo justo el
+          caso que se reportó — nivel de sobra y días insuficientes, con la app diciendo
+          en otra pantalla «necesitas el nivel Arroyo» que ya tienes. Medido en
+          producción: **16 de 23 personas con aportaciones llegan a las gotas de Arroyo y
+          solo 2 a los ocho días**, así que no es un caso raro, es el estado normal.
+
+          Solo se dice cuando falta **una única cosa y es contable**: tienes las gotas de
+          algo y lo que falla son los días. Con cero gotas no sale nada, que es lo que
+          evita la pantalla de bloqueos. */}
+      {(() => {
+        const g = data.grant
+        if (!g || g.capabilities.length > 0 || !g.blockedBy.includes('activeDays')) return null
+        const alAlcance = (g.upcoming ?? []).filter((u) => u.gotes <= data.gotes).length
+        const faltan = (g.requiredActiveDays ?? 0) - (g.activeDays ?? 0)
+        if (alAlcance === 0 || faltan <= 0) return null
+        return (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+            {t('game.needDays', { n: String(faltan), acciones: String(alAlcance) })}{' '}
+            <Link component={RouterLink} to="/gamification">{t('gameHelp.readMore')}</Link>
+          </Typography>
+        )
+      })()}
+
       {(data.grant?.capabilities.length ?? 0) > 0 && (
         <Box sx={{ mt: 1.5 }}>
           <Button

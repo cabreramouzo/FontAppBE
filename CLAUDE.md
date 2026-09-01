@@ -176,7 +176,18 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
     lugar — el rótulo va dibujado dentro de la imagen y en castellano. `LEVEL_BADGES`
     (`lib/levelBadges.ts`) lista cuáles existen: sin entrada no se pide nada y el nivel
     sale solo con su nombre. Al redibujar una hay que subir `VERSION` de ese fichero.
-  - Fase 6: capacidades por nivel (`Gamification/Capabilities.swift`). **Apagadas por
+  - **Los 8 días son el requisito que de verdad manda, y hasta ahora nadie los veía.**
+  Medido en producción: de 23 cuentas con aportaciones liquidadas, **16 llegan a las 350
+  gotas de Arroyo y solo 2 a los ocho días** — o sea que 14 personas tienen el nivel y
+  no el requisito, que es el estado normal y no un caso raro. La tarjeta de `/me` se
+  callaba (con razón: listar permisos que no tienes la convierte en una pantalla de
+  bloqueos) y la única explicación estaba en un párrafo al pie de `/gamification`.
+  Ahora, **solo cuando falta una única cosa y es contable** —tienes las gotas de algo y
+  lo que falla son los días—, la tarjeta dice cuántos faltan y para cuántas acciones.
+  Con cero gotas no sale nada, que es lo que evita la pantalla de bloqueos.
+  El texto dice además **por qué se cuentan días**: no es desconfianza, es que estas
+  acciones tocan el trabajo de otros.
+- Fase 6: capacidades por nivel (`Gamification/Capabilities.swift`). **Apagadas por
     defecto**: hacen falta `GAMIFICATION_CAPABILITIES=true` *y* `GAMIFICATION_EPOCH`
     pasada, porque conceder escritura sobre puntos que `--rescore` puede reescribir da
     permisos que desaparecen solos. Además de las gotas: 8 días distintos con aportación
