@@ -946,13 +946,50 @@ struct FontController: RouteCollection {
         let quantity = min(max(1, params.quantity ?? 10), Self.maxNearQuantity)
         let delta = 0.5 // ~55 km a nivel del ecuador; suficiente como prefiltro.
 
-        let candidates = try await Font.visible(on: req.db)
-            .filter(\.$latitude >= params.lat - delta)
-            .filter(\.$latitude <= params.lat + delta)
-            .filter(\.$longitude >= params.long - delta)
-            .filter(\.$longitude <= params.long + delta)
-            .limit(Self.maxNearQuantity * 5) // cota de seguridad sobre el candidate set en memoria.
-            .all()
+        // ## El recorte tiene que ir ORDENADO, y aquí no lo estaba
+        //
+        // La caja de ±0,5° son unos 55 km de lado, así que en Castellcir incluye
+        // Barcelona entera. Recortar con un `LIMIT` **sin `ORDER BY`** deja que Postgres
+        // devuelva las filas que quiera —en la práctica, por orden físico, o sea la gran
+        // importación de OSM alrededor de la ciudad— y después Swift ordenaba por
+        // distancia *ese* montón arbitrario. Resultado medido con una captura: las
+        // «cercanas» de una fuente del Moianès salían todas a **44 km** y sin nombre.
+        //
+        // Y falla en silencio: hay resultados, están bien ordenados entre ellos y son
+        // fuentes de verdad. Solo se nota mirando los kilómetros.
+        //
+        // Se ordena por la distancia **euclídea aproximada** —con la longitud corregida
+        // por el coseno de la latitud— y no por haversine: sobre unos pocos kilómetros
+        // dan el mismo orden, y esta va dentro de SQL, donde Postgres la resuelve con un
+        // heap acotado por el `LIMIT`. El haversine exacto se sigue aplicando en Swift
+        // sobre el puñado que sobrevive, que es lo que se enseña.
+        let cosLat = cos(params.lat * .pi / 180)
+        var candidates: [Font]
+        if let sql = req.db as? SQLDatabase {
+            struct Row: Decodable { let id: UUID }
+            // Se piden tres veces las pedidas y no `quantity` justas: el orden final lo
+            // decide el haversine, y sobre el borde de la lista los dos criterios pueden
+            // discrepar. Con margen, la que entra por poco no se queda fuera antes.
+            let ids = try await sql.raw("""
+                SELECT id FROM fonts
+                WHERE \(unsafeRaw: Font.visibleSQL)
+                  AND latitude >= \(bind: params.lat - delta) AND latitude <= \(bind: params.lat + delta)
+                  AND longitude >= \(bind: params.long - delta) AND longitude <= \(bind: params.long + delta)
+                ORDER BY (latitude - \(bind: params.lat)) * (latitude - \(bind: params.lat))
+                       + (longitude - \(bind: params.long)) * (longitude - \(bind: params.long))
+                         * \(bind: cosLat * cosLat)
+                LIMIT \(bind: quantity * 3)
+                """).all(decoding: Row.self).map(\.id)
+            candidates = ids.isEmpty ? [] : try await Font.query(on: req.db).filter(\.$id ~~ ids).all()
+        } else {
+            candidates = try await Font.visible(on: req.db)
+                .filter(\.$latitude >= params.lat - delta)
+                .filter(\.$latitude <= params.lat + delta)
+                .filter(\.$longitude >= params.long - delta)
+                .filter(\.$longitude <= params.long + delta)
+                .limit(Self.maxNearQuantity * 5)
+                .all()
+        }
 
         let sorted = candidates
             .sorted {

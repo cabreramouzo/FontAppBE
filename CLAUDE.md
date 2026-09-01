@@ -1330,6 +1330,35 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   todas las reseñas históricas de hasta 3.000 fuentes; bajo varias peticiones concurrentes
   esos arrays fueron la segunda mitad del OOM. `OptimizeMapSummaries` mantiene el índice
   parcial `(font_id, created_at DESC)` de los comentarios que sí llevan estado.
+- **`/fonts/near` recortaba SIN ordenar, y llevaba así desde julio.** El prefiltro es una
+  caja fija de ±0,5° —unos 55 km de lado— y el recorte era `LIMIT 500` **sin `ORDER BY`**:
+  Postgres devolvía las filas que quisiera (en la práctica por orden del índice
+  `(latitude, longitude)`, o sea empezando por el borde sur de la caja) y solo **después**
+  Swift ordenaba por distancia ese montón arbitrario. Medido en producción con el código
+  viejo, la fuente «más cercana» que devolvía: **43,97 km en Castellcir, 49,74 en
+  Donostia**, 7,61 en el Pirineo. Barcelona salía bien de casualidad —media caja es mar,
+  así que el índice arranca ya cerca de la ciudad— y aun así su segunda pasa de 4,2 km a
+  171 m al arreglarlo.
+  · **No fue una regresión: se rompió sola al crecer los datos.** Ese `limit` está desde
+    el 14/07/2026, cuando la base era el Moianès sembrado y nunca había 500 fuentes en la
+    caja. Es literalmente el aviso de «ninguna cifra que salga de una base local sembrada
+    vale», cumplido en producción meses después y sin que nadie viera el momento.
+  · El arreglo ordena **dentro de SQL** por distancia euclídea aproximada, con la longitud
+    corregida por el coseno de la latitud, y recorta a `quantity * 3`; el haversine exacto
+    se sigue aplicando en Swift sobre lo que sobrevive. Medido: **5,4 ms**, `top-N
+    heapsort` sobre 11.710 filas usando el índice que ya existía.
+  · **`/missions` tiene la misma forma y NO falla**, y la diferencia enseña dónde está el
+    riesgo: su caja la deriva del radio que le pides (4 km → 0,036°), así que su
+    `LIMIT 3000` no llega a morder. Con `maxKm` = 30 sí podría en una ciudad densa, pero
+    el daño sería otro: allí todo lo que entra está dentro del radio, así que como mucho
+    se pierden las mejores paradas, no aparecen fuentes a 44 km.
+  · La lección general: **un `LIMIT` sin `ORDER BY` sobre un prefiltro geográfico es un
+    fallo silencioso** — hay resultados, van bien ordenados entre ellos y son fuentes de
+    verdad. Solo se ve mirando los kilómetros.
+  · Aviso al escribir su test: con las fuentes lejanas al **norte** el test **pasa con el
+    código roto**, porque el índice devuelve por latitud ascendente y la cercana sale
+    primero por casualidad. Tienen que ir al sur, que es la geometría del caso real.
+    Verificado en los dos sentidos.
 - **Ojo con el orden: `WHERE id = ANY(...)` devuelve por índice —o sea por UUID— y NUNCA
   en el orden del array.** El camino de Fluent hacía `fonts.map { ... }` y lo conservaba
   sin decirlo; al pasar el resumen a SQL, `GET /fonts/near` empezó a devolver las fuentes

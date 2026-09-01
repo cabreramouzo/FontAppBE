@@ -355,4 +355,37 @@ final class ReportThreadTests: XCTestCase {
             }, afterResponse: { res in XCTAssertEqual(res.status, .badRequest) })
         }
     }
+
+    /// `/fonts/near` recorta **ordenando por distancia**, no por orden físico.
+    ///
+    /// El recorte iba con un `LIMIT` sin `ORDER BY` sobre una caja de ±0,5° (unos 55 km),
+    /// así que en un sitio con una ciudad dentro de esa caja Postgres devolvía las filas
+    /// que quisiera —las importadas primero— y Swift ordenaba por distancia ese montón
+    /// arbitrario. Reportado con una captura: las «cercanas» salían todas a 44 km.
+    ///
+    /// Falla en silencio: hay resultados, van bien ordenados entre ellos y son fuentes de
+    /// verdad. Por eso el test mira **cuál** sale primero y no cuántas salen.
+    func testCercanasSeRecortanPorDistanciaYNoPorOrdenFisico() async throws {
+        try await withApp { app in
+            // Las lejanas van al SUR, y eso importa: el filtro de la caja usa el índice
+            // (latitude, longitude), así que las filas vuelven ordenadas por latitud
+            // ascendente. Poniéndolas al norte el fallo **no se reproduce** —la cercana
+            // sale primero por casualidad— y el test pasaba con el código roto. Es la
+            // geometría del caso real: Castellcir está al norte de Barcelona.
+            for i in 0..<40 {
+                let f = Font(name: "Lluny \(i)", latitude: 41.75 - 0.30,
+                             longitude: 2.16 + Double(i) * 0.0005)
+                try await f.save(on: app.db)
+            }
+            let alLado = Font(name: "Al costat", latitude: 41.7501, longitude: 2.1601)
+            try await alLado.save(on: app.db)
+
+            try await app.test(.GET, "fonts/near?lat=41.75&long=2.16&quantity=5") { res in
+                XCTAssertEqual(res.status, .ok)
+                let fs = try res.content.decode([FontSummary].self)
+                XCTAssertEqual(fs.first?.name, "Al costat",
+                               "La más cercana tiene que salir primero, no las importadas antes.")
+            }
+        }
+    }
 }
