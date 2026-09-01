@@ -3224,6 +3224,19 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - El **motivo de la anulación sale en castellano**, tal cual está guardado. Es a
   propósito: es la cadena que también imprime `gamification-sync`, y traducirla obligaría
   a mantener un diccionario paralelo de algo que solo lee quien administra.
+- **El campo sugiere nombres desde la segunda letra**, y no hizo falta ninguna ruta
+  nueva: `/mentions?q=` ya existe, ya pide sesión y ya devuelve **solo el nombre**. El
+  informe se pide por nombre y acordarse de si era `Dani_Ccir` o `dani_ccir` es imposible
+  — la búsqueda es `ILIKE`, así que escribir `cic` en cualquier caja encuentra
+  `ciclista_test`. Elegir de la lista consulta al momento: quien ha encontrado el nombre
+  ya ha dicho lo que quería, y pedirle además un clic es un paso de más.
+  · El mínimo de letras **lo pone el servidor** y no se escribe aquí: la misma regla en
+    dos sitios se separa el día que allí cambie. Son dos y no tres, que es más generoso.
+  · Va con `freeSolo` porque la lista **no lo cubre todo**: `/mentions` excluye las
+    cuentas anonimizadas y aquí también se puede pegar un UUID. Sin él, lo que no esté
+    sugerido dejaría de poder consultarse.
+  · Y con número de secuencia: se teclea más rápido de lo que contesta la red y las
+    respuestas no vuelven en orden. Mismo truco que `/fonts/map`.
 - Vive en la sección de roles de `/admin` porque son la misma pregunta por los dos lados:
   qué le hemos **dado** a alguien y qué se ha **ganado**.
 

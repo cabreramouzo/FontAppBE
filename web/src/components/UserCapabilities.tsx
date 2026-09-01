@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Stack from '@mui/material/Stack'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
+import Autocomplete from '@mui/material/Autocomplete'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
 import CheckCircleIcon from '@mui/icons-material/CheckCircleOutlined'
 import LockIcon from '@mui/icons-material/LockOutlined'
-import { describeError, getUserCapabilities } from '../api/client'
+import { describeError, getUserCapabilities, searchMentions } from '../api/client'
 import type { UserCapabilityReport } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
 import { abrePorRol, motivosDe, requisitosGenerales } from '../lib/capabilityBlockers'
@@ -27,20 +28,43 @@ import type { Motivo } from '../lib/capabilityBlockers'
  * permisos**. Nada de correo ni de ubicación de registro — eso vive en `/admin/users`,
  * que es de owner por llevar datos personales; esto es de admin porque no lleva ninguno.
  */
+/** Lo que se espera desde la última tecla antes de preguntar. */
+const ESPERA_MS = 250
+
 export function UserCapabilities() {
   const { t, lang } = useI18n()
   const [nombre, setNombre] = useState('')
+  const [sugerencias, setSugerencias] = useState<string[]>([])
   const [informe, setInforme] = useState<UserCapabilityReport | null>(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  // Una respuesta vieja no puede pisar a una nueva: se teclea más rápido de lo que
+  // contesta la red y las respuestas no vuelven en orden. Es el mismo número de secuencia
+  // que usa el mapa con `/fonts/map`.
+  const turno = useRef(0)
 
-  async function buscar(e: React.FormEvent) {
-    e.preventDefault()
+  // Sugerir nombres, porque acordarse de si era `Dani_Ccir` o `dani_ccir` es imposible y
+  // el informe se pide por nombre. Reutiliza `/mentions`, que ya existe, ya pide sesión y
+  // ya devuelve **solo el nombre**: no hacía falta ninguna ruta nueva ni exponer nada más.
+  useEffect(() => {
     const q = nombre.trim()
-    if (!q) return
+    // El mínimo lo pone el servidor (2). Escribirlo aquí sería tener la misma regla en
+    // dos sitios, y la nuestra se quedaría vieja el día que allí cambie.
+    if (q.length < 2) { setSugerencias([]); return }
+    const mio = ++turno.current
+    const id = setTimeout(() => {
+      searchMentions(q)
+        .then((nombres) => { if (mio === turno.current) setSugerencias(nombres) })
+        .catch(() => { if (mio === turno.current) setSugerencias([]) })
+    }, ESPERA_MS)
+    return () => clearTimeout(id)
+  }, [nombre])
+
+  async function mira(q: string) {
+    if (!q.trim()) return
     setError(''); setCargando(true)
     try {
-      setInforme(await getUserCapabilities(q))
+      setInforme(await getUserCapabilities(q.trim()))
     } catch (err) {
       setInforme(null)
       setError(describeError(err, t))
@@ -56,10 +80,22 @@ export function UserCapabilities() {
       <Typography variant="h6" gutterBottom>🔑 {t('admin.caps.title')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{t('admin.caps.hint')}</Typography>
 
-      <Stack component="form" direction="row" spacing={1} onSubmit={buscar} sx={{ mb: 2 }}>
-        <TextField
-          size="small" value={nombre} onChange={(e) => setNombre(e.target.value)}
-          label={t('admin.caps.search')} sx={{ flex: 1, maxWidth: 320 }}
+      <Stack component="form" direction="row" spacing={1} sx={{ mb: 2 }}
+             onSubmit={(e) => { e.preventDefault(); void mira(nombre) }}>
+        <Autocomplete
+          freeSolo
+          // `freeSolo` porque la lista no lo cubre todo: las cuentas anonimizadas no
+          // salen en `/mentions` y aquí también se puede pegar un UUID. Sin él, escribir
+          // algo que no está sugerido dejaría de poder consultarse.
+          options={sugerencias}
+          filterOptions={(x) => x}  // filtra el servidor; volver a filtrar aquí escondería resultados
+          inputValue={nombre}
+          onInputChange={(_, v) => setNombre(v)}
+          // Elegir de la lista consulta al momento: quien ha encontrado el nombre ya ha
+          // dicho lo que quería, y pedirle además un clic en «Mirar» es un paso de más.
+          onChange={(_, v) => { if (typeof v === 'string') { setNombre(v); void mira(v) } }}
+          sx={{ flex: 1, maxWidth: 320 }}
+          renderInput={(params) => <TextField {...params} size="small" label={t('admin.caps.search')} />}
         />
         <Button type="submit" variant="outlined" disabled={cargando || !nombre.trim()}>
           {t('admin.caps.lookUp')}
