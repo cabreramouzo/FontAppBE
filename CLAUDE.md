@@ -540,6 +540,21 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   cuentas vistas más recientemente y las diez más antiguas o aún no observadas, usando el
   mismo `last_seen_at`. Un valor nulo significa «sin actividad registrada desde que existe
   la medición», no demuestra que la cuenta nunca iniciara sesión antes de desplegarla.
+- **Los tres eventos de instalación son ciegos en iOS, y los rótulos lo dicen.**
+  `install_available` no es una acción de nadie: lo dispara el navegador al lanzar
+  `beforeinstallprompt`, o sea cuando **Chromium** decide que la web cumple para
+  instalarse, antes de que el usuario vea nada. Safari **no lo dispara nunca**, y «añadir
+  a pantalla de inicio» tampoco dispara `appinstalled`. Medido en producción (10 días):
+  95 sesiones con oferta disponible, 2 que pulsaron el botón y 3 instalaciones… **contra
+  129 sesiones ya corriendo como PWA** y 195 de iOS. Leído de corrido parece «no instala
+  nadie», y lo que pasa es que no se ve la mitad del público. Por eso el rótulo dice
+  ahora «El navegador la permitía (iOS no lo detecta)» en vez de «Oferta disponible», que
+  no decía quién ofrecía qué a quién.
+- **Una sesión es una pestaña abierta, no una persona** (`fontapp_analytics_session` en
+  `sessionStorage`), y ahora lo dice el propio panel. Con ~60 cuentas salían 129 sesiones
+  de PWA y la cifra parecía imposible: quien abre la app cinco días cuenta cinco, y en una
+  PWA matarla y volver a abrirla empieza otra. Sirve para comparar entre sí, nunca para
+  contar gente — para eso están `users` y `last_seen_at`.
 - **Plataforma anónima:** una vez por sesión de pestaña, el cliente clasifica localmente
   iOS/iPadOS, Android, otro móvil o escritorio y, por separado, PWA instalada o navegador.
   Solo manda esos dos eventos cerrados; nunca el user-agent, modelo, versión, resolución o
