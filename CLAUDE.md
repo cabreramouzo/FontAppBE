@@ -456,6 +456,19 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   consulta meses después. Y sigue valiendo la regla de siempre —qué se midió, qué se
   descartó y por qué—; lo que cambia es el idioma, no la exigencia.
   Ojo: **los commits anteriores a esta línea están en castellano** y no se reescriben.
+- **El código nuevo va en inglés** (nombres y comentarios), decidido por el autor el
+  02/09/2026. Antes se escribía en catalán/castellano y **casi todo el repo sigue así**:
+  `nombreFuente`, `cercanasEn`, `tamanoAproximado` y compañía se quedan — reescribir en
+  cascada es churn masivo, rompe `blame` y arriesga bugs a cambio de nada. Reglas:
+  · lo existente **no se traduce**; una función nueva que llama a `nombreFuente` la sigue
+    llamando así, no hay alternativa sin renombrar el original;
+  · un fichero, componente o módulo **nuevo** va entero en inglés;
+  · al extender uno viejo muy en castellano, manda «que se lea como el código de al lado»
+    dentro de una misma función, para no dejar un Frankenstein a media línea — pero lo que
+    sea claramente nuevo (un helper aparte, un tipo) va en inglés.
+  El resultado será un repo **mixto** una temporada, y es lo aceptado a propósito: la
+  alternativa —traducir 100 ficheros de golpe— es peor que la mezcla. Con el usuario se
+  habla en castellano; solo cambia el idioma del código.
 - Todo `async/await`; nada de `EventLoopFuture` en código nuevo.
 - Un `RouteCollection` por recurso, registrado en `routes.swift`.
 - Config sensible sólo vía `Environment.get(...)`, nunca hardcodeada.
