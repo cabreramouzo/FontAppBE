@@ -107,14 +107,54 @@ async function sinRedirecciones(res) {
 }
 
 // LRU básico: si el caché supera el máximo, borra las entradas más antiguas.
+/**
+ * Cuántas entradas creemos que tiene cada caché, para no contarlas en cada guardado.
+ *
+ * Se pierde al morir el worker y se vuelve a contar una vez. Es una estimación y puede
+ * quedarse corta o larga por unas pocas: lo único que decide es **cuándo toca mirar de
+ * verdad**, y pasarse por veinte entradas de tres mil no le importa a nadie.
+ */
+const tamanoAproximado = new Map()
+
+/**
+ * Recorta un caché… **pero solo cuando de verdad hace falta**, y ahí estaba el problema.
+ *
+ * `cache.keys()` deserializa **todas** las entradas: con `TILE_LIMIT` a 3.000, cada
+ * llamada son tres mil objetos `Request` leídos del disco. Y se llamaba **en cada tesela
+ * guardada**. Un zoom pide unas cuarenta de golpe, o sea cuarenta enumeraciones de tres
+ * mil, todas en el **único hilo** del service worker — que es el mismo que atiende las
+ * peticiones siguientes. Resultado reportado con captura: la mayoría de teselas en gris y
+ * unos 20 segundos para pintar el mapa al volver a acercarlo.
+ *
+ * No era una regresión: iba **a peor según se llenaba el caché**, y se aceleró al subir
+ * el tope de 700 a 3.000. Por eso pareció aparecer de golpe.
+ *
+ * Ahora se lleva la cuenta en memoria y solo se enumera al pasar del tope. Y al recortar
+ * se baja **por debajo** (histéresis) para no volver a entrar aquí en el guardado
+ * siguiente; los borrados van en paralelo y no de uno en uno.
+ */
 async function trimCache(name, max) {
+  let n = tamanoAproximado.get(name)
+  if (n == null) {
+    const cache = await caches.open(name)
+    n = (await cache.keys()).length
+  }
+  n += 1
+  tamanoAproximado.set(name, n)
+  if (n <= max) return
+
   const cache = await caches.open(name)
   // La marca de fecha de las teselas NO cuenta y NO se descarta: es la entrada más
   // antigua del caché, así que el recorte se la llevaría la primera y la caducidad no se
   // dispararía nunca — un fallo perfectamente silencioso.
   const keys = (await cache.keys()).filter((k) => !k.url.endsWith(TILE_STAMP))
-  if (keys.length <= max) return
-  for (const k of keys.slice(0, keys.length - max)) await cache.delete(k)
+  // Nunca a cero: con topes pequeños (los de un test, o un caché futuro de diez
+  // entradas) el 90 % redondeado hacia abajo vaciaría el caché entero.
+  const objetivo = Math.max(1, Math.floor(max * 0.9))
+  if (keys.length > objetivo) {
+    await Promise.all(keys.slice(0, keys.length - objetivo).map((k) => cache.delete(k)))
+  }
+  tamanoAproximado.set(name, Math.min(keys.length, objetivo))
 }
 
 /**
@@ -319,7 +359,7 @@ async function caducaTeselas() {
   const marca = await c.match(TILE_STAMP)
   const desde = marca ? Number(await marca.text()) : 0
   if (desde && Date.now() - desde < TILE_MAX_DIAS * 86400e3) return
-  if (desde) await caches.delete(TILE_CACHE)
+  if (desde) { await caches.delete(TILE_CACHE); tamanoAproximado.delete(TILE_CACHE) }
   const nuevo = await caches.open(TILE_CACHE)
   await nuevo.put(TILE_STAMP, new Response(String(Date.now())))
 }
@@ -380,6 +420,9 @@ async function vacia(nombre) {
   const cache = VACIABLES[nombre]
   if (!cache) return { vaciado: false }
   await caches.delete(cache)
+  // La cuenta en memoria deja de valer: sin esto el worker seguiría creyendo que hay tres
+  // mil teselas y recortaría un caché recién vaciado en el guardado siguiente.
+  tamanoAproximado.delete(cache)
   return { vaciado: true }
 }
 

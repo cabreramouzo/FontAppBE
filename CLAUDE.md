@@ -2801,6 +2801,27 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   entero; y **al tocar el chip se despliega y vuelve a encogerse solo**, sin tener que
   cerrarlo. No se encoge mientras se envía ni durante el «ya está»: las dos son
   transitorias y se van solas en cuatro segundos.
+- **Y el problema de verdad no era ningún timeout: era `trimCache`.** Enumeraba el caché
+  **entero en cada guardado**. `cache.keys()` deserializa todas las entradas, así que con
+  `TILE_LIMIT` a 3.000 cada llamada son tres mil `Request` leídos del disco — y un zoom
+  pide unas cuarenta teselas de golpe. Cuarenta enumeraciones de tres mil, en el **único
+  hilo** del service worker, que es el mismo que atiende las peticiones siguientes.
+  Reportado con captura: la mayoría de teselas en gris y ~20 s para pintar al volver a
+  acercar el mapa.
+  · **No fue una regresión de un día**: iba a peor **según se llenaba el caché**, y se
+    aceleró al subir el tope de 700 a 3.000. Por eso pareció aparecer de golpe, por eso
+    coincidió con el timeout y por eso quitar el timeout no lo arregló.
+  · Ahora la cuenta va en memoria (`tamanoAproximado`) y solo se enumera al pasar del
+    tope; al recortar se baja **por debajo** (histéresis) para no volver a entrar en el
+    guardado siguiente, y los borrados van en paralelo. Medido con el banco de pruebas:
+    guardar mil teselas pasa de **1.000 enumeraciones a 1**.
+  · La cuenta se borra al vaciar el caché desde ajustes y al caducar las teselas, o el
+    worker recortaría un caché recién vaciado.
+  · Y el objetivo va con `Math.max(1, …)`: con un tope pequeño, el 90 % redondeado hacia
+    abajo vaciaría el caché entero.
+  · Dos tests existentes se ajustaron —fijaban un número **exacto** de supervivientes, que
+    nunca fue el punto—; lo que protegen (no tocar lo fijado, no llevarse la marca de
+    fecha) se comprueba igual.
 - **Y las teselas acabaron SIN tope, después de dos intentos fallidos.** El argumento
   para ponérselo era «el navegador permite unas seis conexiones por dominio, así que
   decenas de teselas colgadas le hacen cola a todo lo demás, incluidas las fuentes».

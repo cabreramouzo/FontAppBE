@@ -24,7 +24,7 @@ function cargaSW(hrefDelSW: string) {
     registration: {},
   }
   const fn = new Function('self', 'caches', 'fetch', 'Response', 'clients',
-    `${codigo}\n;return { isTile, isAPI, API_ORIGIN, peticionDeSalida, imagenDe, fetchConTimeout };`)
+    `${codigo}\n;return { isTile, isAPI, API_ORIGIN, peticionDeSalida, imagenDe, fetchConTimeout, trimCache };`)
   return fn(self, {}, () => {}, class {}, {})
 }
 
@@ -240,7 +240,8 @@ test('la marca de fecha NO la borra el recorte', async () => {
   await sw.trimCache(sw.TILE_CACHE, 3)
   const quedan = [...c.almacen.get(sw.TILE_CACHE)!.keys()]
   assert.ok(quedan.includes(sw.TILE_STAMP), 'se ha borrado la marca')
-  assert.equal(quedan.filter((k) => k !== sw.TILE_STAMP).length, 3)
+  // Tope y no número exacto: el recorte baja por debajo del máximo (histéresis).
+  assert.ok(quedan.filter((k) => k !== sw.TILE_STAMP).length <= 3)
 })
 
 test('las teselas caducan a los 30 días, y no antes', async () => {

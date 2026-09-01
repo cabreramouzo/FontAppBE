@@ -85,7 +85,9 @@ test('el recorte NUNCA toca el caché fijado', async () => {
   datos[sw.API_CACHE] = new Map([['x', 1], ['y', 2]])
   await sw.trimCache(sw.API_CACHE, 1)
   assert.equal(datos[sw.PINNED_CACHE].size, 3, 'el descarte se ha llevado algo fijado')
-  assert.equal(datos[sw.API_CACHE].size, 1)
+  // Se comprueba el tope y no un número exacto: el recorte baja por DEBAJO del máximo a
+  // propósito (histéresis), para no volver a enumerar el caché en el guardado siguiente.
+  assert.ok(datos[sw.API_CACHE].size <= 1, `quedan ${datos[sw.API_CACHE].size}`)
 })
 
 test('fijar guarda en el caché fijado y dice cuántas y cuánto ocupan', async () => {
