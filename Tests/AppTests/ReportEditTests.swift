@@ -150,3 +150,131 @@ final class ReportEditTests: XCTestCase {
         }
     }
 }
+
+/// «Me gusta» en un comentario.
+///
+/// Es **social y no evidencial**: no avisa, no puntúa y no entra en ningún cálculo. La
+/// diferencia con «sigue igual» de las reseñas es justo ésa, y por eso ni siquiera usan el
+/// mismo icono en la interfaz.
+final class ReportLikeTests: XCTestCase {
+    private func withApp(_ test: (Application) async throws -> Void) async throws {
+        setenv("DATABASE_NAME", "fontapp_test", 1)
+        let app = try await Application.make(.testing)
+        do {
+            try await configure(app)
+            try? await app.autoRevert()
+            try await app.autoMigrate()
+            try await test(app)
+            try await app.autoRevert()
+        } catch {
+            try? await app.autoRevert()
+            try await app.asyncShutdown()
+            throw error
+        }
+        try await app.asyncShutdown()
+    }
+
+    private func usuario(_ app: Application, _ nombre: String) async throws -> (User, String) {
+        let n = Int.random(in: 1...999_999)
+        let u = User(name: nombre, username: "\(nombre)\(n)", email: "\(nombre)\(n)@x.test",
+                     passwordHash: try Bcrypt.hash("password123"))
+        try await u.save(on: app.db)
+        var token = ""
+        try await app.test(.POST, "auth/login", beforeRequest: { req in
+            req.headers.basicAuthorization = .init(username: "\(nombre)\(n)", password: "password123")
+        }, afterResponse: { res in token = try res.content.decode(LoginResponse.self).token })
+        return (u, token)
+    }
+
+    private func bearer(_ t: String) -> HTTPHeaders { ["Authorization": "Bearer \(t)"] }
+
+    private func fuenteConComentario(_ app: Application, de autor: User) async throws -> (Font, FontReport) {
+        let f = Font(name: "Font del Roure", latitude: 41.75, longitude: 2.16)
+        try await f.save(on: app.db)
+        let r = FontReport(fontID: try f.requireID(), userID: try autor.requireID(),
+                           message: "Está detrás del quiosco", isIncident: false, incidentKind: nil)
+        try await r.save(on: app.db)
+        return (f, r)
+    }
+
+    func testDarYQuitarMeGusta() async throws {
+        try await withApp { app in
+            let (autor, _) = try await usuario(app, "autora")
+            let (_, token) = try await usuario(app, "lectora")
+            let (f, r) = try await fuenteConComentario(app, de: autor)
+
+            try await app.test(.POST, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                               headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .ok)
+                let dto = try res.content.decode(ReportResponse.self)
+                XCTAssertEqual(dto.likes, 1)
+                XCTAssertTrue(dto.likedByMe)
+            }
+            try await app.test(.DELETE, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                               headers: bearer(token)) { res in
+                let dto = try res.content.decode(ReportResponse.self)
+                XCTAssertEqual(dto.likes, 0)
+                XCTAssertFalse(dto.likedByMe)
+            }
+        }
+    }
+
+    /// Repetirlo no apila: lo garantiza el índice único, y desde fuera «ya está hecho» no
+    /// es un error.
+    func testRepetirloNoApila() async throws {
+        try await withApp { app in
+            let (autor, _) = try await usuario(app, "autora")
+            let (_, token) = try await usuario(app, "insistente")
+            let (f, r) = try await fuenteConComentario(app, de: autor)
+
+            for _ in 0..<3 {
+                try await app.test(.POST, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                                   headers: bearer(token)) { res in
+                    XCTAssertEqual(res.status, .ok)
+                    XCTAssertEqual(try res.content.decode(ReportResponse.self).likes, 1)
+                }
+            }
+        }
+    }
+
+    /// La lista es pública y **sigue siéndolo**: sin sesión se ve el recuento, y
+    /// `likedByMe` es falso porque no hay quien. Si al añadir esto la ficha hubiera pasado
+    /// a pedir sesión, se habría roto para quien llega por un cartel.
+    func testSinSesionSeVeElRecuentoYNoRompeNada() async throws {
+        try await withApp { app in
+            let (autor, _) = try await usuario(app, "autora")
+            let (_, token) = try await usuario(app, "lectora")
+            let (f, r) = try await fuenteConComentario(app, de: autor)
+            try await app.test(.POST, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                               headers: bearer(token)) { res in XCTAssertEqual(res.status, .ok) }
+
+            try await app.test(.GET, "fonts/\(f.requireID())/report") { res in
+                XCTAssertEqual(res.status, .ok)
+                let lista = try res.content.decode([ReportResponse].self)
+                XCTAssertEqual(lista.first?.likes, 1)
+                XCTAssertEqual(lista.first?.likedByMe, false)
+            }
+        }
+    }
+
+    /// Y con sesión, cada uno ve el suyo: el recuento es de todos, `likedByMe` es tuyo.
+    func testCadaUnoVeSuPropioMeGusta() async throws {
+        try await withApp { app in
+            let (autor, tokenAutor) = try await usuario(app, "autora")
+            let (_, tokenOtra) = try await usuario(app, "lectora")
+            let (f, r) = try await fuenteConComentario(app, de: autor)
+            try await app.test(.POST, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                               headers: bearer(tokenOtra)) { res in XCTAssertEqual(res.status, .ok) }
+
+            try await app.test(.GET, "fonts/\(f.requireID())/report", headers: bearer(tokenAutor)) { res in
+                let lista = try res.content.decode([ReportResponse].self)
+                XCTAssertEqual(lista.first?.likes, 1)
+                XCTAssertEqual(lista.first?.likedByMe, false, "el autor no lo ha dado")
+            }
+            try await app.test(.GET, "fonts/\(f.requireID())/report", headers: bearer(tokenOtra)) { res in
+                let lista = try res.content.decode([ReportResponse].self)
+                XCTAssertEqual(lista.first?.likedByMe, true)
+            }
+        }
+    }
+}

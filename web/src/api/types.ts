@@ -172,6 +172,10 @@ export interface ReportResponse {
   createdAt: string
   /** Cuándo se corrigió el texto, o nulo si no se ha tocado. La ficha lo pinta como «editado». */
   editedAt?: string | null
+  /** Cuántos me gusta lleva. Cero llega como 0: no pintar nada lo decide el cliente. */
+  likes?: number
+  /** Si tú ya diste el tuyo. Sin sesión, falso. */
+  likedByMe?: boolean
   /** Nulo = sigue abierta. Se cierra, no se borra: la avería es parte de la historia. */
   resolvedAt: string | null
   resolvedBy: string | null

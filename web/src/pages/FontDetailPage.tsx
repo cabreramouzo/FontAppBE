@@ -27,6 +27,8 @@ import Collapse from '@mui/material/Collapse'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import PlaceIcon from '@mui/icons-material/Place'
+import FavoriteIcon from '@mui/icons-material/Favorite'
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
 import DirectionsIcon from '@mui/icons-material/Directions'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ShareIcon from '@mui/icons-material/Share'
@@ -53,6 +55,7 @@ import {
   deleteFont,
   deleteReport,
   resolveReport,
+  likeReport,
   setReportIncident,
   updateReport,
   describeError,
@@ -943,6 +946,27 @@ export function FontDetailPage() {
     return !!user && (user.id === r.userID || !!user.isAdmin)
   }
 
+  /**
+   * Me gusta, con actualización optimista: se pinta antes de que conteste el servidor
+   * porque es un gesto de un toque y esperar a que se rellene el corazón se nota. Si
+   * falla, la fila vuelve a como estaba y se dice por qué.
+   */
+  async function cambiaMeGusta(r: ReportResponse) {
+    if (!id) return
+    const quiero = !r.likedByMe
+    const antes = reports
+    setReports((rs) => rs.map((x) => (x.id === r.id
+      ? { ...x, likedByMe: quiero, likes: (x.likes ?? 0) + (quiero ? 1 : -1) }
+      : x)))
+    try {
+      const actualizado = await likeReport(id, r.id, quiero)
+      setReports((rs) => rs.map((x) => (x.id === r.id ? actualizado : x)))
+    } catch (e) {
+      setReports(antes)
+      toast.show(describeError(e, t), 'error')
+    }
+  }
+
   async function guardaEdicion(r: ReportResponse) {
     if (!id) return
     setGuardandoEdicion(true)
@@ -1575,9 +1599,43 @@ export function FontDetailPage() {
                       «Editado» va sin fecha a propósito: lo que importa es que el texto no
                       es exactamente el que se publicó, no a qué hora se corrigió. El dato
                       completo viaja en `editedAt` por si algún día hace falta. */}
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
-                    {timeAgo(r.createdAt, t)}{r.editedAt ? ` · ${t('report.edited')}` : ''}
-                  </Typography>
+                  {/* ## El me gusta va aquí, con la fecha, y es un corazón
+                      Facebook pone «Me gusta» de texto entre las acciones y un pulgar con
+                      contador a la derecha del todo; Instagram pone un corazón a la
+                      derecha de cada comentario que se rellena al tocarlo. Aquí mandan dos
+                      restricciones propias: **la derecha del todo ya está ocupada** por el
+                      botón de borrar (`secondaryAction`), así que el sitio de Instagram no
+                      está libre; y el icono **no puede ser un pulgar**, porque en esta app
+                      el pulgar ya significa «sigue igual» en las reseñas —que cambia la
+                      confianza de la fuente y paga gotas— y dos pulgares con significados
+                      distintos en la misma página es peor que cualquier familiaridad
+                      ganada. De ahí el corazón, en la fila de las acciones: la estructura
+                      de Facebook con el icono de Instagram.
+                      **Sin ningún me gusta no se pinta un cero**, que además es lo que
+                      hacen los dos. */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {timeAgo(r.createdAt, t)}{r.editedAt ? ` · ${t('report.edited')}` : ''}
+                    </Typography>
+                    {user && (
+                      <IconButton
+                        size="small"
+                        onClick={() => void cambiaMeGusta(r)}
+                        aria-label={t(r.likedByMe ? 'report.unlike' : 'report.like')}
+                        aria-pressed={!!r.likedByMe}
+                        sx={{ ml: 0.5, color: r.likedByMe ? 'error.main' : 'text.secondary' }}
+                      >
+                        {r.likedByMe
+                          ? <FavoriteIcon sx={{ fontSize: 16 }} />
+                          : <FavoriteBorderIcon sx={{ fontSize: 16 }} />}
+                      </IconButton>
+                    )}
+                    {/* El recuento es público: sin sesión no hay corazón que tocar, pero sí
+                        se ve cuánta gente lo agradeció. */}
+                    {(r.likes ?? 0) > 0 && (
+                      <Typography variant="caption" color="text.secondary">{r.likes}</Typography>
+                    )}
+                  </Box>
                   {/* Solo el autor y solo durante la primera hora. La decisión vive en
                       `lib/reportEdit.ts` con sus tests, y el servidor es quien manda: si
                       el plazo se pasa mientras la ficha está abierta, responde 403. */}

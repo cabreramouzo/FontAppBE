@@ -483,6 +483,13 @@ export async function updateReport(fontID: string, reportID: string, message: st
   })
 }
 
+/** Me gusta en un comentario. Idempotente: repetirlo no apila. */
+export async function likeReport(fontID: string, reportID: string, on: boolean): Promise<ReportResponse> {
+  return apiFetch<ReportResponse>(`/fonts/${fontID}/report/${reportID}/like`, {
+    method: on ? 'POST' : 'DELETE',
+  })
+}
+
 export async function deleteReport(fontID: string, reportID: string): Promise<void> {
   await apiFetch(`/fonts/${fontID}/report/${reportID}`, { method: 'DELETE' })
 }

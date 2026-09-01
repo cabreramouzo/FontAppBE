@@ -6,7 +6,11 @@ import Vapor
 struct FontReportController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let reports = routes.grouped("fonts", ":fontID", "report")
-        reports.get(use: index) // lectura pública
+        // Lectura pública, pero **con el autenticador y sin `guardMiddleware`**: hace falta
+        // saber si quien mira ya dio su me gusta, y eso no puede costar que la ficha deje
+        // de verse sin sesión. Es el mismo patrón que usa `GET /fonts` para mirar si quien
+        // llama es admin sin dejar de ser pública.
+        reports.grouped(UserToken.authenticator()).get(use: index)
         let auth = reports.grouped(UserToken.authenticator(), User.guardMiddleware())
         auth.grouped(RateLimitMiddleware(scope: "report", max: 20, window: 60 * 60)).post(use: create)
         // El listado para revisar lo que ya está escrito. Va fuera del grupo de una
@@ -24,6 +28,8 @@ struct FontReportController: RouteCollection {
             r.post("resolve", use: resolve)
             r.delete("resolve", use: reopen)
             r.patch("incident", use: setIncident)
+            r.post("like", use: like)
+            r.delete("like", use: unlike)
         }
     }
 
@@ -79,10 +85,12 @@ struct FontReportController: RouteCollection {
             .all()
         let autores = try await User.authors(
             for: reports.flatMap { [$0.$user.id, $0.$resolver.id] }.compactMap { $0 }, on: req.db)
+        let megusta = try await Self.likes(for: reports, viewer: req.auth.get(User.self)?.id, on: req.db)
         return reports.map {
             let quien = $0.$user.id.flatMap { autores[$0] }
             return ReportResponse($0, username: quien?.username, staff: quien?.staff,
-                                  resolverName: $0.$resolver.id.flatMap { autores[$0]?.username })
+                                  resolverName: $0.$resolver.id.flatMap { autores[$0]?.username },
+                                  likes: $0.id.flatMap { megusta[$0] })
         }
     }
 
@@ -343,6 +351,66 @@ struct FontReportController: RouteCollection {
     }
 
     /// DELETE /fonts/:fontID/report/:reportID — borra una incidencia propia.
+    /// Cuántos me gusta tiene cada comentario y si el que mira ya dio el suyo.
+    ///
+    /// Una sola consulta para toda la lista: el mismo patrón que `confirmations(for:)` en
+    /// las reseñas, y por la misma razón — una por comentario sería una N+1 en la ficha de
+    /// cualquier fuente con conversación.
+    static func likes(for reports: [FontReport], viewer: UUID?, on db: any Database) async throws -> [UUID: LikeAgg] {
+        let ids = reports.compactMap { $0.id }
+        guard !ids.isEmpty else { return [:] }
+        let filas = try await ReportLike.query(on: db).filter(\.$report.$id ~~ ids).all()
+        var out: [UUID: LikeAgg] = [:]
+        for f in filas {
+            let rid = f.$report.id
+            var agg = out[rid] ?? LikeAgg(count: 0, mine: false)
+            agg.count += 1
+            if let viewer, f.$user.id == viewer { agg.mine = true }
+            out[rid] = agg
+        }
+        return out
+    }
+
+    /// POST /fonts/:fontID/report/:reportID/like — me gusta. Idempotente.
+    ///
+    /// **Ni avisa ni puntúa**, y eso es el diseño y no una tarea pendiente: un me gusta no
+    /// cambia lo que vas a hacer —que es la regla que decide qué merece una notificación
+    /// en esta app— y si diera gotas sería gratis de farmear entre dos cuentas.
+    @Sendable func like(req: Request) async throws -> ReportResponse {
+        try await setLike(req, on: true)
+    }
+
+    /// DELETE …/like — quitarlo.
+    @Sendable func unlike(req: Request) async throws -> ReportResponse {
+        try await setLike(req, on: false)
+    }
+
+    private func setLike(_ req: Request, on: Bool) async throws -> ReportResponse {
+        let user = try req.auth.require(User.self)
+        try user.requireCanContribute()
+        guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {
+            throw AppError(.notFound, "report.notFound", "No se ha encontrado el comentario")
+        }
+        let userID = try user.requireID()
+        let reportID = try report.requireID()
+        let ya = try await ReportLike.query(on: req.db)
+            .filter(\.$report.$id == reportID)
+            .filter(\.$user.$id == userID)
+            .first()
+        if on {
+            // Repetirlo no apila nada: el índice único lo impediría igual, pero así
+            // tampoco devuelve un error por algo que desde fuera es «ya está hecho».
+            if ya == nil { try await ReportLike(reportID: reportID, userID: userID).save(on: req.db) }
+        } else {
+            try await ya?.delete(on: req.db)
+        }
+        let autores = try await User.authors(for: report.$user.id.map { [$0] } ?? [], on: req.db)
+        let quien = report.$user.id.flatMap { autores[$0] }
+        let agg = try await Self.likes(for: [report], viewer: userID, on: req.db)
+        return ReportResponse(report, username: quien?.username, staff: quien?.staff,
+                              likes: agg[reportID])
+    }
+
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
         guard let report = try await FontReport.find(req.parameters.get("reportID"), on: req.db) else {
@@ -374,6 +442,12 @@ extension CreateReportDTO: Validatable {
 }
 
 /// Representación pública de un reporte (evita el `{"font":{"id":…}}` del @Parent).
+/// Recuento de me gusta de un comentario y si el que mira ya dio el suyo.
+struct LikeAgg {
+    var count: Int
+    var mine: Bool
+}
+
 struct ReportResponse: Content {
     let id: UUID?
     let fontID: UUID
@@ -394,8 +468,14 @@ struct ReportResponse: Content {
     /// API: omitido llega como `undefined` y «resuelta» se distingue de «no lo sé».
     let resolvedAt: Date?
     let resolvedBy: String?
+    /// Cuántos me gusta lleva. **Cero es cero y se manda igual**: el cliente decide no
+    /// pintar nada, que no es lo mismo que no saberlo.
+    let likes: Int
+    /// Si quien pide la lista ya dio el suyo. Sin sesión es `false`.
+    let likedByMe: Bool
 
-    init(_ report: FontReport, username: String?, staff: UserRole? = nil, resolverName: String? = nil) {
+    init(_ report: FontReport, username: String?, staff: UserRole? = nil, resolverName: String? = nil,
+         likes: LikeAgg? = nil) {
         self.id = report.id
         self.fontID = report.$font.id
         self.userID = report.$user.id
@@ -408,6 +488,8 @@ struct ReportResponse: Content {
         self.editedAt = report.editedAt
         self.resolvedAt = report.resolvedAt
         self.resolvedBy = resolverName
+        self.likes = likes?.count ?? 0
+        self.likedByMe = likes?.mine ?? false
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -427,5 +509,7 @@ struct ReportResponse: Content {
         try c.encode(editedAt, forKey: .editedAt)
         try c.encode(resolvedAt, forKey: .resolvedAt)
         try c.encode(resolvedBy, forKey: .resolvedBy)
+        try c.encode(likes, forKey: .likes)
+        try c.encode(likedByMe, forKey: .likedByMe)
     }
 }

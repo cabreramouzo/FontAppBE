@@ -3594,6 +3594,27 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   **fecha absoluta pasados 30 días**, donde «hace 8 meses» ya no sitúa nada.
   El cliente decide si pinta el botón con `lib/reportEdit.ts` (con tests), pero **quien
   manda es el servidor**: pasado el plazo responde 403 `report.editWindowOver`.
+- **«Me gusta» en los comentarios** (`ReportLike` → `POST/DELETE /fonts/:id/report/:rid/like`).
+  Es **social y no evidencial**, y ahí está toda la diferencia con el pulgar de las
+  reseñas: aquél dice «sigue igual», cambia la confianza de la fuente y paga gotas; éste
+  solo agradece lo que alguien escribió. Por eso **no avisa** —un me gusta no cambia lo que
+  vas a hacer, que es la regla que decide qué merece push— y **no puntúa**, que si no sería
+  gratis de farmear entre dos cuentas.
+  **El icono es un corazón y no un pulgar, a propósito.** Se miró cómo lo hacen los dos
+  sitios de los que viene la costumbre —Facebook: «Me gusta» de texto más un pulgar con
+  contador a la derecha del todo; Instagram: corazón a la derecha de cada comentario— y
+  aquí mandan dos restricciones propias: la **derecha del todo ya la ocupa** el botón de
+  borrar (`secondaryAction`), así que el sitio de Instagram no está libre; y un pulgar
+  significaría dos cosas distintas en la misma página. Queda la estructura de Facebook con
+  el icono de Instagram: el corazón en la fila de las acciones, junto a la fecha.
+  **Sin ningún me gusta no se pinta un cero**, que es además lo que hacen los dos.
+  El recuento es **público** y `likedByMe` es tuyo, así que `GET …/report` lleva ahora el
+  autenticador **sin `guardMiddleware`**: hace falta saber si ya diste el tuyo y eso no
+  puede costar que la ficha deje de verse sin sesión. Hay test de esa mitad.
+  El agregado va en **una consulta para toda la lista** (`likes(for:viewer:)`, calcado de
+  `confirmations(for:)`): una por comentario sería una N+1 en cualquier ficha con
+  conversación. Y la unicidad la da el índice `(report_id, user_id)`, no una comprobación
+  en Swift.
 - **`/admin/reports`** (solo admin) lista todo lo escrito con su interruptor en cada fila.
   Existe porque la marca llegó **después que los datos**: hay que poder repasarlos de una
   sentada, y ficha por ficha eso es imposible. Escribe por la **misma ruta** que la ficha,

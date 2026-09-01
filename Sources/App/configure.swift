@@ -177,6 +177,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateMunicipalBoundary()) // contorno de cada municipio, para dibujarlo en el mapa
     app.migrations.add(AddIncidentFlagToFontReport()) // la caja pasa a ser de comentarios; la incidencia se marca
     app.migrations.add(AddEditedAtToFontReport())     // corregir un comentario durante la primera hora
+    app.migrations.add(CreateReportLike())            // «me gusta» en los comentarios
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
