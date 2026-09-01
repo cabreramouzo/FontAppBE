@@ -21,6 +21,9 @@ final class FontReport: Model, Content, @unchecked Sendable {
     /// urgencia y se puede dar por resuelta. Sin marcar es un comentario y no toca ningún
     /// contador — que es justo lo que hacía falta para que el número que se le enseña a
     /// un ayuntamiento signifique algo.
+    /// De qué comentario cuelga, si es una respuesta. Ver `AddParentToFontReport`: un solo
+    /// nivel, y al borrar el padre la respuesta se queda suelta en vez de desaparecer.
+    @OptionalParent(key: "parent_id") var parent: FontReport?
     @Field(key: "is_incident") var isIncident: Bool
     /// Qué clase de avería, si lo es. Ver `IncidentKind`.
     @OptionalField(key: "incident_kind") var incidentKind: IncidentKind?
@@ -38,13 +41,14 @@ final class FontReport: Model, Content, @unchecked Sendable {
     init() {}
 
     init(id: UUID? = nil, fontID: UUID, userID: UUID? = nil, message: String,
-         isIncident: Bool = true, incidentKind: IncidentKind? = nil) {
+         isIncident: Bool = true, incidentKind: IncidentKind? = nil, parentID: UUID? = nil) {
         self.id = id
         self.$font.id = fontID
         self.$user.id = userID
         self.message = message
         self.isIncident = isIncident
         self.incidentKind = incidentKind
+        self.$parent.id = parentID
     }
 }
 

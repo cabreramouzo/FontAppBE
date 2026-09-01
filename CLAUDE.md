@@ -3627,6 +3627,35 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   ficha sí los cuenta a los dos. Quitar el me gusta **no borra el aviso**: un aviso es una
   foto de lo que pasó. El `excerpt` lleva un trozo del comentario y no un código, como
   `mention`: son tus propias palabras y no hay nada que traducir.
+- **Responder a un comentario** (`font_reports.parent_id` → `AddParentToFontReport`). El
+  hilo en sí es una columna; **lo caro es que una respuesta es una fila de `font_reports`**,
+  y de esa tabla cuelgan las gotas (`.report` paga 40), las novedades, el correo semanal,
+  los avisos a quien sigue la fuente, la cola de moderación y el recuento de averías
+  abiertas de un municipio. Si una respuesta se colara en eso no fallaría nada visible:
+  se pagarían gotas por responder, la portada se llenaría de conversación y a un
+  ayuntamiento se le contarían averías que no existen.
+  Lo que lo impide es **una sola regla**: una respuesta **nunca es incidencia**, ni al
+  crearla ni ascendiéndola después (`report.replyNotIncident`). Los cuatro primeros
+  consumidores ya filtraban `isIncident`, así que esa marca es la que los blinda — otra
+  cara del trabajo de la bandera de incidencias. La cola de moderación filtra además
+  `parent_id IS NULL`, porque existe para clasificar qué es incidencia y una respuesta no
+  puede serlo. Hay un test por puerta, y los dos verificados rompiéndolos.
+  **Un solo nivel**: responder a una respuesta se rechaza (`report.nestedReply`). Dos
+  niveles obligan a plegar, a paginar y a decidir qué se enseña, y esta caja lleva **once
+  comentarios** en toda su historia; la columna admite más el día que haga falta.
+  **Borrar el padre NO borra las respuestas** (`onDelete: .setNull`): son palabras de otra
+  persona, la misma regla que impide que borrar una fuente se lleve las reseñas ajenas. La
+  respuesta se queda suelta —pierde el hilo, no el contenido— y `agrupaEnHilos` la pinta
+  como comentario en vez de dejarla invisible, que es lo que pasaría si se filtrara por
+  padre existente. Hay test de las dos mitades.
+  **El orden lo decide el cliente** (`lib/reportThread.ts`, con tests) porque es de
+  lectura y no de datos: los comentarios del más nuevo al más viejo, y las respuestas de
+  cada uno **en el orden en que ocurrieron**, que es como se lee una conversación.
+  **Avisa por campana y push** (`Notification.Kind.commentReply`), al revés que el me
+  gusta: la regla de «¿cambia lo que voy a hacer?» la pasa una respuesta sin discusión —
+  alguien te está hablando a ti— y por eso reutiliza `pushMentions`, que para quien lo
+  recibe es la misma clase de aviso. **No avisa dos veces**: si la respuesta ya menciona a
+  esa persona, `MentionNotifier` ya se encarga.
 - **`/admin/reports`** (solo admin) lista todo lo escrito con su interruptor en cada fila.
   Existe porque la marca llegó **después que los datos**: hay que poder repasarlos de una
   sentada, y ficha por ficha eso es imposible. Escribe por la **misma ruta** que la ficha,

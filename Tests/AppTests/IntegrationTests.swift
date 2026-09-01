@@ -601,7 +601,7 @@ final class IntegrationTests: XCTestCase {
             // Sin decir nada, es un comentario.
             var reportID = ""
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(token), beforeRequest: { req in
-                try req.content.encode(CreateReportDTO(message: "¿le pones una foto?", isIncident: nil, incidentKind: nil))
+                try req.content.encode(CreateReportDTO(message: "¿le pones una foto?", isIncident: nil, incidentKind: nil, parentID: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .created)
                 let r = try res.content.decode(ReportResponse.self)
@@ -651,7 +651,7 @@ final class IntegrationTests: XCTestCase {
             let fontID = try await createFont(app, token: token, name: "F", lat: 40, long: -3)
 
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(token), beforeRequest: { req in
-                try req.content.encode(CreateReportDTO(message: "grifo roto", isIncident: true, incidentKind: .broken))
+                try req.content.encode(CreateReportDTO(message: "grifo roto", isIncident: true, incidentKind: .broken, parentID: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .created)
                 let report = try res.content.decode(ReportResponse.self)
@@ -975,7 +975,7 @@ final class IntegrationTests: XCTestCase {
 
             var reportID = UUID()
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(tok), beforeRequest: { req in
-                try req.content.encode(CreateReportDTO(message: "El caño está roto", isIncident: true, incidentKind: .broken))
+                try req.content.encode(CreateReportDTO(message: "El caño está roto", isIncident: true, incidentKind: .broken, parentID: nil))
             }, afterResponse: { res in
                 XCTAssertEqual(res.status, .created)
                 reportID = try res.content.decode(ReportResponse.self).id ?? reportID
@@ -1979,7 +1979,7 @@ final class IntegrationTests: XCTestCase {
             })
 
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(tok), beforeRequest: { req in
-                try req.content.encode(CreateReportDTO(message: "El agua no es potable", isIncident: true, incidentKind: .other))
+                try req.content.encode(CreateReportDTO(message: "El agua no es potable", isIncident: true, incidentKind: .other, parentID: nil))
             }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
 
             try await app.test(.GET, "fonts/\(fontID)/favorite", headers: bearer(tok), afterResponse: { res in
@@ -1989,7 +1989,7 @@ final class IntegrationTests: XCTestCase {
             // Una segunda incidencia no duplica la fila: `count` es el total de gente que
             // la tiene, así que dos filas de la misma persona lo inflarían.
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(tok), beforeRequest: { req in
-                try req.content.encode(CreateReportDTO(message: "Y además está rota", isIncident: true, incidentKind: .broken))
+                try req.content.encode(CreateReportDTO(message: "Y además está rota", isIncident: true, incidentKind: .broken, parentID: nil))
             }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
 
             try await app.test(.GET, "fonts/\(fontID)/favorite", headers: bearer(tok), afterResponse: { res in
@@ -2126,7 +2126,7 @@ final class IntegrationTests: XCTestCase {
             for id in [aqui, alla] {
                 _ = try await addComment(app, token: tok, fontID: id, body: "Mana")
                 try await app.test(.POST, "fonts/\(id)/report", headers: bearer(tok), beforeRequest: { req in
-                    try req.content.encode(CreateReportDTO(message: "Grifo roto", isIncident: true, incidentKind: .broken))
+                    try req.content.encode(CreateReportDTO(message: "Grifo roto", isIncident: true, incidentKind: .broken, parentID: nil))
                 }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
             }
             // La zona la pone `populate-regions` en producción; aquí a mano.
@@ -4153,7 +4153,7 @@ final class IntegrationTests: XCTestCase {
             let fontID = try await createFont(app, token: token, name: "Font seca", lat: 41.8, long: 2.1)
 
             try await app.test(.POST, "fonts/\(fontID)/report", headers: bearer(token), beforeRequest: { req in
-                try req.content.encode(CreateReportDTO(message: "Está seca desde julio", isIncident: true, incidentKind: .dry))
+                try req.content.encode(CreateReportDTO(message: "Está seca desde julio", isIncident: true, incidentKind: .dry, parentID: nil))
             }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
 
             // Una reseña que NO dice que mana no cierra nada.

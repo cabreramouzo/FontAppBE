@@ -46,6 +46,13 @@ final class Notification: Model, @unchecked Sendable {
         /// «hasta las 22:00» desde un servidor en UTC sería mentirle a media base de
         /// usuarios, que va de Chile a Italia.
         case sourceLimit
+        /// Alguien ha respondido a un comentario tuyo.
+        ///
+        /// **Campana y push**, al revés que `commentLike`: la regla es «¿cambia lo que voy
+        /// a hacer?», y una respuesta es alguien hablándote — el mismo caso por el que una
+        /// mención pasa ese filtro sin discusión. Reutiliza la preferencia `pushMentions`
+        /// porque para quien lo recibe es la misma clase de aviso.
+        case commentReply
         /// A alguien le ha gustado un comentario tuyo.
         ///
         /// **Campana y no notificación del sistema.** La regla de «¿cambia lo que voy a

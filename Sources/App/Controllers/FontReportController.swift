@@ -218,7 +218,11 @@ struct FontReportController: RouteCollection {
         let user = try req.auth.require(User.self)
         guard user.isAdmin else { throw AppError(.forbidden, "auth.adminOnly", "Solo administradores") }
 
+        // Solo primer nivel: esta lista existe para clasificar qué es incidencia y qué no,
+        // y una respuesta nunca puede serlo. Colarlas aquí sería llenar de ruido la única
+        // pantalla desde la que se repasa lo escrito.
         let reports = try await FontReport.query(on: req.db)
+            .filter(\.$parent.$id == nil)
             .sort(\.$createdAt, .descending)
             .limit(500)
             .all()
@@ -262,6 +266,13 @@ struct FontReportController: RouteCollection {
             throw AppError(.notFound, "report.notFound", "Incidencia no encontrada")
         }
         let dto = try req.content.decode(SetIncidentDTO.self)
+        // Una respuesta no puede ascender a incidencia: entraría en el recuento de averías
+        // abiertas de un municipio y en la cola de moderación como si fuera un aviso de
+        // primer nivel, que es exactamente lo que el hilo no debe romper.
+        guard report.$parent.id == nil else {
+            throw AppError(.badRequest, "report.replyNotIncident",
+                           "Una respuesta no puede marcarse como incidencia")
+        }
         guard report.$user.id == (try user.requireID()) || user.canModerate else {
             throw AppError(.forbidden, "report.notYours", "Solo puedes cambiar los tuyos")
         }
@@ -290,14 +301,46 @@ struct FontReportController: RouteCollection {
         try CreateReportDTO.validate(content: req)
         let dto = try req.content.decode(CreateReportDTO.self)
 
-        let esIncidencia = dto.isIncident ?? false
+        // ## Responder: un solo nivel, y nunca una incidencia
+        //
+        // Las dos reglas se comprueban aquí y no en el cliente porque de ellas depende que
+        // una respuesta **no se parezca a una incidencia** para el resto del sistema. Un
+        // `FontReport` alimenta las gotas, las novedades, el correo semanal, los avisos a
+        // quien sigue la fuente y el recuento de averías abiertas de un municipio; los
+        // tres primeros y el cuarto ya filtran `isIncident`, así que mantener a las
+        // respuestas fuera de esa marca es lo que las mantiene fuera de todo eso.
+        //
+        // Un solo nivel: responder a una respuesta obliga a plegar, a paginar y a decidir
+        // qué se enseña, y esta caja lleva once comentarios en toda su historia. La
+        // columna admite más el día que haga falta.
+        var padre: FontReport?
+        if let parentID = dto.parentID {
+            guard let p = try await FontReport.find(parentID, on: req.db), p.$font.id == fontID else {
+                throw AppError(.notFound, "report.parentNotFound",
+                               "No se ha encontrado el comentario al que respondes")
+            }
+            guard p.$parent.id == nil else {
+                throw AppError(.badRequest, "report.nestedReply",
+                               "Solo se puede responder a un comentario, no a una respuesta")
+            }
+            padre = p
+        }
+
+        let esIncidencia = padre == nil && (dto.isIncident ?? false)
         let report = FontReport(fontID: fontID, userID: try user.requireID(), message: dto.message,
                                 isIncident: esIncidencia,
                                 // El tipo solo tiene sentido si es una incidencia: guardarlo
                                 // en un comentario dejaría filas que dicen «rota» sobre algo
                                 // que nadie ha declarado avería.
-                                incidentKind: esIncidencia ? dto.incidentKind : nil)
+                                incidentKind: esIncidencia ? dto.incidentKind : nil,
+                                parentID: padre?.id)
         try await report.save(on: req.db)
+
+        // A quien escribió el comentario al que respondes. Va con `try?`: perder la
+        // respuesta por no poder avisar sería absurdo, como en el resto de la app.
+        if let padre {
+            try? await avisaDeLaRespuesta(padre, de: user, texto: dto.message, on: req)
+        }
 
         // Después de guardar y sin esperar: un aviso que no sale no puede costarle la
         // incidencia a quien la escribe.
@@ -406,6 +449,46 @@ struct FontReportController: RouteCollection {
         try await aviso.save(on: db)
     }
 
+    /// A quien escribió el comentario al que se responde: campana **y** notificación del
+    /// sistema.
+    ///
+    /// Aquí sí se pusha, al revés que en el me gusta, y la regla es la misma de siempre:
+    /// **¿cambia lo que voy a hacer?** Un me gusta no; una respuesta es alguien
+    /// hablándote, que es exactamente el caso por el que una mención pasa ese filtro «sin
+    /// discusión». Por eso reutiliza la preferencia `pushMentions`: para quien la recibe
+    /// es la misma clase de aviso, y una casilla nueva sería pedirle que decida dos veces
+    /// lo mismo.
+    ///
+    /// **No se avisa dos veces.** Si la respuesta ya menciona a esa persona —el caso
+    /// normal si viene del botón «Responder» de un cliente viejo, que rellenaba
+    /// `@usuario`— `MentionNotifier` ya la avisa y esto se calla.
+    private func avisaDeLaRespuesta(_ padre: FontReport, de quien: User, texto: String,
+                                    on req: Request) async throws {
+        guard let autorID = padre.$user.id, autorID != (try quien.requireID()) else { return }
+        guard let autor = try await User.find(autorID, on: req.db) else { return }
+        if Mentions.names(in: texto).contains(where: { $0.lowercased() == autor.username.lowercased() }) {
+            return
+        }
+        let db = req.db
+        let fontID = padre.$font.id
+        let font = try await Font.find(fontID, on: db)
+        let trozo = String(texto.prefix(120))
+        let aviso = Notification(userID: autorID, kind: .commentReply,
+                                 actorID: try quien.requireID(), actorName: quien.username,
+                                 fontID: fontID, fontName: font?.name, excerpt: trozo)
+        try await aviso.save(on: db)
+
+        if autor.pushMentions, let push = PushEnvio(req.application) {
+            let (titulo, cuerpo) = PushCopy.mention(by: quien.username, texto: trozo, lang: autor.lang)
+            await PushSender.send(
+                .init(title: titulo, body: cuerpo, url: "/fonts/\(fontID)",
+                      // Por fuente: tres respuestas seguidas en la misma conversación son
+                      // un aviso, no tres. Misma etiqueta que las menciones a propósito.
+                      tag: "mention-\(fontID)"),
+                to: autorID, on: db, client: push.client, vapid: push.vapid, logger: push.logger)
+        }
+    }
+
     /// POST /fonts/:fontID/report/:reportID/like — me gusta. Idempotente.
     ///
     /// **Ni avisa ni puntúa**, y eso es el diseño y no una tarea pendiente: un me gusta no
@@ -471,6 +554,9 @@ struct CreateReportDTO: Content {
     /// comentarios, que es el fallo barato: se marca después.
     let isIncident: Bool?
     let incidentKind: IncidentKind?
+    /// De qué comentario cuelga, si es una respuesta. Ver `create`: solo un nivel, y una
+    /// respuesta **nunca** es incidencia.
+    let parentID: UUID?
 }
 
 extension CreateReportDTO: Validatable {
@@ -511,6 +597,8 @@ struct ReportResponse: Content {
     let likes: Int
     /// Si quien pide la lista ya dio el suyo. Sin sesión es `false`.
     let likedByMe: Bool
+    /// De qué comentario cuelga, si es una respuesta. El cliente agrupa con esto.
+    let parentID: UUID?
 
     init(_ report: FontReport, username: String?, staff: UserRole? = nil, resolverName: String? = nil,
          likes: LikeAgg? = nil) {
@@ -528,6 +616,7 @@ struct ReportResponse: Content {
         self.resolvedBy = resolverName
         self.likes = likes?.count ?? 0
         self.likedByMe = likes?.mine ?? false
+        self.parentID = report.$parent.id
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -549,5 +638,6 @@ struct ReportResponse: Content {
         try c.encode(resolvedBy, forKey: .resolvedBy)
         try c.encode(likes, forKey: .likes)
         try c.encode(likedByMe, forKey: .likedByMe)
+        try c.encode(parentID, forKey: .parentID)
     }
 }

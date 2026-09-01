@@ -106,6 +106,7 @@ import { FontBadges } from '../components/FontBadges'
 import { FichaTecnica } from '../components/FichaTecnica'
 import { Autor } from '../components/AuthorLine'
 import { puedeEditar } from '../lib/reportEdit'
+import { agrupaEnHilos } from '../lib/reportThread'
 import { TextoRico } from '../components/RichText'
 import { TextoLargo } from '../components/TextoLargo'
 import { FontHiddenNotice, FontMaintenance } from '../components/FontMaintenance'
@@ -675,6 +676,10 @@ export function FontDetailPage() {
   /** Qué comentario se está corrigiendo, y con qué texto. Ver `lib/reportEdit.ts`. */
   const [editando, setEditando] = useState<string | null>(null)
   const [borradorEdicion, setBorradorEdicion] = useState('')
+  /** A qué comentario se está respondiendo, y con qué texto. */
+  const [respondiendoA, setRespondiendoA] = useState<string | null>(null)
+  const [borradorRespuesta, setBorradorRespuesta] = useState('')
+  const [enviandoRespuesta, setEnviandoRespuesta] = useState(false)
   const [guardandoEdicion, setGuardandoEdicion] = useState(false)
   const [comments, setComments] = useState<CommentResponse[]>([])
   const [error, setError] = useState('')
@@ -951,6 +956,34 @@ export function FontDetailPage() {
    * porque es un gesto de un toque y esperar a que se rellene el corazón se nota. Si
    * falla, la fila vuelve a como estaba y se dice por qué.
    */
+  /**
+   * Responder abre la caja **debajo del comentario**, no la de abajo del todo.
+   *
+   * Antes esto rellenaba el formulario general con `@usuario` y bajaba hasta él. Con el
+   * hilo de verdad ya no hace falta: la respuesta cuelga del comentario, así que
+   * escribirla donde está la conversación es lo que menos mueve al lector — y la mención
+   * sobra, porque el servidor avisa al autor por el `parentID`.
+   */
+  function responder(r: ReportResponse) {
+    setRespondiendoA(r.id)
+    setBorradorRespuesta('')
+  }
+
+  async function enviaRespuesta(padre: ReportResponse) {
+    if (!id || !borradorRespuesta.trim()) return
+    setEnviandoRespuesta(true)
+    try {
+      const nueva = await createReport(id, borradorRespuesta.trim(), undefined, padre.id)
+      setReports((rs) => [...rs, nueva])
+      setRespondiendoA(null)
+      setBorradorRespuesta('')
+    } catch (e) {
+      toast.show(describeError(e, t), 'error')
+    } finally {
+      setEnviandoRespuesta(false)
+    }
+  }
+
   async function cambiaMeGusta(r: ReportResponse) {
     if (!id) return
     const quiero = !r.likedByMe
@@ -1549,8 +1582,22 @@ export function FontDetailPage() {
           <Typography variant="h6" gutterBottom>{t('detail.comments', { n: reports.length })}</Typography>
           {reports.length === 0 && <Typography color="text.secondary">{t('detail.noComments')}</Typography>}
           <List disablePadding>
-            {reports.map((r) => (
-              <ListItem key={r.id} divider disableGutters secondaryAction={(user?.id === r.userID || user?.isAdmin) ? (
+            {/* El hilo se arma aquí: comentarios del más nuevo al más viejo y sus
+                respuestas en el orden en que ocurrieron. La lógica y el porqué están en
+                `lib/reportThread.ts`, con tests — incluido el caso de la respuesta cuyo
+                padre se borró, que se enseña suelta en vez de desaparecer. */}
+            {agrupaEnHilos(reports).flatMap((h) => [
+              { r: h.comentario, esRespuesta: false },
+              ...h.respuestas.map((x) => ({ r: x, esRespuesta: true })),
+            ]).map(({ r, esRespuesta }) => (
+              <ListItem key={r.id} divider disableGutters
+                        sx={esRespuesta ? {
+                          // Sangrado y una línea a la izquierda: dice de quién cuelga sin
+                          // gastar una fila en repetirlo. Solo un nivel, así que no hace
+                          // falta que el sangrado crezca.
+                          pl: 3, borderLeft: 2, borderLeftColor: 'divider',
+                        } : undefined}
+                        secondaryAction={(user?.id === r.userID || user?.isAdmin) ? (
                 <IconButton edge="end" size="small" color="error" onClick={() => removeReport(r.id)} aria-label={t('detail.delete')}><DeleteOutlineIcon fontSize="small" /></IconButton>
               ) : undefined}>
                 <Box>
@@ -1639,13 +1686,57 @@ export function FontDetailPage() {
                   {/* Solo el autor y solo durante la primera hora. La decisión vive en
                       `lib/reportEdit.ts` con sus tests, y el servidor es quien manda: si
                       el plazo se pasa mientras la ficha está abierta, responde 403. */}
+                  {/* ## Responder es una mención, no un hilo
+                      Las menciones ya existen en esta misma caja y hacen el trabajo: `@usuario`
+                      avisa por campana, correo y notificación del sistema —una mención pasa el
+                      filtro del push sin discusión, porque alguien te está hablando a ti—. Lo
+                      único que faltaba era **verlo**: había que saber que se podía y escribir el
+                      nombre a mano.
+                      Así que esto no crea ninguna estructura nueva: rellena la caja con la
+                      mención puesta y baja hasta ella. Lo que se publica es un comentario normal,
+                      y por eso no toca ninguno de los seis sitios de los que cuelga un
+                      `FontReport` —gotas, novedades, correo semanal, avisos a quien sigue la
+                      fuente, la cola de moderación y el recuento del municipio—, que es donde
+                      está el trabajo de verdad de un hilo con `parent_id`.
+                      Llevar al usuario a otro punto de la página es correcto **aquí** y no lo era
+                      en el hueco de la foto: allí la intención era «tengo una foto» y se
+                      respondía con un formulario de reseña; aquí la intención **es** escribir. */}
+                  {/* Solo desde un comentario, no desde una respuesta: el servidor
+                      rechaza anidar y ofrecer un botón que solo sabe dar error es lo que
+                      esta app no hace. */}
+                  {user && !esRespuesta && respondiendoA !== r.id && (
+                    <Button size="small" onClick={() => responder(r)}
+                            sx={{ textTransform: 'none', ml: -1, mr: 1 }}>
+                      {t('report.reply')}
+                    </Button>
+                  )}
+                  {respondiendoA === r.id && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, my: 1 }}>
+                      <TextField
+                        value={borradorRespuesta}
+                        onChange={(e) => setBorradorRespuesta(e.target.value)}
+                        placeholder={t('report.replyPlaceholder')}
+                        multiline minRows={2} maxRows={6} size="small" fullWidth autoFocus
+                      />
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button size="small" variant="contained" disableElevation
+                                disabled={enviandoRespuesta || !borradorRespuesta.trim()}
+                                onClick={() => void enviaRespuesta(r)}>
+                          {t('report.send')}
+                        </Button>
+                        <Button size="small" onClick={() => setRespondiendoA(null)}>
+                          {t('form.cancel')}
+                        </Button>
+                      </Box>
+                    </Box>
+                  )}
                   {editando !== r.id && puedeEditar(r, user?.id) && (
                     <Button size="small" onClick={() => { setEditando(r.id); setBorradorEdicion(r.message) }}
                             sx={{ textTransform: 'none', ml: -1, mr: 1 }}>
                       {t('detail.edit')}
                     </Button>
                   )}
-                  {puedeMarcar(r) && (
+                  {!esRespuesta && puedeMarcar(r) && (
                     <Button size="small" onClick={() => cambiaIncidencia(r, !r.isIncident)} sx={{ textTransform: 'none', ml: -1, mr: 1 }}>
                       {t(r.isIncident ? 'comment.unmark' : 'comment.mark')}
                     </Button>

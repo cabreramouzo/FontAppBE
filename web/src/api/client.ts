@@ -428,10 +428,18 @@ export async function confirmComment(fontID: string, commentID: string, on: bool
  * explícito o volvemos a donde estábamos, con la caja llenándose de cosas que nadie va a
  * resolver nunca.
  */
-export async function createReport(fontID: string, message: string, kind?: IncidentKind): Promise<ReportResponse> {
+/**
+ * Publica un comentario, o una **respuesta** si se pasa `parentID`.
+ *
+ * Una respuesta nunca es incidencia y el servidor lo impone: aunque llegara con `kind`, lo
+ * guarda como comentario. De eso depende que no entre en las gotas, la portada, el correo
+ * semanal ni el recuento de averías de un municipio.
+ */
+export async function createReport(fontID: string, message: string, kind?: IncidentKind,
+                                   parentID?: string): Promise<ReportResponse> {
   return apiFetch<ReportResponse>(`/fonts/${fontID}/report`, {
     method: 'POST',
-    body: JSON.stringify({ message, isIncident: !!kind, incidentKind: kind }),
+    body: JSON.stringify({ message, isIncident: !!kind, incidentKind: kind, parentID }),
   })
 }
 

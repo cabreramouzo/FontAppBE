@@ -65,7 +65,7 @@ final class ReportEditTests: XCTestCase {
                        espera: (XCTHTTPResponse) throws -> Void) async throws {
         try await app.test(.PUT, "fonts/\(f.requireID())/report/\(r.requireID())",
                            headers: bearer(token), beforeRequest: { req in
-            try req.content.encode(CreateReportDTO(message: texto, isIncident: nil, incidentKind: nil))
+            try req.content.encode(CreateReportDTO(message: texto, isIncident: nil, incidentKind: nil, parentID: nil))
         }, afterResponse: espera)
     }
 

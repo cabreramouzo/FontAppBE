@@ -176,6 +176,8 @@ export interface ReportResponse {
   likes?: number
   /** Si tú ya diste el tuyo. Sin sesión, falso. */
   likedByMe?: boolean
+  /** De qué comentario cuelga, si es una respuesta. El cliente agrupa con esto. */
+  parentID?: string | null
   /** Nulo = sigue abierta. Se cierra, no se borra: la avería es parte de la historia. */
   resolvedAt: string | null
   resolvedBy: string | null
