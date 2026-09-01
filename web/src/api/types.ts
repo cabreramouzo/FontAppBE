@@ -443,7 +443,7 @@ export type UserCapabilityReport = {
   requiredActiveDays: number
   blockedBy: string[]
   granted: string[]
-  missing: { key: string; level: string; gotes: number; missingGotes: number }[]
+  missing: { key: string; level: string; gotes: number; missingGotes: number; requiresDefinitivePoints: boolean }[]
   gamificationOptOut: boolean
   postingRestrictedUntil?: string | null
   recentVoids: { reason: string; count: number; misconduct: boolean; lastAt?: string | null }[]

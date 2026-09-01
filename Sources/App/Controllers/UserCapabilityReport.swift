@@ -52,8 +52,16 @@ struct UserCapabilityReport: Content {
         let level: String
         let gotes: Int
         /// Cuántas le faltan para ese peldaño. `0` cuando ya tiene las gotas y lo que
-        /// falla es otro requisito — que es justo el caso que nadie sabía leer.
+        /// falla es otro requisito.
         let missingGotes: Int
+        /// ¿Esta capacidad exige además puntos **definitivos**?
+        ///
+        /// Sin este campo el panel no podía explicar una capacidad cerrada por la época:
+        /// `blockedBy` solo dice `provisional` cuando se cierran **todas**, así que con
+        /// los puntos provisionales las tres destructivas desaparecían de `granted` sin
+        /// que nada dijera por qué. Eso dejaba al administrador exactamente donde estaba
+        /// antes de este panel.
+        let requiresDefinitivePoints: Bool
     }
 
     struct VoidGroup: Content {
@@ -94,7 +102,8 @@ struct UserCapabilityReport: Content {
         let faltan = Capabilities.Capability.allCases
             .filter { !concedidas.contains($0.rawValue) }
             .map { Missing(key: $0.rawValue, level: $0.level, gotes: $0.gotes,
-                           missingGotes: max(0, $0.gotes - gotes)) }
+                           missingGotes: max(0, $0.gotes - gotes),
+                           requiresDefinitivePoints: $0.requiresDefinitivePoints) }
 
         return UserCapabilityReport(
             username: user.username,

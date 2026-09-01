@@ -3192,13 +3192,32 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
     común, «he aportado y no me ha subido nada»;
   · **los días, en color cuando faltan**, porque son la mitad del requisito que nadie
     miraba;
-  · **chips de lo que puede** (llenos) y **de lo que no** (con candado), y estos últimos
-    dicen si le faltan gotas **o si le sobran y falla otro requisito** — que es
-    literalmente el caso que nadie sabía leer;
+  · **chips verdes de lo que puede** y **grises de lo que no**, y cada gris dice **su**
+    motivo. La primera versión ponía «tiene las gotas de sobra; falla otro requisito», y
+    eso deja al administrador donde estaba: sabe que algo falla y no cuál. Lo reportó el
+    autor probándolo;
   · **las anulaciones de los últimos 90 días diciendo cuáles cuentan** como mala
     conducta y cuáles no;
   · y **el estado del sistema** antes que el de la persona: con las capacidades apagadas,
     «no puede nada» no dice nada de ella.
+- **Las capacidades tienen dos clases de puerta y el panel las separa**
+  (`lib/capabilityBlockers.ts`, puro y con tests). Unas son **generales** —el sistema
+  encendido, la restricción, el opt-out, los días, la mala conducta— y cierran todo a la
+  vez: se pintan **una sola vez arriba**, con ✓/✗ y los números, porque repetir «le faltan
+  seis días» en siete chips es ruido. La otra es **propia de cada capacidad**, las gotas
+  de su nivel. Un chip gris nombra las dos cuando fallan las dos: enseñando solo la
+  primera, la capacidad más alta decía «le faltan 6 días» y se callaba las 3.050 gotas, o
+  sea que quien lo leyera concluiría que dentro de seis días la tendrá.
+- El orden de los motivos es **lo que hay que arreglar antes**, no lo más llamativo:
+  decirle «le faltan 3.050 gotas» a alguien con las aportaciones restringidas manda a
+  trabajar en lo que no toca. Replica el de `Capabilities.of`.
+- Ojo con `requiresDefinitivePoints`: `blockedBy` solo dice `provisional` cuando se
+  cierran **todas**, así que con puntos provisionales las tres destructivas desaparecían
+  de `granted` sin que nada dijera por qué. El informe lo publica **por capacidad**.
+- **Un admin no ve la lista de requisitos**, ve que su rol se lo abre todo. Con la lista
+  puesta salían los siete chips verdes junto a «✗ 0 de 8 días»: dos verdades que juntas se
+  leen como una contradicción, y quien la vea acaba dudando del panel entero justo cuando
+  venía a resolver una duda.
 - Los nombres de las capacidades y de los niveles **se reutilizan** (`game.can.*`,
   `game.level.*`): ya estaban en los ocho idiomas y son el mismo vocabulario que ve el
   usuario, así que el panel y su pantalla hablan igual.

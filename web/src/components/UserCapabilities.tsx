@@ -11,6 +11,8 @@ import LockIcon from '@mui/icons-material/LockOutlined'
 import { describeError, getUserCapabilities } from '../api/client'
 import type { UserCapabilityReport } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
+import { abrePorRol, motivosDe, requisitosGenerales } from '../lib/capabilityBlockers'
+import type { Motivo } from '../lib/capabilityBlockers'
 
 /**
  * «¿Qué puede hacer esta persona, y por qué no puede el resto?», para el panel.
@@ -70,9 +72,26 @@ export function UserCapabilities() {
   )
 }
 
+/** Los motivos, en una frase corta que quepa dentro de un chip. */
+function textoDeLosMotivos(ms: Motivo[], t: (k: string, p?: Record<string, string | number>) => string,
+                           n: (x: number) => string): string {
+  return ms.map((m) => {
+    switch (m.clave) {
+      case 'days': return t('admin.caps.why.days', { n: n(m.faltan) })
+      case 'gotes': return t('admin.caps.needsGotes', { level: t(`game.level.${m.level}`), n: n(m.faltan) })
+      default: return t(`admin.caps.why.${m.clave}`)
+    }
+  }).join(' · ')
+}
+
+/** Sin motivos que dar —no debería pasar— el chip se queda con el nombre a secas, que es
+ *  mejor que un guion suelto al final. */
+function etiquetaDeCapacidad(nombre: string, motivos: string): string {
+  return motivos ? `${nombre} — ${motivos}` : nombre
+}
+
 function InformeDeCapacidades({ r, n }: { r: UserCapabilityReport; n: (x: number) => string }) {
   const { t } = useI18n()
-  const diasCortos = r.activeDays < r.requiredActiveDays
 
   return (
     <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
@@ -87,20 +106,26 @@ function InformeDeCapacidades({ r, n }: { r: UserCapabilityReport; n: (x: number
         {r.pendingGotes > 0 && ` · ${t('admin.caps.pending', { n: n(r.pendingGotes) })}`}
       </Typography>
 
-      {/* Los días son la mitad del requisito que nadie miraba, y por eso van en grande y
-          con color: es lo que contestaba la pregunta del caso real. */}
-      <Typography variant="body2" sx={{ mt: 0.5, fontWeight: diasCortos ? 700 : 400 }}
-                  color={diasCortos ? 'warning.main' : 'text.secondary'}>
-        {t('admin.caps.days', { have: n(r.activeDays), need: n(r.requiredActiveDays) })}
-      </Typography>
-
-      {/* El estado del sistema, antes que el de la persona: con las capacidades apagadas,
-          «no puede nada» no dice nada de ella. */}
-      {!r.capabilitiesEnabled && <Alert severity="info" sx={{ mt: 1.5 }}>{t('admin.caps.systemOff')}</Alert>}
-      {r.capabilitiesEnabled && !r.definitivePoints && (
-        <Alert severity="info" sx={{ mt: 1.5 }}>{t('admin.caps.provisional')}</Alert>
+      {/* Los requisitos GENERALES van una sola vez y arriba, porque cierran todo a la
+          vez: repetir «le faltan seis días» en siete chips es ruido. El motivo concreto
+          de cada capacidad va después, en su chip. */}
+      {abrePorRol(r.role) ? (
+        <Alert severity="info" sx={{ mt: 2 }}>{t('admin.caps.byRole')}</Alert>
+      ) : (
+        <>
+          <Typography variant="subtitle2" sx={{ mt: 2, fontWeight: 800 }}>{t('admin.caps.requirements')}</Typography>
+          <Stack sx={{ mt: 0.5, gap: 0.25 }}>
+            {requisitosGenerales(r).map((q) => (
+              <Typography key={q.clave} variant="body2"
+                          color={q.cumple ? 'text.secondary' : 'warning.main'}
+                          sx={{ fontWeight: q.cumple ? 400 : 700 }}>
+                {q.cumple ? '✓' : '✗'} {t(`admin.caps.req.${q.clave}`, q.detalle)}
+              </Typography>
+            ))}
+          </Stack>
+        </>
       )}
-      {r.gamificationOptOut && <Alert severity="info" sx={{ mt: 1.5 }}>{t('admin.caps.optedOut')}</Alert>}
+
       {r.postingRestrictedUntil && (
         <Alert severity="warning" sx={{ mt: 1.5 }}>
           {t('admin.caps.restricted', { date: new Date(r.postingRestrictedUntil).toLocaleDateString() })}
@@ -118,14 +143,15 @@ function InformeDeCapacidades({ r, n }: { r: UserCapabilityReport; n: (x: number
           </Stack>
         )}
 
+      {/* Cada chip cerrado dice SU motivo. Antes ponía «falla otro requisito», que es
+          saber que algo falla y no cuál — o sea, el administrador seguía sin poder
+          contestar el correo. */}
       <Typography variant="subtitle2" sx={{ mt: 2, fontWeight: 800 }}>{t('admin.caps.cannot')}</Typography>
       <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.75, mt: 0.5 }}>
         {r.missing.map((m) => (
           <Chip
             key={m.key} size="small" variant="outlined" icon={<LockIcon />}
-            label={`${t(`game.can.${m.key}`)} — ${m.missingGotes > 0
-              ? t('admin.caps.needsGotes', { level: t(`game.level.${m.level}`), n: n(m.missingGotes) })
-              : t('admin.caps.needsOnlyOther')}`}
+            label={etiquetaDeCapacidad(t(`game.can.${m.key}`), textoDeLosMotivos(motivosDe(m, r), t, n))}
           />
         ))}
       </Stack>
