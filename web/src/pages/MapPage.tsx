@@ -342,6 +342,11 @@ function FontMarkers({
   const requestNumber = useRef(0)
   // Tampoco debe seguir consumiendo recursos: en el mapa solo importa la última caja.
   const activeRequest = useRef<AbortController | null>(null)
+  // Un 429 tiene que verse. Sin esto caía en el mismo `catch` que la falta de red y el
+  // mapa se quedaba mudo: **indistinguible de estar rota**, que es justo el síntoma que
+  // se reportó desde una ruta con 3G. El tope de lectura son 600/h y hacen falta unas
+  // tres horas seguidas para tocarlo, pero cuando pase, que se entienda.
+  const [topeHasta, setTopeHasta] = useState<number | null>(null)
 
   const loadBounds = useCallback(async (map: LeafletMap) => {
     const b = map.getBounds()
@@ -389,11 +394,14 @@ function FontMarkers({
           ? prev
           : { fonts: nuevas.fonts, clusters: nuevas.clusters }
       ))
-    } catch {
+    } catch (error) {
       // Sin red, la zona guardada. Antes esto dejaba el mapa vacío: la lista de cercanas
       // sí caía a la zona pero el mapa no, así que el excursionista veía sus fuentes en
       // una lista y ninguna en el mapa. Se reportó probándolo en el monte.
       if (mine !== requestNumber.current) return
+      if (error instanceof ApiError && error.status === 429) {
+        setTopeHasta(Date.now() + (error.retryAfterSeconds ?? 60) * 1000)
+      }
       const zona = await zonaGuardada()
       const fonts = zona ? enCaja(zona, caja) : []
       setMapData((prev) => (
@@ -431,7 +439,49 @@ function FontMarkers({
     if (sourceFilter !== 'all') l = l.filter((f) => f.source === sourceFilter)
     return l
   }, [mapData.fonts, hideNonPotable, onlyWithWater, onlyReliable, sourceFilter])
-  return <ClusteredMarkers fonts={shown} clusters={mapData.clusters} selectedID={selectedID} />
+  return (
+    <>
+      <ClusteredMarkers fonts={shown} clusters={mapData.clusters} selectedID={selectedID} />
+      {topeHasta && <AvisoDeTope hasta={topeHasta} onFin={() => { setTopeHasta(null); loadBounds(map) }} />}
+    </>
+  )
+}
+
+/**
+ * «Has hecho demasiadas consultas seguidas», sobre el mapa.
+ *
+ * Sin esto un 429 caía en el mismo `catch` que la falta de red y el mapa se quedaba mudo:
+ * indistinguible de estar rota, que es el peor error posible aquí y justo el síntoma que
+ * ya se reportó desde una ruta con 3G.
+ *
+ * **Se va solo y recarga el mapa.** El tope es una ventana deslizante, así que la cuota
+ * vuelve sin que nadie toque nada; dejar el aviso puesto —o dejar el mapa vacío hasta que
+ * la persona lo mueva otra vez— convertiría algo temporal en algo que parece roto.
+ */
+function AvisoDeTope({ hasta, onFin }: { hasta: number; onFin: () => void }) {
+  const { t } = useI18n()
+  // `onFin` va por `ref` y NO en las dependencias: es una función nueva en cada render y
+  // este componente vive dentro del mapa, que repinta con **cada posición del GPS**. Con
+  // ella en la lista, el temporizador se cancelaría y se recrearía cada pocos segundos y
+  // no llegaría a saltar nunca — el aviso se quedaría puesto para siempre, que es el
+  // fallo silencioso de este cambio.
+  const fin = useRef(onFin)
+  fin.current = onFin
+  useEffect(() => {
+    // `Retry-After` puede venir en horas; se despierta como muy tarde en un minuto para
+    // no tener un temporizador durmiendo media tarde en un móvil.
+    const espera = Math.min(Math.max(hasta - Date.now(), 0), 60_000)
+    const id = setTimeout(() => fin.current(), espera)
+    return () => clearTimeout(id)
+  }, [hasta])
+  const minutos = Math.max(1, Math.ceil((hasta - Date.now()) / 60_000))
+  return (
+    <div className="hint" role="status">
+      <strong>{t('map.rateLimited')}</strong>
+      <div>{t('error.tooManyRetry', { minutes: minutos })}</div>
+      <div style={{ opacity: 0.75 }}>{t('map.rateLimitedBody')}</div>
+    </div>
+  )
 }
 
 // Captura el clic en el mapa para situar la nueva fuente.

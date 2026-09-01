@@ -509,6 +509,26 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   Y sigue sin impedir la copia —`in-bounds` da 3.000 por llamada y tiene que seguir abierta
   porque la usa el mapa—: es cerrar la puerta de la calle sabiendo que la verja del jardín
   sigue abierta. No es seguridad, es no ponerlo fácil.
+- **Un 429 se ve, y esto faltaba.** Caía en el mismo `catch` que la falta de red, así
+  que el mapa se quedaba mudo: **indistinguible de estar rota**, que es el peor error
+  posible aquí y justo el síntoma que ya se reportó desde una ruta con 3G. Ahora sale un
+  aviso sobre el mapa con los minutos que faltan, y **se va solo y recarga**: el tope es
+  una ventana deslizante, la cuota vuelve sin que nadie toque nada, y dejar el aviso
+  puesto convertiría algo temporal en algo que parece roto.
+  · La traducción va **por estado y no por código**: los topes de lectura no pasan
+    `errorCode`, así que aquí llegaba el `reason` del servidor en castellano o nada.
+    Tratándolo en `describeError` por `status === 429` queda cubierta de una vez cualquier
+    ruta con tope, las que hay y las que se añadan, sin acordarse en cada una.
+  · Ojo con el temporizador: `onFin` va por `ref` y **no** en las dependencias del efecto.
+    Es una función nueva en cada render y ese componente vive dentro del mapa, que repinta
+    con **cada posición del GPS**; con ella en la lista el temporizador se cancelaría cada
+    pocos segundos y no saltaría nunca — el aviso se quedaría puesto para siempre.
+  · **El tope se queda en 600/h.** Se planteó bajarlo a 300 «por precaución» y se midió
+    antes: una vista de pueblo son 8,8 KB y la de Barcelona 336 KB, así que 600 peticiones
+    en el peor caso son unos 200 MB/hora de una sola IP — céntimos. Enfrente, 300 son 150
+    movimientos de mapa, que alguien planificando una ruta un domingo alcanza. Cortarle el
+    mapa a quien más lo usa para ahorrar céntimos es mal negocio, y además el incidente de
+    coste real que ha habido fue el OOM —memoria por petición— y no el volumen.
 - Ojo: `RateLimitMiddleware` es **en memoria y por instancia**. Con más de una, el tope
   real se multiplica por el número de instancias.
 - **Lo que NO se hace: fuentes falsas de control** para detectar copias. Envenenaría el

@@ -36,6 +36,15 @@ export function describeError(e: unknown, t: (key: string, params?: Record<strin
     }
     const traducido = e.code ? traduceCodigo(e.code, t) : null
     if (traducido) return traducido
+    // Un 429 **sin código propio**: los topes de lectura no pasan `errorCode`, así que
+    // aquí llegaba el `reason` del servidor en castellano, o nada. Se trata por estado y
+    // no por código a propósito — así lo cubre de una vez cualquier ruta con tope, las
+    // que hay y las que se añadan, sin tener que acordarse en cada una.
+    if (e.status === 429) {
+      return e.retryAfterSeconds != null
+        ? t('error.tooManyRetry', { minutes: Math.max(1, Math.ceil(e.retryAfterSeconds / 60)) })
+        : t('error.tooMany')
+    }
     if (e.status === 401) return t('error.unauthorized')
     return e.message || t('error.generic')
   }
