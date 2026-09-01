@@ -46,6 +46,17 @@ final class Notification: Model, @unchecked Sendable {
         /// «hasta las 22:00» desde un servidor en UTC sería mentirle a media base de
         /// usuarios, que va de Chile a Italia.
         case sourceLimit
+        /// A alguien le ha gustado un comentario tuyo.
+        ///
+        /// **Campana y no notificación del sistema.** La regla de «¿cambia lo que voy a
+        /// hacer?» decide el push, no la campana: ésta es el registro de lo que pasó y no
+        /// interrumpe a nadie. Un me gusta no te hace desviarte tres kilómetros, pero
+        /// enterarte de que alguien agradeció lo que escribiste es justo lo que la campana
+        /// existe para contarte.
+        ///
+        /// El `excerpt` lleva **un trozo del comentario**, no un código: son tus propias
+        /// palabras, así que no hay nada que traducir. Igual que `mention`.
+        case commentLike
     }
 
     @ID(key: .id) var id: UUID?

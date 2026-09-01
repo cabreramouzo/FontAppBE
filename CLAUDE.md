@@ -3615,6 +3615,18 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   `confirmations(for:)`): una por comentario sería una N+1 en cualquier ficha con
   conversación. Y la unicidad la da el índice `(report_id, user_id)`, no una comprobación
   en Swift.
+  **Avisa por la campana, no por push** (`Notification.Kind.commentLike`), y la distinción
+  no es un matiz: la regla de «¿cambia lo que voy a hacer?» gobierna la **notificación del
+  sistema**, que interrumpe; la campana es el registro de lo que pasó y por eso apagar un
+  grupo de push nunca la apaga. Se dijo primero que un me gusta «no avisa» y estaba mal:
+  eso era aplicarle a la campana el criterio del push.
+  Nunca a ti mismo, y **uno por comentario mientras siga sin leer** — diez me gusta
+  seguidos no son diez noticias. Se controla mirando la propia tabla de avisos, sin columna
+  nueva, igual que `StaleGuardedNotifier`. Precio asumido: dos personas sobre el mismo
+  comentario sin leer dejan un solo aviso, con el nombre del primero; el recuento de la
+  ficha sí los cuenta a los dos. Quitar el me gusta **no borra el aviso**: un aviso es una
+  foto de lo que pasó. El `excerpt` lleva un trozo del comentario y no un código, como
+  `mention`: son tus propias palabras y no hay nada que traducir.
 - **`/admin/reports`** (solo admin) lista todo lo escrito con su interruptor en cada fila.
   Existe porque la marca llegó **después que los datos**: hay que poder repasarlos de una
   sentada, y ficha por ficha eso es imposible. Escribe por la **misma ruta** que la ficha,

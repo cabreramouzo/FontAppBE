@@ -371,6 +371,41 @@ struct FontReportController: RouteCollection {
         return out
     }
 
+    /// A quien escribió el comentario, por la campana.
+    ///
+    /// **Campana y no push**, y la distinción no es un matiz: la regla de «¿cambia lo que
+    /// voy a hacer?» gobierna la notificación del sistema, que interrumpe. La campana es
+    /// el registro de lo que pasó y no interrumpe a nadie — por eso apagar un grupo de
+    /// push nunca la apaga. Enterarte de que alguien agradeció lo que escribiste cabe ahí
+    /// perfectamente; sacarte el móvil del bolsillo por eso, no.
+    ///
+    /// **Nunca a ti mismo**, y **uno por comentario mientras siga sin leer**: diez me
+    /// gusta seguidos no son diez noticias, son una. Se controla mirando la propia tabla
+    /// de avisos, sin columna nueva — el mismo truco que `StaleGuardedNotifier`. El precio
+    /// asumido es que dos personas distintas sobre el mismo comentario sin leer dejan un
+    /// solo aviso, con el nombre del primero; el recuento de la ficha sí los cuenta a los
+    /// dos.
+    ///
+    /// Quitar el me gusta **no borra el aviso**: un aviso es una foto de lo que pasó, y
+    /// pasó.
+    private func avisaDelMeGusta(_ report: FontReport, de quien: User, on db: any Database) async throws {
+        guard let autorID = report.$user.id, autorID != (try quien.requireID()) else { return }
+        let trozo = String(report.message.prefix(120))
+        let yaHay = try await Notification.query(on: db)
+            .filter(\.$user.$id == autorID)
+            .filter(\.$kind == .commentLike)
+            .filter(\.$readAt == nil)
+            .filter(\.$excerpt == trozo)
+            .first()
+        guard yaHay == nil else { return }
+        let font = try await Font.find(report.$font.id, on: db)
+        let aviso = Notification(userID: autorID, kind: .commentLike,
+                                 actorID: try quien.requireID(), actorName: quien.username,
+                                 fontID: report.$font.id, fontName: font?.name,
+                                 excerpt: trozo)
+        try await aviso.save(on: db)
+    }
+
     /// POST /fonts/:fontID/report/:reportID/like — me gusta. Idempotente.
     ///
     /// **Ni avisa ni puntúa**, y eso es el diseño y no una tarea pendiente: un me gusta no
@@ -400,7 +435,10 @@ struct FontReportController: RouteCollection {
         if on {
             // Repetirlo no apila nada: el índice único lo impediría igual, pero así
             // tampoco devuelve un error por algo que desde fuera es «ya está hecho».
-            if ya == nil { try await ReportLike(reportID: reportID, userID: userID).save(on: req.db) }
+            if ya == nil {
+                try await ReportLike(reportID: reportID, userID: userID).save(on: req.db)
+                try? await avisaDelMeGusta(report, de: user, on: req.db)
+            }
         } else {
             try await ya?.delete(on: req.db)
         }

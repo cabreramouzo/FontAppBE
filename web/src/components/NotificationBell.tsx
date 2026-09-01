@@ -167,6 +167,8 @@ export function NotificationBell({ desktopLabel = false }: { desktopLabel?: bool
                   ? t('notif.onFire', { user: n.actorName })
                   : n.kind === 'fontUpdate'
                     ? t('notif.fontUpdate', { font: rotulo(n.fontName, t) })
+                  : n.kind === 'commentLike'
+                    ? t('notif.commentLike', { user: n.actorName })
                     : t('notif.mentionedYou', { user: n.actorName, font: rotulo(n.fontName, t) })}
             </Typography>
             {/* El texto que lo provocó. Sin él hay que abrir la ficha para saber si

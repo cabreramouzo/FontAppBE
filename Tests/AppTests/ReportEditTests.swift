@@ -257,6 +257,85 @@ final class ReportLikeTests: XCTestCase {
         }
     }
 
+    /// **Campana sí, push no.** La regla de «¿cambia lo que voy a hacer?» gobierna la
+    /// notificación del sistema, que interrumpe; la campana es el registro de lo que pasó.
+    func testAvisaPorLaCampanaAQuienEscribio() async throws {
+        try await withApp { app in
+            let (autor, _) = try await usuario(app, "autora")
+            let (lectora, token) = try await usuario(app, "lectora")
+            let (f, r) = try await fuenteConComentario(app, de: autor)
+
+            try await app.test(.POST, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                               headers: bearer(token)) { res in XCTAssertEqual(res.status, .ok) }
+
+            let avisos = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == autor.requireID()).all()
+            XCTAssertEqual(avisos.count, 1)
+            XCTAssertEqual(avisos.first?.kind, .commentLike)
+            XCTAssertEqual(avisos.first?.actorName, lectora.username)
+            XCTAssertEqual(avisos.first?.excerpt, "Está detrás del quiosco",
+                           "el aviso lleva un trozo del comentario: son tus propias palabras")
+        }
+    }
+
+    /// Nunca a ti mismo: es la forma más rápida de que la campana se vuelva ruido.
+    func testDarteMeGustaATiMismoNoAvisa() async throws {
+        try await withApp { app in
+            let (autor, token) = try await usuario(app, "autora")
+            let (f, r) = try await fuenteConComentario(app, de: autor)
+
+            try await app.test(.POST, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                               headers: bearer(token)) { res in XCTAssertEqual(res.status, .ok) }
+
+            let avisos = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == autor.requireID()).count()
+            XCTAssertEqual(avisos, 0)
+        }
+    }
+
+    /// **Uno por comentario mientras siga sin leer.** Diez me gusta seguidos no son diez
+    /// noticias. El recuento de la ficha sí los cuenta todos; lo que no se repite es el
+    /// aviso.
+    func testDosPersonasSobreElMismoComentarioDejanUnSoloAviso() async throws {
+        try await withApp { app in
+            let (autor, _) = try await usuario(app, "autora")
+            let (_, t1) = try await usuario(app, "primera")
+            let (_, t2) = try await usuario(app, "segunda")
+            let (f, r) = try await fuenteConComentario(app, de: autor)
+
+            for tk in [t1, t2] {
+                try await app.test(.POST, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                                   headers: bearer(tk)) { res in XCTAssertEqual(res.status, .ok) }
+            }
+            let avisos = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == autor.requireID()).count()
+            XCTAssertEqual(avisos, 1, "sin esto, un comentario popular inunda la campana")
+
+            // Pero el recuento sí los cuenta a los dos: lo que se agrupa es el aviso.
+            try await app.test(.GET, "fonts/\(f.requireID())/report") { res in
+                XCTAssertEqual(try res.content.decode([ReportResponse].self).first?.likes, 2)
+            }
+        }
+    }
+
+    /// Quitar el me gusta no borra el aviso: un aviso es una foto de lo que pasó, y pasó.
+    func testQuitarloNoBorraElAviso() async throws {
+        try await withApp { app in
+            let (autor, _) = try await usuario(app, "autora")
+            let (_, token) = try await usuario(app, "lectora")
+            let (f, r) = try await fuenteConComentario(app, de: autor)
+
+            try await app.test(.POST, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                               headers: bearer(token)) { res in XCTAssertEqual(res.status, .ok) }
+            try await app.test(.DELETE, "fonts/\(f.requireID())/report/\(r.requireID())/like",
+                               headers: bearer(token)) { res in XCTAssertEqual(res.status, .ok) }
+
+            let avisos = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == autor.requireID()).count()
+            XCTAssertEqual(avisos, 1)
+        }
+    }
+
     /// Y con sesión, cada uno ve el suyo: el recuento es de todos, `likedByMe` es tuyo.
     func testCadaUnoVeSuPropioMeGusta() async throws {
         try await withApp { app in
