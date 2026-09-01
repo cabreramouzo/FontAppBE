@@ -73,6 +73,23 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
     no dupliquen el trabajo.
     El trabajador **no calcula nada propio**: llama a `ContributionLedger.sync()`, la misma
     función que el comando. Son dos formas de decidir cuándo se lanza una sola, y conviven.
+    **El barrido de reposo es cada 12 h, y el número sale de la factura.** Estaba en 30
+    minutos, o sea 48 pasadas al día pasara lo que pasara, y cada una despierta a Neon —
+    que es exactamente lo que se paga: en la factura de agosto (20–31), **52,25 CU-hora =
+    5,54 $ de los 5,55 $ totales**. Los **8,26 GB** que salieron de la base costaron
+    **cero** (incluidos hasta 500 GB) y el almacenamiento un céntimo. **No se paga por
+    mover datos, se paga por estar encendida**, y con ~37 visitas al día esos despertares
+    no los provocaba la gente.
+    Es seguro porque el barrido de reposo **no es el único disparador**: el middleware de
+    Fluent marca «sucio» en cada escritura, así que cuando alguien aporta se puntúa a los
+    20 s — y encima gratis, porque la base ya está despierta. Lo de las 12 h solo cubre lo
+    que cumple sus 72 h **sin que nadie toque nada**. Y nada que importe cuelga de ahí: el
+    estado del agua, la frescura y el cierre automático de incidencias viven en sus
+    controladores a propósito; lo único que se retrasa son las gotas, que son un incentivo
+    y no el servicio.
+    El techo lo fija un test contra `settlementWindow`: por encima de la mitad de las 72 h,
+    una aportación esperaría medio ciclo de más y «72 h» pasaría a ser «hasta cuatro
+    días». Verificado subiéndolo a 60 h.
     Y es **un temporizador de NIO dentro del proceso que sirve el HTTP** (igual que la
     limpieza de tokens de `configure.swift`), no un servicio aparte ni nada de Fly: del
     alojamiento solo necesita que el proceso siga vivo. `--rescore` no lo hace nunca.

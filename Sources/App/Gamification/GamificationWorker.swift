@@ -41,7 +41,32 @@ final class GamificationWorker: Sendable {
 
     /// Aunque no se mueva nada, hay que pasar de vez en cuando: la liquidación de las
     /// 72 h ocurre por el paso del tiempo, no porque alguien haga algo.
-    static let idleSweep: TimeInterval = 30 * 60
+    ///
+    /// ## Doce horas, y el número sale de la factura
+    ///
+    /// Estaba en 30 minutos, o sea **48 pasadas al día pasara lo que pasara**. Y cada una
+    /// despierta a Neon, que es exactamente lo que se paga: en la factura de agosto
+    /// (20–31), **52,25 CU-hora = 5,54 $ de los 5,55 $ totales**. Los 8,26 GB que salieron
+    /// de la base costaron **cero** —van incluidos hasta 500 GB—, y el almacenamiento,
+    /// un céntimo. No se paga por mover datos: se paga por estar encendida.
+    ///
+    /// Con ~37 visitas al día, esos despertares no los provocaba la gente.
+    ///
+    /// ## Por qué es seguro alargarlo
+    ///
+    /// **Esto NO es el único disparador.** Un `GamificationNudge` de Fluent marca «sucio»
+    /// en cada escritura, así que cuando alguien aporta se puntúa a los 20 s — y encima
+    /// gratis, porque la base ya está despierta: acaban de escribir en ella. Lo de aquí
+    /// solo cubre lo que cumple sus 72 h **sin que nadie toque nada**, y para una ventana
+    /// de tres días mirar cada media hora no aporta nada.
+    ///
+    /// Y nada que importe cuelga de esto: el estado del agua, la frescura y el cierre
+    /// automático de incidencias viven en sus controladores, a propósito. Lo único que se
+    /// retrasa son las gotas, que son un incentivo y no el servicio.
+    ///
+    /// El techo lo pone `settlementWindow`: el barrido tiene que ser **bastante menor**
+    /// que las 72 h o una aportación esperaría un ciclo entero de más. Hay test.
+    static let idleSweep: TimeInterval = 12 * 3_600
 
     private let sucio = NIOLockedValueBox(false)
     private let enMarcha = NIOLockedValueBox(false)

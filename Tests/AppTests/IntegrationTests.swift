@@ -2923,6 +2923,26 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// El barrido de reposo tiene que caber holgadamente dentro de la ventana de
+    /// liquidación, y esto es lo único que lo ata.
+    ///
+    /// Se alargó de 30 min a 12 h leyendo la factura —52,25 CU-hora eran el 99,8 % de los
+    /// 5,55 $ de agosto, y los 8,26 GB de datos costaron cero—, así que la tentación de
+    /// seguir subiéndolo va a volver. El límite no es una opinión: por encima de la mitad
+    /// de `settlementWindow`, una aportación que cumple sus 72 h justo después de una
+    /// pasada esperaría medio ciclo más, y eso ya se nota — dejaría de ser «72 h» para
+    /// pasar a ser «hasta cuatro días».
+    ///
+    /// Nada de esto rompe ningún test si alguien lo pone en una semana: las gotas
+    /// simplemente tardarían, y solo se vería en el móvil de otra persona.
+    func testIdleSweepFitsInsideTheSettlementWindow() throws {
+        XCTAssertLessThanOrEqual(GamificationWorker.idleSweep, ContributionLedger.settlementWindow / 2,
+                                 "Un barrido tan espaciado retrasa la liquidación más de lo que promete la ventana.")
+        // Y hacia abajo: por debajo de una hora vuelve el problema que esto vino a
+        // arreglar, despertar la base sin que nadie haya hecho nada.
+        XCTAssertGreaterThanOrEqual(GamificationWorker.idleSweep, 3_600)
+    }
+
     /// La foto que le faltaba al panel: por qué esta persona no puede, con los números
     /// delante. Reproduce el caso real —gotas de sobra, días insuficientes— porque es el
     /// que se contestó mal por no poder mirarlo.
