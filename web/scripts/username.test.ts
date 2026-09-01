@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import { esNombreValido, pareceCorreo } from '../src/lib/username.ts'
+import { escribiendoCorreo, esNombreValido, pareceCorreo } from '../src/lib/username.ts'
 
 test('acepta lo que el servidor acepta', () => {
   for (const n of ['maria_r', 'oriol_t', 'jose.maria', 'a-b-c', 'abc', 'x'.repeat(30)]) {
@@ -25,5 +25,16 @@ test('reconoce un nombre de usuario que es una dirección de correo', () => {
 test('y no confunde con uno normal', () => {
   for (const n of ['maria_r', 'jose.maria', 'Sebas', 'Toni Serra', 'a@b', 'arroba@']) {
     assert.equal(pareceCorreo(n), false, n)
+  }
+})
+
+test('avisa en cuanto aparece una arroba, sin esperar al correo entero', () => {
+  // El aviso sirve mientras se escribe: a mitad de teclear ya se sabe lo que pasa, y la
+  // regla en positivo («letras, números, punto, guion…») no dice que la @ no valga.
+  for (const n of ['yo@', 'yo@gmail', 'joansws@gmail.com', '@alguien']) {
+    assert.equal(escribiendoCorreo(n), true, n)
+  }
+  for (const n of ['maria_r', 'jose.maria', 'Sebas', '']) {
+    assert.equal(escribiendoCorreo(n), false, n)
   }
 })

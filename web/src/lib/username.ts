@@ -19,6 +19,23 @@ export function esNombreValido(nombre: string): boolean {
 }
 
 /**
+ * ¿Están escribiendo un correo aquí?
+ *
+ * Se pregunta **mientras se escribe**, y basta con que haya una `@`: no hace falta que
+ * sea un correo completo, porque a mitad de teclearlo (`yo@gmail`) la intención ya está
+ * clara y es cuando el aviso sirve.
+ *
+ * Existe porque la regla estaba escrita **en positivo** —«letras sin acentos, números,
+ * punto, guion y guion bajo»— y de ahí hay que deducir que la `@` no vale. Nadie deduce
+ * nada mientras rellena un formulario: lee que su correo no cumple «algo» y lo intenta
+ * otra vez. Y lo que hay que decir no es qué caracteres faltan, es **por qué**: el nombre
+ * es público y firma cada reseña.
+ */
+export function escribiendoCorreo(nombre: string): boolean {
+  return nombre.includes('@')
+}
+
+/**
  * ¿El nombre de usuario es una dirección de correo?
  *
  * Se pregunta para **avisar a quien lo tiene**, no para prohibirlo: prohibirlo ya lo hace

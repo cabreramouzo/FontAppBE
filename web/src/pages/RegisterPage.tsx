@@ -7,7 +7,7 @@ import Link from '@mui/material/Link'
 import Alert from '@mui/material/Alert'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
-import { esNombreValido } from '../lib/username'
+import { escribiendoCorreo, esNombreValido } from '../lib/username'
 import { describeError, trackInteraction } from '../api/client'
 
 // Formulario de ALTA, en su propia URL (ver la nota de LoginPage: un propósito por
@@ -38,6 +38,9 @@ export function RegisterPage() {
     // La regla es la misma que la del servidor a propósito (ver `lib/username.ts`): un
     // nombre que el servidor aceptara y el parser de menciones no reconociera mandaría
     // los avisos a otra persona.
+    // La `@` se dice aparte: la regla va en positivo y de ahí hay que deducir que el
+    // correo no vale, cosa que nadie hace rellenando un formulario.
+    if (escribiendoCorreo(username)) { setError(t('profile.usernameNotEmail')); return }
     if (!esNombreValido(username.trim())) { setError(t('profile.usernameRules')); return }
     setBusy(true)
     try {
@@ -81,7 +84,7 @@ export function RegisterPage() {
           // elige un nombre para siempre, y enterarse de que no vale al pulsar «crear»
           // es tarde. En rojo solo cuando de verdad está mal.
           error={!!username && !esNombreValido(username.trim())}
-          helperText={t('profile.usernameRules')}
+          helperText={escribiendoCorreo(username) ? t('profile.usernameNotEmail') : t('profile.usernameRules')}
         />
 
         <TextField

@@ -2508,6 +2508,14 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   búsqueda pasaba a ser ambigua (comprobado que hoy no hay ninguna pareja así).
   Va por `lower() = lower()` y **no** por `ILIKE`: los nombres admiten `_`, que en `LIKE`
   es un comodín de un carácter, así que `Dani_Ccir` habría casado con `DaniXCcir`.
+- **Y escribir una `@` se avisa en el momento, con el motivo.** La regla se enseñaba solo
+  en positivo —«letras sin acentos, números, punto, guion y guion bajo»— y de ahí hay que
+  **deducir** que el correo no vale. Nadie deduce nada rellenando un formulario: lee que
+  su correo incumple «algo» y lo vuelve a intentar. Lo reportó el autor probándolo.
+  `escribiendoCorreo` mira solo si hay una `@`, sin esperar a un correo completo: a mitad
+  de teclear (`yo@gmail`) la intención ya está clara y es cuando el aviso sirve. Y el
+  texto no dice qué caracteres faltan, dice **por qué**: «el nombre de usuario es público
+  y firma cada reseña». Va en el registro y en ajustes, en el helper y al enviar.
 - **Un nombre de usuario que es un correo burla `emailPublic`.** Esa preferencia nace
   apagada y el perfil oculta el campo `email` como debe… mientras el mismo correo está al
   lado como nombre, firmando cada reseña en público. Son **2 de 15** en producción. Las

@@ -6,7 +6,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { deletePasskey, describeError, listPasskeys, registerPasskey, type PasskeySummary } from '../../api/client'
 import { useI18n } from '../../i18n/I18nContext'
-import { esNombreValido, pareceCorreo } from '../../lib/username'
+import { escribiendoCorreo, esNombreValido, pareceCorreo } from '../../lib/username'
 import { PantallaDeAjustes, useAjustes } from './comun'
 
 /**
@@ -40,6 +40,7 @@ export function AccountSettingsPage() {
     e.preventDefault()
     const limpio = usuario.trim()
     if (!nombre.trim()) { setError(t('profile.nameEmpty')); return }
+    if (escribiendoCorreo(limpio)) { setError(t('profile.usernameNotEmail')); return }
     if (!esNombreValido(limpio)) { setError(t('profile.usernameRules')); return }
     await guardar({ name: nombre.trim(), username: limpio })
   }
@@ -76,7 +77,7 @@ export function AccountSettingsPage() {
           size="small" fullWidth
           slotProps={{ htmlInput: { maxLength: 30, autoCapitalize: 'none', spellCheck: false } }}
           error={!!usuario && !esNombreValido(usuario)}
-          helperText={t('profile.usernameRules')}
+          helperText={escribiendoCorreo(usuario) ? t('profile.usernameNotEmail') : t('profile.usernameRules')}
         />
         {/* Dos avisos para las cuentas creadas antes de que el registro exigiera la regla.
             El del correo va primero y en `warning` porque es de privacidad: su dirección
