@@ -540,6 +540,13 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   cuentas vistas más recientemente y las diez más antiguas o aún no observadas, usando el
   mismo `last_seen_at`. Un valor nulo significa «sin actividad registrada desde que existe
   la medición», no demuestra que la cuenta nunca iniciara sesión antes de desplegarla.
+- **El contador de visitas ya existía, repartido en cuatro filas.** Cada sesión de
+  pestaña dispara exactamente un `platform_*` (`trackPlatformOnce` desde `Layout`, que
+  envuelve todas las rutas), así que sumar los cuatro **es** «cuánta gente llega a la
+  web», con código de campaña o sin él. Estaba a la vista y a la vez no: había que
+  sumarlos de cabeza, que es tanto como no estar. Ahora sale como una cifra sola y grande
+  arriba del bloque, y **sin ningún evento ni endpoint nuevo** — se calcula de lo que esa
+  pantalla ya pedía. Medido: 410 llegadas en once días.
 - **Clics de campaña sin registrarse** (`campaign_visits` + `POST /analytics/visit` →
   `GET /admin/analytics/campaigns`). El código de `?p=` se guardaba en `localStorage` y
   **solo llegaba al servidor al crear la cuenta**, así que de un post de LinkedIn con

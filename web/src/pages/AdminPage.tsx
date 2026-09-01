@@ -44,7 +44,7 @@ const ANALYTICS_GROUPS = [
 
 export function AdminPage() {
   const { user, loading } = useAuth()
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const navigate = useNavigate()
   const [flags, setFlags] = useState<Flag[] | null>(null)
   const [edits, setEdits] = useState<FontEdit[] | null>(null)
@@ -384,11 +384,24 @@ export function AdminPage() {
           const modeTotal = modes.reduce((sum, i) => sum + i.sessions, 0)
           const pwa = modes.find((i) => i.event === 'platform_mode_pwa')?.sessions ?? 0
           if (!deviceTotal) return null
-          return <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
-            <Chip color="primary" label={`${t('analytics.mobile')}: ${Math.round((deviceTotal - desktop) / deviceTotal * 100)}%`} />
-            <Chip variant="outlined" label={`${t('analytics.platform_desktop')}: ${Math.round(desktop / deviceTotal * 100)}%`} />
-            {modeTotal > 0 && <Chip variant="outlined" label={`${t('analytics.platform_mode_pwa')}: ${Math.round(pwa / modeTotal * 100)}%`} />}
-          </Box>
+          // El contador de visitas NO necesita ningún evento nuevo: cada sesión de
+          // pestaña dispara exactamente un `platform_*`, así que sumar los cuatro ya es
+          // «cuánta gente ha llegado a la web», con código de campaña o sin él. Estaba
+          // ahí desde el principio, repartido en cuatro filas que había que sumar de
+          // cabeza — que es tanto como no estar.
+          return <>
+            <Box sx={{ mt: 1.5 }}>
+              <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1 }}>
+                {deviceTotal.toLocaleString(lang)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">{t('analytics.visits')}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+              <Chip color="primary" label={`${t('analytics.mobile')}: ${Math.round((deviceTotal - desktop) / deviceTotal * 100)}%`} />
+              <Chip variant="outlined" label={`${t('analytics.platform_desktop')}: ${Math.round(desktop / deviceTotal * 100)}%`} />
+              {modeTotal > 0 && <Chip variant="outlined" label={`${t('analytics.platform_mode_pwa')}: ${Math.round(pwa / modeTotal * 100)}%`} />}
+            </Box>
+          </>
         })()}
         {interactions && ANALYTICS_GROUPS.map((group) => {
           const items = interactions.filter((item) =>
