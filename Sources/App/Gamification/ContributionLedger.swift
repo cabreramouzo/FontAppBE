@@ -141,14 +141,14 @@ enum ContributionLedger {
 
         for e in desaparecidas {
             e.status = .void
-            e.voidReason = "la aportación ya no existe (borrada o revertida)"
+            e.voidReason = VoidReason.disappeared
             try await e.save(on: db)
             result.voided += 1
             result.voidReasons["desaparecida", default: 0] += 1
         }
         for e in denunciadas {
             e.status = .void
-            e.voidReason = "contenido denunciado durante la ventana de liquidación"
+            e.voidReason = VoidReason.flagged
             try await e.save(on: db)
             result.voided += 1
             result.voidReasons["denunciada", default: 0] += 1
@@ -163,7 +163,7 @@ enum ContributionLedger {
         }
         for e in pasadas {
             e.status = .void
-            e.voidReason = "por encima del techo de \(dailyCap) gotas de ese día"
+            e.voidReason = VoidReason.overCap(dailyCap)
             try await e.save(on: db)
             result.voided += 1
             result.overCap += 1

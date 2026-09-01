@@ -2816,6 +2816,54 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Borrar una aportación propia NO es mala conducta, y durante un tiempo lo fue: la
+    /// clasificación iba por exclusión («todo lo que no sea el techo») y el borrado
+    /// cerraba las capacidades 90 días. Reportado desde producción por una cuenta con
+    /// casi 4.000 gotas que no podía subir una segunda foto.
+    ///
+    /// Se prueba además que el motivo que SÍ cuenta sigue contando, o el arreglo podría
+    /// haber sido dejar de mirar las anulaciones.
+    func testDeletingYourOwnContributionIsNotMisconduct() async throws {
+        try await withApp { app in
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+
+            let ordenada = try await register(app, username: "ordenada")
+            try await grantGotes(ordenada, 5_000, days: 20, on: app.db)
+            try await grantGotes(ordenada, 10, days: 1, on: app.db, status: .void,
+                                 voidReason: VoidReason.disappeared)
+            let grant = try await Capabilities.of(try await User.find(ordenada, on: app.db)!, on: app.db)
+            XCTAssertFalse(grant.blockedBy.contains("recentlyVoided"),
+                           "Borrar lo tuyo no puede cerrar las capacidades.")
+            XCTAssertTrue(grant.capabilities.contains(.addSecondaryPhoto))
+
+            let sancionada = try await register(app, username: "sancionada")
+            try await grantGotes(sancionada, 5_000, days: 20, on: app.db)
+            try await grantGotes(sancionada, 10, days: 1, on: app.db, status: .void,
+                                 voidReason: VoidReason.moderationPrefix + "spam")
+            let cerrada = try await Capabilities.of(try await User.find(sancionada, on: app.db)!, on: app.db)
+            XCTAssertEqual(cerrada.blockedBy, ["recentlyVoided"])
+        }
+    }
+
+    /// `blockedBy: ["activeDays"]` dice cuál es el requisito que falla; los días dicen a
+    /// qué distancia estás. Sin ellos la interfaz solo puede decir «todavía no».
+    func testGrantReportsHowManyActiveDaysYouHave() async throws {
+        try await withApp { app in
+            setenv("GAMIFICATION_CAPABILITIES", "true", 1)
+            setenv("GAMIFICATION_EPOCH", "2020-01-01", 1)
+            defer { unsetenv("GAMIFICATION_CAPABILITIES"); unsetenv("GAMIFICATION_EPOCH") }
+
+            let nueva = try await register(app, username: "condosdias")
+            try await grantGotes(nueva, 5_000, days: 2, on: app.db)
+            let grant = try await Capabilities.of(try await User.find(nueva, on: app.db)!, on: app.db)
+            XCTAssertEqual(grant.blockedBy, ["activeDays"])
+            XCTAssertEqual(grant.activeDays, 2)
+            XCTAssertEqual(grant.requiredActiveDays, Capabilities.requiredActiveDays)
+        }
+    }
+
     /// La puerta de verdad: reubicar una fuente ajena por HTTP. Y lo que NO se abre —
     /// sustituir la foto y borrar siguen siendo del creador o de un admin.
     func testLevelLetsYouRelocateSomeoneElsesFountainButNotDeleteOrReplaceItsPhoto() async throws {

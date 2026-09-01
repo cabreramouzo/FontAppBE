@@ -389,7 +389,7 @@ struct FontController: RouteCollection {
                     .all()
                 for event in events {
                     event.status = .void
-                    event.voidReason = "moderación confirmada: \(dto.reason)"
+                    event.voidReason = VoidReason.moderationPrefix + dto.reason
                     try await event.save(on: db)
                 }
             }
@@ -423,7 +423,7 @@ struct FontController: RouteCollection {
                     .filter(\.$font.$id == fontID)
                     .filter(\.$status == .void)
                     .all()
-                    .filter { $0.voidReason?.hasPrefix("moderación confirmada:") == true }
+                    .filter { $0.voidReason?.hasPrefix(VoidReason.moderationPrefix) == true }
                 for event in events {
                     event.status = event.settledAt == nil ? .pending : .settled
                     event.voidReason = nil

@@ -306,6 +306,11 @@ export interface GamificationProfile {
     blockedBy: string[]
     /** Lo que aún no tienes, con el nivel que lo abre. */
     upcoming?: { key: string; level: string; gotes: number }[]
+    /** Días distintos con aportación liquidada, y cuántos hacen falta. Sin esto,
+     *  `blockedBy: ['activeDays']` dice cuál es el requisito pero no a qué distancia
+     *  estás, y la interfaz solo puede decir «todavía no». */
+    activeDays?: number
+    requiredActiveDays?: number
   } | null
   /** La vitrina: los diez peldaños de abajo arriba. */
   levels: LevelStanding[]

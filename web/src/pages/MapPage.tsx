@@ -1058,9 +1058,22 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
     let allowNearbyDuplicate = false
     try {
       const nearby = await nearbyFonts(coords.lat, coords.lng, 10)
-      const tooClose = nearby.some((f) => haversineKm(coords.lat, coords.lng, f.latitude, f.longitude) <= 0.025)
-      if (tooClose) {
-        if (!confirm(t('newFont.nearDuplicate'))) { setSaving(false); return }
+      // La más cercana de las que están dentro del radio, no una cualquiera: el aviso la
+      // NOMBRA, y para eso hay que elegir de cuál se habla.
+      const cerca = nearby
+        .map((f) => ({ f, km: haversineKm(coords.lat, coords.lng, f.latitude, f.longitude) }))
+        .filter((x) => x.km <= 0.025)
+        .sort((a, b) => a.km - b.km)[0]
+      if (cerca) {
+        // Decir «hay una fuente a menos de 25 m» no basta para reconocerla: la que
+        // motivó esto estaba a 3 m y **con otro nombre**, así que quien la estaba
+        // duplicando no tenía forma de saber que era la misma. Con el nombre y los
+        // metros delante, la pregunta se puede contestar.
+        const aviso = t('newFont.nearDuplicateNamed', {
+          name: nombreFuente(cerca.f, t),
+          m: Math.round(cerca.km * 1000),
+        })
+        if (!confirm(aviso)) { setSaving(false); return }
         allowNearbyDuplicate = true
       }
     } catch {

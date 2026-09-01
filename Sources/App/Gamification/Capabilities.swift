@@ -133,12 +133,11 @@ enum Capabilities {
     /// de que cueste, sino de que no sea la opinión de uno.
     static let retireGoneReports = 2
 
-    /// Anulaciones que cuentan como mala conducta. La del techo diario **no**: pasarse del
-    /// tope es haber aportado mucho un día, no haber hecho nada malo, y castigarlo con la
-    /// pérdida de permisos sería absurdo.
+    /// Anulaciones que cuentan como mala conducta. La lista vive en `VoidReason` y va
+    /// **en positivo**: aquí estuvo escrita por exclusión («todo lo que no sea el techo»)
+    /// y eso clasificaba como mala conducta el borrado de una aportación propia.
     static func isMisconduct(_ voidReason: String?) -> Bool {
-        guard let r = voidReason else { return false }
-        return !r.contains("techo")
+        VoidReason.isMisconduct(voidReason)
     }
 
     /// ¿Está encendido el sistema? Apagado por defecto.
@@ -164,11 +163,21 @@ enum Capabilities {
         }
         let upcoming: [Upcoming]
 
-        static func of(_ abiertas: [Capability], blockedBy: [String]) -> Grant {
+        /// Días distintos con aportación liquidada, y cuántos hacen falta.
+        ///
+        /// Van en la respuesta porque `blockedBy: ["activeDays"]` dice **cuál** es el
+        /// requisito que falla y no a qué distancia estás de cumplirlo, y sin eso la
+        /// interfaz solo puede decir «todavía no». «Llevas 2 de 8 días» se entiende y se
+        /// puede terminar; «no puedes» manda a escribir un correo.
+        let activeDays: Int
+        let requiredActiveDays: Int
+
+        static func of(_ abiertas: [Capability], blockedBy: [String], activeDays: Int = 0) -> Grant {
             let pendientes = Capability.allCases
                 .filter { !abiertas.contains($0) }
                 .map { Upcoming(key: $0.rawValue, level: $0.level, gotes: $0.gotes) }
-            return Grant(capabilities: abiertas, blockedBy: blockedBy, upcoming: pendientes)
+            return Grant(capabilities: abiertas, blockedBy: blockedBy, upcoming: pendientes,
+                         activeDays: activeDays, requiredActiveDays: Capabilities.requiredActiveDays)
         }
     }
 
@@ -236,11 +245,11 @@ enum Capabilities {
         if manchas { bloqueos.append("recentlyVoided") }
 
         // Un solo requisito que falle deja todo cerrado: son puertas, no una media.
-        guard bloqueos.isEmpty else { return Grant.of([], blockedBy: bloqueos) }
+        guard bloqueos.isEmpty else { return Grant.of([], blockedBy: bloqueos, activeDays: dias) }
 
         let abiertas = candidatas.filter { gotes >= $0.gotes }
         if abiertas.isEmpty { bloqueos.append("gotes") }
-        return Grant.of(abiertas, blockedBy: bloqueos)
+        return Grant.of(abiertas, blockedBy: bloqueos, activeDays: dias)
     }
 
     /// Atajo para los controladores: ¿tiene esta capacidad concreta?

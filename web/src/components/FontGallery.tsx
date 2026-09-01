@@ -16,14 +16,16 @@ import CollectionsIcon from '@mui/icons-material/CollectionsOutlined'
 import DescriptionIcon from '@mui/icons-material/DescriptionOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { Link as RouterLink } from 'react-router-dom'
-import { addFontPhoto, ApiError, assetUrl, deleteFontPhoto, describeError, getFontPhotos, uploadImage } from '../api/client'
+import { addFontPhoto, ApiError, assetUrl, deleteFontPhoto, describeError, getFontPhotos, getGamification, uploadImage } from '../api/client'
 import type { FontPhoto, PhotoKind } from '../api/client'
+import type { GamificationProfile } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { Skeleton } from './Skeleton'
 import { ZoomableImage } from './ZoomableImage'
 import { prepararFoto } from '../lib/image'
 import { capabilityLevels } from '../lib/capabilities'
+import { bloqueoDe } from '../lib/capabilityNotice'
 
 /**
  * «Otras fotos»: la galería de una fuente, detrás de un botón y en otra pantalla.
@@ -58,6 +60,8 @@ export function FontGallery({ fontID }: { fontID: string }) {
   // A partir de qué nivel se pueden subir fotos de la fuente. Viene del servidor: el
   // aviso decía «nivel 3» escrito a mano y ese número no puede vivir en dos sitios.
   const [nivelFotos, setNivelFotos] = useState<{ level: string; gotes: number } | null>(null)
+  // Lo que ESTA persona puede ya. `undefined` es «aún no lo sabemos» y se calla.
+  const [grant, setGrant] = useState<GamificationProfile['grant'] | undefined>(undefined)
 
   useEffect(() => {
     if (!open) return
@@ -67,13 +71,29 @@ export function FontGallery({ fontID }: { fontID: string }) {
     })
   }, [open])
 
-  /** «Necesitas el nivel Arroyo (350 gotas)». Sin los datos, el aviso genérico. */
-  const avisoNivel = nivelFotos
-    ? t('cap.needLevel', {
-        level: t(`game.level.${nivelFotos.level}`),
-        n: nivelFotos.gotes.toLocaleString(lang),
-      })
-    : t('cap.needLevelUnknown')
+  useEffect(() => {
+    if (!open || !user) return
+    // 204 (gamificación apagada) llega como null, que es un motivo de bloqueo de verdad.
+    getGamification().then((p) => setGrant(p ? (p.grant ?? null) : null)).catch(() => setGrant(undefined))
+  }, [open, user])
+
+  /**
+   * Qué le falta a quien mira, o nada si ya puede.
+   *
+   * Antes decía siempre «necesitas el nivel Rierol», tuvieras el nivel o no. Lo reportó
+   * alguien con 3.949 gotas —de sobra— al que le faltaban días distintos con aportación.
+   */
+  const bloqueo = bloqueoDe('addSecondaryPhoto', grant)
+  const avisoNivel = !bloqueo
+    ? ''
+    : bloqueo.clave !== 'cap.needLevel'
+      ? t(bloqueo.clave, bloqueo.params)
+      : nivelFotos
+        ? t('cap.needLevel', {
+            level: t(`game.level.${nivelFotos.level}`),
+            n: nivelFotos.gotes.toLocaleString(lang),
+          })
+        : t('cap.needLevelUnknown')
 
   useEffect(() => {
     if (!open || fotos) return
@@ -90,9 +110,11 @@ export function FontGallery({ fontID }: { fontID: string }) {
       setFotos((f) => [nueva, ...(f ?? [])])
       setCaption('')
     } catch (e) {
-      // Un 403 aquí solo puede ser el nivel, y el servidor no sabe en qué idioma
-      // contestarte: se sustituye por el aviso que sí nombra el nivel que falta.
-      setError(e instanceof ApiError && e.status === 403 ? avisoNivel : describeError(e, t))
+      // Un 403 aquí solo puede ser la capacidad, y el servidor no sabe en qué idioma
+      // contestarte: se sustituye por el aviso que sí nombra lo que falta.
+      setError(e instanceof ApiError && e.status === 403
+        ? (avisoNivel || t('cap.needLevelUnknown'))
+        : describeError(e, t))
     } finally {
       setSubiendo(false)
     }
@@ -179,7 +201,9 @@ export function FontGallery({ fontID }: { fontID: string }) {
               </Button>
               {/* Solo las de la fuente piden nivel; el documento no. Se dice antes de
                   intentarlo, no después de un 403. */}
-              {kind !== 'document' && (
+              {/* Solo se dice lo que falta si de verdad falta algo: a quien ya puede,
+                  el aviso le estaba diciendo que no podía. */}
+              {kind !== 'document' && avisoNivel && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                   {avisoNivel} {t('gallery.documentsFree')}{' '}
                   <Link component={RouterLink} to="/gamification">{t('gameHelp.readMore')}</Link>

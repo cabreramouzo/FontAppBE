@@ -3141,6 +3141,51 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   que sería churn sin ganancia.
 
 
+## El aviso decía el requisito equivocado
+
+- Reportado por un usuario con **3.949 gotas liquidadas**: «l'App diu que necessito nivell
+  rierol per aportar més fotos però crec que ja el tinc aquest nivell». Y tenía razón —
+  `brook` son 350 gotas, lleva once veces eso. Lo que le faltaba era la **otra mitad del
+  requisito**: `Capabilities.requiredActiveDays`, 8 días distintos con aportación
+  liquidada, y llevaba **2**. El aviso nombraba un requisito cumplido y escondía el que
+  fallaba, así que no había forma de saber qué hacer.
+- Ahora el aviso sale de `lib/capabilityNotice.ts` (`bloqueoDe`, puro y con tests), que
+  mira `grant.blockedBy` —que ya viajaba y **no lo usaba nadie**— y dice lo que de verdad
+  falta. `Grant` publica además `activeDays` y `requiredActiveDays`: saber **cuál** es el
+  requisito no basta si no se sabe a qué distancia estás, y «llevas 2 de 8 días» se puede
+  terminar mientras que «todavía no» manda a escribir un correo.
+- **Y a quien ya puede no se le dice nada.** El texto se pintaba con `kind !== 'document'`
+  y punto, o sea también a quien tenía la capacidad concedida: la app le estaba diciendo
+  que no podía hacer lo que sí podía. Comprobado en el navegador por los dos lados.
+- `grant` a `undefined` es «aún no lo sabemos» y **se calla**; `null` (204, gamificación
+  apagada) sí es un motivo. Afirmar un motivo mientras carga es volver a decir algo falso.
+- **De rebote salió un fallo peor: borrar tu propia aportación contaba como mala
+  conducta.** `Capabilities.isMisconduct` clasificaba **por exclusión** —«todo lo que no
+  mencione el techo»— así que `"la aportación ya no existe (borrada o revertida)"` cerraba
+  **todas** las capacidades por nivel durante 90 días. Recoger lo tuyo no es portarse mal,
+  y esa misma cuenta tenía dos. La lista vive ahora en `VoidReason`, **en positivo**: solo
+  la denuncia de terceros y la decisión de moderación cuentan. Un motivo nuevo obliga a
+  decir a qué lado cae, en vez de nacer clasificado como mala conducta sin que nadie lo
+  decida. Hay test y está verificado devolviendo la exclusión: sale en rojo.
+
+## El aviso de fuente duplicada la NOMBRA
+
+- El mismo usuario: «la Font de La Vall a Castellcir està triplicada… quan la vaig crear,
+  in situ, no vaig veure que ja existia i amb dos noms diferents». Medido en producción,
+  las tres están a **2,8 m** y **15,5 m** — dentro del radio de 25 m que ya avisa.
+- **La causa era la fecha, no una carencia**: las tres se crearon el 17 y el 22 de agosto
+  y la comprobación de vecindad entró el **24** (`14ab5f3`). Hoy el servidor devuelve 409
+  y el cliente pregunta antes. Conviene no prometer «implementaremos un aviso» sobre algo
+  que ya existe — y menos a 10 m, que es **más flojo** que los 25 m que ya hay.
+- Lo que sí faltaba es que el aviso **se pudiera contestar**: «ya hay una fuente a menos de
+  25 metros» no permite reconocer nada, y el caso real es justo el difícil —la de al lado
+  estaba a 3 m y **con otro nombre**—. Ahora dice cuál y a cuántos metros («A 3 m ya está
+  «Font de la Vall». Puede ser la misma fuente con otro nombre»), eligiendo **la más
+  cercana** de las que caen dentro del radio.
+- Sigue siendo un `confirm()` del navegador y sigue sin enseñar la ficha ni la foto. Es
+  deliberado por ahora: el gesto ocurre con el formulario abierto sobre el mapa y montar
+  ahí una tarjeta con foto es otro trabajo. Si vuelve a pasar, ése es el siguiente paso.
+
 - **Guardar una fuente es seguirla.** No hay tabla de suscripciones: la relación ya
   existía (`FontFavorite`, el botón de la ficha y la lista de `/me`). Guardar una fuente y
   querer saber si se seca son la misma intención dicha dos veces; separarlas obligaría a
