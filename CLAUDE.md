@@ -2822,6 +2822,22 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   · Dos tests existentes se ajustaron —fijaban un número **exacto** de supervivientes, que
     nunca fue el punto—; lo que protegen (no tocar lo fijado, no llevarse la marca de
     fecha) se comprueba igual.
+  · **La regla general, para cualquier cosa que se enganche a `fetch` en `sw.js`:** ese
+    manejador corre en el **único hilo del service worker**, que es el mismo que sirve
+    TODAS las peticiones de la app. Nada de lo que cuelgue de un guardado —recortar,
+    contar, medir, indexar— puede escalar con el tamaño del caché ni con el número de
+    peticiones, porque cada una de esas peticiones espera detrás. `cache.keys()`,
+    `caches.match()` sobre muchas entradas o `(await res.blob()).size` en el camino
+    caliente son la trampa: no fallan, no dan error, y solo se notan **cuando el caché ya
+    está lleno y en el móvil de otra persona**. Lo barato es llevar la cuenta en memoria y
+    tocar el disco solo cuando de verdad toca.
+  · **Y el aprendizaje de diagnóstico, que costó dos intentos:** el fallo apareció al día
+    siguiente de tocar los timeouts, así que se culpó al timeout —dos veces, subiéndolo y
+    quitándolo— sin medir. Era un problema **acumulativo** (peor según se llenaba el
+    caché) que solo coincidió en el tiempo. La lección: «empezó justo cuando cambié X» es
+    una pista, no un diagnóstico; con un `MutationObserver` sobre las teselas o un contador
+    de `keys()` se habría visto a la primera. Correlación temporal ≠ causa, sobre todo con
+    un caché que se degrada solo.
 - **Y las teselas acabaron SIN tope, después de dos intentos fallidos.** El argumento
   para ponérselo era «el navegador permite unas seis conexiones por dominio, así que
   decenas de teselas colgadas le hacen cola a todo lo demás, incluidas las fuentes».
