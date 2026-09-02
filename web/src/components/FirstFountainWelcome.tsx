@@ -100,9 +100,9 @@ export function FirstFountainWelcome() {
 
   async function activaUbicacion() {
     trackInteraction('first_fountain_locate')
-    // Report why it failed, so the panel can show how often the iPad case happens.
-    const pos = await askPosition((reason) =>
-      trackInteraction(reason === 'denied' ? 'first_fountain_geo_denied' : 'first_fountain_geo_failed'))
+    // Report why it failed, split by reason (denied / timeout / unavailable) so the panel
+    // can tell the iPad cases apart — see `GeoFailReason`.
+    const pos = await askPosition((reason) => trackInteraction(`first_fountain_geo_${reason}`))
     if (pos) { trackInteraction('first_fountain_located'); await resolveNearest(pos) }
     else cierra(false) // couldn't locate or denied: don't insist, don't burn the moment
   }

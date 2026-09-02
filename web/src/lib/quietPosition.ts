@@ -8,8 +8,22 @@
  * se le puede preguntar — eso lo hace quien llama, desde su gesto.
  */
 
-/** Why a location request failed, for the caller to report or branch on. */
-export type GeoFailReason = 'denied' | 'unavailable'
+/**
+ * Why a location request failed, for the caller to report or branch on.
+ *
+ * `timeout` and `unavailable` are kept apart on purpose: on an iPad both come back where a
+ * phone would succeed, and telling them apart in analytics is the only way to guess the
+ * cause without the device — mostly-unavailable points at Location Services being off in
+ * iOS settings (which no retry can fix), mostly-timeout at it just being slow.
+ */
+export type GeoFailReason = 'denied' | 'timeout' | 'unavailable'
+
+/** Map the browser's error code to our reason. code 1=denied, 2=unavailable, 3=timeout. */
+function reasonOf(err: GeolocationPositionError): GeoFailReason {
+  if (err.code === err.PERMISSION_DENIED) return 'denied'
+  if (err.code === err.TIMEOUT) return 'timeout'
+  return 'unavailable'
+}
 
 /**
  * getCurrentPosition with an iPad-friendly retry.
@@ -34,11 +48,11 @@ function getPosition(onFail?: (reason: GeoFailReason) => void): Promise<[number,
   return (async () => {
     let r = await once({ enableHighAccuracy: false, timeout: 10_000, maximumAge: 5 * 60 * 1000 })
     if (Array.isArray(r)) return r
-    // A denial is the user's call — no point retrying, and don't report it as "unavailable".
+    // A denial is the user's call — no point retrying.
     if (r.code === r.PERMISSION_DENIED) { onFail?.('denied'); return null }
     r = await once({ enableHighAccuracy: false, timeout: 15_000, maximumAge: Infinity })
     if (Array.isArray(r)) return r
-    onFail?.(r.code === r.PERMISSION_DENIED ? 'denied' : 'unavailable')
+    onFail?.(reasonOf(r)) // report the second attempt's reason: timeout vs unavailable
     return null
   })()
 }

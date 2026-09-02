@@ -22,9 +22,12 @@ struct InteractionAnalyticsController: RouteCollection {
         "first_fountain_gift", "first_fountain_mission", "first_fountain_explore",
         "first_fountain_locate", "first_fountain_go", "first_fountain_save",
         "first_fountain_add", "first_fountain_dismiss",
-        // Éxito y los dos fallos de la geolocalización del popup: denegado, y —el caso del
-        // iPad WiFi— concedido pero sin poder ubicar. Sin esto no se sabe cuánto pasa.
-        "first_fountain_located", "first_fountain_geo_denied", "first_fountain_geo_failed",
+        // Éxito y los fallos de la geolocalización del popup, separados para diagnosticar:
+        // denegado, timeout (lento) y unavailable (el sistema no da posición — en un iPad
+        // suele ser Localización apagada en Ajustes, que ningún reintento arregla).
+        // `geo_failed` se mantiene un tiempo por los clientes que aún no se han actualizado.
+        "first_fountain_located", "first_fountain_geo_denied",
+        "first_fountain_geo_timeout", "first_fountain_geo_unavailable", "first_fountain_geo_failed",
         // La lista de cercanas. Es de lo poco del mapa que no mandaba nada, así que «no
         // la usa nadie» era una intuición y no un dato — y vive dentro de la hoja de
         // filtros, donde cuesta encontrarla. Sin esta línea el evento se descartaría en
