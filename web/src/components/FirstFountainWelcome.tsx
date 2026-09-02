@@ -68,8 +68,11 @@ export function FirstFountainWelcome() {
       const conDist = fs.map((f) => ({ f, km: haversineKm(lat, long, f.latitude, f.longitude) }))
       const agua = conDist.find((x) => constaAgua(x.f)) ?? null
       const virgen = conDist.find((x) => !x.f.lastUpdate) ?? null // never checked by anyone
-      const kind = firstFountainKind({ waterKm: agua?.km ?? null, unknownKm: virgen?.km ?? null })
-      const elegida = kind === 'gift' ? agua : kind === 'mission' ? virgen : null
+      const cerca = conDist[0] ?? null // nearest of any state (list is distance-sorted)
+      const kind = firstFountainKind({
+        waterKm: agua?.km ?? null, unknownKm: virgen?.km ?? null, anyKm: cerca?.km ?? null,
+      })
+      const elegida = kind === 'gift' ? agua : kind === 'mission' ? virgen : kind === 'dry' ? cerca : null
       setState({ phase: 'card', kind, nearest: elegida?.f ?? null, distanceKm: elegida?.km ?? 0 })
     } catch {
       // A network hiccup here is not worth a broken welcome: just don't show it.
@@ -155,17 +158,19 @@ export function FirstFountainWelcome() {
   const titulo =
     kind === 'gift' ? t('firstFountain.giftTitle', { dist: dist(distanceKm) })
     : kind === 'mission' ? t('firstFountain.missionTitle', { dist: dist(distanceKm) })
+    : kind === 'dry' ? t('firstFountain.dryTitle')
     : t('firstFountain.exploreTitle')
   const cuerpo =
     kind === 'gift' ? t('firstFountain.giftBody')
     : kind === 'mission' ? t('firstFountain.missionBody')
+    : kind === 'dry' ? t('firstFountain.dryBody')
     : t('firstFountain.exploreBody')
 
   return (
     <Dialog open onClose={() => cierra()} maxWidth="xs" fullWidth>
       <DialogContent sx={{ textAlign: 'center', pt: 4 }}>
         <Typography sx={{ fontSize: 48, lineHeight: 1 }}>
-          {kind === 'gift' ? '💧' : kind === 'mission' ? '🔍' : '🗺️'}
+          {kind === 'gift' ? '💧' : kind === 'mission' ? '🔍' : kind === 'dry' ? '🚱' : '🗺️'}
         </Typography>
         <Typography variant="h6" sx={{ fontWeight: 800, mt: 1 }}>{titulo}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cuerpo}</Typography>
