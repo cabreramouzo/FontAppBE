@@ -11,7 +11,7 @@ import { positionIfAllowed, askPosition } from '../lib/quietPosition'
 import { nearbyFonts, setFavorite, trackInteraction } from '../api/client'
 import type { FontSummary } from '../api/types'
 import { constaAgua } from '../lib/confidence'
-import { firstFountainKind, type FirstFountainKind, type Nearest } from '../lib/firstFountain'
+import { firstFountainKind, type FirstFountainKind } from '../lib/firstFountain'
 import { haversineKm } from '../lib/geo'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
@@ -62,11 +62,15 @@ export function FirstFountainWelcome() {
 
   async function resolveNearest([lat, long]: [number, number]) {
     try {
-      const fs = await nearbyFonts(lat, long, 1)
-      const nearest = fs[0] ?? null
-      const distanceKm = nearest ? haversineKm(lat, long, nearest.latitude, nearest.longitude) : Infinity
-      const arg: Nearest | null = nearest ? { distanceKm, hasWaterNow: constaAgua(nearest) } : null
-      setState({ phase: 'card', kind: firstFountainKind(arg), nearest, distanceKm })
+      // More than one: we want the nearest *with water* and the nearest *never checked*,
+      // which need not be the single closest fountain. See `firstFountain.ts`.
+      const fs = await nearbyFonts(lat, long, 20)
+      const conDist = fs.map((f) => ({ f, km: haversineKm(lat, long, f.latitude, f.longitude) }))
+      const agua = conDist.find((x) => constaAgua(x.f)) ?? null
+      const virgen = conDist.find((x) => !x.f.lastUpdate) ?? null // never checked by anyone
+      const kind = firstFountainKind({ waterKm: agua?.km ?? null, unknownKm: virgen?.km ?? null })
+      const elegida = kind === 'gift' ? agua : kind === 'mission' ? virgen : null
+      setState({ phase: 'card', kind, nearest: elegida?.f ?? null, distanceKm: elegida?.km ?? 0 })
     } catch {
       // A network hiccup here is not worth a broken welcome: just don't show it.
       cierra(false)

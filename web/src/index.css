@@ -1005,8 +1005,8 @@ select:not([class*="Mui"]) {
    entiende el idioma actual tiene que fijarse en que ahí puede cambiarlo. Late seis
    veces (~3 s) y para. Con prefers-reduced-motion no hace nada, como el resto de la app. */
 @keyframes langPulse {
-  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
-  40%  { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 0%, transparent); }
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 80%, transparent); }
+  40%  { box-shadow: 0 0 0 11px color-mix(in srgb, var(--accent) 0%, transparent); }
   100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
 }
 .lang-pulse { border-radius: 6px; animation: langPulse 0.5s ease-out 0.4s 6; }
