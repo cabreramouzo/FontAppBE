@@ -2974,8 +2974,23 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
     Ojo al escribir los tests: `Intl` separa cifra y unidad con un **espacio fino no
     separable** (U+202F en francés) y escribe «kB» en minúscula. Las dos cosas son
     correctas y lo que se ajusta es el esperado, no el código.
-  · «Libres» era falso y ahora dice **«disponibles»**: `quota - usage` es lo que el
-    navegador le deja guardar a esta app, no el espacio libre del teléfono.
+  · **«Disponibles» se quitó** (02/09/2026). Primero fue «libres» → «disponibles»
+    (`quota - usage`), pero ni así: en WebKit la `quota` no es el libre del teléfono sino
+    una estimación sobre el disco entero, y salía **«38 GB disponibles» con 6 GB reales**.
+    Un usuario lo pilló mintiendo comparándolo con Ajustes de iOS, y una cifra que se
+    puede desmentir mina la confianza en toda la pantalla. Ahora `ocupado()` no devuelve
+    `quota`; solo el total.
+  · **Y el total se dice «aproximado»**, porque lo es de verdad: `estimate().usage`
+    incluye el **padding de privacidad de las respuestas opacas** (teselas y fotos de
+    otros dominios, que se guardan `no-cors`). Medido con datos reales de un móvil: **446
+    MB reportados sobre ~30-40 MB de contenido**, ~10x. No se puede descontar desde JS —
+    es el mismo mecanismo que impide leer el tamaño de una opaca—, así que la única
+    respuesta honesta es marcarla como aproximada. Los **recuentos** de las filas (14
+    fuentes, 2968 casillas…) sí son exactos, y son lo accionable.
+  · Contexto para no volver a intentarlo: iOS, en Ajustes → Almacenamiento, muestra la
+    PWA con **KB** (solo la cáscara); todo el Cache Storage lo atribuye a «Datos del
+    sistema», no a la app. Por eso «37 KB» en iOS y «446 MB» en la app no se contradicen:
+    miden cubos distintos.
   · **El total sale de `navigator.storage.estimate()` y NO de sumar los cuerpos**: sumarlos
     obligaría a leer hasta 3.000 teselas para pintar una cifra. El precio es que es del
     origen entero y aproximado, así que se enseña **una sola cifra** y nunca repartida por

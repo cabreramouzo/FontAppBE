@@ -62,23 +62,24 @@ export function vaciaParte(cual: Parte): Promise<boolean> {
  * Sale de `navigator.storage.estimate()` y **no de sumar los cuerpos de los cachés**: eso
  * obligaría a leer hasta 3.000 teselas para pintar una cifra, y en un móvil se nota. El
  * precio es que la cifra es del **origen entero** —cachés, IndexedDB y `localStorage`
- * juntos— y aproximada, así que se enseña como total y nunca repartida por partes: decir
- * «las fotos ocupan 14 MB» con este dato sería inventárselo.
+ * juntos— y **muy aproximada**: WebKit rellena las respuestas opacas (teselas y fotos de
+ * otros dominios) con padding de privacidad, así que el número reportado llega a ser un
+ * orden de magnitud mayor que el contenido real y no hay forma de descontarlo desde JS.
+ * Por eso se enseña como «aproximado», solo como total y nunca repartido por filas.
  *
- * `libre` es lo que el **navegador** le deja guardar a esta app, no el espacio libre del
- * teléfono. Son cosas distintas y por eso se dice «disponibles» y no «libres».
+ * **No se devuelve `quota`** (el `disponibles` de antes): en WebKit no es el espacio
+ * libre del teléfono sino una estimación teórica sobre el disco entero, y salía «38 GB
+ * disponibles» con 6 GB reales — un número que un usuario pilla mintiendo, y eso mina la
+ * confianza en el resto de la pantalla. Reportado con captura.
  *
  * Devuelve `null` cuando el navegador no lo dice (Safari lo ha ocultado en algunas
  * versiones), y entonces no se pinta la línea en vez de enseñar un cero que es mentira.
  */
-export async function ocupado(): Promise<{ usado: number; libre: number | null } | null> {
+export async function ocupado(): Promise<number | null> {
   try {
     const e = await navigator.storage?.estimate?.()
     if (!e || typeof e.usage !== 'number') return null
-    return {
-      usado: e.usage,
-      libre: typeof e.quota === 'number' ? Math.max(0, e.quota - e.usage) : null,
-    }
+    return e.usage
   } catch {
     return null
   }

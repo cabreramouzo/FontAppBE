@@ -30,7 +30,7 @@ import { borraZona, zonaGuardada, type Zona } from '../lib/zonaAlmacen'
 export function DatosGuardados({ sinTitulo = false }: { sinTitulo?: boolean }) {
   const { t, lang } = useI18n()
   const [n, setN] = useState<Recuento | null>(null)
-  const [total, setTotal] = useState<{ usado: number; libre: number | null } | null>(null)
+  const [total, setTotal] = useState<number | null>(null)
   const [zona, setZona] = useState<Zona | null>(null)
   const [haySW, setHaySW] = useState(true)
 
@@ -60,13 +60,13 @@ export function DatosGuardados({ sinTitulo = false }: { sinTitulo?: boolean }) {
       {!sinTitulo && <Typography variant="h6" gutterBottom>{t('storage.title')}</Typography>}
 
       {/* La cifra total sale de `navigator.storage.estimate()`, que es del origen entero y
-          aproximada. Por eso va sola y NUNCA repartida por filas: repartirla sería
-          inventarse cuánto ocupa cada cosa. Si el navegador no la da, no se pinta. */}
-      {total && (
+          **muy aproximada** por el padding de privacidad de las respuestas opacas (ver
+          `ocupado`). Por eso se dice «aproximadamente», va sola y NUNCA repartida por
+          filas. No se enseña «disponibles»: la quota de WebKit no es el libre real del
+          teléfono. Si el navegador no da el dato, no se pinta. */}
+      {total !== null && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-          {total.libre !== null
-            ? t('storage.used', { mb: formateaTamano(total.usado, lang), libre: formateaTamano(total.libre, lang) })
-            : t('storage.usedOnly', { mb: formateaTamano(total.usado, lang) })}
+          {t('storage.usedApprox', { mb: formateaTamano(total, lang) })}
         </Typography>
       )}
 

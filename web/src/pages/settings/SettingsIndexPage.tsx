@@ -67,7 +67,7 @@ export function SettingsIndexPage() {
   // navegador y el espacio lo dice el navegador.
   useEffect(() => {
     void estadoPush().then(setPush)
-    void ocupado().then((o) => setEspacio(o ? formateaTamano(o.usado, lang) : null))
+    void ocupado().then((o) => setEspacio(o !== null ? formateaTamano(o, lang) : null))
   }, [lang])
 
   if (loading || !user) return null
