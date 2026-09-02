@@ -70,10 +70,12 @@ export function IntroDialog() {
       <DialogContent sx={{ textAlign: 'center', pt: 0, mt: -6, overflow: 'visible', flex: '0 0 auto' }}>
         {/* El selector global queda detrás del modal. Intentar usarlo contaba como clic
             en el backdrop, cerraba la presentación y la marcaba para siempre como vista.
-            Aquí el idioma cambia en vivo sin abandonar el onboarding. */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
-          <Typography variant="body2" color="text.secondary">{t('lang.label')}:</Typography>
-          <LanguageSwitcher />
+            Aquí el idioma cambia en vivo sin abandonar el onboarding.
+            Prominente y con globo: es el primer contacto y quien no entiende el idioma
+            actual tiene que poder reconocer aquí que puede cambiarlo. El idioma persiste,
+            así que no hace falta repetir el selector en los popups siguientes. */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
+          <LanguageSwitcher variant="prominent" />
         </Box>
         <Typography variant="h5" sx={{ fontWeight: 800 }}>{t('intro.title')}</Typography>
         <Typography color="text.secondary" sx={{ mt: 1 }}>{t('intro.lead')}</Typography>
