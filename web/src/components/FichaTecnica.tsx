@@ -56,7 +56,7 @@ import { nombrePais } from '../lib/countries'
  * escribir es exactamente lo pedido.
  */
 export function FichaTecnica({ font, onReportarDato }: { font: Font; onReportarDato?: (texto: string) => void }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [abierto, setAbierto] = useState(false)
 
   const filas: { rotulo: string; valor: string }[] = []
@@ -87,7 +87,7 @@ export function FichaTecnica({ font, onReportarDato }: { font: Font; onReportarD
       rotulo: t('detail.addedOn'),
       // El formato lo pone el navegador con el idioma que se está leyendo: el servidor
       // manda ISO y no sabe ni el idioma ni el huso de quien mira.
-      valor: new Date(font.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }),
+      valor: new Date(font.createdAt).toLocaleDateString(lang, { year: 'numeric', month: 'long', day: 'numeric' }),
     })
   }
   if (filas.length === 0) return null
@@ -99,7 +99,10 @@ export function FichaTecnica({ font, onReportarDato }: { font: Font; onReportarD
         aria-expanded={abierto}
         size="small"
         endIcon={<ExpandMoreIcon sx={{ transform: abierto ? 'rotate(180deg)' : 'none', transition: 'transform 160ms ease' }} />}
-        sx={{ textTransform: 'none', ml: -1, color: 'text.secondary' }}
+        // Sin `ml: -1`: la columna izquierda de la ficha lleva `overflowY: auto`, así que
+        // un margen negativo saca la «D» fuera y la recorta. Se alinea con el contenido
+        // quitando el padding lateral, que no desborda.
+        sx={{ textTransform: 'none', px: 0, minWidth: 0, fontWeight: 700, color: 'text.primary', '&:hover': { bgcolor: 'transparent' } }}
       >
         {t('detail.moreInfo')}
       </Button>
@@ -122,13 +125,21 @@ export function FichaTecnica({ font, onReportarDato }: { font: Font; onReportarD
           ))}
         </Box>
         {onReportarDato && (
-          <Button
-            size="small"
-            onClick={() => onReportarDato(t('detail.dataWrongDraft'))}
-            sx={{ textTransform: 'none', ml: -1, mt: 0.5 }}
-          >
-            {t('detail.dataWrong')}
-          </Button>
+          <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+            {/* Estos datos son calculados (el municipio sale de los límites del IGN), no
+                un campo que se rellena. Se dice, para que no parezca que falta un botón de
+                editar — y se ofrece el único arreglo correcto: avisar. */}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {t('detail.dataComputed')}
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => onReportarDato(t('detail.dataWrongDraft'))}
+              sx={{ textTransform: 'none', px: 0, minWidth: 0, mt: 0.25, '&:hover': { bgcolor: 'transparent' } }}
+            >
+              {t('detail.dataWrong')}
+            </Button>
+          </Box>
         )}
       </Collapse>
     </Box>
