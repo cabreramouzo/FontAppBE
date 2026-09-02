@@ -9,6 +9,7 @@ import { ToastProvider } from './components/ToastContext'
 import { Layout } from './components/Layout'
 import { Skeleton } from './components/Skeleton'
 import { WelcomeDialog } from './components/WelcomeDialog'
+import { FirstFountainWelcome } from './components/FirstFountainWelcome'
 import { BadgeCelebration } from './components/BadgeCelebration'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useI18n } from './i18n/I18nContext'
@@ -118,6 +119,7 @@ export default function App() {
               </BarreraDePantalla>
             </Layout>
             <WelcomeDialog />
+            <FirstFountainWelcome />
             {/* Fuera de la barrera de errores y del layout: es un aviso de la sesión, no
                 de una pantalla, y tiene que poder salir estés donde estés. */}
             <BadgeCelebration />

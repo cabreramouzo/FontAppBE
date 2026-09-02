@@ -32,6 +32,9 @@ import { useEffect, useSyncExternalStore } from 'react'
  * sino por lo que cada aviso se ha ganado el derecho a interrumpir**:
  *
  * - `intro` y `welcome` explican qué es esto. Sin ellos lo demás no se entiende.
+ * - `firstFountain` es el «aha» de la primera visita: te enseña tu fuente cercana. Va
+ *   justo detrás de explicar qué es la app y delante de todo lo demás, porque es lo
+ *   primero que da valor real —una respuesta a «¿dónde bebo?»— en vez de pedir nada.
  * - `badge` es un premio por algo que la persona acaba de hacer; nada debe taparlo.
  * - `news` cuenta lo que ha cambiado desde la última vez. Va **detrás del premio** —tapar
  *   una insignia recién ganada con un changelog es cambiar algo suyo por algo nuestro— y
@@ -42,10 +45,11 @@ import { useEffect, useSyncExternalStore } from 'react'
 const PRIORIDAD = {
   intro: 0,
   welcome: 0,
-  badge: 1,
-  news: 2,
-  install: 3,
-  interest: 4,
+  firstFountain: 1,
+  badge: 2,
+  news: 3,
+  install: 4,
+  interest: 5,
 } as const
 
 export type Aviso = keyof typeof PRIORIDAD

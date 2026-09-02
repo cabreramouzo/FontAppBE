@@ -16,6 +16,12 @@ struct InteractionAnalyticsController: RouteCollection {
         "map_filters", "map_missions", "map_locate", "map_add_font", "map_add_font_button", "map_add_font_long_press",
         "map_add_font_signed_out", "map_long_press_signed_out", "map_export_gpx", "map_gpx",
         "map_offline",
+        // El «aha» de la primera visita: la tarjeta que enseña tu fuente cercana según
+        // lo que haya (gift/mission/explore). Contar cuál sale y qué se pulsa es lo único
+        // que dirá si convierte a un anónimo en alguien que vuelve.
+        "first_fountain_gift", "first_fountain_mission", "first_fountain_explore",
+        "first_fountain_locate", "first_fountain_go", "first_fountain_save",
+        "first_fountain_add", "first_fountain_dismiss",
         // La lista de cercanas. Es de lo poco del mapa que no mandaba nada, así que «no
         // la usa nadie» era una intuición y no un dato — y vive dentro de la hoja de
         // filtros, donde cuesta encontrarla. Sin esta línea el evento se descartaría en
