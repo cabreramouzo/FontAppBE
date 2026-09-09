@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -32,13 +32,17 @@ export function PendingDetails({ open, onClose }: { open: boolean; onClose: () =
     return () => { alive = false }
   }, [open])
 
-  // Object URLs for the photos, revoked when the list changes or the dialog closes.
-  const photoUrls = useMemo(() => {
+  // Object URLs for the photos. Created AND revoked in one effect, in state, not a memo:
+  // the previous version made the URLs in a `useMemo` (during render) and only revoked
+  // them in a separate cleanup, so on a re-open (or StrictMode's double-invoke) the URLs
+  // could be revoked without being recreated — the photo came back as a broken "?".
+  const [photoUrls, setPhotoUrls] = useState<Map<number, string>>(new Map())
+  useEffect(() => {
     const map = new Map<number, string>()
     for (const it of items ?? []) if (it.photo) map.set(it.id, URL.createObjectURL(it.photo))
-    return map
+    setPhotoUrls(map)
+    return () => { for (const url of map.values()) URL.revokeObjectURL(url) }
   }, [items])
-  useEffect(() => () => { for (const url of photoUrls.values()) URL.revokeObjectURL(url) }, [photoUrls])
 
   const when = (ms: number): string | null => (Number.isFinite(ms) && ms > 0 ? new Date(ms).toLocaleString(lang) : null)
 
@@ -57,6 +61,19 @@ export function PendingDetails({ open, onClose }: { open: boolean; onClose: () =
     }
   }
 
+  async function savePhoto(blob: Blob, id: number) {
+    const file = new File([blob], `fontapp-${id}.jpg`, { type: blob.type || 'image/jpeg' })
+    // iOS: the share sheet offers "Save Image" for a shared file — the reliable way into
+    // the gallery from a web app (a plain <a download> is inert in the PWA sandbox).
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return } catch { /* cancelled or unsupported */ }
+    }
+    // Fallback: open the photo full-screen so it can be saved with a long-press.
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
+
   const titleOf = (it: PendingView) =>
     it.kind === 'font' ? t('offline.itemFont')
     : it.kind === 'comment' ? t('offline.itemReview')
@@ -69,7 +86,7 @@ export function PendingDetails({ open, onClose }: { open: boolean; onClose: () =
     const push = (k: string, v: unknown) => { if (v !== null && v !== undefined && v !== '') rows.push([k, String(v)]) }
     push(t('offline.fName'), f.name)
     if (f.latitude !== undefined) push(t('offline.fCoords'), `${f.latitude}, ${f.longitude}`)
-    push(t('offline.fStatus'), f.waterStatus)
+    push(t('offline.fStatus'), f.waterStatus ? t(`status.${f.waterStatus}`) : null)
     push(t('offline.fRating'), f.rating)
     push(t('offline.fText'), f.text ?? f.description)
     push(t('offline.fFont'), f.fontID)
@@ -98,11 +115,14 @@ export function PendingDetails({ open, onClose }: { open: boolean; onClose: () =
                 </Box>
               ))}
             </Box>
-            {photoUrls.get(it.id) && (
+            {photoUrls.get(it.id) && it.photo && (
               <Box sx={{ mt: 1 }}>
                 <Box component="img" src={photoUrls.get(it.id)} alt=""
                      sx={{ maxWidth: '100%', maxHeight: 200, borderRadius: 1, display: 'block' }} />
-                <Typography variant="caption" color="text.secondary">{t('offline.photoSaveHint')}</Typography>
+                <Button size="small" onClick={() => savePhoto(it.photo!, it.id)}
+                        sx={{ textTransform: 'none', px: 0, minWidth: 0, mt: 0.25, '&:hover': { bgcolor: 'transparent' } }}>
+                  {t('offline.savePhoto')}
+                </Button>
               </Box>
             )}
             {(when(it.queuedAt) || it.attempts > 0) && (
