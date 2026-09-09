@@ -3,7 +3,9 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { TypographyProps } from '@mui/material/Typography'
-import { TextoRico } from './RichText'
+import Box from '@mui/material/Box'
+import { pintaInline } from './RichText'
+import { parseBloques } from '../lib/richText'
 import { useI18n } from '../i18n/I18nContext'
 
 /** A partir de cuántos caracteres se recorta. */
@@ -72,8 +74,22 @@ export function TextoLargo({ texto, menciones = true, variant, color, sx }: {
 
   return (
     <>
-      <Typography variant={variant} color={color} component="div" sx={{ whiteSpace: 'pre-wrap', ...sx }}>
-        <TextoRico texto={entero || !largo ? texto : `${recorta(texto)}…`} menciones={menciones} />
+      <Typography variant={variant} color={color} component="div" sx={sx}>
+        {/* Bloques (párrafos y listas) y no un solo inline: la descripción admite listas,
+            y una lista es un bloque. Va en un `div` (arriba) para poder llevar `<ul>`. Los
+            párrafos conservan los saltos simples con `pre-wrap`; el inline de cada uno
+            lleva negrita, cursiva, enlaces y menciones. */}
+        {parseBloques(entero || !largo ? texto : `${recorta(texto)}…`, { menciones }).map((b, i) =>
+          b.tipo === 'lista' ? (
+            <Box component="ul" key={i} sx={{ my: 0.5, pl: 3 }}>
+              {b.items.map((it, j) => <li key={j}>{pintaInline(it)}</li>)}
+            </Box>
+          ) : (
+            <Box component="p" key={i} sx={{ m: 0, whiteSpace: 'pre-wrap', '&:not(:last-child)': { mb: 1 } }}>
+              {pintaInline(b.hijos)}
+            </Box>
+          ),
+        )}
       </Typography>
       {largo && !entero && (
         <Button size="small" onClick={() => setEntero(true)} sx={{ textTransform: 'none', ml: -1 }}>

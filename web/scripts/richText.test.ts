@@ -1,9 +1,20 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { etiquetaDe, tokeniza, type Token } from '../src/lib/richText.ts'
+import { etiquetaDe, parseBloques, tokeniza, type Token } from '../src/lib/richText.ts'
 
 const enlaces = (t: string) => tokeniza(t).filter((x): x is Extract<Token, { tipo: 'enlace' }> => x.tipo === 'enlace')
-const texto = (t: string) => tokeniza(t).map((x) => (x.tipo === 'texto' ? x.texto : x.tipo === 'enlace' ? `[${x.href}]` : `@${x.nombre}`)).join('')
+const texto = (t: string) => tokeniza(t).map((x) =>
+  x.tipo === 'texto' ? x.texto
+  : x.tipo === 'enlace' ? `[${x.href}]`
+  : x.tipo === 'mencion' ? `@${x.nombre}` : '').join('')
+
+// Aplana un árbol de tokens a una cadena marcada, para probar el énfasis y los bloques.
+const plano = (tokens: Token[]): string => tokens.map((x) =>
+  x.tipo === 'texto' ? x.texto
+  : x.tipo === 'enlace' ? `[${x.href}]`
+  : x.tipo === 'mencion' ? `@${x.nombre}`
+  : x.tipo === 'fuerte' ? `**${plano(x.hijos)}**`
+  : `*${plano(x.hijos)}*`).join('')
 
 test('reconoce una dirección pegada en medio de una frase', () => {
   assert.deepEqual(enlaces('mira https://ca.wikipedia.org/wiki/Font aquí').map((e) => e.href),
@@ -71,4 +82,40 @@ test('la etiqueta se lee: sin esquema, sin www y descodificada', () => {
 test('un texto sin nada devuelve un solo trozo, y el vacío ninguno', () => {
   assert.deepEqual(tokeniza('Font de tres canyes'), [{ tipo: 'texto', texto: 'Font de tres canyes' }])
   assert.deepEqual(tokeniza(''), [])
+})
+
+test('negrita: **texto** se marca como fuerte', () => {
+  assert.equal(plano(tokeniza('esto es **importante** hoy')), 'esto es **importante** hoy')
+  assert.equal(tokeniza('**a**')[0]?.tipo, 'fuerte')
+})
+
+test('cursiva: *texto* se marca como énfasis, pero 2 * 3 no', () => {
+  assert.equal(tokeniza('un *matiz*')[1]?.tipo, 'enfasis')
+  // Con espacios alrededor no es cursiva (multiplicación, no formato).
+  assert.ok(tokeniza('2 * 3 * 4').every((x) => x.tipo === 'texto'))
+})
+
+test('un marcador sin pareja se queda como texto literal', () => {
+  assert.equal(plano(tokeniza('a**b sin cerrar')), 'a**b sin cerrar')
+})
+
+test('la negrita puede llevar un enlace dentro', () => {
+  const toks = tokeniza('**mira https://x.com ya**')
+  assert.equal(toks[0]?.tipo, 'fuerte')
+  const dentro = toks[0]?.tipo === 'fuerte' ? toks[0].hijos : []
+  assert.ok(dentro.some((x) => x.tipo === 'enlace'))
+})
+
+test('parseBloques agrupa una lista y separa párrafos', () => {
+  const bloques = parseBloques('Intro\n\n- uno\n- dos\n\nFin')
+  assert.deepEqual(bloques.map((b) => b.tipo), ['parrafo', 'lista', 'parrafo'])
+  const lista = bloques[1]
+  assert.equal(lista.tipo === 'lista' ? lista.items.length : 0, 2)
+})
+
+test('los ítems de lista también llevan formato inline', () => {
+  const bloques = parseBloques('- algo **fuerte**')
+  const lista = bloques[0]
+  const item = lista.tipo === 'lista' ? lista.items[0] : []
+  assert.equal(plano(item), 'algo **fuerte**')
 })

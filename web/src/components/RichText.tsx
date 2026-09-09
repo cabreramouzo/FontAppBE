@@ -1,7 +1,8 @@
-import { Fragment, useMemo } from 'react'
+import { Fragment, useMemo, type ReactNode } from 'react'
+import Box from '@mui/material/Box'
 import Link from '@mui/material/Link'
 import { Link as RouterLink } from 'react-router-dom'
-import { tokeniza } from '../lib/richText'
+import { tokeniza, type Token } from '../lib/richText'
 
 /**
  * Texto escrito por alguien, con sus direcciones y sus `@menciones` pulsables.
@@ -29,41 +30,47 @@ import { tokeniza } from '../lib/richText'
  * mención en la descripción sería subrayar a alguien a quien nadie va a avisar, que es
  * exactamente lo que la regla de paridad cliente/servidor existe para impedir.
  */
+/**
+ * Pinta una lista de tokens inline (texto, enlaces, menciones y el énfasis del markdown
+ * ligero). Se exporta para que `TextoLargo` pinte el inline de cada párrafo o ítem sin
+ * duplicar esta lógica; **nunca genera HTML**, solo elementos de React.
+ */
+export function pintaInline(tokens: Token[]): ReactNode {
+  return tokens.map((t, i) => (
+    <Fragment key={i}>
+      {t.tipo === 'texto' && t.texto}
+      {t.tipo === 'fuerte' && <Box component="strong" sx={{ fontWeight: 700 }}>{pintaInline(t.hijos)}</Box>}
+      {t.tipo === 'enfasis' && <Box component="em">{pintaInline(t.hijos)}</Box>}
+      {t.tipo === 'mencion' && (
+        <Link
+          component={RouterLink}
+          to={`/users/${encodeURIComponent(t.nombre)}`}
+          sx={{ fontWeight: 700, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+        >
+          @{t.nombre}
+        </Link>
+      )}
+      {t.tipo === 'enlace' && (
+        <Link
+          href={t.href}
+          target="_blank"
+          // `nofollow ugc` es la pieza antispam de verdad (ver arriba); `noopener
+          // noreferrer` es lo que impide que la pestaña de destino toque la nuestra.
+          rel="nofollow ugc noopener noreferrer"
+          // La dirección completa al pasar por encima: la etiqueta va recortada y
+          // hay que poder ver a dónde lleva antes de pulsar.
+          title={t.href}
+          // Una dirección larga en un móvil rompe la caja si no se le deja partir.
+          sx={{ wordBreak: 'break-word' }}
+        >
+          {t.etiqueta}
+        </Link>
+      )}
+    </Fragment>
+  ))
+}
+
 export function TextoRico({ texto, menciones = true }: { texto: string; menciones?: boolean }) {
   const trozos = useMemo(() => tokeniza(texto, { menciones }), [texto, menciones])
-
-  return (
-    <>
-      {trozos.map((t, i) => (
-        <Fragment key={i}>
-          {t.tipo === 'texto' && t.texto}
-          {t.tipo === 'mencion' && (
-            <Link
-              component={RouterLink}
-              to={`/users/${encodeURIComponent(t.nombre)}`}
-              sx={{ fontWeight: 700, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-            >
-              @{t.nombre}
-            </Link>
-          )}
-          {t.tipo === 'enlace' && (
-            <Link
-              href={t.href}
-              target="_blank"
-              // `nofollow ugc` es la pieza antispam de verdad (ver arriba); `noopener
-              // noreferrer` es lo que impide que la pestaña de destino toque la nuestra.
-              rel="nofollow ugc noopener noreferrer"
-              // La dirección completa al pasar por encima: la etiqueta va recortada y
-              // hay que poder ver a dónde lleva antes de pulsar.
-              title={t.href}
-              // Una dirección larga en un móvil rompe la caja si no se le deja partir.
-              sx={{ wordBreak: 'break-word' }}
-            >
-              {t.etiqueta}
-            </Link>
-          )}
-        </Fragment>
-      ))}
-    </>
-  )
+  return <>{pintaInline(trozos)}</>
 }
