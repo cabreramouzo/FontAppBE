@@ -236,6 +236,62 @@ export async function descartaPendientes(soloAjenas = false): Promise<number> {
   }
 }
 
+/**
+ * A readable view of one queued contribution, for the "see / export" screen.
+ *
+ * Exists because a contribution can get stuck retrying on flaky coverage (which is
+ * correct — we never drop it), and until now the user was left blind: they could only
+ * trust it was saved, or discard it and lose it. This lets them see it, copy it, or
+ * screenshot it, so a new fountain's data is never trapped where nobody can read it.
+ *
+ * `photo` is the raw Blob so the UI can show it (and the user can save it with the
+ * browser's own gesture); the exported text carries the fields, not the photo.
+ */
+export interface PendingView {
+  id: number
+  kind: OutboxItem['kind']
+  queuedAt: number
+  attempts: number
+  needsAuth?: boolean
+  mine: boolean
+  /** The legible fields, ready to serialise. Never includes the photo Blob. */
+  fields: Record<string, unknown>
+  photo?: Blob
+}
+
+function fieldsOf(item: StoredItem): Record<string, unknown> {
+  const base = { hasPhoto: Boolean(item.photo) }
+  if (item.kind === 'font') {
+    const d = item.data
+    return {
+      ...base, type: 'new-fountain',
+      name: d.name ?? null, latitude: d.latitude, longitude: d.longitude,
+      description: d.description ?? null, source: d.source ?? null,
+      drinkable: d.drinkable ?? null, waterStatus: item.waterStatus ?? null,
+    }
+  }
+  if (item.kind === 'comment') {
+    const d = item.data
+    return {
+      ...base, type: 'review', fontID: item.fontID,
+      waterStatus: d.waterStatus ?? null, rating: d.rating ?? null, text: d.body ?? null,
+    }
+  }
+  return { ...base, type: 'photo', fontID: item.fontID }
+}
+
+/** The queued contributions, readable and in queue order (oldest first). */
+export async function listPending(): Promise<PendingView[]> {
+  const yo = await quienSoy()
+  const items = await allItems()
+  return items
+    .sort((a, b) => a.queuedAt - b.queuedAt)
+    .map((it) => ({
+      id: it.id, kind: it.kind, queuedAt: it.queuedAt, attempts: it.attempts,
+      needsAuth: it.needsAuth, mine: esMia(it, yo), fields: fieldsOf(it), photo: it.photo,
+    }))
+}
+
 async function allItems(): Promise<StoredItem[]> {
   const items = await tx<StoredItem[]>('readonly', (s) => s.getAll() as IDBRequest<StoredItem[]>)
   return items.sort((a, b) => a.id - b.id) // se envían en el orden en que se guardaron

@@ -11,6 +11,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff'
 import CloudDoneIcon from '@mui/icons-material/CloudDone'
 import SyncProblemIcon from '@mui/icons-material/SyncProblem'
 import { descartaPendientes, flushOutbox, isOutboxSyncing, onOutboxChanged, onOutboxSyncState, pendingStatus } from '../lib/outbox'
+import { PendingDetails } from './PendingDetails'
 import { useI18n } from '../i18n/I18nContext'
 import { ChipDeAviso, TarjetaDeAviso } from './Avisos'
 
@@ -29,6 +30,7 @@ const COLAPSA_MS = 3000
 // Aviso de aportaciones guardadas sin cobertura. Solo aparece si hay algo pendiente,
 // para que nada parezca perdido, y permite forzar el envío sin esperar.
 export function PendingUploads() {
+  const [verDetalles, setVerDetalles] = useState(false)
   const { t } = useI18n()
   const [count, setCount] = useState(0)
   const [needsAuth, setNeedsAuth] = useState(false)
@@ -189,6 +191,17 @@ export function PendingUploads() {
             Se pregunta antes porque esto SÍ borra: son datos que solo existen en este
             móvil. Y en texto pequeño, no como botón: la salida tiene que existir, no
             invitar. */}
+        {count > 0 && (
+          // Ver / copiar lo que hay atascado: la salida para el bucle de «reintentar y
+          // fallar» sin cobertura, para que nunca se pierda de vista una fuente nueva.
+          <Button
+            size="small" color="inherit"
+            sx={{ textTransform: 'none', minWidth: 0, opacity: 0.9, ml: -1, mt: 0.25, display: 'flex' }}
+            onClick={() => setVerDetalles(true)}
+          >
+            {t('offline.seeDetails')}
+          </Button>
+        )}
         {count > 0 && (ajenas > 0 || !sending) && (
           <Button
             size="small" color="inherit"
@@ -248,6 +261,9 @@ export function PendingUploads() {
       <Grow in={encogido} timeout={duracion} unmountOnExit style={{ transformOrigin: 'left center' }}>
         {chip}
       </Grow>
+      {/* Fuera de las transiciones: el diálogo de ver/copiar no depende de si el aviso
+          está en tarjeta o en chip, y tiene que poder abrirse desde cualquiera de los dos. */}
+      <PendingDetails open={verDetalles} onClose={() => setVerDetalles(false)} />
     </>
   )
 }
