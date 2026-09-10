@@ -416,13 +416,35 @@ function FontMarkers({
     moveend: () => loadBounds(map),
   })
 
+  // Un solo `invalidateSize` a 100 ms se quedaba corto: llegando por navegación SPA
+  // desde la ficha («ver en el mapa»), a veces el contenedor aún no está dispuesto en
+  // ese instante, Leaflet calcula tamaño 0 y el mapa aparece en blanco hasta que
+  // mueves la vista —único momento en que se recarga—. Reportado en escritorio.
+  //
+  // Ahora se reintenta hasta que el contenedor tiene tamaño real (con tope de ~2 s) y,
+  // ya con tamaño, se invalida una vez más en el frame siguiente: `invalidateSize` no
+  // siempre repinta las teselas del área que acaba de destaparse, y ese segundo pase
+  // las trae. Con el mapa ya bien dimensionado el primer intento acierta y no se nota.
   useEffect(() => {
-    const t = setTimeout(() => {
-      map.invalidateSize()
-      loadBounds(map)
-    }, 100)
+    let cancelado = false
+    let reintento: ReturnType<typeof setTimeout> | undefined
+    let raf: number | undefined
+    const intenta = (restantes: number) => {
+      if (cancelado) return
+      const c = map.getContainer()
+      if (c.clientWidth > 0 && c.clientHeight > 0) {
+        map.invalidateSize()
+        loadBounds(map)
+        raf = requestAnimationFrame(() => { if (!cancelado) map.invalidateSize() })
+        return
+      }
+      if (restantes > 0) reintento = setTimeout(() => intenta(restantes - 1), 120)
+    }
+    reintento = setTimeout(() => intenta(16), 100)
     return () => {
-      clearTimeout(t)
+      cancelado = true
+      if (reintento) clearTimeout(reintento)
+      if (raf) cancelAnimationFrame(raf)
       activeRequest.current?.abort()
     }
   }, [map, loadBounds, nonce])
