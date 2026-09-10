@@ -1,9 +1,7 @@
 import type { ShareLang } from './_meta'
+import { socialRedirect } from './_share'
 
-/** Enlaces cortos fáciles de imprimir, dictar y reconocer en analítica. */
+/** Enlaces cortos de WhatsApp. Delega en `socialRedirect`; ver allí el porqué. */
 export function whatsappRedirect(request: Request, lang: ShareLang): Response {
-  const target = new URL('/', request.url)
-  target.searchParams.set('lang', lang)
-  target.searchParams.set('p', 'whatsapp')
-  return Response.redirect(target.toString(), 302)
+  return socialRedirect(request, lang, 'whatsapp')
 }
