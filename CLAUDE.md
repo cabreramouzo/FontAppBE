@@ -3830,6 +3830,32 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   o el modo standalone de iOS), nunca en una pestaña normal. Antes de navegar verifica
   que el HTML y sus assets ya estén publicados; si la propagación no ha terminado,
   conserva la versión actual y permite reintentar en vez de dejar una pantalla blanca.
+- **Una PWA instalada se puede quedar pegada a código viejo, y matar la app NO lo
+  arregla** (pasó el 12/09/2026). Síntoma: la ficha de fuente daba «esta pantalla ha
+  fallado» en el iPhone instalado (iOS 26.6) y funcionaba en el Mac **y en el simulador de
+  iOS 26.6 con el código actual** — o sea, no era un bug del código ni de la versión de
+  WebKit (se descartó el lookbehind, que solo rompe en Safari < 16.4), sino que la PWA
+  servía un bundle viejo con un fallo ya corregido.
+  · **Por qué matar la app no bastó:** el navegador solo reinstala el service worker si
+    `sw.js` cambia de bytes, y una tanda de despliegues que solo tocan `src/` deja `sw.js`
+    **idéntico**. Sin cambio, el SW nunca se reinstala y sigue sirviendo el shell y los
+    trozos viejos, apertura tras apertura. El `AppUpdatePrompt` (por `version.json`) debería
+    cazarlo, pero en este aparato no lo desatascó.
+  · **El remedio fiable:** subir `SHELL_CACHE` (`fontapp-shell-vN`). Al cambiar `sw.js`, el
+    navegador baja el worker nuevo, tira el shell viejo en `activate` y reprecacha uno
+    fresco → `index.html` nuevo, hashes de trozo nuevos, código nuevo. Es la otra cara de
+    la regla de siempre: normalmente subes la versión al TOCAR el SW; aquí se sube **a
+    propósito, sin tocar el SW**, solo para forzar la actualización de las PWAs pegadas.
+    Los demás cachés (teselas, API, fotos, fijado) NO se tocan — lo fija `sw-routing.test`.
+  · **Regla para el futuro:** si un despliegue arregla un **crash que la gente ya está
+    sufriendo en la PWA instalada**, sube `SHELL_CACHE` en el mismo cambio; no confíes en
+    que un despliegue de solo `src/` llegue solo a un aparato ya atascado.
+  · **Receta de diagnóstico** para «funciona en el Mac, falla en el iPhone instalado»:
+    (1) versión de iOS —descarta rarezas por versión de motor, como el lookbehind—;
+    (2) cargar la misma página en el **simulador de iOS** (WebKit de verdad) con el código
+    actual: si pinta, es caché vieja y no un bug; (3) el `ErrorBoundary` enseña ahora
+    **«Detalles técnicos»** en pantalla con el texto del error cuando SÍ es un bug del
+    código, para no depender de conectar el móvil al inspector de Safari.
 
 ## El hueco de la tab bar en iOS (sin resolver, con sonda)
 
