@@ -54,7 +54,7 @@ import { useHeading } from '../lib/useHeading'
 import {
   modoTrasToque, MODO_TRAS_GESTO, sigueUbicacion, orientaAlRumbo,
   botonRelleno, iconoDeModo, bearingRumboArriba, modoVisible, MODO_INICIAL,
-  type ModoUbicacion,
+  zoomAlUbicar, type ModoUbicacion,
 } from '../lib/locateMode'
 // Parchea L.Map para poder girar el mapa con dos dedos. Se importa por su efecto.
 import 'leaflet-rotate'
@@ -715,33 +715,53 @@ function AsomaElPin({ pos, activo }: { pos: LatLng | null; activo: boolean }) {
 
 // Enfoca una fuente centrándola en el área visible por ENCIMA del panel inferior
 // (bottom-sheet "cerca de ti"), para que el pin no quede tapado por la lista.
+// Centra el mapa en `latlng` al `zoom` dado, dejando el punto en el hueco visible por
+// ENCIMA del bottom-sheet de «cerca de ti» si está abierto (para que no lo tape la lista).
+// Compartido por FocusOn (enfocar una fuente, zoom fijo) y CentraEnMi (ubicarse, tu zoom).
+function centraConHueco(map: LeafletMap, latlng: LatLng, zoom: number) {
+  let offsetY = 0
+  const panel = document.querySelector('.nearby') as HTMLElement | null
+  if (panel) {
+    const mapRect = map.getContainer().getBoundingClientRect()
+    const panelRect = panel.getBoundingClientRect()
+    // ¿El panel tapa la parte inferior del mapa (bottom-sheet)? Entonces centra
+    // el pin en la mitad del hueco visible que queda por encima.
+    const coversBottom = panelRect.bottom >= mapRect.bottom - 1 && panelRect.top > mapRect.top
+    if (coversBottom) {
+      const visibleH = panelRect.top - mapRect.top
+      offsetY = map.getSize().y / 2 - visibleH / 2
+    }
+  }
+  if (offsetY > 0) {
+    const p = map.project(latlng, zoom)
+    const center = map.unproject(L.point(p.x, p.y + offsetY), zoom)
+    map.setView(center, zoom)
+  } else {
+    map.setView(latlng, zoom)
+  }
+}
+
+// Enfoca una FUENTE (buscar, una ficha, una parada): zoom fijo 16, porque la intención es
+// verla de cerca. Distinto de ubicarse, que conserva tu zoom (ver CentraEnMi).
 function FocusOn({ target, marca }: { target: [number, number] | null; marca: React.MutableRefObject<boolean> }) {
   const map = useMap()
   useEffect(() => {
     if (!target) return
     marca.current = true // reencuadre nuestro: que no lo lea como gesto del usuario
-    const zoom = 16
-    const latlng = L.latLng(target[0], target[1])
-    let offsetY = 0
-    const panel = document.querySelector('.nearby') as HTMLElement | null
-    if (panel) {
-      const mapRect = map.getContainer().getBoundingClientRect()
-      const panelRect = panel.getBoundingClientRect()
-      // ¿El panel tapa la parte inferior del mapa (bottom-sheet)? Entonces centra
-      // el pin en la mitad del hueco visible que queda por encima.
-      const coversBottom = panelRect.bottom >= mapRect.bottom - 1 && panelRect.top > mapRect.top
-      if (coversBottom) {
-        const visibleH = panelRect.top - mapRect.top
-        offsetY = map.getSize().y / 2 - visibleH / 2
-      }
-    }
-    if (offsetY > 0) {
-      const p = map.project(latlng, zoom)
-      const center = map.unproject(L.point(p.x, p.y + offsetY), zoom)
-      map.setView(center, zoom)
-    } else {
-      map.setView(latlng, zoom)
-    }
+    centraConHueco(map, L.latLng(target[0], target[1]), 16)
+  }, [target, map, marca])
+  return null
+}
+
+// Ubicarse (botón de la flecha): centra en ti CONSERVANDO tu zoom, y solo acerca si estabas
+// muy alejado. Forzar zoom 16 aquí alejaba de golpe a quien ya estaba cerca poniendo
+// fuentes — reportado. La regla de zoom vive en `zoomAlUbicar`.
+function CentraEnMi({ target, marca }: { target: [number, number] | null; marca: React.MutableRefObject<boolean> }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!target) return
+    marca.current = true
+    centraConHueco(map, L.latLng(target[0], target[1]), zoomAlUbicar(map.getZoom()))
   }, [target, map, marca])
   return null
 }
@@ -1513,6 +1533,9 @@ export function MapPage() {
   // Destino del seguimiento continuo: cambia con cada fix del GPS mientras `siguiendo`.
   // Separado de `goto` a propósito — `goto` enfoca a zoom 16 y esto solo desplaza.
   const [sigueme, setSigueme] = useState<[number, number] | null>(null)
+  // Destino de «centrar en mí» (una vez, conservando el zoom). Separado de `goto` (que
+  // enfoca a zoom 16) y de `sigueme` (seguimiento continuo).
+  const [centrame, setCentrame] = useState<[number, number] | null>(null)
   // Marca los movimientos que hacemos nosotros (FocusOn, seguir, centrar en mí) para que
   // no se confundan con un gesto del usuario. Ver `DetectaGestoDelUsuario`.
   const movimientoNuestro = useRef(false)
@@ -1706,7 +1729,7 @@ export function MapPage() {
       // fallaba se quedaba «siguiendo» a nadie. Con la posición, engancha y endereza.
       setModo('follow')
       map?.setBearing(0)
-      setGoto([...c])   // centrar el mapa solo aquí: el seguimiento NO lo mueve
+      setCentrame([...c])   // centrar en mí conservando tu zoom (no fuerza 16)
       if (openList) setShowNearby(true)
       startWatching()   // ya hay permiso: a partir de ahora se actualiza sola
     }
@@ -1880,6 +1903,7 @@ export function MapPage() {
         <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} onlyReliable={onlyReliable} hideNonPotable={hideNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
         <PersistView />
         <FocusOn target={goto} marca={movimientoNuestro} />
+        <CentraEnMi target={centrame} marca={movimientoNuestro} />
         <SigueAlUsuario pos={sigueme} marca={movimientoNuestro} />
         <DetectaGestoDelUsuario onGesto={() => setModo(MODO_TRAS_GESTO)} marca={movimientoNuestro} />
         <FlyToPlace place={place} />

@@ -12,6 +12,8 @@ import {
   anguloDelCono,
   modoVisible,
   MODO_INICIAL,
+  zoomAlUbicar,
+  ZOOM_UBICAR,
   type ModoUbicacion,
 } from '../src/lib/locateMode.ts'
 
@@ -146,4 +148,13 @@ test('con posición, el estado visible es el real', () => {
   assert.equal(modoVisible('off', true), 'off')
   assert.equal(modoVisible('follow', true), 'follow')
   assert.equal(modoVisible('heading', true), 'heading')
+})
+
+test('ubicarse conserva tu zoom si ya estás cerca, y solo acerca si estás lejos', () => {
+  // El caso reportado: a zoom 18 poniendo fuentes, ubicarse NO debe alejarte a 16.
+  assert.equal(zoomAlUbicar(18), 18)
+  assert.equal(zoomAlUbicar(ZOOM_UBICAR), ZOOM_UBICAR)
+  // Muy alejado (portada en Madrid a zoom 5): acerca a un nivel útil.
+  assert.equal(zoomAlUbicar(12), ZOOM_UBICAR)
+  assert.equal(zoomAlUbicar(5), ZOOM_UBICAR)
 })

@@ -114,3 +114,16 @@ export function bearingRumboArriba(heading: number): number {
 export function anguloDelCono(heading: number, bearing: number, rumboArriba: boolean): number {
   return rumboArriba ? 0 : anguloConoEnPantalla(heading, bearing)
 }
+
+/**
+ * A qué zoom centrarse al pulsar «ubicarme». Como Mapas de iOS: **conserva tu zoom** si ya
+ * estás lo bastante cerca, y solo acerca (a `ZOOM_UBICAR`) si estabas muy alejado.
+ *
+ * Antes centrar forzaba zoom 16 siempre, así que estando a zoom 18 poniendo fuentes te
+ * alejaba de golpe — molesto y reportado. Enfocar una FUENTE concreta (buscar, una ficha)
+ * sí fija 16, que es otra intención: ahí quieres verla, no quedarte donde estabas.
+ */
+export const ZOOM_UBICAR = 16
+export function zoomAlUbicar(zoomActual: number): number {
+  return zoomActual >= ZOOM_UBICAR ? zoomActual : ZOOM_UBICAR
+}
