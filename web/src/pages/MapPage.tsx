@@ -52,6 +52,7 @@ import { MeMarker } from '../components/MeMarker'
 import { Compass } from '../components/Compass'
 import { useHeading } from '../lib/useHeading'
 import { guardaFix, leeFix } from '../lib/lastFix'
+import { claveAvisoTrasDenegar, type EstadoPermiso } from '../lib/geoNotice'
 import {
   modoTrasToque, MODO_TRAS_GESTO, sigueUbicacion, orientaAlRumbo,
   botonRelleno, iconoDeModo, bearingRumboArriba, modoVisible, MODO_INICIAL,
@@ -1744,9 +1745,13 @@ export function MapPage() {
     navigator.geolocation.getCurrentPosition(
       onOk,
       (err) => {
-        // Permiso denegado: es decisión del usuario, no reintentamos.
+        // Permiso denegado: no reintentamos, pero distinguimos «bloqueado de verdad»
+        // (ir a ajustes) de «caducado / cerrado el diálogo» (reintentar). En iOS el
+        // permiso caduca cada 24 h y esto último es lo normal. Ver `geoNotice`.
         if (err.code === err.PERMISSION_DENIED) {
-          setGeoError(t('map.geoDenied'))
+          navigator.permissions?.query({ name: 'geolocation' })
+            .then((e) => setGeoError(t(claveAvisoTrasDenegar(e.state as EstadoPermiso))))
+            .catch(() => setGeoError(t('map.geoDismissed'))) // sin API de permisos: no asustar
           return
         }
         // POSITION_UNAVAILABLE / TIMEOUT: en escritorio la alta precisión (GPS)
