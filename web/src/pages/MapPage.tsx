@@ -1882,7 +1882,7 @@ export function MapPage() {
         <FlyToPlace place={place} />
         <ZoomControls />
         <VigilaGiro onChange={setBearing} />
-        {me && <MeMarker pos={me} heading={heading} bearing={bearing} />}
+        {me && <MeMarker pos={me} heading={heading} bearing={bearing} rumboArriba={orientaAlRumbo(modo)} />}
         {placing && <PlacePicker onPick={setPos} />}
         <AsomaElPin pos={pos} activo={placing} />
         {/* Añadir con una pulsación larga. **También sin sesión**: el gesto es deliberado

@@ -9,6 +9,7 @@ import {
   iconoDeModo,
   anguloConoEnPantalla,
   bearingRumboArriba,
+  anguloDelCono,
   type ModoUbicacion,
 } from '../src/lib/locateMode.ts'
 
@@ -105,4 +106,18 @@ test('bearingRumboArriba normaliza a [0, 360)', () => {
   assert.equal(bearingRumboArriba(0), 0)
   assert.equal(bearingRumboArriba(370), 350)   // -370 -> -10 -> 350
   assert.equal(bearingRumboArriba(-30), 30)
+})
+
+test('en rumbo arriba el cono va fijo hacia arriba (0), pase lo que pase con el sensor', () => {
+  // El parpadeo reportado: heading y el giro del mapa llegan desfasados, así que
+  // heading + bearing saltaba entre fixes. En course-up el cono es 0 por definición.
+  for (const [h, b] of [[90, 270], [37, 12], [200, -50], [0, 0]]) {
+    assert.equal(anguloDelCono(h, b, true), 0, `rumbo arriba con ${h},${b}`)
+  }
+})
+
+test('fuera de rumbo arriba, el cono se calcula normal (heading + bearing)', () => {
+  assert.equal(anguloDelCono(90, 0, false), 90)
+  assert.equal(anguloDelCono(0, 90, false), 90)
+  assert.equal(anguloDelCono(10, 350, false), 0)
 })

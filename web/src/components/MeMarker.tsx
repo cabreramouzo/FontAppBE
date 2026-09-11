@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Marker } from 'react-leaflet'
 import type { Marker as LeafletMarker } from 'leaflet'
 import { userLocationIcon } from '../lib/userLocationIcon'
-import { anguloConoEnPantalla } from '../lib/locateMode'
+import { anguloDelCono } from '../lib/locateMode'
 
 const meIcon = userLocationIcon()
 
@@ -16,7 +16,7 @@ const meIcon = userLocationIcon()
  * Al ángulo de la brújula se le resta el giro del mapa. Si no, con el mapa rotado el
  * cono apuntaría al norte de la pantalla en lugar de al norte real.
  */
-export function MeMarker({ pos, heading, bearing }: { pos: [number, number]; heading: number | null; bearing: number }) {
+export function MeMarker({ pos, heading, bearing, rumboArriba = false }: { pos: [number, number]; heading: number | null; bearing: number; rumboArriba?: boolean }) {
   const ref = useRef<LeafletMarker | null>(null)
 
   useEffect(() => {
@@ -27,10 +27,10 @@ export function MeMarker({ pos, heading, bearing }: { pos: [number, number]; hea
       return
     }
     el.style.setProperty('--me-cone-on', '1')
-    // Misma fórmula que usa el modo «rumbo arriba» para girar el mapa; viven juntas en
-    // `locateMode` para que un cambio de signo no descuadre una respecto a la otra.
-    el.style.setProperty('--me-cone', `${anguloConoEnPantalla(heading, bearing)}deg`)
-  }, [heading, bearing, pos])
+    // En rumbo arriba el cono va fijo hacia arriba (0): calcularlo desde el sensor y el
+    // giro del mapa —que llegan desfasados— lo hacía saltar. Ver `anguloDelCono`.
+    el.style.setProperty('--me-cone', `${anguloDelCono(heading, bearing, rumboArriba)}deg`)
+  }, [heading, bearing, pos, rumboArriba])
 
   return <Marker ref={ref} position={pos} icon={meIcon} zIndexOffset={500} />
 }

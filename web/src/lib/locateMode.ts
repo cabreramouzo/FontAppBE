@@ -82,3 +82,17 @@ export function anguloConoEnPantalla(heading: number, bearing: number): number {
 export function bearingRumboArriba(heading: number): number {
   return (((-heading) % 360) + 360) % 360
 }
+
+/**
+ * Ángulo del cono del punto azul en pantalla, ya contando el modo.
+ *
+ * En 'heading' (rumbo arriba) es SIEMPRE 0: tu rumbo está arriba por definición. Calcularlo
+ * como `heading + bearing` ahí lo hacía **parpadear** —el `heading` (sensor) y el `bearing`
+ * (giro del mapa) se actualizan en instantes distintos, así que entre un fix y que el mapa
+ * acabe de girar el cono saltaba y volvía, reportado en un iPhone—. Fijarlo a 0 quita el
+ * salto y es lo correcto: en course-up el haz siempre apunta arriba. Fuera de ese modo se
+ * calcula normal, que es lo que muestra hacia dónde miras sobre un mapa girado a mano.
+ */
+export function anguloDelCono(heading: number, bearing: number, rumboArriba: boolean): number {
+  return rumboArriba ? 0 : anguloConoEnPantalla(heading, bearing)
+}
