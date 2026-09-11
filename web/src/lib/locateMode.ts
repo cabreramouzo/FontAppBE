@@ -57,19 +57,28 @@ export function iconoDeModo(modo: ModoUbicacion): 'hollow' | 'filled' | 'navigat
 
 /**
  * Dirección del cono del punto azul en pantalla, en grados (0 = hacia arriba), a partir de
- * tu rumbo real `heading` y del giro del mapa `bearing`. El mapa puede estar rotado, así
- * que el rumbo se pinta a `heading - bearing`. Normalizado a [0, 360).
+ * tu rumbo real `heading` y del giro del mapa `bearing` (el `getBearing()` de leaflet-rotate).
+ *
+ * Es `heading + bearing`, NO `heading - bearing`. El signo importa y estaba al revés: en
+ * leaflet-rotate `setBearing(b)` deja arriba la dirección `-b` (el pane gira +b, así que lo
+ * que sube es lo que estaba a -b), de modo que un rumbo real `heading` cae en pantalla a
+ * `heading - (-bearing) = heading + bearing`. Con el mapa sin girar (`bearing = 0`) da lo
+ * mismo que antes, así que el cono de siempre (norte arriba) no cambia; solo se corrige
+ * cuando el mapa está rotado. Normalizado a [0, 360).
  */
 export function anguloConoEnPantalla(heading: number, bearing: number): number {
-  return (((heading - bearing) % 360) + 360) % 360
+  return (((heading + bearing) % 360) + 360) % 360
 }
 
 /**
- * El giro del mapa (`bearing`) que deja tu rumbo arriba: el que hace que el cono apunte a
- * 0. Como el cono es `heading - bearing`, ese `bearing` es el propio `heading`. Aislarlo
- * aquí ata la fórmula del cono y la del giro: si una cambia, el test de que el cono queda
- * a 0 lo caza. Normalizado a [0, 360).
+ * El giro del mapa (`bearing` de leaflet-rotate) que deja tu rumbo arriba.
+ *
+ * Es `-heading`, NO `heading`: lo confirma el propio plugin, cuyo seguimiento por brújula
+ * hace `setBearing(360 - webkitCompassHeading)` en iOS (`_onDeviceOrientation`). Con
+ * `heading` el mapa giraba **invertido** —reportado en un iPhone real—. Aislado aquí para
+ * atar las dos fórmulas: con este giro, el cono (`heading + bearing`) queda a 0, y hay un
+ * test que lo fija para cualquier rumbo. Normalizado a [0, 360).
  */
 export function bearingRumboArriba(heading: number): number {
-  return ((heading % 360) + 360) % 360
+  return (((-heading) % 360) + 360) % 360
 }

@@ -72,16 +72,18 @@ test('con el mapa sin girar, el cono apunta a tu rumbo', () => {
   assert.equal(anguloConoEnPantalla(270, 0), 270) // oeste, a la izquierda
 })
 
-test('con el mapa girado, el cono descuenta el giro y sigue apuntando al rumbo real', () => {
-  // Sin descontar `bearing`, el cono apuntaría al norte de la PANTALLA y no al real.
-  assert.equal(anguloConoEnPantalla(90, 90), 0)   // mapa mirando al este: el este va arriba
-  assert.equal(anguloConoEnPantalla(0, 90), 270)  // norte real queda a la izquierda
-  assert.equal(anguloConoEnPantalla(10, 350), 20) // envuelve por 360, no da -340
+test('con el mapa girado, el cono cuenta el giro (heading + bearing) y envuelve por 360', () => {
+  // En leaflet-rotate `setBearing(b)` deja arriba la dirección `-b`, así que el rumbo real
+  // cae a `heading + bearing`. Con `bearing = -heading` (rumbo arriba) el cono queda a 0
+  // —lo fija el test de más abajo—; aquí van casos sueltos, incluido el que envuelve.
+  assert.equal(anguloConoEnPantalla(90, 270), 0)   // este arriba (bearing -90): el cono sube
+  assert.equal(anguloConoEnPantalla(0, 90), 90)
+  assert.equal(anguloConoEnPantalla(10, 350), 0)   // 360 -> 0, no 360
 })
 
 test('rumbo arriba: el giro elegido deja el cono recto (0) para cualquier rumbo', () => {
   // La invariante que sostiene el modo heading: girar el mapa a `bearingRumboArriba` y
-  // pintar el cono a `heading - bearing` tiene que dar 0. Un signo cambiado en cualquiera
+  // pintar el cono a `heading + bearing` tiene que dar 0. Un signo cambiado en cualquiera
   // de las dos fórmulas rompe esto — y solo esto, porque el resto compila igual.
   for (const heading of [0, 1, 37, 90, 180, 233, 359, 360, 725, -30]) {
     const bearing = bearingRumboArriba(heading)
@@ -89,8 +91,18 @@ test('rumbo arriba: el giro elegido deja el cono recto (0) para cualquier rumbo'
   }
 })
 
+test('rumbo arriba gira el mapa al lado correcto: mirando al este, bearing 270 y no 90', () => {
+  // El bug reportado en un iPhone: el mapa giraba al revés. En leaflet-rotate el giro de
+  // rumbo arriba es `-heading` (su propio `_onDeviceOrientation` hace `360 - heading`), no
+  // `heading`. Si alguien vuelve a poner `heading`, mirando al este saldría 90 y el mapa
+  // volvería a girar invertido; aquí tiene que salir 270.
+  assert.equal(bearingRumboArriba(90), 270)   // este
+  assert.equal(bearingRumboArriba(270), 90)   // oeste
+  assert.equal(bearingRumboArriba(180), 180)  // sur (el único que coincide con su opuesto)
+})
+
 test('bearingRumboArriba normaliza a [0, 360)', () => {
   assert.equal(bearingRumboArriba(0), 0)
-  assert.equal(bearingRumboArriba(370), 10)
-  assert.equal(bearingRumboArriba(-30), 330)
+  assert.equal(bearingRumboArriba(370), 350)   // -370 -> -10 -> 350
+  assert.equal(bearingRumboArriba(-30), 30)
 })
