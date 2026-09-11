@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { puedoConfirmarMiReseña } from '../lib/selfConfirm'
 import { capabilities, capabilityLevels } from '../lib/capabilities'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
@@ -1513,7 +1514,7 @@ export function FontDetailPage() {
                 <>
                   {!updating && (
                     <Stack direction="row" sx={{ my: 1.5, gap: 1, flexWrap: 'wrap' }}>
-                      {latest.waterStatus && latest.userID !== user.id && (
+                      {latest.waterStatus && (latest.userID !== user.id || puedoConfirmarMiReseña(latest.createdAt, latest.lastConfirmedAt)) && (
                         <Button
                           variant={latest.confirmedByMe ? 'contained' : 'outlined'}
                           color="success"
