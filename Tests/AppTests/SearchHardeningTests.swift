@@ -28,4 +28,30 @@ final class SearchHardeningTests: XCTestCase {
     func testNormalTermIsUntouched() {
         XCTAssertEqual(SearchTerm.likePattern("  Font de la Quintana "), "%Font de la Quintana%")
     }
+
+    // MARK: - Búsqueda por palabras (artículos, orden)
+
+    func testWordsAreMatchedIndependently() {
+        // Un solo `%font vall%` no casa «Font de la Vall»; partido por palabras, sí.
+        XCTAssertEqual(SearchTerm.likePatterns("font vall"), ["%font%", "%vall%"])
+    }
+
+    func testSingleWordIsOnePattern() {
+        XCTAssertEqual(SearchTerm.likePatterns("Vall"), ["%Vall%"])
+        XCTAssertEqual(SearchTerm.likePatterns("  Moià  "), ["%Moià%"])
+    }
+
+    func testWordCountIsCapped() {
+        let muchas = Array(repeating: "x", count: 50).joined(separator: " ")
+        XCTAssertEqual(SearchTerm.likePatterns(muchas)?.count, SearchTerm.maxWords)
+    }
+
+    func testWildcardsAreEscapedPerWord() {
+        XCTAssertEqual(SearchTerm.likePatterns("50% _x"), ["%50\\%%", "%\\_x%"])
+    }
+
+    func testEmptyTermHasNoPatterns() {
+        XCTAssertNil(SearchTerm.likePatterns(""))
+        XCTAssertNil(SearchTerm.likePatterns("   "))
+    }
 }

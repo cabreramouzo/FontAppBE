@@ -592,10 +592,12 @@ struct FontController: RouteCollection {
     /// cerrarla del todo habría roto el buscador para todo el que no tiene cuenta, que es
     /// justo la gente que llega por un cartel.
     @Sendable func index(req: Request) async throws -> Page<Font> {
-        let patron = req.query[String.self, at: "search"].flatMap { SearchTerm.likePattern($0) }
+        // Un patrón por palabra: exige que todas aparezcan, en cualquier orden. Así los
+        // artículos («Font de la Vall») no rompen la búsqueda. Ver `SearchTerm`.
+        let patrones = req.query[String.self, at: "search"].flatMap { SearchTerm.likePatterns($0) }
         let esAdmin = req.auth.get(User.self)?.isAdmin == true
         if !esAdmin {
-            guard patron != nil else {
+            guard patrones != nil else {
                 throw AppError(.forbidden, "font.searchRequired",
                                "Este listado necesita un término de búsqueda.")
             }
@@ -611,7 +613,7 @@ struct FontController: RouteCollection {
         let query = Font.visible(on: req.db).sort(\.$name)
         // El patrón se acota y se escapa: ver `SearchTerm` (un ILIKE con una cadena
         // enorme cuesta segundos de CPU por petición).
-        if let patron { query.filter(\.$name, .custom("ILIKE"), patron) }
+        if let patrones { for p in patrones { query.filter(\.$name, .custom("ILIKE"), p) } }
         return try await query.paginate(SafePage.from(req))
     }
 

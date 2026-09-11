@@ -19,19 +19,45 @@ enum SearchTerm {
     /// Ningún topónimo real se acerca; de sobra para "font de la mare de déu del…".
     static let maxLength = 80
 
+    /// Cuántas palabras se cruzan como mucho. Un topónimo real no pasa de esto, y acota el
+    /// coste: cada palabra es un `ILIKE` aparte, y quien pega muchas no está buscando.
+    static let maxWords = 6
+
     /// Devuelve el patrón listo para `ILIKE`, o `nil` si no hay nada que buscar.
     static func likePattern(_ raw: String) -> String? {
         let limpio = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !limpio.isEmpty else { return nil }
         // Se recorta en silencio en vez de devolver un error: quien pega algo largo
         // de más no está atacando, normalmente se ha equivocado de portapapeles.
-        let acotado = String(limpio.prefix(maxLength))
-        // El orden importa: la barra invertida primero, o se escaparían las que añadimos.
-        let escapado = acotado
-            .replacingOccurrences(of: "\\", with: "\\\\")
+        return "%\(escapa(String(limpio.prefix(maxLength))))%"
+    }
+
+    /// Un patrón `ILIKE` **por palabra**, para exigir que TODAS aparezcan (en cualquier
+    /// orden), no la frase entera pegada.
+    ///
+    /// Es el arreglo de «si no pones la palabra exacta no encuentra». Un solo `%font vall%`
+    /// no casa «Font de la Vall» —hay artículos por medio—; partido en `%font%` AND
+    /// `%vall%` sí, y además da igual el orden. `nil` si no queda ninguna palabra.
+    ///
+    /// El coste sigue acotado: el término se recorta a `maxLength` **antes** de partir, y
+    /// se toman como mucho `maxWords`, así que ni el patrón total ni el número de `ILIKE`
+    /// se disparan por pegar una parrafada.
+    static func likePatterns(_ raw: String) -> [String]? {
+        let limpio = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !limpio.isEmpty else { return nil }
+        let palabras = String(limpio.prefix(maxLength))
+            .split(whereSeparator: { $0.isWhitespace })
+            .prefix(maxWords)
+            .map { "%\(escapa(String($0)))%" }
+        return palabras.isEmpty ? nil : Array(palabras)
+    }
+
+    /// Escapa los comodines de `LIKE`. La barra invertida primero, o se escaparían las que
+    /// añadimos después. Sin esto, buscar `%` devolvía la tabla entera.
+    private static func escapa(_ s: String) -> String {
+        s.replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "%", with: "\\%")
             .replacingOccurrences(of: "_", with: "\\_")
-        return "%\(escapado)%"
     }
 }
 
