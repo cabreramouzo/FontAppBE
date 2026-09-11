@@ -173,6 +173,13 @@ a:hover { text-decoration: underline; }
   align-items: flex-end;
   gap: 12px;
 }
+
+/* El contenedor NO captura los toques de su espacio vacío: solo los botones. Sin esto, su
+   caja —tan ancha como el botón más ancho, el de «Añadir fuente»— se come los toques al
+   mapa que caen a la izquierda de los botones pequeños o en los huecos. Reportado en móvil.
+   Igual para la columna de controles de arriba. */
+.map-fabs, .map-controls { pointer-events: none; }
+.map-fabs > *, .map-controls > * { pointer-events: auto; }
 .fab { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
 /* Botón "mi ubicación" tipo mapa: flecha de navegación en un círculo. */
 .locate-btn {
