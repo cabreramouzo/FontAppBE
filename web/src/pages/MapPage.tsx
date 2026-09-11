@@ -2065,6 +2065,12 @@ export function MapPage() {
         <div className="map-fabs">
           <Compass
             bearing={bearing}
+            // Siempre visible en escritorio: allí no hay gesto de dos dedos, así que es la
+            // ÚNICA forma de girar el mapa. En móvil, solo cuando ya está girado.
+            siempre={!movil}
+            // Arrastrarla gira el mapa (como Mapas del Mac). En 'heading' no se ofrece: el
+            // efecto de rumbo manda sobre el giro y pelearían.
+            onRotate={modo === 'heading' ? undefined : (deg) => map?.setBearing(deg)}
             onReset={() => {
               // Enderezar el norte sale de 'heading': si no, el efecto de rumbo lo
               // volvería a girar al instante. Queda siguiendo tu posición, norte arriba.
