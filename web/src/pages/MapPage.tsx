@@ -222,17 +222,21 @@ function PersistView() {
 }
 
 // Avisa cuando el usuario toma el control del mapa (arrastrar, rueda, pellizco).
-// Solo esos tres: `movestart` también lo dispara el centrado automático, y usarlo
-// haría que el mapa se "desenganchara" él solo al primer centrado.
-function DetectaGestoDelUsuario({ onGesto }: { onGesto: () => void }) {
+//
+// El zoom lo dispara tanto el usuario (rueda, pellizco) como nuestros reencuadres
+// (`FocusOn`, «centrar en mí»), y hay que distinguirlos: si un reencuadre nuestro contara
+// como gesto, «centrar en mí» se desengancharía él solo al instante. Antes se miraba
+// `zoomstart.originalEvent`, pero en el **pellizco móvil con leaflet-rotate** ese campo no
+// siempre llega, así que el zoom del usuario NO desenganchaba y el siguiente fix del GPS
+// lo devolvía a su sitio — reportado caminando. Ahora se marca `marca` justo antes de
+// cada movimiento nuestro y se limpia al terminar (`moveend`/`zoomend`), que es
+// determinista y no depende del navegador.
+function DetectaGestoDelUsuario({ onGesto, marca }: { onGesto: () => void; marca: React.MutableRefObject<boolean> }) {
   useMapEvents({
-    dragstart: onGesto,      // arrastrar con el dedo o el ratón
-    zoomstart: (e) => {
-      // Cubre también la rueda y el pellizco, que acaban en un zoom. El zoom
-      // programático de FocusOn pasa por aquí igual, pero sin `originalEvent`:
-      // así distinguimos "lo ha hecho el usuario" de "lo hemos hecho nosotros".
-      if ((e as unknown as { originalEvent?: Event }).originalEvent) onGesto()
-    },
+    dragstart: onGesto,                       // arrastrar es siempre del usuario
+    zoomstart: () => { if (!marca.current) onGesto() },  // rueda/pellizco, no lo nuestro
+    moveend: () => { marca.current = false },
+    zoomend: () => { marca.current = false },
   })
   return null
 }
@@ -704,10 +708,11 @@ function AsomaElPin({ pos, activo }: { pos: LatLng | null; activo: boolean }) {
 
 // Enfoca una fuente centrándola en el área visible por ENCIMA del panel inferior
 // (bottom-sheet "cerca de ti"), para que el pin no quede tapado por la lista.
-function FocusOn({ target }: { target: [number, number] | null }) {
+function FocusOn({ target, marca }: { target: [number, number] | null; marca: React.MutableRefObject<boolean> }) {
   const map = useMap()
   useEffect(() => {
     if (!target) return
+    marca.current = true // reencuadre nuestro: que no lo lea como gesto del usuario
     const zoom = 16
     const latlng = L.latLng(target[0], target[1])
     let offsetY = 0
@@ -730,7 +735,22 @@ function FocusOn({ target }: { target: [number, number] | null }) {
     } else {
       map.setView(latlng, zoom)
     }
-  }, [target, map])
+  }, [target, map, marca])
+  return null
+}
+
+// Sigue al usuario mientras camina: lo reencuadra SIN tocar el zoom. El seguimiento iba
+// antes por `goto`/`FocusOn`, que fuerza zoom 16, así que cada fix del GPS deshacía el
+// zoom que el usuario acababa de hacer y lo devolvía al predeterminado — el fallo que se
+// notaba sobre todo en movimiento, porque parado el filtro de 15 m descarta los fixes.
+// `panTo` conserva el zoom actual; solo desplaza.
+function SigueAlUsuario({ pos, marca }: { pos: [number, number] | null; marca: React.MutableRefObject<boolean> }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!pos) return
+    marca.current = true
+    map.panTo(pos, { animate: true })
+  }, [pos, map, marca])
   return null
 }
 
@@ -1483,6 +1503,12 @@ export function MapPage() {
   const [nonce, setNonce] = useState(0)
   const [me, setMe] = useState<[number, number] | null>(null)
   const [goto, setGoto] = useState<[number, number] | null>(null)
+  // Destino del seguimiento continuo: cambia con cada fix del GPS mientras `siguiendo`.
+  // Separado de `goto` a propósito — `goto` enfoca a zoom 16 y esto solo desplaza.
+  const [sigueme, setSigueme] = useState<[number, number] | null>(null)
+  // Marca los movimientos que hacemos nosotros (FocusOn, seguir, centrar en mí) para que
+  // no se confundan con un gesto del usuario. Ver `DetectaGestoDelUsuario`.
+  const movimientoNuestro = useRef(false)
   const [geoError, setGeoError] = useState('')
   // Los tres arrancan de lo último elegido en esta sesión, igual que la vista del mapa.
   // `down('sm')` y no un ancho a mano: es el mismo corte que usan la tab bar, el pie y
@@ -1600,10 +1626,11 @@ export function MapPage() {
         if (anterior && haversineKm(anterior[0], anterior[1], c[0], c[1]) * 1000 < 15) return
         ultimaPos.current = c
         setMe(c)
-        // Mientras no toques el mapa, va detrás de ti. La comparación se hace contra
-        // una ref y no dentro del actualizador de `setMe`: encadenar un `setGoto` ahí
-        // es una actualización en fase de render y React la descarta sin avisar.
-        if (siguiendoRef.current) setGoto([...c])
+        // Mientras no toques el mapa, va detrás de ti — desplazando, SIN cambiar tu
+        // zoom (por eso `sigueme` y no `goto`, que enfoca a zoom 16). La comparación va
+        // contra una ref y no dentro del actualizador de `setMe`: encadenar ahí es una
+        // actualización en fase de render y React la descarta sin avisar.
+        if (siguiendoRef.current) setSigueme([...c])
       },
       // Un fallo puntual del GPS no es noticia: seguimos con la última posición buena.
       () => {},
@@ -1818,8 +1845,9 @@ export function MapPage() {
         <BaseLayerTile layer={layer} />
         <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} onlyReliable={onlyReliable} hideNonPotable={hideNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
         <PersistView />
-        <FocusOn target={goto} />
-        <DetectaGestoDelUsuario onGesto={() => setSiguiendo(false)} />
+        <FocusOn target={goto} marca={movimientoNuestro} />
+        <SigueAlUsuario pos={sigueme} marca={movimientoNuestro} />
+        <DetectaGestoDelUsuario onGesto={() => setSiguiendo(false)} marca={movimientoNuestro} />
         <FlyToPlace place={place} />
         <ZoomControls />
         <VigilaGiro onChange={setBearing} />
