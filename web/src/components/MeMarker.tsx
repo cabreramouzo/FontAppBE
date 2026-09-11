@@ -4,7 +4,8 @@ import type { Marker as LeafletMarker } from 'leaflet'
 import { userLocationIcon } from '../lib/userLocationIcon'
 import { anguloDelCono } from '../lib/locateMode'
 
-const meIcon = userLocationIcon()
+const meIcon = userLocationIcon(false)
+const meIconStale = userLocationIcon(true)
 
 /**
  * El punto azul del usuario, con el cono que dice hacia dónde mira.
@@ -16,7 +17,7 @@ const meIcon = userLocationIcon()
  * Al ángulo de la brújula se le resta el giro del mapa. Si no, con el mapa rotado el
  * cono apuntaría al norte de la pantalla en lugar de al norte real.
  */
-export function MeMarker({ pos, heading, bearing, rumboArriba = false }: { pos: [number, number]; heading: number | null; bearing: number; rumboArriba?: boolean }) {
+export function MeMarker({ pos, heading, bearing, rumboArriba = false, atenuado = false }: { pos: [number, number]; heading: number | null; bearing: number; rumboArriba?: boolean; atenuado?: boolean }) {
   const ref = useRef<LeafletMarker | null>(null)
 
   useEffect(() => {
@@ -32,5 +33,6 @@ export function MeMarker({ pos, heading, bearing, rumboArriba = false }: { pos: 
     el.style.setProperty('--me-cone', `${anguloDelCono(heading, bearing, rumboArriba)}deg`)
   }, [heading, bearing, pos, rumboArriba])
 
-  return <Marker ref={ref} position={pos} icon={meIcon} zIndexOffset={500} />
+  // Atenuado (última posición conocida) va por debajo del punto en vivo y no molesta.
+  return <Marker ref={ref} position={pos} icon={atenuado ? meIconStale : meIcon} zIndexOffset={atenuado ? 400 : 500} />
 }

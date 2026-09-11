@@ -51,6 +51,7 @@ import '../leafletSetup'
 import { MeMarker } from '../components/MeMarker'
 import { Compass } from '../components/Compass'
 import { useHeading } from '../lib/useHeading'
+import { guardaFix, leeFix } from '../lib/lastFix'
 import {
   modoTrasToque, MODO_TRAS_GESTO, sigueUbicacion, orientaAlRumbo,
   botonRelleno, iconoDeModo, bearingRumboArriba, modoVisible, MODO_INICIAL,
@@ -1529,6 +1530,9 @@ export function MapPage() {
   const [pos, setPos] = useState<LatLng | null>(null)
   const [nonce, setNonce] = useState(0)
   const [me, setMe] = useState<[number, number] | null>(null)
+  // Última posición conocida, para pintar un punto atenuado al abrir cuando el permiso ha
+  // caducado (iOS). Se siembra del almacén una vez; en cuanto llega `me` en vivo, sobra.
+  const [meStale] = useState<[number, number] | null>(() => leeFix())
   const [goto, setGoto] = useState<[number, number] | null>(null)
   // Destino del seguimiento continuo: cambia con cada fix del GPS mientras `siguiendo`.
   // Separado de `goto` a propósito — `goto` enfoca a zoom 16 y esto solo desplaza.
@@ -1656,6 +1660,7 @@ export function MapPage() {
         if (anterior && haversineKm(anterior[0], anterior[1], c[0], c[1]) * 1000 < 15) return
         ultimaPos.current = c
         setMe(c)
+        guardaFix(c) // recordamos la última posición para el punto atenuado del próximo arranque
         // Mientras no toques el mapa, va detrás de ti — desplazando, SIN cambiar tu
         // zoom (por eso `sigueme` y no `goto`, que enfoca a zoom 16). La comparación va
         // contra una ref y no dentro del actualizador de `setMe`: encadenar ahí es una
@@ -1724,6 +1729,7 @@ export function MapPage() {
     const onOk = (p: GeolocationPosition) => {
       const c: [number, number] = [p.coords.latitude, p.coords.longitude]
       setMe(c)
+      guardaFix(c)
       // 'follow' se marca AQUÍ, con la posición ya en la mano — no al pulsar. Ponerlo
       // antes dejaba el botón en estado 2 sin punto azul mientras el GPS respondía, y si
       // fallaba se quedaba «siguiendo» a nadie. Con la posición, engancha y endereza.
@@ -1909,7 +1915,9 @@ export function MapPage() {
         <FlyToPlace place={place} />
         <ZoomControls />
         <VigilaGiro onChange={setBearing} />
-        {me && <MeMarker pos={me} heading={heading} bearing={bearing} rumboArriba={orientaAlRumbo(modo)} />}
+        {me
+          ? <MeMarker pos={me} heading={heading} bearing={bearing} rumboArriba={orientaAlRumbo(modo)} />
+          : meStale && <MeMarker pos={meStale} heading={null} bearing={bearing} atenuado />}
         {placing && <PlacePicker onPick={setPos} />}
         <AsomaElPin pos={pos} activo={placing} />
         {/* Añadir con una pulsación larga. **También sin sesión**: el gesto es deliberado

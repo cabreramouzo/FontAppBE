@@ -539,6 +539,11 @@ select:not([class*="Mui"]) {
   .me-loc__cone { transition: opacity 0.3s ease; }
 }
 
+/* Última posición conocida (permiso caducado en iOS): gris, translúcido, sin latido ni
+   cono. Se ve claramente que es aproximado y no el punto azul en vivo. */
+.me-loc--stale .me-loc__dot { background: #8a8f98; opacity: 0.6; box-shadow: none; }
+.me-loc--stale .me-loc__pulse { display: none; }
+
 /* Leyenda (abajo a la izquierda). */
 /* Solo posición: la superficie la pone MUI Paper. */
 .legend {

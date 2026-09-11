@@ -9,12 +9,15 @@ import L from 'leaflet'
  * cambiando dos variables CSS. Así el ángulo se actualiza sin recrear el icono, que
  * haría parpadear el marcador con cada latido del sensor.
  */
-export function userLocationIcon(): L.DivIcon {
+export function userLocationIcon(atenuado = false): L.DivIcon {
   // 28 px: el de 22 dejaba un punto visible de solo 14 px, demasiado fácil de perder
   // entre carreteras, etiquetas y marcadores en una pantalla de móvil.
   const size = 28
+  // Atenuado: la última posición conocida cuando el permiso ha caducado (iOS). Gris y sin
+  // latido, para que se lea como «aproximado» y no se confunda con el punto en vivo.
+  const clase = atenuado ? 'me-loc me-loc--stale' : 'me-loc'
   const html =
-    `<div class="me-loc">` +
+    `<div class="${clase}">` +
     `<span class="me-loc__cone"></span>` +
     `<span class="me-loc__pulse"></span>` +
     `<span class="me-loc__dot"></span>` +
