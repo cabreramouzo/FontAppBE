@@ -3,7 +3,7 @@ import Fab from '@mui/material/Fab'
 import Box from '@mui/material/Box'
 import Zoom from '@mui/material/Zoom'
 import { useI18n } from '../i18n/I18nContext'
-import { anguloPuntero, bearingArrastrando, esArrastre } from '../lib/compassDrag'
+import { anguloPuntero, bearingArrastrando, esArrastre, cardinalArriba } from '../lib/compassDrag'
 
 /**
  * Brújula: devuelve el mapa al norte y, arrastrándola, lo gira.
@@ -25,6 +25,9 @@ export function Compass({ bearing, onReset, onRotate, siempre = false }: {
 }) {
   const { t } = useI18n()
   const girado = Math.abs(bearing) > 0.5
+  // Qué cardinal queda arriba, escrito como en Mapas del Mac. La letra la traduce el
+  // diccionario (O y no W en las lenguas romances).
+  const letra = t(`compass.${cardinalArriba(bearing).toLowerCase()}`)
   const ref = useRef<HTMLButtonElement>(null)
   // Estado del arrastre en curso: dónde está el centro de la brújula, dónde se agarró y con
   // qué bearing, y si ya se ha movido lo bastante para contar como giro (y no como clic).
@@ -87,15 +90,24 @@ export function Compass({ bearing, onReset, onRotate, siempre = false }: {
           touchAction: 'none',
         }}
       >
-        {/* La aguja gira al revés que el mapa: si el mapa mira al este, el norte
-            queda a la izquierda. La N acompaña a la punta roja. */}
-        <Box
-          component="svg"
-          viewBox="0 0 24 24"
-          sx={{ width: 26, height: 26, transform: `rotate(${-bearing}deg)`, transition: 'transform 0.1s linear' }}
-        >
-          <path d="M12 3 L15.4 12 L12 10.4 L8.6 12 Z" fill="#e5484d" />
-          <path d="M12 21 L8.6 12 L12 13.6 L15.4 12 Z" fill="currentColor" opacity="0.45" />
+        {/* Rosa de los vientos: la punta roja (norte) gira para apuntar al norte REAL, y en
+            el centro va la letra del cardinal que queda ARRIBA. El giro es `+bearing`, el
+            mismo signo que `cardinalArriba`; con `-bearing` la aguja y la letra se
+            contradecían. La letra va FUERA del grupo que gira, para no ponerse del revés. */}
+        <Box component="svg" viewBox="0 0 40 40" sx={{ width: 34, height: 34, color: 'text.secondary' }}>
+          {/* Giro por ATRIBUTO SVG y no por CSS: `transform` CSS sobre un `<g>` con
+              `transform-box: fill-box` computa a identidad en algunos navegadores (medido).
+              El atributo `rotate(deg cx cy)` gira siempre, alrededor de (20,20). */}
+          <g transform={`rotate(${bearing} 20 20)`}>
+            <path d="M20 5 L23.2 12.5 L20 10.7 L16.8 12.5 Z" fill="#e5484d" />
+            <circle cx="20" cy="35" r="1.4" fill="currentColor" opacity="0.35" />
+            <circle cx="35" cy="20" r="1.4" fill="currentColor" opacity="0.35" />
+            <circle cx="5" cy="20" r="1.4" fill="currentColor" opacity="0.35" />
+          </g>
+          <text x="20" y="20" textAnchor="middle" dominantBaseline="central"
+                style={{ fontSize: '13px', fontWeight: 700, fill: 'currentColor' }}>
+            {letra}
+          </text>
         </Box>
       </Fab>
     </Zoom>

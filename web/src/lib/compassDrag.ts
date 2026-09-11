@@ -36,3 +36,14 @@ export function bearingArrastrando(
 export function esArrastre(dx: number, dy: number, umbralPx = 4): boolean {
   return Math.hypot(dx, dy) >= umbralPx
 }
+
+/**
+ * Qué punto cardinal está ARRIBA del mapa, para escribirlo en la brújula (como Mapas del
+ * Mac). En leaflet-rotate `setBearing(b)` deja arriba la dirección `-b`, así que arriba
+ * está `(360 - bearing)`; se redondea al cardinal más cercano. Devuelve la clave N/E/S/W;
+ * la letra visible (O en vez de W en las lenguas romances) la pone el diccionario.
+ */
+export function cardinalArriba(bearing: number): 'N' | 'E' | 'S' | 'W' {
+  const arriba = (((360 - bearing) % 360) + 360) % 360
+  return (['N', 'E', 'S', 'W'] as const)[Math.round(arriba / 90) % 4]
+}
