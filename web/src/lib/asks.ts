@@ -1,4 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
+import { useLocation } from 'react-router-dom'
+import { permiteInterrupciones } from './quietRoutes'
 
 /**
  * Cola de interrupciones: **como mucho una a la vez**.
@@ -76,8 +78,12 @@ function suscribe(f: () => void) {
  * condiciones (ya lo cerró, ya está instalada, aún no toca…) y esto solo decide el turno.
  */
 export function useTurno(quien: Aviso, listo: boolean): boolean {
+  // En rutas silenciosas (p. ej. /install) ningún aviso se registra ni se pinta: es un
+  // enlace de ayuda para instalar y el tutorial estorbaría. Ver `quietRoutes`.
+  const { pathname } = useLocation()
+  const activo = listo && permiteInterrupciones(pathname)
   useEffect(() => {
-    if (!listo) return
+    if (!activo) return
     listos.add(quien)
     recalcula()
     for (const f of oyentes) f()
@@ -86,10 +92,10 @@ export function useTurno(quien: Aviso, listo: boolean): boolean {
       recalcula()
       for (const f of oyentes) f()
     }
-  }, [quien, listo])
+  }, [quien, activo])
 
   const actual = useSyncExternalStore(suscribe, () => turno, () => null)
-  return listo && actual === quien
+  return activo && actual === quien
 }
 
 // MARK: - Cuántas veces ha vuelto
