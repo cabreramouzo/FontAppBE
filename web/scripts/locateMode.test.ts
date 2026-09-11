@@ -10,6 +10,8 @@ import {
   anguloConoEnPantalla,
   bearingRumboArriba,
   anguloDelCono,
+  modoVisible,
+  MODO_INICIAL,
   type ModoUbicacion,
 } from '../src/lib/locateMode.ts'
 
@@ -120,4 +122,28 @@ test('fuera de rumbo arriba, el cono se calcula normal (heading + bearing)', () 
   assert.equal(anguloDelCono(90, 0, false), 90)
   assert.equal(anguloDelCono(0, 90, false), 90)
   assert.equal(anguloDelCono(10, 350, false), 0)
+})
+
+test('el botón arranca en off, no en follow (bug del primer arranque)', () => {
+  // Arrancaba en 'follow': al primer arranque, sin vista guardada que lo bajara a 'off' y
+  // sin permiso aún para localizar, salía el icono de estado 2 SIN punto azul, y pulsar el
+  // botón iba de follow a heading en vez de localizar. En 'off', el primer toque localiza.
+  assert.equal(MODO_INICIAL, 'off')
+})
+
+test('sin posición el botón se ve off, nunca siguiendo (invariante que evita el bug)', () => {
+  // La regla que hace imposible el estado que se reportó: icono relleno sin punto azul.
+  assert.equal(modoVisible('off', false), 'off')
+  assert.equal(modoVisible('follow', false), 'off')
+  assert.equal(modoVisible('heading', false), 'off')
+  // Y el corolario: sin posición, el botón nunca va relleno.
+  for (const m of ['off', 'follow', 'heading'] as const) {
+    assert.equal(botonRelleno(modoVisible(m, false)), false, `sin punto, ${m} no se rellena`)
+  }
+})
+
+test('con posición, el estado visible es el real', () => {
+  assert.equal(modoVisible('off', true), 'off')
+  assert.equal(modoVisible('follow', true), 'follow')
+  assert.equal(modoVisible('heading', true), 'heading')
 })

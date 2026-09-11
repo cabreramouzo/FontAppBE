@@ -31,6 +31,24 @@ export function modoTrasToque(modo: ModoUbicacion): ModoUbicacion {
 /** Mover el mapa (arrastrar o hacer zoom) suelta el seguimiento: vuelve a 'off'. */
 export const MODO_TRAS_GESTO: ModoUbicacion = 'off'
 
+/**
+ * El botón arranca en 'off'. Hasta tener una posición no se está siguiendo nada, y mostrar
+ * 'follow' de entrada mentía: al primer arranque salía el icono relleno (estado 2) sin
+ * punto azul, y al pulsar el botón `modo` iba de 'follow' a 'heading' en vez de localizar,
+ * así que el punto no aparecía hasta mover el mapa. Con 'off', el primer toque localiza.
+ */
+export const MODO_INICIAL: ModoUbicacion = 'off'
+
+/**
+ * Qué estado MUESTRA el botón, que no es lo mismo que la intención `modo`: sin posición no
+ * puedes estar siguiendo a nadie, así que se ve 'off' (hueco) aunque la intención fuera
+ * seguir. Es la red de seguridad contra el estado imposible —relleno sin punto— pase lo
+ * que pase con el orden de los efectos al arrancar.
+ */
+export function modoVisible(modo: ModoUbicacion, tienePosicion: boolean): ModoUbicacion {
+  return tienePosicion ? modo : 'off'
+}
+
 /** ¿Este modo sigue tu posición? `follow` y `heading` sí; `off` no. Lo usa el watch del
  *  GPS para decidir si recentra el mapa en cada fix. */
 export function sigueUbicacion(modo: ModoUbicacion): boolean {

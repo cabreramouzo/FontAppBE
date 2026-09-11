@@ -53,7 +53,8 @@ import { Compass } from '../components/Compass'
 import { useHeading } from '../lib/useHeading'
 import {
   modoTrasToque, MODO_TRAS_GESTO, sigueUbicacion, orientaAlRumbo,
-  botonRelleno, iconoDeModo, bearingRumboArriba, type ModoUbicacion,
+  botonRelleno, iconoDeModo, bearingRumboArriba, modoVisible, MODO_INICIAL,
+  type ModoUbicacion,
 } from '../lib/locateMode'
 // Parchea L.Map para poder girar el mapa con dos dedos. Se importa por su efecto.
 import 'leaflet-rotate'
@@ -1616,8 +1617,8 @@ export function MapPage() {
   // ¿El mapa va detrás de ti? Deja de hacerlo en cuanto tocas el mapa: a partir de
   // ahí estás mirando otra zona y que el mapa te devuelva a tu posición cada pocos
   // segundos sería insufrible. El botón de "centrar en mí" lo vuelve a activar.
-  const [modo, setModo] = useState<ModoUbicacion>('follow')
-  const modoRef = useRef<ModoUbicacion>('follow')
+  const [modo, setModo] = useState<ModoUbicacion>(MODO_INICIAL)
+  const modoRef = useRef<ModoUbicacion>(MODO_INICIAL)
   modoRef.current = modo
 
   const startWatching = useCallback(() => {
@@ -1665,7 +1666,6 @@ export function MapPage() {
     // sola vez al montar: `params` cambia de identidad y lo relanzaría.
     const veniaDeOtroSitio = loadView() !== null
       || new URLSearchParams(window.location.search).get('lat') !== null
-    if (veniaDeOtroSitio) setModo('off')
     navigator.permissions?.query({ name: 'geolocation' })
       .then((estado) => {
         if (estado.state !== 'granted') return
@@ -1698,11 +1698,14 @@ export function MapPage() {
       setGeoError(t('map.geoInsecure'))
       return
     }
-    setModo('follow')   // centrar en mí vuelve a enganchar el mapa (norte arriba)
-    map?.setBearing(0)
     const onOk = (p: GeolocationPosition) => {
       const c: [number, number] = [p.coords.latitude, p.coords.longitude]
       setMe(c)
+      // 'follow' se marca AQUÍ, con la posición ya en la mano — no al pulsar. Ponerlo
+      // antes dejaba el botón en estado 2 sin punto azul mientras el GPS respondía, y si
+      // fallaba se quedaba «siguiendo» a nadie. Con la posición, engancha y endereza.
+      setModo('follow')
+      map?.setBearing(0)
       setGoto([...c])   // centrar el mapa solo aquí: el seguimiento NO lo mueve
       if (openList) setShowNearby(true)
       startWatching()   // ya hay permiso: a partir de ahora se actualiza sola
@@ -2071,11 +2074,18 @@ export function MapPage() {
               void enableCompass()
             }}
           />
+          {(() => {
+            // El estado que se PINTA baja a 'off' si aún no hay punto azul: nunca un icono
+            // relleno (te sigue) sin nada a lo que seguir. Ver `modoVisible`.
+            const visible = modoVisible(modo, me !== null)
+            return (
           <Fab size="medium" onClick={ciclaUbicacion} title={t('map.recenter')} aria-label={t('map.recenter')}
-               sx={{ bgcolor: botonRelleno(modo) ? 'primary.main' : 'background.paper', color: botonRelleno(modo) ? 'primary.contrastText' : 'primary.main', '&:hover': { bgcolor: botonRelleno(modo) ? 'primary.main' : 'background.paper' } }}>
+               sx={{ bgcolor: botonRelleno(visible) ? 'primary.main' : 'background.paper', color: botonRelleno(visible) ? 'primary.contrastText' : 'primary.main', '&:hover': { bgcolor: botonRelleno(visible) ? 'primary.main' : 'background.paper' } }}>
             {/* Hueca (libre) · rellena (te sigue) · navegación (rumbo arriba), como iOS. */}
-            {{ hollow: <NearMeOutlinedIcon />, filled: <NearMeIcon />, navigation: <NavigationIcon /> }[iconoDeModo(modo)]}
+            {{ hollow: <NearMeOutlinedIcon />, filled: <NearMeIcon />, navigation: <NavigationIcon /> }[iconoDeModo(visible)]}
           </Fab>
+            )
+          })()}
           {/* ## Se pinta SIEMPRE, también sin sesión
               Estaba detrás de `user &&`, así que sin sesión no salía nada: ni el botón ni
               una explicación. Medido: **438 sesiones anónimas contra 48 cuentas**, o sea
