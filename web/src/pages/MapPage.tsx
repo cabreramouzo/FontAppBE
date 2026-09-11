@@ -30,6 +30,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import MyLocationIcon from '@mui/icons-material/MyLocation'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import NearMeIcon from '@mui/icons-material/NearMe'
+import NearMeOutlinedIcon from '@mui/icons-material/NearMeOutlined'
+import NavigationIcon from '@mui/icons-material/Navigation'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import DoNotDisturbAltIcon from '@mui/icons-material/DoNotDisturbAlt'
 import AddIcon from '@mui/icons-material/Add'
@@ -49,6 +51,15 @@ import '../leafletSetup'
 import { MeMarker } from '../components/MeMarker'
 import { Compass } from '../components/Compass'
 import { useHeading } from '../lib/useHeading'
+
+/**
+ * Estados del botón de ubicación, como Mapas de iOS:
+ *  · 'off'     — libre; el mapa no te sigue. Flecha hueca.
+ *  · 'follow'  — centrado en ti y desplazándose contigo, norte arriba. Flecha rellena.
+ *  · 'heading' — además gira el mapa a tu rumbo (rumbo arriba); aparece la brújula.
+ * `follow` y `heading` siguen tu posición; mover el mapa (arrastrar/zoom) vuelve a 'off'.
+ */
+type ModoUbicacion = 'off' | 'follow' | 'heading'
 // Parchea L.Map para poder girar el mapa con dos dedos. Se importa por su efecto.
 import 'leaflet-rotate'
 
@@ -1610,9 +1621,9 @@ export function MapPage() {
   // ¿El mapa va detrás de ti? Deja de hacerlo en cuanto tocas el mapa: a partir de
   // ahí estás mirando otra zona y que el mapa te devuelva a tu posición cada pocos
   // segundos sería insufrible. El botón de "centrar en mí" lo vuelve a activar.
-  const [siguiendo, setSiguiendo] = useState(true)
-  const siguiendoRef = useRef(true)
-  siguiendoRef.current = siguiendo
+  const [modo, setModo] = useState<ModoUbicacion>('follow')
+  const modoRef = useRef<ModoUbicacion>('follow')
+  modoRef.current = modo
 
   const startWatching = useCallback(() => {
     if (watchID.current !== null || !navigator.geolocation) return
@@ -1630,7 +1641,7 @@ export function MapPage() {
         // zoom (por eso `sigueme` y no `goto`, que enfoca a zoom 16). La comparación va
         // contra una ref y no dentro del actualizador de `setMe`: encadenar ahí es una
         // actualización en fase de render y React la descarta sin avisar.
-        if (siguiendoRef.current) setSigueme([...c])
+        if (modoRef.current !== 'off') setSigueme([...c])
       },
       // Un fallo puntual del GPS no es noticia: seguimos con la última posición buena.
       () => {},
@@ -1659,7 +1670,7 @@ export function MapPage() {
     // sola vez al montar: `params` cambia de identidad y lo relanzaría.
     const veniaDeOtroSitio = loadView() !== null
       || new URLSearchParams(window.location.search).get('lat') !== null
-    if (veniaDeOtroSitio) setSiguiendo(false)
+    if (veniaDeOtroSitio) setModo('off')
     navigator.permissions?.query({ name: 'geolocation' })
       .then((estado) => {
         if (estado.state !== 'granted') return
@@ -1692,7 +1703,8 @@ export function MapPage() {
       setGeoError(t('map.geoInsecure'))
       return
     }
-    setSiguiendo(true)   // pulsar "centrar en mí" vuelve a enganchar el mapa
+    setModo('follow')   // centrar en mí vuelve a enganchar el mapa (norte arriba)
+    map?.setBearing(0)
     const onOk = (p: GeolocationPosition) => {
       const c: [number, number] = [p.coords.latitude, p.coords.longitude]
       setMe(c)
@@ -1726,6 +1738,27 @@ export function MapPage() {
     )
   }
   locateRef.current = locate
+
+  // El botón de ubicación cicla como en Mapas de iOS: off -> follow -> heading -> follow.
+  // De 'off' a 'follow' lo hace `locate` (centra + engancha). De 'follow' a 'heading'
+  // enciende la brújula —el sensor de iOS EXIGE que la petición salga de este toque— y
+  // deja que el efecto de abajo gire el mapa. De 'heading' se vuelve a 'follow' y se
+  // endereza el norte. Para salir del todo ('off') se mueve el mapa, como en iOS.
+  function ciclaUbicacion() {
+    trackInteraction('map_locate')
+    if (modo === 'off') { locate(false); return }
+    if (modo === 'follow') { setModo('heading'); void enableCompass(); return }
+    setModo('follow')
+    map?.setBearing(0)
+  }
+
+  // Modo 'heading' (rumbo arriba): el mapa gira para que tu rumbo quede arriba. Se pone
+  // `bearing = heading` porque el cono del punto azul se pinta a `heading - bearing`, así
+  // que con esa igualdad apunta recto hacia arriba y el mapa queda orientado a tu marcha.
+  useEffect(() => {
+    if (modo !== 'heading' || heading === null) return
+    map?.setBearing(heading)
+  }, [modo, heading, map])
 
   // Los mismos controles en las dos formas. En una función y no copiados: dos listas de
   // filtros se separan al primer añadido, y el que se olvide solo se nota en uno de los
@@ -1847,7 +1880,7 @@ export function MapPage() {
         <PersistView />
         <FocusOn target={goto} marca={movimientoNuestro} />
         <SigueAlUsuario pos={sigueme} marca={movimientoNuestro} />
-        <DetectaGestoDelUsuario onGesto={() => setSiguiendo(false)} marca={movimientoNuestro} />
+        <DetectaGestoDelUsuario onGesto={() => setModo('off')} marca={movimientoNuestro} />
         <FlyToPlace place={place} />
         <ZoomControls />
         <VigilaGiro onChange={setBearing} />
@@ -2032,13 +2065,18 @@ export function MapPage() {
           <Compass
             bearing={bearing}
             onReset={() => {
+              // Enderezar el norte sale de 'heading': si no, el efecto de rumbo lo
+              // volvería a girar al instante. Queda siguiendo tu posición, norte arriba.
+              if (modo === 'heading') setModo('follow')
               map?.setBearing(0)
               // Aprovechamos el gesto para pedirle a iOS el sensor de orientación.
               void enableCompass()
             }}
           />
-          <Fab size="medium" onClick={() => { trackInteraction('map_locate'); locate(false) }} title={t('map.recenter')} aria-label={t('map.recenter')} sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}>
-            <NearMeIcon />
+          <Fab size="medium" onClick={ciclaUbicacion} title={t('map.recenter')} aria-label={t('map.recenter')}
+               sx={{ bgcolor: modo === 'off' ? 'background.paper' : 'primary.main', color: modo === 'off' ? 'primary.main' : 'primary.contrastText', '&:hover': { bgcolor: modo === 'off' ? 'background.paper' : 'primary.main' } }}>
+            {/* Hueca (libre) · rellena (te sigue) · navegación (rumbo arriba), como iOS. */}
+            {modo === 'off' ? <NearMeOutlinedIcon /> : modo === 'follow' ? <NearMeIcon /> : <NavigationIcon />}
           </Fab>
           {/* ## Se pinta SIEMPRE, también sin sesión
               Estaba detrás de `user &&`, así que sin sesión no salía nada: ni el botón ni
