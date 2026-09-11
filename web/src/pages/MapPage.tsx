@@ -51,15 +51,10 @@ import '../leafletSetup'
 import { MeMarker } from '../components/MeMarker'
 import { Compass } from '../components/Compass'
 import { useHeading } from '../lib/useHeading'
-
-/**
- * Estados del botón de ubicación, como Mapas de iOS:
- *  · 'off'     — libre; el mapa no te sigue. Flecha hueca.
- *  · 'follow'  — centrado en ti y desplazándose contigo, norte arriba. Flecha rellena.
- *  · 'heading' — además gira el mapa a tu rumbo (rumbo arriba); aparece la brújula.
- * `follow` y `heading` siguen tu posición; mover el mapa (arrastrar/zoom) vuelve a 'off'.
- */
-type ModoUbicacion = 'off' | 'follow' | 'heading'
+import {
+  modoTrasToque, MODO_TRAS_GESTO, sigueUbicacion, orientaAlRumbo,
+  botonRelleno, iconoDeModo, bearingRumboArriba, type ModoUbicacion,
+} from '../lib/locateMode'
 // Parchea L.Map para poder girar el mapa con dos dedos. Se importa por su efecto.
 import 'leaflet-rotate'
 
@@ -1641,7 +1636,7 @@ export function MapPage() {
         // zoom (por eso `sigueme` y no `goto`, que enfoca a zoom 16). La comparación va
         // contra una ref y no dentro del actualizador de `setMe`: encadenar ahí es una
         // actualización en fase de render y React la descarta sin avisar.
-        if (modoRef.current !== 'off') setSigueme([...c])
+        if (sigueUbicacion(modoRef.current)) setSigueme([...c])
       },
       // Un fallo puntual del GPS no es noticia: seguimos con la última posición buena.
       () => {},
@@ -1746,18 +1741,21 @@ export function MapPage() {
   // endereza el norte. Para salir del todo ('off') se mueve el mapa, como en iOS.
   function ciclaUbicacion() {
     trackInteraction('map_locate')
-    if (modo === 'off') { locate(false); return }
-    if (modo === 'follow') { setModo('heading'); void enableCompass(); return }
-    setModo('follow')
-    map?.setBearing(0)
+    if (modo === 'off') { locate(false); return }  // locate centra y deja 'follow'
+    const siguiente = modoTrasToque(modo)
+    setModo(siguiente)
+    // Entrar en rumbo enciende el sensor (iOS lo exige desde este toque); salir de rumbo
+    // endereza el norte, o el efecto de abajo lo volvería a girar al instante.
+    if (siguiente === 'heading') void enableCompass()
+    else map?.setBearing(0)
   }
 
   // Modo 'heading' (rumbo arriba): el mapa gira para que tu rumbo quede arriba. Se pone
   // `bearing = heading` porque el cono del punto azul se pinta a `heading - bearing`, así
   // que con esa igualdad apunta recto hacia arriba y el mapa queda orientado a tu marcha.
   useEffect(() => {
-    if (modo !== 'heading' || heading === null) return
-    map?.setBearing(heading)
+    if (!orientaAlRumbo(modo) || heading === null) return
+    map?.setBearing(bearingRumboArriba(heading))
   }, [modo, heading, map])
 
   // Los mismos controles en las dos formas. En una función y no copiados: dos listas de
@@ -1880,7 +1878,7 @@ export function MapPage() {
         <PersistView />
         <FocusOn target={goto} marca={movimientoNuestro} />
         <SigueAlUsuario pos={sigueme} marca={movimientoNuestro} />
-        <DetectaGestoDelUsuario onGesto={() => setModo('off')} marca={movimientoNuestro} />
+        <DetectaGestoDelUsuario onGesto={() => setModo(MODO_TRAS_GESTO)} marca={movimientoNuestro} />
         <FlyToPlace place={place} />
         <ZoomControls />
         <VigilaGiro onChange={setBearing} />
@@ -2074,9 +2072,9 @@ export function MapPage() {
             }}
           />
           <Fab size="medium" onClick={ciclaUbicacion} title={t('map.recenter')} aria-label={t('map.recenter')}
-               sx={{ bgcolor: modo === 'off' ? 'background.paper' : 'primary.main', color: modo === 'off' ? 'primary.main' : 'primary.contrastText', '&:hover': { bgcolor: modo === 'off' ? 'background.paper' : 'primary.main' } }}>
+               sx={{ bgcolor: botonRelleno(modo) ? 'primary.main' : 'background.paper', color: botonRelleno(modo) ? 'primary.contrastText' : 'primary.main', '&:hover': { bgcolor: botonRelleno(modo) ? 'primary.main' : 'background.paper' } }}>
             {/* Hueca (libre) · rellena (te sigue) · navegación (rumbo arriba), como iOS. */}
-            {modo === 'off' ? <NearMeOutlinedIcon /> : modo === 'follow' ? <NearMeIcon /> : <NavigationIcon />}
+            {{ hollow: <NearMeOutlinedIcon />, filled: <NearMeIcon />, navigation: <NavigationIcon /> }[iconoDeModo(modo)]}
           </Fab>
           {/* ## Se pinta SIEMPRE, también sin sesión
               Estaba detrás de `user &&`, así que sin sesión no salía nada: ni el botón ni

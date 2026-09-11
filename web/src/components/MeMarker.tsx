@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Marker } from 'react-leaflet'
 import type { Marker as LeafletMarker } from 'leaflet'
 import { userLocationIcon } from '../lib/userLocationIcon'
+import { anguloConoEnPantalla } from '../lib/locateMode'
 
 const meIcon = userLocationIcon()
 
@@ -26,7 +27,9 @@ export function MeMarker({ pos, heading, bearing }: { pos: [number, number]; hea
       return
     }
     el.style.setProperty('--me-cone-on', '1')
-    el.style.setProperty('--me-cone', `${heading - bearing}deg`)
+    // Misma fórmula que usa el modo «rumbo arriba» para girar el mapa; viven juntas en
+    // `locateMode` para que un cambio de signo no descuadre una respecto a la otra.
+    el.style.setProperty('--me-cone', `${anguloConoEnPantalla(heading, bearing)}deg`)
   }, [heading, bearing, pos])
 
   return <Marker ref={ref} position={pos} icon={meIcon} zIndexOffset={500} />
