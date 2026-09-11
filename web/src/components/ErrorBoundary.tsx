@@ -43,6 +43,8 @@ interface Props {
    */
   mensajeCaducado: string
   reintentar: string
+  /** Rótulo del desplegable con el texto técnico del error (diagnóstico). */
+  detalles: string
 }
 
 interface State {
@@ -51,17 +53,22 @@ interface State {
   caducado: boolean
   /** Ese mismo fallo, pero por estar sin cobertura. La salida es la contraria. */
   sinRed: boolean
+  /** Texto del error (nombre, mensaje y unas líneas de traza) para poder diagnosticar
+   *  un fallo que solo pasa en el móvil de otra persona, sin un servicio de errores. */
+  detalle?: string
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { roto: false, caducado: false, sinRed: false }
 
   static getDerivedStateFromError(error: Error): State {
+    const detalle = [error?.name, error?.message].filter(Boolean).join(': ')
+      + (error?.stack ? '\n' + error.stack.split('\n').slice(1, 4).join('\n') : '')
     // Sin red va primero: los dos fallos dan el mismo error, pero decir «se ha
     // actualizado, recarga» en pleno modo avión manda a la persona a hacer justo lo que
     // la dejaría sin nada. Reportado con una captura desde el monte.
-    if (esFalloPorFaltaDeRed(error)) return { roto: true, caducado: false, sinRed: true }
-    return { roto: true, caducado: esTrozoCaducado(error), sinRed: false }
+    if (esFalloPorFaltaDeRed(error)) return { roto: true, caducado: false, sinRed: true, detalle }
+    return { roto: true, caducado: esTrozoCaducado(error), sinRed: false, detalle }
   }
 
   private recuperarYRecargar = async () => {
@@ -98,6 +105,15 @@ export class ErrorBoundary extends Component<Props, State> {
         <button type="button" onClick={this.state.sinRed ? () => window.history.back() : this.recuperarYRecargar}>
           {this.state.sinRed ? this.props.volver : this.props.reintentar}
         </button>
+        {/* Solo en un fallo de pantalla de verdad (no sin red ni versión caducada): el
+            texto del error, para poder diagnosticar un crash que solo pasa en el móvil de
+            otra persona. Colapsado, así que no molesta a quien no lo va a leer. */}
+        {!this.state.sinRed && !this.state.caducado && this.state.detalle && (
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 13, opacity: 0.6 }}>{this.props.detalles}</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, opacity: 0.6 }}>{this.state.detalle}</pre>
+          </details>
+        )}
       </div>
     )
   }

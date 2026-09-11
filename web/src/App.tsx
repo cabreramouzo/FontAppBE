@@ -154,6 +154,7 @@ function BarreraDePantalla({ children }: { children: React.ReactNode }) {
       mensajeSinRed={t('error.offlineChunk')}
       volver={t('detail.backMap')}
       reintentar={t('error.retry')}
+      detalles={t('error.details')}
     >
       {children}
     </ErrorBoundary>
