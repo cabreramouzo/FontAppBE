@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { puedoConfirmarMiReseña } from '../lib/selfConfirm'
+import { reseñadaHacePoco } from '../lib/misResenas'
 import { capabilities, capabilityLevels } from '../lib/capabilities'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
@@ -716,7 +717,8 @@ export function FontDetailPage() {
       await setFontPhoto(font.id, image)
       toast.show(t('toast.photoAdded'))
       setPhotoRemoval({ canRequest: true, pending: false, canUndo: true })
-      setPreguntaEstado(true)
+      // Si acabas de reseñarla, no vuelvas a preguntar cómo está (ver misResenas).
+      if (!reseñadaHacePoco(font.id)) setPreguntaEstado(true)
       load()
     } catch (e) {
       // Sin cobertura se queda en el móvil y sube sola al volver la red. Es justo el caso:
@@ -726,7 +728,7 @@ export function FontDetailPage() {
         toast.show(t('offline.savedPhoto'))
         // También sin cobertura: la reseña tiene su propia cola, y el estado del agua
         // caduca mucho más deprisa que la foto.
-        setPreguntaEstado(true)
+        if (!reseñadaHacePoco(font.id)) setPreguntaEstado(true)
       } else {
         setError(describeError(e, t))
       }

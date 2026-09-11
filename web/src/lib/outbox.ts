@@ -1,3 +1,4 @@
+import { apuntaResena } from './misResenas'
 import type { PhotoUploadMeta } from './image'
 import { ApiError, createComment, createFont, setFontPhoto, trackInteraction, uploadImage, type NewComment, type NewFont } from '../api/client'
 
@@ -155,6 +156,8 @@ export async function enqueue(item: OutboxItem): Promise<void> {
   // arregla: entre las dos cosas puede pasar un cambio de cuenta.
   const userID = await quienSoy()
   await tx('readwrite', (s) => s.add({ ...item, userID, queuedAt: Date.now(), attempts: 0 } as unknown as StoredItem))
+  // Reseña con estado encolada offline: cuenta como «ya he dicho cómo está» (ver misResenas).
+  if (item.kind === 'comment' && item.data?.waterStatus) apuntaResena(item.fontID)
   notifyChanged()
   // En Android esto permite enviarlo aunque el usuario cierre la app.
   void requestBackgroundSync()

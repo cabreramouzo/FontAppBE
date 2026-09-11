@@ -1,3 +1,4 @@
+import { apuntaResena } from '../lib/misResenas'
 import type { PhotoUploadMeta } from '../lib/image'
 import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
 import { storedSource } from '../lib/campaign'
@@ -408,6 +409,8 @@ export async function createComment(fontID: string, data: NewComment, queuedOffl
     body: JSON.stringify(data),
     headers: queuedOffline ? { 'X-FontApp-Queued-Offline': '1' } : undefined,
   })
+  // Reseñar con estado: recuérdalo para no volver a preguntarte cómo está (ver misResenas).
+  if (data.waterStatus) apuntaResena(fontID)
   avisaDeAportacion()
   return c
 }
@@ -440,9 +443,11 @@ export async function deleteComment(fontID: string, commentID: string): Promise<
 
 /** 👍 "sigue igual": confirma (o deshace) que el estado del comentario sigue vigente. */
 export async function confirmComment(fontID: string, commentID: string, on: boolean): Promise<CommentResponse> {
-  return apiFetch<CommentResponse>(`/fonts/${fontID}/comments/${commentID}/confirm`, {
+  const r = await apiFetch<CommentResponse>(`/fonts/${fontID}/comments/${commentID}/confirm`, {
     method: on ? 'POST' : 'DELETE',
   })
+  if (on) apuntaResena(fontID) // confirmar también es «ya he dicho cómo está»
+  return r
 }
 
 /**

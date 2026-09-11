@@ -1,3 +1,4 @@
+import { reseñadaHacePoco } from '../lib/misResenas'
 import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
 import { useNavigate } from 'react-router-dom'
@@ -341,7 +342,7 @@ export function ClusteredMarkers({
           <div class="muted small" title="${escapeHtml(t(confidenceDetailKey(confidence)))}">${CONFIDENCE_EMOJI[confidence]} ${escapeHtml(t(confidenceLabelKey(confidence)))}</div>
           ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
         </div>
-        ${user ? `<div class="popup-quick" data-font="${f.id}" data-antes="${f.lastWaterStatus ?? ''}" data-sinfoto="${f.image ? '' : '1'}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
+        ${user && !reseñadaHacePoco(f.id) ? `<div class="popup-quick" data-font="${f.id}" data-antes="${f.lastWaterStatus ?? ''}" data-sinfoto="${f.image ? '' : '1'}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
           <span class="muted small">${escapeHtml(t('popup.howIsIt'))}</span>
           <div class="popup-quick-row">
             ${ESTADOS_RAPIDOS.map((e) => {
