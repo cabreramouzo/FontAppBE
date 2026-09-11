@@ -1,4 +1,4 @@
-import type { ShareLang } from './_meta'
+import type { ShareLang } from './_meta.ts'
 
 /**
  * Redirección corta de un canal social a la landing localizada.
