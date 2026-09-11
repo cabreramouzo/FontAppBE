@@ -1369,6 +1369,44 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Los acentos NO cuentan al buscar: «moia» encuentra «Moià». Necesita la extensión
+    /// `unaccent` (migración EnableUnaccent), disponible en CI porque el rol es superusuario.
+    func testSearchIgnoresAccents() async throws {
+        try await withApp { app in
+            try await Font(name: "Moià centre", latitude: 41.81, longitude: 2.09,
+                           source: .fountain).create(on: app.db)
+            for term in ["moia", "MOIÀ", "moià"] {
+                let q = term.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+                try await app.test(.GET, "fonts?search=\(q)") { res in
+                    XCTAssertEqual(res.status, .ok)
+                    let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                    let items = json?["items"] as? [[String: Any]] ?? []
+                    XCTAssertTrue(items.contains { ($0["name"] as? String) == "Moià centre" },
+                                  "«\(term)» debería encontrar «Moià centre»")
+                }
+            }
+        }
+    }
+
+    /// Cada palabra tiene que aparecer, pero en cualquier orden y con artículos en medio:
+    /// «crespiera brollador» encuentra «Brollador de la Crespiera».
+    func testSearchMatchesWordsInAnyOrder() async throws {
+        try await withApp { app in
+            try await Font(name: "Brollador de la Crespiera", latitude: 41.7, longitude: 2.1,
+                           source: .fountain).create(on: app.db)
+            for term in ["brollador crespiera", "crespiera brollador", "la crespiera"] {
+                let q = term.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+                try await app.test(.GET, "fonts?search=\(q)") { res in
+                    XCTAssertEqual(res.status, .ok)
+                    let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                    let items = json?["items"] as? [[String: Any]] ?? []
+                    XCTAssertTrue(items.contains { ($0["name"] as? String) == "Brollador de la Crespiera" },
+                                  "«\(term)» debería encontrar la fuente")
+                }
+            }
+        }
+    }
+
     /// El JSON público dice que una ficha está escondida, pero **no por qué**.
     ///
     /// El motivo (`hidden_spam`, `hidden_fake`, `hidden_abuse`) es un veredicto de

@@ -613,7 +613,18 @@ struct FontController: RouteCollection {
         let query = Font.visible(on: req.db).sort(\.$name)
         // El patrón se acota y se escapa: ver `SearchTerm` (un ILIKE con una cadena
         // enorme cuesta segundos de CPU por petición).
-        if let patrones { for p in patrones { query.filter(\.$name, .custom("ILIKE"), p) } }
+        // `unaccent` en las dos partes: los acentos no cuentan («moia» encuentra «Moià»).
+        // El patrón ya trae los comodines escapados (ver `SearchTerm`); `unaccent` no toca
+        // ni `%` ni `\\`, así que el escape se conserva. Ver migración `EnableUnaccent`.
+        if let patrones {
+            for p in patrones {
+                query.filter(.sql(SQLBinaryExpression(
+                    left: SQLFunction("unaccent", args: SQLColumn("name", table: "fonts")),
+                    op: SQLRaw("ILIKE"),
+                    right: SQLFunction("unaccent", args: SQLBind(p))
+                )))
+            }
+        }
         return try await query.paginate(SafePage.from(req))
     }
 
