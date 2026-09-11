@@ -8,8 +8,10 @@ import { permiteInterrupciones, RUTAS_SIN_INTERRUPCIONES } from '../src/lib/quie
  * se cuela una ruta principal, el mapa se queda mudo sin bienvenida ni nada.
  */
 
-test('/install no interrumpe (tutorial, ubicación, encuesta…)', () => {
-  assert.equal(permiteInterrupciones('/install'), false)
+test('las páginas de ayuda/informativas no interrumpen', () => {
+  for (const r of ['/install', '/support', '/legal']) {
+    assert.equal(permiteInterrupciones(r), false, r)
+  }
 })
 
 test('las rutas normales sí interrumpen', () => {
@@ -18,6 +20,6 @@ test('las rutas normales sí interrumpen', () => {
   }
 })
 
-test('la lista contiene /install', () => {
-  assert.ok(RUTAS_SIN_INTERRUPCIONES.includes('/install'))
+test('la lista contiene las rutas silenciosas', () => {
+  for (const r of ['/install', '/support', '/legal']) assert.ok(RUTAS_SIN_INTERRUPCIONES.includes(r), r)
 })
