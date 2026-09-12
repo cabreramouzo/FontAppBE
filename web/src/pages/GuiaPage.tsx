@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
@@ -30,6 +30,7 @@ type Ui = {
   fuenteEjemplo: string
   chips: { flowing: string; trickle: string; dry: string }
   pista: string
+  ruta: string
   gpx: string
   enElMapa: string
 }
@@ -59,7 +60,7 @@ const CA: Contenido = {
       titulo: '3. Aigua a la teva ruta',
       ilustra: 'gpx',
       parrafos: [
-        'Aquí és on la cosa canvia. Si planifiques rutes (Wikiloc, Strava, Komoot…), obre «Aigua a la meva ruta» (el botó GPX del mapa) i tria el teu fitxer: FontApp et diu quines fonts hi ha pel camí, en quin quilòmetre i a quina distància del traçat. El fitxer no surt del teu mòbil.',
+        'Aquí és on la cosa canvia. Si planifiques rutes (Wikiloc, Strava, Komoot…): al mapa toca el botó GPX, obre «Aigua a la meva ruta» i tria el teu fitxer. FontApp et diu quines fonts hi ha pel camí, en quin quilòmetre i a quina distància del traçat. El fitxer no surt del teu mòbil.',
         'I el que de veritat decideix si portes un bidó o dos: el tram més llarg sense aigua. Exemple real d’una ruta de 14 km per Barcelona —167 fonts pel camí, però cap comprovada recentment—: el tram sec de debò no són 2 km, són els 14, tota la ruta. Això ho vols saber abans de sortir, no a mig camí.',
         'Pots baixar les fonts al teu GPS (Garmin) i, en tornar, dir com estaven amb un toc: així la ruta que has fet ajuda el següent.',
       ],
@@ -79,6 +80,7 @@ const CA: Contenido = {
     fuenteEjemplo: 'Font de la Vall',
     chips: { flowing: 'Raja', trickle: 'Poca', dry: 'Seca' },
     pista: 'toca com està',
+    ruta: 'Aigua a la meva ruta',
     gpx: 'Tria un fitxer GPX',
     enElMapa: 'al mapa',
   },
@@ -108,7 +110,7 @@ const ES: Contenido = {
       titulo: '3. Agua en tu ruta',
       ilustra: 'gpx',
       parrafos: [
-        'Aquí es donde la cosa cambia. Si planificas rutas (Wikiloc, Strava, Komoot…), abre «Agua en mi ruta» (el botón GPX del mapa) y elige tu archivo: FontApp te dice qué fuentes hay por el camino, en qué kilómetro y a qué distancia del trazado. El archivo no sale de tu móvil.',
+        'Aquí es donde la cosa cambia. Si planificas rutas (Wikiloc, Strava, Komoot…): en el mapa toca el botón GPX, abre «Agua en mi ruta» y elige tu archivo. FontApp te dice qué fuentes hay por el camino, en qué kilómetro y a qué distancia del trazado. El archivo no sale de tu móvil.',
         'Y lo que de verdad decide si llevas un bidón o dos: el tramo más largo sin agua. Ejemplo real de una ruta de 14 km por Barcelona —167 fuentes por el camino, pero ninguna comprobada recientemente—: el tramo seco de verdad no son 2 km, son los 14, toda la ruta. Eso lo quieres saber antes de salir, no a medio camino.',
         'Puedes bajarte las fuentes a tu GPS (Garmin) y, al volver, decir cómo estaban con un toque: así la ruta que has hecho ayuda al siguiente.',
       ],
@@ -128,6 +130,7 @@ const ES: Contenido = {
     fuenteEjemplo: 'Fuente del Valle',
     chips: { flowing: 'Mana', trickle: 'Poca', dry: 'Seca' },
     pista: 'toca cómo está',
+    ruta: 'Agua en mi ruta',
     gpx: 'Elegir un fichero GPX',
     enElMapa: 'en el mapa',
   },
@@ -158,8 +161,31 @@ function Flecha() {
 /** Número de paso, un círculo pequeño con el dígito. */
 function Paso({ n }: { n: number }) {
   return (
-    <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: 'primary.main', color: 'primary.contrastText', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>
+    <Box sx={{ width: 20, height: 20, flexShrink: 0, borderRadius: '50%', bgcolor: 'primary.main', color: 'primary.contrastText', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>
       {n}
+    </Box>
+  )
+}
+
+/** Un botón de MUI imitado (mismos colores del tema), con el icono de subir. `contained`
+ *  es el azul relleno («Elegir un fichero GPX»); si no, el `outlined` («Agua en mi ruta»). */
+function BotonMock({ children, contained }: { children: ReactNode; contained?: boolean }) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: 1, borderRadius: 1, fontWeight: 700, fontSize: 14,
+        ...(contained
+          ? { bgcolor: 'primary.main', color: 'primary.contrastText', boxShadow: 2 }
+          : { border: '1px solid', borderColor: 'primary.main', color: 'primary.main', bgcolor: 'background.paper' }),
+      }}
+    >
+      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M12 16 V4" />
+        <path d="M7 9 L12 4 L17 9" />
+        <path d="M5 20 H19" />
+      </svg>
+      {children}
     </Box>
   )
 }
@@ -216,32 +242,29 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
     )
   }
 
-  // gpx: los DOS botones reales que se tocan, en orden, porque el primero cuesta de
-  // encontrar (lo reportó un usuario: no está a la vista, está en el botón «GPX» del
-  // mapa). Se reproducen fieles —el FAB redondo blanco con «GPX» en azul y el botón azul
-  // «Elegir un fichero GPX» (`gpxIn.pick`)— en vez de una captura, que se quedaría vieja.
+  // gpx: los TRES botones reales que se tocan, en orden, porque el camino no es obvio
+  // (lo reportó un usuario). En el mapa el FAB redondo «GPX» abre una hoja; ahí,
+  // «Agua en mi ruta» (outlined) lleva a /gpx; y ahí, «Elegir un fichero GPX» (contained,
+  // `gpxIn.pick`). Mockups fieles del tema, no capturas —que se quedan viejas y son por
+  // idioma—. En columna: en móvil una fila horizontal de tres botones no cabe, y en
+  // columna queda siempre centrada.
   return (
-    <Box sx={{ my: 2, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+    <Box sx={{ my: 2, display: 'flex', flexDirection: 'column', gap: 1.25, width: 'fit-content', mx: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Paso n={1} />
         {/* El botón «GPX» del mapa: un FAB redondo, fondo del papel y letras en azul. */}
-        <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: 'background.paper', color: 'primary.main', boxShadow: 2, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, letterSpacing: '0.5px' }}>
+        <Box sx={{ width: 44, height: 44, flexShrink: 0, borderRadius: '50%', bgcolor: 'background.paper', color: 'primary.main', boxShadow: 2, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, letterSpacing: '0.5px' }}>
           GPX
         </Box>
-        <Typography variant="caption" color="text.secondary">{ui.enElMapa}</Typography>
+        <Typography variant="body2" color="text.secondary">{ui.enElMapa}</Typography>
       </Box>
-      <Box aria-hidden sx={{ color: 'text.disabled', fontSize: 24, lineHeight: 1, alignSelf: 'center', mt: -1.5 }}>›</Box>
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Paso n={2} />
-        {/* El botón real de «Agua en mi ruta»: azul, con icono de subir y el rótulo pick. */}
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: 1, borderRadius: 1, bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 700, fontSize: 14, boxShadow: 2 }}>
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M12 16 V4" />
-            <path d="M7 9 L12 4 L17 9" />
-            <path d="M5 20 H19" />
-          </svg>
-          {ui.gpx}
-        </Box>
+        <BotonMock>{ui.ruta}</BotonMock>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Paso n={3} />
+        <BotonMock contained>{ui.gpx}</BotonMock>
       </Box>
     </Box>
   )
