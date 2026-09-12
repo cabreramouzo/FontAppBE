@@ -44,6 +44,7 @@ const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then((m) =>
 const NewsPage = lazy(() => import('./pages/NewsPage').then((m) => ({ default: m.NewsPage })))
 const ZonesPage = lazy(() => import('./pages/ZonesPage').then((m) => ({ default: m.ZonesPage })))
 const GamificationPage = lazy(() => import('./pages/GamificationPage').then((m) => ({ default: m.GamificationPage })))
+const GuiaPage = lazy(() => import('./pages/GuiaPage').then((m) => ({ default: m.GuiaPage })))
 const BadgesPage = lazy(() => import('./pages/BadgesPage').then((m) => ({ default: m.BadgesPage })))
 // Los ajustes son una pantalla por tema, como los del teléfono. Cada una en su trozo:
 // son pantallas que se abren de una en una y casi nunca.
@@ -81,6 +82,7 @@ export default function App() {
                   <Route path="/activity" element={<NewsPage />} />
                   <Route path="/zones" element={<ZonesPage />} />
                   <Route path="/gamification" element={<GamificationPage />} />
+                  <Route path="/guia" element={<GuiaPage />} />
                   <Route path="/me/badges" element={<BadgesPage />} />
                   <Route path="/places/:slug" element={<PlacePage />} />
                   {/* Pública y sin enlazar todavía desde la navegación: se manda por

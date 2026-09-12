@@ -26,6 +26,7 @@ export function Footer() {
           enseña nada —la gente lo cierra sin leerlo— y después no había ningún sitio
           donde volver a mirarlo. No se pinta si ya la tiene instalada. */}
       {!estaInstalada() && <RouterLink to="/install">{t('install.button')}</RouterLink>}
+      <RouterLink to="/guia">{t('nav.guide')}</RouterLink>
       <RouterLink to="/legal">{t('footer.legal')}</RouterLink>
       <span className="muted">
         {t('footer.dataPrefix')}{' '}
