@@ -746,7 +746,7 @@ const ca: Dict = {
   'gpxIn.showMap': 'Veure-ho al mapa',
   'gpxIn.forget': 'Oblida-la',
   'gpxIn.counted': 'Comptat',
-  'gpxIn.reportTitle': 'Vas fer-hi via? Digues com estava cada font',
+  'gpxIn.reportTitle': 'Vas fer aquesta ruta? Digues com estava cada font',
   'gpxIn.reportBody': 'Toca l’estat i es publica a l’instant, sense escriure res. És el que evita que el següent s’hi desviï per no res.',
   'gpxIn.reportLogin': 'Entra per poder dir com estava cada font.',
   'gpxIn.backTitle': '{name} · fa {d} dies',
