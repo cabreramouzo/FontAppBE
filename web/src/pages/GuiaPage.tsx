@@ -142,12 +142,12 @@ function Pin({ color }: { color: string }) {
   )
 }
 
-/** Flecha curva que apunta hacia arriba-izquierda, al control de encima. */
+/** Flecha corta que sube hacia la derecha, para clavar la punta en el control de arriba. */
 function Flecha() {
   return (
-    <svg width={38} height={26} viewBox="0 0 38 26" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: 'block' }}>
-      <path d="M34 24 C 30 10, 20 5, 7 5" />
-      <path d="M13 2 L5 5 L9 12" />
+    <svg width={46} height={32} viewBox="0 0 46 32" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: 'block' }}>
+      <path d="M5 29 C 11 16, 24 10, 38 9" />
+      <path d="M31 6 L39 8.5 L34 16" />
     </svg>
   )
 }
@@ -173,10 +173,13 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
   }
 
   if (tipo === 'chips') {
+    // Los chips reales del globo llevan borde gris NEUTRO (var(--border) en index.css):
+    // el color lo pone el emoji, no el contorno. La primera versión les puso borde verde/
+    // ámbar/rojo y eso no existe en producción —una ilustración fiel enseña lo que se ve—.
     const chips = [
-      { emoji: WATER_STATUS.flowing.emoji, l: ui.chips.flowing, color: WATER_STATUS.flowing.color },
-      { emoji: WATER_STATUS.trickle.emoji, l: ui.chips.trickle, color: WATER_STATUS.trickle.color },
-      { emoji: WATER_STATUS.dry.emoji, l: ui.chips.dry, color: WATER_STATUS.dry.color },
+      { emoji: WATER_STATUS.flowing.emoji, l: ui.chips.flowing },
+      { emoji: WATER_STATUS.trickle.emoji, l: ui.chips.trickle },
+      { emoji: WATER_STATUS.dry.emoji, l: ui.chips.dry },
     ]
     return (
       <Box sx={{ my: 2 }}>
@@ -185,13 +188,16 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
           <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>📍 {ui.fuenteEjemplo}</Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {chips.map((c) => (
-              <Box key={c.l} component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.5, borderRadius: 5, border: '1.5px solid', borderColor: c.color, fontSize: 14, fontWeight: 600 }}>
+              <Box key={c.l} component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.5, borderRadius: 999, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', fontSize: 14, fontWeight: 600 }}>
                 <span aria-hidden>{c.emoji}</span>{c.l}
               </Box>
             ))}
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'primary.main', mt: 0.5, ml: 2 }}>
+        {/* La flecha sube desde la esquina inferior izquierda del globo y clava la punta en
+            el PRIMER chip (el estado más común). El `ml` deja la punta bajo su centro sin
+            depender del ancho exacto de la etiqueta; la pista va a su derecha. */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'primary.main', mt: 0.25, ml: 1 }}>
           <Flecha />
           <Typography variant="caption" sx={{ fontWeight: 700 }}>{ui.pista}</Typography>
         </Box>
@@ -199,7 +205,10 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
     )
   }
 
-  // gpx
+  // gpx: la casilla punteada se explica sola —lleva su rótulo dentro—, así que NO lleva
+  // flecha ni pista. Una flecha a un único control es adorno, y «toca com està» no dice
+  // nada aquí (esto no es reseñar, es subir un fichero). Queda como la leyenda de pines:
+  // ilustración sin señalar.
   return (
     <Box sx={{ my: 2 }}>
       <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: 1.5, borderRadius: 2, border: '2px dashed', borderColor: 'divider', color: 'text.secondary' }}>
@@ -209,10 +218,6 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
           <path d="M5 20 H19" />
         </svg>
         <Typography sx={{ fontWeight: 700 }}>{ui.gpx}</Typography>
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'primary.main', mt: 0.5, ml: 2 }}>
-        <Flecha />
-        <Typography variant="caption" sx={{ fontWeight: 700 }}>{ui.pista}</Typography>
       </Box>
     </Box>
   )
