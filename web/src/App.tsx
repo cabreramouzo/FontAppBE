@@ -83,6 +83,7 @@ export default function App() {
                   <Route path="/zones" element={<ZonesPage />} />
                   <Route path="/gamification" element={<GamificationPage />} />
                   <Route path="/guia" element={<GuiaPage />} />
+                  <Route path="/guide" element={<GuiaPage />} />
                   <Route path="/me/badges" element={<BadgesPage />} />
                   <Route path="/places/:slug" element={<PlacePage />} />
                   {/* Pública y sin enlazar todavía desde la navegación: se manda por

@@ -9,7 +9,7 @@ import { permiteInterrupciones, RUTAS_SIN_INTERRUPCIONES } from '../src/lib/quie
  */
 
 test('las páginas de ayuda/informativas no interrumpen', () => {
-  for (const r of ['/install', '/support', '/legal', '/guia']) {
+  for (const r of ['/install', '/support', '/legal', '/guia', '/guide']) {
     assert.equal(permiteInterrupciones(r), false, r)
   }
 })
@@ -21,5 +21,5 @@ test('las rutas normales sí interrumpen', () => {
 })
 
 test('la lista contiene las rutas silenciosas', () => {
-  for (const r of ['/install', '/support', '/legal', '/guia']) assert.ok(RUTAS_SIN_INTERRUPCIONES.includes(r), r)
+  for (const r of ['/install', '/support', '/legal', '/guia', '/guide']) assert.ok(RUTAS_SIN_INTERRUPCIONES.includes(r), r)
 })
