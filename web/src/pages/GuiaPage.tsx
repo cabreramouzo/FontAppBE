@@ -173,13 +173,12 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
   }
 
   if (tipo === 'chips') {
-    // Los chips reales del globo llevan borde gris NEUTRO (var(--border) en index.css):
-    // el color lo pone el emoji, no el contorno. La primera versión les puso borde verde/
-    // ámbar/rojo y eso no existe en producción —una ilustración fiel enseña lo que se ve—.
+    // Cada chip con el color de su estado (verde/ámbar/rojo), igual que los chips reales
+    // del globo: el color sale de `waterStatus`, la misma fuente que pinta los pines.
     const chips = [
-      { emoji: WATER_STATUS.flowing.emoji, l: ui.chips.flowing },
-      { emoji: WATER_STATUS.trickle.emoji, l: ui.chips.trickle },
-      { emoji: WATER_STATUS.dry.emoji, l: ui.chips.dry },
+      { emoji: WATER_STATUS.flowing.emoji, l: ui.chips.flowing, color: WATER_STATUS.flowing.color },
+      { emoji: WATER_STATUS.trickle.emoji, l: ui.chips.trickle, color: WATER_STATUS.trickle.color },
+      { emoji: WATER_STATUS.dry.emoji, l: ui.chips.dry, color: WATER_STATUS.dry.color },
     ]
     return (
       <Box sx={{ my: 2 }}>
@@ -188,7 +187,7 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
           <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>📍 {ui.fuenteEjemplo}</Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {chips.map((c) => (
-              <Box key={c.l} component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.5, borderRadius: 999, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', fontSize: 14, fontWeight: 600 }}>
+              <Box key={c.l} component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.5, borderRadius: 999, border: '1.5px solid', borderColor: c.color, bgcolor: 'background.paper', fontSize: 14, fontWeight: 600 }}>
                 <span aria-hidden>{c.emoji}</span>{c.l}
               </Box>
             ))}

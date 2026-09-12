@@ -849,7 +849,8 @@ select:not([class*="Mui"]) {
   padding: 4px 6px;
   font-size: 12px;
   line-height: 1.15;
-  border: 1px solid var(--border, rgba(128, 128, 128, 0.35));
+  /* 1.5px para que el color del estado (borde en línea desde waterStatus) se lea. */
+  border: 1.5px solid var(--border, rgba(128, 128, 128, 0.35));
   border-radius: 999px;
   /* Fondo OPACO: lo de siempre con lo que flota sobre el mapa —un botón translúcido se
      lee fatal sobre el bosque y sobre el mar. */

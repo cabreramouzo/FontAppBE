@@ -347,7 +347,9 @@ export function ClusteredMarkers({
           <div class="popup-quick-row">
             ${ESTADOS_RAPIDOS.map((e) => {
               const info = waterStatusInfo(e)
-              return `<button type="button" data-estado="${e}" title="${escapeHtml(t(`status.${e}`))}">${info?.emoji ?? ''} ${escapeHtml(t(`status.${e}`))}</button>`
+              // Borde del color del estado (verde/ámbar/rojo). El color sale de `waterStatus`,
+              // no escrito aquí: la misma fuente que pinta los pines y la ilustración de la guía.
+              return `<button type="button" data-estado="${e}" title="${escapeHtml(t(`status.${e}`))}" style="border-color:${info?.color ?? ''}">${info?.emoji ?? ''} ${escapeHtml(t(`status.${e}`))}</button>`
             }).join('')}
           </div>
         </div>` : ''}
