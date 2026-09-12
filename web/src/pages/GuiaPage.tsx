@@ -148,12 +148,12 @@ function Pin({ color }: { color: string }) {
   )
 }
 
-/** Flecha corta que sube hacia la derecha, para clavar la punta en el control de arriba. */
+/** Flecha corta y vertical: sube a los chips que tiene justo encima. */
 function Flecha() {
   return (
-    <svg width={46} height={32} viewBox="0 0 46 32" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: 'block' }}>
-      <path d="M5 29 C 11 16, 24 10, 38 9" />
-      <path d="M31 6 L39 8.5 L34 16" />
+    <svg width={18} height={18} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: 'block' }}>
+      <path d="M9 16 L9 5" />
+      <path d="M4 9 L9 4 L14 9" />
     </svg>
   )
 }
@@ -230,13 +230,13 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
               </Box>
             ))}
           </Box>
-        </Box>
-        {/* La flecha sube desde la esquina inferior izquierda del globo y clava la punta en
-            el PRIMER chip (el estado más común). El `ml` deja la punta bajo su centro sin
-            depender del ancho exacto de la etiqueta; la pista va a su derecha. */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'primary.main', mt: 0.25, ml: 1 }}>
-          <Flecha />
-          <Typography variant="caption" sx={{ fontWeight: 700 }}>{ui.pista}</Typography>
+          {/* La pista va DENTRO del globo, pegada a los chips: fuera quedaba una flecha
+              suelta separada de la tarjeta por el relleno. La flecha corta apunta hacia
+              arriba, a los chips que tiene justo encima. */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'primary.main', mt: 1 }}>
+            <Flecha />
+            <Typography variant="caption" sx={{ fontWeight: 700 }}>{ui.pista}</Typography>
+          </Box>
         </Box>
       </Box>
     )
