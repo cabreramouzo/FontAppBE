@@ -240,6 +240,28 @@ function BotonMock({ children, contained }: { children: ReactNode; contained?: b
   )
 }
 
+/**
+ * Fondo esquemático de mapa para la leyenda de pines: terreno, un par de senderos
+ * discontinuos y un riachuelo azul (guiño al agua). Decorativo y dibujado, no una captura,
+ * así que no se queda viejo. Colores translúcidos fijos que se leen sobre el panel verde
+ * tanto en claro como en oscuro.
+ */
+function MapaDeFondo() {
+  return (
+    <Box
+      component="svg"
+      viewBox="0 0 320 120"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden
+      sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+    >
+      <path d="M-10 34 C 70 14, 130 52, 210 32 S 320 22, 340 44" fill="none" stroke="rgba(120,150,110,0.5)" strokeWidth={2} strokeDasharray="6 7" />
+      <path d="M-10 96 C 80 78, 150 104, 240 84 S 330 92, 340 74" fill="none" stroke="rgba(120,150,110,0.4)" strokeWidth={2} strokeDasharray="6 7" />
+      <path d="M70 -10 C 100 30, 55 55, 95 85 S 120 120, 150 130" fill="none" stroke="rgba(70,130,200,0.5)" strokeWidth={3} strokeLinecap="round" />
+    </Box>
+  )
+}
+
 function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
   if (tipo === 'pins') {
     const filas = [
@@ -249,13 +271,23 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
       { color: NO_STATUS_COLOR, l: ui.pins.unknown },
     ]
     return (
-      <Box sx={{ my: 2, display: 'flex', gap: 2.5, flexWrap: 'wrap' }}>
-        {filas.map((f) => (
-          <Box key={f.l} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-            <Pin color={f.color} />
-            <Typography variant="caption" color="text.secondary">{f.l}</Typography>
-          </Box>
-        ))}
+      // Los pines sobre un panel «mapa»: se ven como en el mapa de verdad, no sueltos.
+      <Box
+        sx={(t) => ({
+          my: 2, position: 'relative', borderRadius: 3, overflow: 'hidden',
+          border: '1px solid', borderColor: 'divider',
+          bgcolor: t.palette.mode === 'dark' ? '#1c2a1f' : '#e8f1e3',
+        })}
+      >
+        <MapaDeFondo />
+        <Box sx={{ position: 'relative', display: 'flex', gap: 2.5, flexWrap: 'wrap', justifyContent: 'center', p: 2 }}>
+          {filas.map((f) => (
+            <Box key={f.l} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+              <Pin color={f.color} />
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>{f.l}</Typography>
+            </Box>
+          ))}
+        </Box>
       </Box>
     )
   }
