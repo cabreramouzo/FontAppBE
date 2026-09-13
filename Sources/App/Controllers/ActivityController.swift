@@ -1,4 +1,5 @@
 import Fluent
+import SQLKit
 import Vapor
 
 /// Actividad reciente de toda la app en una sola línea de tiempo: fuentes nuevas,
@@ -202,6 +203,35 @@ struct ActivityController: RouteCollection {
             // dividiendo por el coseno; sin eso, en el norte la caja se queda corta.
             let dLat = km / 111.0
             let dLong = km / (111.0 * max(cos(lat * .pi / 180), 0.01))
+
+            // ## El recorte a 5000 tiene que ir ORDENADO por distancia
+            //
+            // La caja son ~80 km de lado y en el Vallès abarca toda el área de Barcelona:
+            // más de 5000 fuentes. Con `LIMIT 5000` **sin `ORDER BY`**, Postgres devuelve
+            // 5000 arbitrarias (por orden físico, o sea la importación vieja de OSM), y una
+            // fuente **recién creada** se queda fuera del recorte y NO aparece en «cerca de
+            // mí», mientras que otra más lejana pero antigua sí. Es el mismo fallo
+            // silencioso que ya se arregló en `/fonts/near`: se ordena por distancia
+            // euclídea aproximada —la longitud corregida por el coseno de la latitud— para
+            // quedarnos con las más cercanas, que son las que caen en el círculo; el
+            // haversine exacto recorta las esquinas después. Y de paso trae solo id/lat/long
+            // en vez de cargar hasta 5000 `Font` enteros para usar solo el id.
+            let cosLat = cos(lat * .pi / 180)
+            if let sql = req.db as? SQLDatabase {
+                struct Row: Decodable { let id: UUID; let latitude: Double; let longitude: Double }
+                let rows = try await sql.raw("""
+                    SELECT id, latitude, longitude FROM fonts
+                    WHERE latitude >= \(bind: lat - dLat) AND latitude <= \(bind: lat + dLat)
+                      AND longitude >= \(bind: long - dLong) AND longitude <= \(bind: long + dLong)
+                    ORDER BY (latitude - \(bind: lat)) * (latitude - \(bind: lat))
+                           + (longitude - \(bind: long)) * (longitude - \(bind: long))
+                             * \(bind: cosLat * cosLat)
+                    LIMIT 5000
+                    """).all(decoding: Row.self)
+                return .fuentes(rows.compactMap { haversineKm(lat, long, $0.latitude, $0.longitude) <= km ? $0.id : nil })
+            }
+            // Sin SQL crudo (tests con SQLite en memoria): el prefiltro por caja basta,
+            // porque las bases de test nunca tienen 5000 fuentes en la caja.
             let candidates = try await Font.query(on: req.db)
                 .filter(\.$latitude >= lat - dLat).filter(\.$latitude <= lat + dLat)
                 .filter(\.$longitude >= long - dLong).filter(\.$longitude <= long + dLong)
