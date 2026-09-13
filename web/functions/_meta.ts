@@ -70,6 +70,19 @@ export const MUNI_META: Record<ShareLang, { title: string; description: string }
 }
 
 /**
+ * La tarjeta y las etiquetas de la guía `/guia`.
+ *
+ * Solo CA y ES: el cuerpo de la guía (`GuiaPage`) únicamente existe en esos dos idiomas y
+ * los demás caen a CA. La meta acompaña —dar título y descripción en inglés sobre un
+ * cuerpo en catalán es el desajuste que penaliza Google—, así que quien pida otro idioma
+ * recibe la meta en CA, igual que el cuerpo.
+ */
+export const GUIA_META: Record<'ca' | 'es', { title: string; description: string }> = {
+  ca: { title: 'Com funciona FontApp', description: "Guia ràpida per fer servir FontApp: troba fonts d'aigua a prop, digues si ragen amb un toc i, pujant el teu GPX, mira quines fonts hi ha per la teva ruta i el tram més llarg sense aigua." },
+  es: { title: 'Cómo funciona FontApp', description: 'Guía rápida para usar FontApp: encuentra fuentes de agua cerca, di si manan con un toque y, subiendo tu GPX, mira qué fuentes hay por tu ruta y el tramo más largo sin agua.' },
+}
+
+/**
  * Los idiomas que tienen su propia tarjeta `public/og-card-<lang>.jpg`.
  *
  * Existe porque la tarjeta es una **imagen con texto dentro** y no se genera desde el
