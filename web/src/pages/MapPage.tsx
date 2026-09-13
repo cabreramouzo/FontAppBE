@@ -343,7 +343,7 @@ function firmaDeClusters(l: MapCluster[]): string {
 
 /** Máximo ritmo de recarga del mapa mientras el mapa se mueve SOLO (seguimiento/
  *  navegación). Ver el antiavalancha en `FontMarkers`. */
-const MIN_GAP_SIGUIENDO_MS = 6000
+const MIN_GAP_SIGUIENDO_MS = 8000
 
 function FontMarkers({
   nonce,
