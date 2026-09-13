@@ -83,6 +83,21 @@ export const GUIA_META: Record<'ca' | 'es', { title: string; description: string
 }
 
 /**
+ * El directorio de pueblos `/places`. Su valor SEO es sobre todo enlazar hacia las páginas
+ * por pueblo, pero un título propio evita que parezca una copia de la portada.
+ */
+export const PLACES_META: Record<ShareLang, { title: string; description: string }> = {
+  ca: { title: 'Fonts per poble', description: "Tots els pobles amb fonts d'aigua al mapa de FontApp. Mira quines fonts hi ha a prop de cada poble i el seu estat." },
+  es: { title: 'Fuentes por pueblo', description: 'Todos los pueblos con fuentes de agua en el mapa de FontApp. Mira qué fuentes hay cerca de cada pueblo y su estado.' },
+  gl: { title: 'Fontes por vila', description: 'Todas as vilas con fontes de auga no mapa de FontApp. Mira que fontes hai preto de cada vila e o seu estado.' },
+  eu: { title: 'Iturriak herriz herri', description: 'FontApp mapako ur-iturriak dituzten herri guztiak. Begiratu zer iturri dauden herri bakoitzetik gertu eta haien egoera.' },
+  en: { title: 'Fountains by town', description: 'Every town with water fountains on the FontApp map. See which fountains are near each town and their status.' },
+  fr: { title: 'Fontaines par commune', description: "Toutes les communes avec des points d'eau sur la carte FontApp. Voyez les fontaines près de chaque commune et leur état." },
+  pt: { title: 'Fontes por localidade', description: 'Todas as localidades com fontes de água no mapa de FontApp. Vê que fontes há perto de cada uma e o seu estado.' },
+  it: { title: 'Fontane per paese', description: "Tutti i paesi con fontane d'acqua sulla mappa di FontApp. Guarda quali fontane ci sono vicino a ogni paese e il loro stato." },
+}
+
+/**
  * Los idiomas que tienen su propia tarjeta `public/og-card-<lang>.jpg`.
  *
  * Existe porque la tarjeta es una **imagen con texto dentro** y no se genera desde el

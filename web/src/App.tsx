@@ -42,6 +42,7 @@ const AdminReportsPage = lazy(() => import('./pages/AdminReportsPage').then((m) 
 const AdminModerationPage = lazy(() => import('./pages/AdminModerationPage').then((m) => ({ default: m.AdminModerationPage })))
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })))
 const NewsPage = lazy(() => import('./pages/NewsPage').then((m) => ({ default: m.NewsPage })))
+const PlacesDirectoryPage = lazy(() => import('./pages/PlacesDirectoryPage').then((m) => ({ default: m.PlacesDirectoryPage })))
 const ZonesPage = lazy(() => import('./pages/ZonesPage').then((m) => ({ default: m.ZonesPage })))
 const GamificationPage = lazy(() => import('./pages/GamificationPage').then((m) => ({ default: m.GamificationPage })))
 const GuiaPage = lazy(() => import('./pages/GuiaPage').then((m) => ({ default: m.GuiaPage })))
@@ -85,6 +86,7 @@ export default function App() {
                   <Route path="/guia" element={<GuiaPage />} />
                   <Route path="/guide" element={<GuiaPage />} />
                   <Route path="/me/badges" element={<BadgesPage />} />
+                  <Route path="/places" element={<PlacesDirectoryPage />} />
                   <Route path="/places/:slug" element={<PlacePage />} />
                   {/* Pública y sin enlazar todavía desde la navegación: se manda por
                       correo mientras se valida el producto territorial. Ver

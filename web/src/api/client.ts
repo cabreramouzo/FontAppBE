@@ -1084,3 +1084,13 @@ export interface PlacePage {
 export async function fetchPlace(slug: string): Promise<PlacePage> {
   return apiFetch<PlacePage>(`/places/${encodeURIComponent(slug)}`)
 }
+
+/** El listado de pueblos con fuentes, para el directorio `/places`. Ordenado por número
+ *  de fuentes; con `region` acota a una demarcación (todas), sin él trae los mayores. */
+export async function getPlaces(opts: { region?: string; limit?: number } = {}): Promise<PlaceDTO[]> {
+  const q = new URLSearchParams()
+  if (opts.region) q.set('region', opts.region)
+  if (opts.limit) q.set('limit', String(opts.limit))
+  const s = q.toString()
+  return apiFetch<PlaceDTO[]>(`/places${s ? `?${s}` : ''}`)
+}

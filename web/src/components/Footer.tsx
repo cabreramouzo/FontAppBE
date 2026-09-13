@@ -27,6 +27,7 @@ export function Footer() {
           donde volver a mirarlo. No se pinta si ya la tiene instalada. */}
       {!estaInstalada() && <RouterLink to="/install">{t('install.button')}</RouterLink>}
       <RouterLink to={lang === 'en' ? '/guide' : '/guia'}>{t('nav.guide')}</RouterLink>
+      <RouterLink to="/places">{t('places.title')}</RouterLink>
       <RouterLink to="/legal">{t('footer.legal')}</RouterLink>
       <span className="muted">
         {t('footer.dataPrefix')}{' '}
