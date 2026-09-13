@@ -48,9 +48,10 @@ import { useTheme } from '@mui/material/styles'
 import L, { type LatLng, type Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
-import { MeMarker } from '../components/MeMarker'
+import { MeMarker, MeMarkerNav } from '../components/MeMarker'
 import { Compass } from '../components/Compass'
 import { useHeading } from '../lib/useHeading'
+import { decideNavegando, velocidadMs, rumboEntre } from '../lib/navMode'
 import { guardaFix, leeFix } from '../lib/lastFix'
 import { claveAvisoTrasDenegar, type EstadoPermiso } from '../lib/geoNotice'
 import {
@@ -1538,6 +1539,11 @@ export function MapPage() {
   // Destino del seguimiento continuo: cambia con cada fix del GPS mientras `siguiendo`.
   // Separado de `goto` a propósito — `goto` enfoca a zoom 16 y esto solo desplaza.
   const [sigueme, setSigueme] = useState<[number, number] | null>(null)
+  // Modo navegación (flecha en vez de punto) cuando te mueves rápido, y el rumbo de viaje.
+  // `intervaloMs` es la cadencia real de fixes, que marca la duración de la interpolación.
+  const [navegando, setNavegando] = useState(false)
+  const [curso, setCurso] = useState<number | null>(null)
+  const [intervaloMs, setIntervaloMs] = useState(1000)
   // Destino de «centrar en mí» (una vez, conservando el zoom). Separado de `goto` (que
   // enfoca a zoom 16) y de `sigueme` (seguimiento continuo).
   const [centrame, setCentrame] = useState<[number, number] | null>(null)
@@ -1642,6 +1648,11 @@ export function MapPage() {
   const seguimiento = useRef(false)
   // Última posición aceptada (la que pasó el filtro de temblor del GPS).
   const ultimaPos = useRef<[number, number] | null>(null)
+  // Espejos en ref de lo que decide el modo navegación dentro del callback del GPS, para
+  // no leer estado obsoleto ni re-renderizar por cada tick. `horaFix` mide la cadencia.
+  const navRef = useRef(false)
+  const cursoRef = useRef<number | null>(null)
+  const horaFix = useRef(0)
   // ¿El mapa va detrás de ti? Deja de hacerlo en cuanto tocas el mapa: a partir de
   // ahí estás mirando otra zona y que el mapa te devuelva a tu posición cada pocos
   // segundos sería insufrible. El botón de "centrar en mí" lo vuelve a activar.
@@ -1655,10 +1666,29 @@ export function MapPage() {
     watchID.current = navigator.geolocation.watchPosition(
       (p) => {
         const c: [number, number] = [p.coords.latitude, p.coords.longitude]
+        const anterior = ultimaPos.current
+        const distM = anterior ? haversineKm(anterior[0], anterior[1], c[0], c[1]) * 1000 : 0
+
+        // ── Modo navegación (flecha vs punto), barato y en CADA tick, para que reaccione
+        // al frenar aunque el punto no se mueva 15 m. La velocidad manda la del GPS; el
+        // rumbo sale del propio desplazamiento (no necesita brújula). Ver `lib/navMode`.
+        const dt = horaFix.current ? (p.timestamp - horaFix.current) / 1000 : 0
+        const vel = velocidadMs(p.coords.speed, distM, dt)
+        const rumbo = anterior ? rumboEntre(anterior, c) : null
+        if (rumbo != null) {
+          cursoRef.current = rumbo
+          // Solo repinta si el rumbo cambia de verdad (≥3°), para no re-renderizar por ruido.
+          setCurso((prev) => (prev == null || Math.abs(((rumbo - prev + 540) % 360) - 180) >= 3) ? rumbo : prev)
+        }
+        const nav = decideNavegando(vel, cursoRef.current, navRef.current)
+        if (nav !== navRef.current) { navRef.current = nav; setNavegando(nav) }
+
         // El GPS "baila" unos metros estando quieto. Sin este filtro el punto
         // temblaría y la lista de cercanas se recargaría sin haberte movido.
-        const anterior = ultimaPos.current
-        if (anterior && haversineKm(anterior[0], anterior[1], c[0], c[1]) * 1000 < 15) return
+        if (anterior && distM < 15) return
+        // Intervalo real entre fixes: es la duración de la interpolación en modo navegación.
+        if (horaFix.current) setIntervaloMs(Math.min(3000, Math.max(400, p.timestamp - horaFix.current)))
+        horaFix.current = p.timestamp
         ultimaPos.current = c
         setMe(c)
         guardaFix(c) // recordamos la última posición para el punto atenuado del próximo arranque
@@ -1666,7 +1696,9 @@ export function MapPage() {
         // zoom (por eso `sigueme` y no `goto`, que enfoca a zoom 16). La comparación va
         // contra una ref y no dentro del actualizador de `setMe`: encadenar ahí es una
         // actualización en fase de render y React la descarta sin avisar.
-        if (sigueUbicacion(modoRef.current)) setSigueme([...c])
+        // En navegación NO se usa `sigueme`: el marcador de navegación arrastra el mapa
+        // con la posición ya suavizada, y dos seguimientos a la vez se pisan.
+        if (sigueUbicacion(modoRef.current) && !navRef.current) setSigueme([...c])
       },
       // Un fallo puntual del GPS no es noticia: seguimos con la última posición buena.
       () => {},
@@ -1921,7 +1953,9 @@ export function MapPage() {
         <ZoomControls />
         <VigilaGiro onChange={setBearing} />
         {me
-          ? <MeMarker pos={me} heading={heading} bearing={bearing} rumboArriba={orientaAlRumbo(modo)} />
+          ? (navegando
+              ? <MeMarkerNav target={me} curso={curso} bearing={bearing} rumboArriba={orientaAlRumbo(modo)} intervaloMs={intervaloMs} follow={sigueUbicacion(modo)} />
+              : <MeMarker pos={me} heading={heading} bearing={bearing} rumboArriba={orientaAlRumbo(modo)} />)
           : meStale && <MeMarker pos={meStale} heading={null} bearing={bearing} atenuado />}
         {placing && <PlacePicker onPick={setPos} />}
         <AsomaElPin pos={pos} activo={placing} />

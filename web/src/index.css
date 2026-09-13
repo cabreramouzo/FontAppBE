@@ -550,6 +550,18 @@ select:not([class*="Mui"]) {
    cono. Se ve claramente que es aproximado y no el punto azul en vivo. */
 .me-loc--stale .me-loc__dot { background: #8a8f98; opacity: 0.6; box-shadow: none; }
 .me-loc--stale .me-loc__pulse { display: none; }
+/* Flecha de navegación (modo coche/bici): sustituye al punto cuando te mueves rápido.
+   `--me-nav` es el ángulo ya corregido (rumbo de viaje menos giro del mapa), igual que el
+   cono. La transición corta suaviza los pasos de rumbo entre fixes. */
+.me-loc--nav { position: relative; width: 28px; height: 28px; }
+.me-loc__arrow {
+  position: absolute; top: 50%; left: 50%; line-height: 0;
+  transform: translate(-50%, -50%) rotate(var(--me-nav, 0deg));
+  transform-origin: 50% 50%;
+  transition: transform 0.12s linear;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+@media (prefers-reduced-motion: reduce) { .me-loc__arrow { transition: none; } }
 
 /* Leyenda (abajo a la izquierda). */
 /* Solo posición: la superficie la pone MUI Paper. */
