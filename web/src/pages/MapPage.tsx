@@ -221,9 +221,16 @@ function saveFilters(f: SavedFilters) {
 }
 
 // Guarda la vista del mapa cada vez que el usuario lo mueve o hace zoom.
+//
+// Con freno de ritmo: la flecha de navegación recentra el mapa en cada frame, así que sin
+// esto se escribiría en `localStorage` decenas de veces por segundo. Basta con guardar la
+// última vista de vez en cuando —es un respaldo para reabrir, no un dato al segundo—.
 function PersistView() {
+  const ultima = useRef(0)
   const map = useMapEvents({
     moveend: () => {
+      if (Date.now() - ultima.current < 1000) return
+      ultima.current = Date.now()
       const c = map.getCenter()
       saveView({ lat: c.lat, lng: c.lng, zoom: map.getZoom() })
     },
@@ -334,6 +341,10 @@ function firmaDeClusters(l: MapCluster[]): string {
   return l.map((c) => [c.latitude, c.longitude, c.count].join('|')).join('~')
 }
 
+/** Máximo ritmo de recarga del mapa mientras el mapa se mueve SOLO (seguimiento/
+ *  navegación). Ver el antiavalancha en `FontMarkers`. */
+const MIN_GAP_SIGUIENDO_MS = 6000
+
 function FontMarkers({
   nonce,
   onlyWithWater,
@@ -341,6 +352,7 @@ function FontMarkers({
   hideNonPotable,
   sourceFilter,
   selectedID,
+  siguiendoRef,
 }: {
   nonce: number
   onlyWithWater: boolean
@@ -348,6 +360,7 @@ function FontMarkers({
   hideNonPotable: boolean
   sourceFilter: WaterSource | 'all'
   selectedID: string | null
+  siguiendoRef: React.MutableRefObject<boolean>
 }) {
   const [mapData, setMapData] = useState<{ fonts: FontSummary[]; clusters: MapCluster[] }>({
     fonts: [], clusters: [],
@@ -426,8 +439,40 @@ function FontMarkers({
     }
   }, [])
 
+  // ## Antiavalancha de peticiones al SEGUIR
+  //
+  // Cada `moveend` dispara una carga de `/fonts/map`. Estando quieto y explorando a mano
+  // eso está bien: cada movimiento es una intención. Pero cuando el mapa **se mueve solo**
+  // —el seguimiento en coche, y sobre todo la flecha de navegación, que recentra el mapa
+  // en CADA frame— son decenas de `moveend` por segundo, decenas de peticiones por
+  // segundo, y el tope de 600/h por IP se agota en segundos. Medido en producción el
+  // 13/09/2026 (ráfaga de 94 rechazos en 3 s): el mapa se queda mudo y hasta el alta de
+  // fuente se bloquea, porque comparten IP. Reportado conduciendo por el Montseny.
+  //
+  // Siguiendo, como mucho una carga cada `MIN_GAP_SIGUIENDO_MS`: las fuentes no cambian en
+  // ese rato y a velocidad de coche son unos cientos de metros. Explorando a mano no se
+  // limita (`gap` 0), para que cada arrastre responda al instante. La cola de arrastre
+  // garantiza una carga al final del intervalo, así el mapa se pone al día aunque el
+  // seguimiento no pare nunca.
+  const ultimaCargaMov = useRef(0)
+  const cargaDiferida = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const cargaAlMover = useCallback((map: LeafletMap) => {
+    const gap = siguiendoRef.current ? MIN_GAP_SIGUIENDO_MS : 0
+    const desde = Date.now() - ultimaCargaMov.current
+    clearTimeout(cargaDiferida.current)
+    if (desde >= gap) {
+      ultimaCargaMov.current = Date.now()
+      loadBounds(map)
+    } else {
+      cargaDiferida.current = setTimeout(() => {
+        ultimaCargaMov.current = Date.now()
+        loadBounds(map)
+      }, gap - desde)
+    }
+  }, [loadBounds, siguiendoRef])
+
   const map = useMapEvents({
-    moveend: () => loadBounds(map),
+    moveend: () => cargaAlMover(map),
   })
 
   // Un solo `invalidateSize` a 100 ms se quedaba corto: llegando por navegación SPA
@@ -459,6 +504,7 @@ function FontMarkers({
       cancelado = true
       if (reintento) clearTimeout(reintento)
       if (raf) cancelAnimationFrame(raf)
+      clearTimeout(cargaDiferida.current)
       activeRequest.current?.abort()
     }
   }, [map, loadBounds, nonce])
@@ -1659,6 +1705,10 @@ export function MapPage() {
   const [modo, setModo] = useState<ModoUbicacion>(MODO_INICIAL)
   const modoRef = useRef<ModoUbicacion>(MODO_INICIAL)
   modoRef.current = modo
+  // ¿El mapa se mueve solo detrás de ti? Lo lee `FontMarkers` para no inundar de
+  // peticiones al seguir (sobre todo en navegación). Ver su antiavalancha.
+  const siguiendoRef = useRef(false)
+  siguiendoRef.current = sigueUbicacion(modo)
 
   const startWatching = useCallback(() => {
     if (watchID.current !== null || !navigator.geolocation) return
@@ -1943,7 +1993,7 @@ export function MapPage() {
         fadeAnimation={false}
       >
         <BaseLayerTile layer={layer} />
-        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} onlyReliable={onlyReliable} hideNonPotable={hideNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} />
+        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} onlyReliable={onlyReliable} hideNonPotable={hideNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} siguiendoRef={siguiendoRef} />
         <PersistView />
         <FocusOn target={goto} marca={movimientoNuestro} />
         <CentraEnMi target={centrame} marca={movimientoNuestro} />

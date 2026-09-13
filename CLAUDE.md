@@ -1379,6 +1379,32 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 
 ## Carga y agrupación del mapa
 
+- **Seguir al usuario no puede inundar `/fonts/map`, y la flecha de navegación lo hacía.**
+  La carga del mapa cuelga de `moveend` (`FontMarkers.cargaAlMover`). Estando quieto está
+  bien —cada movimiento es una intención—, pero cuando el mapa **se mueve solo** el coste
+  se dispara: el seguimiento normal recentra una vez por fix del GPS (conduciendo, ~1/s) y
+  la **flecha de navegación recentra en CADA frame** (60/s). Cada uno es un `moveend` y una
+  petición. Medido en producción el 13/09/2026 conduciendo por el Montseny: **ráfaga de 94
+  rechazos del tope de 600/h en 3 segundos**, el mapa mudo y —porque el tope es por IP— el
+  alta de fuente bloqueada de rebote (su comprobación de duplicados es una lectura). El
+  429 lo vio el usuario como «demasiadas consultas», que sonaba raro y lo era: era un bug
+  del cliente, no un uso intenso.
+  · **El arreglo va en el cliente y distingue quién mueve el mapa.** Explorando a mano no
+    se limita (respuesta inmediata); **siguiendo**, como mucho una carga cada
+    `MIN_GAP_SIGUIENDO_MS` (6 s) —las fuentes no cambian en ese rato y a velocidad de coche
+    son unos cientos de metros—, con cola de arrastre para ponerse al día aunque el
+    seguimiento no pare. Lo decide `siguiendoRef` (= `sigueUbicacion(modo)`), que `MapPage`
+    baja a `FontMarkers`.
+  · **El `panTo` por frame es intrínseco al seguimiento suave** (marcador y mapa se mueven
+    juntos o la flecha se despega del centro), así que la regla es que sus listeners de
+    `moveend` sean **baratos**: por eso también `PersistView` limita su `saveView` a 1/s en
+    vez de escribir `localStorage` 60 veces por segundo. Cualquier listener nuevo de
+    `moveend` tiene que asumir que puede llamarse a 60 Hz.
+  · **El rate limiter hizo su trabajo**: la ráfaga chocó contra el tope y **no** tumbó la
+    máquina por memoria (sin OOM ni reinicio en los logs de ese rato), que es justo el
+    fallo que esos 600/h existen para evitar. El precio fue bloquear al usuario; el arreglo
+    es no generar la ráfaga, no subir el tope.
+
 - El mapa usa `GET /fonts/map` con el bounding box y el tamaño en píxeles del viewport.
   Hasta 3.000 resultados devuelve todas las `FontSummary`; por encima, PostgreSQL agrupa
   **todas** las fuentes visibles en una cuadrícula de unos 70 px y devuelve centro y
