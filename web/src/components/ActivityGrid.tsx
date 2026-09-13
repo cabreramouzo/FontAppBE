@@ -259,6 +259,24 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
  * Complementa a `ActivityFeed`, que es la misma información en lista: la lista sirve
  * para revisar, esta para mirar. Comparten el endpoint `/activity`.
  */
+/**
+ * Radios elegibles de «cerca de mí», en km. El número era fijo (40) y arbitrario: un
+ * barrio de Barcelona y un pueblo tranquilo no piden lo mismo. Por defecto 5 km —lo que de
+ * verdad es «cerca»— y el usuario sube si su zona está tranquila. Se recuerda por cuenta
+ * del navegador, como el resto de preferencias de esta pantalla.
+ */
+const RADIOS_KM = [5, 10, 25, 50] as const
+const RADIO_KEY = 'activity:km'
+const RADIO_DEFECTO = 5
+function leeRadio(): number {
+  try {
+    const v = Number(localStorage.getItem(RADIO_KEY))
+    if ((RADIOS_KM as readonly number[]).includes(v)) return v
+  } catch { /* modo privado: el valor por defecto */ }
+  return RADIO_DEFECTO
+}
+function guardaRadio(v: number) { try { localStorage.setItem(RADIO_KEY, String(v)) } catch { /* nada que hacer */ } }
+
 export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: number; showFilter?: boolean }) {
   const { t, lang } = useI18n()
   const theme = useTheme()
@@ -275,6 +293,7 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
   // casi inútil para quien vive lejos de donde se mueve la cosa.
   const [cerca, setCerca] = useState(true)
   const [ubicando, setUbicando] = useState(true)
+  const [km, setKm] = useState<number>(leeRadio)
 
   // Al montar, la posición solo si el permiso YA estaba dado (ver `positionIfAllowed`).
   useEffect(() => {
@@ -310,7 +329,7 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
     if (ubicando) return
     setItems(null)
     setFallo(false)
-    const zona = cerca && pos ? { lat: pos[0], long: pos[1] } : {}
+    const zona = cerca && pos ? { lat: pos[0], long: pos[1], km } : {}
     getActivity({
       limit,
       region: cerca ? undefined : region || undefined,
@@ -322,7 +341,7 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
         setFallo(true)
         setItems([])
       })
-  }, [limit, region, pais, cerca, pos, ubicando, intento])
+  }, [limit, region, pais, cerca, pos, km, ubicando, intento])
 
   /**
    * Invitar: la hoja de compartir del sistema si la hay, y si no, el enlace al
@@ -367,6 +386,17 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
           variant={!cerca ? 'filled' : 'outlined'}
           onClick={() => setCerca(false)}
         />
+        {/* Radio elegible: solo con «cerca de mí» y posición, que es cuando el círculo
+            existe. Sin posición «cerca de mí» cae a global y el radio no pinta nada. */}
+        {cerca && pos && (
+          <TextField
+            select size="small" label={t('activity.radius')} value={km}
+            onChange={(e) => { const v = Number(e.target.value); setKm(v); guardaRadio(v) }}
+            sx={{ minWidth: 110 }}
+          >
+            {RADIOS_KM.map((r) => <MenuItem key={r} value={r}>{`${r} km`}</MenuItem>)}
+          </TextField>
+        )}
         {/* País y demarcación solo tienen sentido mirando el global: con "cerca de mí"
             el recorte ya lo dan las coordenadas, y dos filtros de zona a la vez confunden. */}
         {!cerca && (
