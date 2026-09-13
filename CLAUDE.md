@@ -612,11 +612,13 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   Si se retira algún día, lo que hay que salvar es el `WorthChip`: la lista es uno de los
   dos únicos sitios donde se ve **antes de decidir a cuál ir** que una fuente olvidada
   paga catorce veces más, y el mapa no lo enseña.
-- **Presencia de usuarios:** `POST /users/presence` actualiza `last_seen_at` para la propia
-  sesión como máximo cada 2 minutos; el cliente lo llama al entrar, volver a primer plano
-  y cada 5 minutos mientras está visible. `GET /users/stats/online` es solo admin y devuelve
-  nombre + última actividad de los últimos 10 minutos. Es presencia aproximada, no WebSocket:
-  una pestaña cerrada desaparece al vencer la ventana. Nunca guarda IP, página o dispositivo.
+- **Presencia de usuarios sin heartbeat:** `GET /notifications`, que la campana ya pide
+  al abrir la app y al volver a primer plano, actualiza `last_seen_at` como máximo una vez
+  por hora. No existe una ruta ni un temporizador de presencia: el antiguo sondeo cada
+  cinco minutos impedía que Neon alcanzara sus cinco minutos de inactividad y mantuviera
+  el compute suspendido. `GET /users/stats/online` es solo admin y devuelve nombre +
+  última actividad de los últimos 30 minutos. Es presencia aproximada, no WebSocket.
+  Nunca guarda IP, página o dispositivo.
 - **Retorno e inactividad:** `GET /users/stats/activity-ranking` muestra al admin las diez
   cuentas vistas más recientemente y las diez más antiguas o aún no observadas, usando el
   mismo `last_seen_at`. Un valor nulo significa «sin actividad registrada desde que existe

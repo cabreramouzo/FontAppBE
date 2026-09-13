@@ -369,8 +369,15 @@ final class IntegrationTests: XCTestCase {
         try await withApp { app in
             let userID = try await register(app, username: "onlineadmin")
             let token = try await login(app, username: "onlineadmin")
+            // La presencia nace de una petición real de la aplicación, no de un
+            // heartbeat periódico que mantendría despierta la base de datos.
+            try await app.test(.GET, "notifications", headers: bearer(token)) { res in
+                XCTAssertEqual(res.status, .ok)
+            }
+            // Clientes PWA antiguos todavía pueden intentar el heartbeat hasta renovar
+            // su bundle. Debe fallar antes de autenticar y, por tanto, sin tocar Postgres.
             try await app.test(.POST, "users/presence", headers: bearer(token)) { res in
-                XCTAssertEqual(res.status, .noContent)
+                XCTAssertEqual(res.status, .notFound)
             }
             try await app.test(.GET, "users/stats/online", headers: bearer(token)) { res in
                 XCTAssertEqual(res.status, .forbidden)

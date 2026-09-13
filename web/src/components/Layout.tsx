@@ -19,7 +19,7 @@ import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
-import { getFlags, getNewUsers, touchPresence, trackInteraction, trackPlatformOnce } from '../api/client'
+import { getFlags, getNewUsers, trackInteraction, trackPlatformOnce } from '../api/client'
 import { lastSeenAt } from '../lib/newUsers'
 import { marcarNovedadesVistas, programarZumbidos } from '../lib/newsNudge'
 import { Footer } from './Footer'
@@ -84,15 +84,6 @@ export function Layout({ children }: { children: ReactNode }) {
   const seccionActiva = mainSection(pathname)
 
   useEffect(() => { trackPlatformOnce() }, [])
-
-  useEffect(() => {
-    if (!user) return
-    const touch = () => { if (document.visibilityState === 'visible') void touchPresence().catch(() => {}) }
-    touch()
-    const timer = window.setInterval(touch, 5 * 60 * 1000)
-    document.addEventListener('visibilitychange', touch)
-    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', touch) }
-  }, [user])
 
   useEffect(() => {
     // Entrar a Novedades apaga el gesto para siempre: ya se ha descubierto la sección.

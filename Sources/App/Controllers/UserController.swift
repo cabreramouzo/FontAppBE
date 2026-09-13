@@ -25,7 +25,6 @@ struct UserController: RouteCollection {
         protected.get("stats", "sources", use: sourceStats)  // admin: altas por cartel
         protected.get("stats", "online", use: onlineUsers)   // admin: presencia reciente
         protected.get("stats", "activity-ranking", use: activityRanking) // admin: retorno e inactividad
-        protected.post("presence", use: touchPresence)       // heartbeat de la propia sesión
         protected.post("source-limit-exemption-request", use: requestSourceLimitExemption)
         protected.get("staff", use: staff)                   // owner: moderadores/admins
         protected.get("admin", use: adminList)               // owner: listado completo paginado
@@ -72,24 +71,15 @@ struct UserController: RouteCollection {
         return .created
     }
 
-    /// POST /users/presence — heartbeat sin contenido. Como mucho escribe una vez cada
-    /// dos minutos aunque varias pestañas lo llamen a la vez.
-    @Sendable func touchPresence(req: Request) async throws -> HTTPStatus {
-        let user = try req.auth.require(User.self)
-        let now = Date()
-        if user.lastSeenAt == nil || now.timeIntervalSince(user.lastSeenAt!) >= 120 {
-            user.lastSeenAt = now
-            try await user.save(on: req.db)
-        }
-        return .noContent
-    }
-
     /// GET /users/stats/online — presencia aproximada, nunca una conexión persistente.
     /// Solo admin; no expone IP, pantalla, dispositivo ni token.
     @Sendable func onlineUsers(req: Request) async throws -> [OnlineUser] {
         let me = try req.auth.require(User.self)
         guard me.isAdmin else { throw Abort(.forbidden) }
-        let cutoff = Date().addingTimeInterval(-10 * 60)
+        // Sin heartbeat: la señal es abrir la app o volver a primer plano, mediante la
+        // bandeja de avisos. Media hora mantiene útil esta presencia aproximada sin
+        // inventar peticiones periódicas que impidan a Neon suspenderse.
+        let cutoff = Date().addingTimeInterval(-30 * 60)
         return try await User.query(on: req.db)
             .filter(\.$anonymizedAt == nil)
             .filter(\.$lastSeenAt >= cutoff)

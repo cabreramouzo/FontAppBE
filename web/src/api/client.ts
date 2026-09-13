@@ -199,7 +199,6 @@ export const getCampaignStats = (days: 30 | 180 | 'all' = 30) =>
 export const getInteractionStats = (days: 30 | 180 | 'all' = 30) =>
   apiFetch<InteractionSummary[]>(`/admin/analytics${days === 'all' ? '' : `?days=${days}`}`)
 
-export const touchPresence = () => apiFetch<void>('/users/presence', { method: 'POST' })
 export const getOnlineUsers = () => apiFetch<OnlineUser[]>('/users/stats/online')
 export const getUserActivityRanking = () => apiFetch<UserActivityRanking>('/users/stats/activity-ranking')
 
