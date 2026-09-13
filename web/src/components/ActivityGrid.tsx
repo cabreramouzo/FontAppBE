@@ -90,6 +90,19 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
   // Una foto que no carga (borrada del almacén, red caída) dejaba la tarjeta en blanco
   // con el texto blanco encima: ilegible. Si falla, se cae a la ilustración de relleno.
   const [falla, setFalla] = useState(false)
+  // Reintento al volver la red. En una ruta con mala cobertura, las fotos de las fuentes
+  // NUEVAS (que nadie ha visto, así que no están en el caché del service worker) fallan y
+  // se quedaban en el respaldo hasta reabrir la vista; las viejas se veían porque estaban
+  // cacheadas. Reportado en el Montseny. Como el navegador NO reintenta solo una imagen
+  // que ya dio error, se fuerza con una `key` que cambia — misma técnica que
+  // `ZoomableImage`, que ya lo hace en la ficha y la galería.
+  const [intento, setIntento] = useState(0)
+  useEffect(() => {
+    if (!falla || !item.image) return
+    const alReconectar = () => { setFalla(false); setIntento((n) => n + 1) }
+    window.addEventListener('online', alReconectar)
+    return () => window.removeEventListener('online', alReconectar)
+  }, [falla, item.image])
   const ws = item.waterStatus ? waterStatusInfo(item.waterStatus) : null
   const propia = !!item.image && !falla
   const esAviso = item.kind === 'report'
@@ -120,6 +133,7 @@ function Tarjeta({ item, cols, filas }: { item: ActivityItem; cols: number; fila
         {/* La altura la marca la rejilla, no la foto: `cover` recorta lo que sobre. */}
         <Box sx={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
           <Box
+            key={intento}
             component="img"
             src={propia ? assetUrl(item.image as string) : SIN_FOTO}
             alt=""
