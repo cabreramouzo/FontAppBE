@@ -3,7 +3,7 @@
 // - Teselas del mapa (OSM, otro dominio): cache-first con tope (LRU sencillo).
 // - API GET del mismo origen: stale-while-revalidate (sirve al instante, refresca si hay red).
 // - Navegación SPA: network-first con respaldo en el shell.
-const SHELL_CACHE = 'fontapp-shell-v9'
+const SHELL_CACHE = 'fontapp-shell-v10'
 const TILE_CACHE = 'fontapp-tiles-v2'
 const API_CACHE = 'fontapp-api-v3'
 // El nombre NO sube de versión al guardar las fotos: no ha cambiado el formato de nada, y
@@ -329,6 +329,28 @@ async function fija(urls) {
   return { guardadas, bytes }
 }
 
+// Guarda en el caché de fotos una imagen que la página ACABA de subir, con los bytes que
+// ella ya tiene. Así la ficha (y Novedades) la muestran al instante desde el caché en vez
+// de pedírsela a R2: la URL pública nueva de R2 tarda un momento en servir tras el PUT
+// —y encima descargarla dependería de la cobertura, que en el monte no está—, y subir la
+// foto ya demostró que había red suficiente. Va al MISMO `PHOTO_CACHE` del que lee
+// `cacheFirst` para los `/uploads/`, así que el <img> la encuentra sin tocar la red.
+// Reportado en el Montseny: la foto se subía bien (salía «deshacer») pero la ficha no la
+// mostraba.
+async function guardaFoto(url, blob) {
+  try {
+    const cache = await caches.open(PHOTO_CACHE)
+    await cache.put(url, new Response(blob, {
+      headers: { 'Content-Type': (blob && blob.type) || 'image/jpeg' },
+    }))
+    trimCache(PHOTO_CACHE, PHOTO_LIMIT)
+    return { guardada: true }
+  } catch {
+    // Sin Cache API o cuota llena: la foto se pedirá a R2 como antes, no se rompe nada.
+    return { guardada: false }
+  }
+}
+
 async function precargaShell() {
   const cache = await caches.open(SHELL_CACHE)
   // `cache: 'reload'` para no precargar lo que ya hubiera en la caché HTTP del navegador.
@@ -436,6 +458,7 @@ self.addEventListener('message', (event) => {
   if (datos.tipo === 'fijar' && Array.isArray(datos.urls)) return responde(fija(datos.urls))
   if (datos.tipo === 'medir') return responde(mide())
   if (datos.tipo === 'vaciar' && typeof datos.cual === 'string') return responde(vacia(datos.cual))
+  if (datos.tipo === 'guardaFoto' && typeof datos.url === 'string' && datos.blob) return responde(guardaFoto(datos.url, datos.blob))
 })
 
 // MARK: - Notificaciones del sistema

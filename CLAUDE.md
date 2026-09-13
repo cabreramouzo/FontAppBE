@@ -2760,6 +2760,20 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   Aviso al probarlo: las imágenes llevan `loading="lazy"`, así que **si el panel del
   navegador está colapsado no se piden nunca** y parece que el arreglo no funciona. Hay que
   forzar `loading='eager'` o tener la ventana con alto de verdad.
+- **La foto recién subida se muestra desde el MÓVIL, no se pide a R2** (`uploadImage` →
+  mensaje `guardaFoto` del SW → `PHOTO_CACHE`). Reportado en el Montseny: la foto se subía
+  bien (salía el «deshacer»), pero la ficha **no la mostraba** — absurdo, porque el móvil
+  tiene los bytes que acaba de enviar. Dos causas, y las dos las tapa cachear lo subido:
+  la URL pública **nueva** de R2 tarda un momento en servir tras el PUT (`r2.dev` no está
+  pensado para producción justo por esto), y descargarla depende de la cobertura —que en
+  el monte no está, y encima **subir pesa más que bajar**, así que si la subida fue no
+  tiene sentido volver a la red a por lo mismo—. Tras subir con éxito, `uploadImage`
+  calienta `PHOTO_CACHE` con el blob (bajo `assetUrl(url)`, la misma URL que pedirá el
+  `<img>`) y **espera** la confirmación antes de devolver la URL, así el `<img>` que sale
+  al re-renderizar ya la encuentra. Lo hace el SW y no la página, dueño del caché que lee
+  `cacheFirst` para los `/uploads/` (misma razón que `fijaParaOffline`); best-effort y con
+  tope de 4 s, nunca cuelga la subida. Un SW viejo sin el mensaje lo ignora y se cae al
+  comportamiento de antes. Hay test (`guardaFoto` en `sw-routing.test`).
 - **Las fotos tienen su propio caché** (`fontapp-photos-v1`). Compartían los 300 huecos con
   las respuestas de la API, o sea que mover el mapa unas decenas de veces echaba todas las
   fotos guardadas y mirar fotos echaba las respuestas del mapa: dos cosas con ritmos

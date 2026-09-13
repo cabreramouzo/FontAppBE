@@ -14,7 +14,7 @@ import { test } from 'node:test'
  * No se puede registrar un service worker en un test, pero sí cargar su código con un
  * `self` de mentira y preguntarle por sus decisiones, que es donde estaba el error.
  */
-function cargaSW(hrefDelSW: string) {
+function cargaSW(hrefDelSW: string, extras: { caches?: unknown; Response?: unknown } = {}) {
   const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
   const self = {
     location: { href: hrefDelSW, origin: new URL(hrefDelSW).origin },
@@ -24,13 +24,13 @@ function cargaSW(hrefDelSW: string) {
     registration: {},
   }
   const fn = new Function('self', 'caches', 'fetch', 'Response', 'clients',
-    `${codigo}\n;return { isTile, isAPI, API_ORIGIN, peticionDeSalida, imagenDe, fetchConTimeout, trimCache };`)
-  return fn(self, {}, () => {}, class {}, {})
+    `${codigo}\n;return { isTile, isAPI, API_ORIGIN, peticionDeSalida, imagenDe, fetchConTimeout, trimCache, guardaFoto };`)
+  return fn(self, extras.caches ?? {}, () => {}, extras.Response ?? class {}, {})
 }
 
 test('el shell actual invalida el bundle persistente anterior', () => {
   const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
-  assert.match(codigo, /const SHELL_CACHE = 'fontapp-shell-v9'/)
+  assert.match(codigo, /const SHELL_CACHE = 'fontapp-shell-v10'/)
   // El remedio no debe borrar mapas ni respuestas offline. Este test ya ha cazado un
   // intento de subir `API_CACHE` sin que hubiera cambiado ningún formato: habría tirado
   // lo guardado de todo el mundo en el cambio que existía para conservarlo mejor.
@@ -318,4 +318,38 @@ test('vaciar una parte se lleva esa y solo esa', async () => {
   assert.deepEqual(await sw.vacia('fijado'), { vaciado: true })
   assert.ok(!c.almacen.has('fontapp-pinned-v1'))
   assert.ok(c.almacen.has(sw.TILE_CACHE), 'no tenía que tocar las teselas')
+})
+
+
+// Un Cache Storage de mentira: cada nombre es un Map de url -> Response.
+function cachesFake() {
+  const almacen = new Map<string, Map<string, unknown>>()
+  const abre = (name: string) => {
+    if (!almacen.has(name)) almacen.set(name, new Map())
+    const m = almacen.get(name)!
+    return {
+      put: async (url: unknown, res: unknown) => { m.set(String(url), res) },
+      match: async (url: unknown) => m.get(String((url as { url?: string })?.url ?? url)),
+      keys: async () => [...m.keys()].map((u) => ({ url: u })),
+      delete: async (k: unknown) => m.delete(String((k as { url?: string })?.url ?? k)),
+    }
+  }
+  return { caches: { open: async (name: string) => abre(name) }, almacen }
+}
+
+test('guardaFoto mete la foto recién subida en el caché de fotos, lista para el <img>', async () => {
+  const { caches, almacen } = cachesFake()
+  const sw = cargaSW('https://fontapp.net/sw.js', { caches, Response: globalThis.Response })
+  const url = 'https://pub-xxx.r2.dev/uploads/abc123.jpg'
+  const blob = new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'image/jpeg' })
+
+  const r = await sw.guardaFoto(url, blob)
+  assert.deepEqual(r, { guardada: true })
+
+  // Queda bajo SU url en el caché de fotos —el mismo del que `cacheFirst` sirve los
+  // `/uploads/`—, así que el <img> la encuentra sin tocar la red, con la imagen dentro.
+  const fotos = almacen.get('fontapp-photos-v1')
+  assert.ok(fotos?.has(url), 'la foto quedó bajo su URL en el caché de fotos')
+  const res = fotos!.get(url) as Response
+  assert.equal((await res.blob()).size, 4)
 })

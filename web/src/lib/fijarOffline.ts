@@ -50,3 +50,32 @@ export async function fijaParaOffline(urls: string[], msPorFichero = 3_000): Pro
     }
   })
 }
+
+
+/**
+ * Mete en el caché de fotos una imagen que ACABAMOS de subir, sin ir a pedírsela a R2.
+ *
+ * El móvil ya tiene los bytes que envió, así que la ficha (y Novedades) la muestran al
+ * instante desde el caché en vez de descargarla —justo tras subir, la URL pública nueva de
+ * R2 tarda un momento en servir, y bajarla depende de la cobertura, que en el monte no
+ * está—. Lo hace el service worker, dueño del caché que consulta `fetch`, igual que
+ * `fijaParaOffline`. Se ESPERA la confirmación (con tope) para que el `<img>` que sale al
+ * re-renderizar tras la subida ya la encuentre en el caché.
+ */
+export async function calientaCacheDeFoto(url: string, blob: Blob): Promise<void> {
+  const sw = navigator.serviceWorker?.controller
+  // Sin service worker (pestaña de desarrollo, o su versión vieja aún sin este mensaje) no
+  // pasa nada: la foto se pedirá a R2 como siempre.
+  if (!sw) return
+  await new Promise<void>((resolve) => {
+    const canal = new MessageChannel()
+    // Un service worker atascado no puede colgar la subida: a los 4 s se sigue igual.
+    const reloj = setTimeout(resolve, 4_000)
+    canal.port1.onmessage = () => { clearTimeout(reloj); resolve() }
+    try {
+      sw.postMessage({ tipo: 'guardaFoto', url, blob }, [canal.port2])
+    } catch {
+      clearTimeout(reloj); resolve()
+    }
+  })
+}

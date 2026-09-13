@@ -2,6 +2,7 @@ import { apuntaResena } from '../lib/misResenas'
 import type { PhotoUploadMeta } from '../lib/image'
 import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
 import { storedSource } from '../lib/campaign'
+import { calientaCacheDeFoto } from '../lib/fijarOffline'
 import type { AdminUser, IncidentKind, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserCapabilityReport, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
@@ -236,6 +237,12 @@ export async function uploadImage(file: File, meta?: PhotoUploadMeta): Promise<s
   if (meta?.lon != null) form.append('longitude', String(meta.lon))
   form.append('file', file)
   const res = await apiFetch<{ url: string }>('/images', { method: 'POST', body: form })
+  // El móvil ya tiene los bytes: se calienta el caché para que la foto se vea al INSTANTE
+  // en la ficha y en Novedades, sin pedírsela a R2 (cuya URL nueva tarda en servir tras el
+  // PUT, y bajarla dependería de la cobertura). Se espera ANTES de devolver la URL, para
+  // que el <img> que sale al re-renderizar ya la encuentre cacheada. Best-effort y con
+  // tope: nunca cuelga la subida.
+  try { await calientaCacheDeFoto(assetUrl(res.url), file) } catch { /* da igual, se pedirá a R2 */ }
   return res.url
 }
 
