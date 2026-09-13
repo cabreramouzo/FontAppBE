@@ -262,6 +262,28 @@ function MapaDeFondo() {
   )
 }
 
+/**
+ * El panel «mapa»: el fondo verde con senderos y riachuelo, y el contenido centrado
+ * encima. Lo comparten las tres ilustraciones para que la guía se vea coherente —todo
+ * pasa sobre el mapa— y para no repetir el fondo en cada una.
+ */
+function PanelMapa({ children }: { children: ReactNode }) {
+  return (
+    <Box
+      sx={(t) => ({
+        my: 2, position: 'relative', borderRadius: 3, overflow: 'hidden',
+        border: '1px solid', borderColor: 'divider',
+        bgcolor: t.palette.mode === 'dark' ? '#1c2a1f' : '#e8f1e3',
+      })}
+    >
+      <MapaDeFondo />
+      <Box sx={{ position: 'relative', p: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: 2.5 }}>
+        {children}
+      </Box>
+    </Box>
+  )
+}
+
 function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
   if (tipo === 'pins') {
     const filas = [
@@ -271,24 +293,15 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
       { color: NO_STATUS_COLOR, l: ui.pins.unknown },
     ]
     return (
-      // Los pines sobre un panel «mapa»: se ven como en el mapa de verdad, no sueltos.
-      <Box
-        sx={(t) => ({
-          my: 2, position: 'relative', borderRadius: 3, overflow: 'hidden',
-          border: '1px solid', borderColor: 'divider',
-          bgcolor: t.palette.mode === 'dark' ? '#1c2a1f' : '#e8f1e3',
-        })}
-      >
-        <MapaDeFondo />
-        <Box sx={{ position: 'relative', display: 'flex', gap: 2.5, flexWrap: 'wrap', justifyContent: 'center', p: 2 }}>
-          {filas.map((f) => (
-            <Box key={f.l} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-              <Pin color={f.color} />
-              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>{f.l}</Typography>
-            </Box>
-          ))}
-        </Box>
-      </Box>
+      // Los pines sobre el panel «mapa»: se ven como en el mapa de verdad, no sueltos.
+      <PanelMapa>
+        {filas.map((f) => (
+          <Box key={f.l} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+            <Pin color={f.color} />
+            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>{f.l}</Typography>
+          </Box>
+        ))}
+      </PanelMapa>
     )
   }
 
@@ -301,9 +314,9 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
       { emoji: WATER_STATUS.dry.emoji, l: ui.chips.dry, color: WATER_STATUS.dry.color },
     ]
     return (
-      <Box sx={{ my: 2 }}>
-        {/* Un globo del mapa esquemático: nombre de la fuente y los tres chips debajo. */}
-        <Box sx={{ display: 'inline-block', maxWidth: 320, p: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', boxShadow: 1 }}>
+      // El globo, sobre el panel «mapa»: es justo donde sale en la app, encima del mapa.
+      <PanelMapa>
+        <Box sx={{ maxWidth: 320, p: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', boxShadow: 2 }}>
           <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>📍 {ui.fuenteEjemplo}</Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {chips.map((c) => (
@@ -320,7 +333,7 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
             <Typography variant="caption" sx={{ fontWeight: 700 }}>{ui.pista}</Typography>
           </Box>
         </Box>
-      </Box>
+      </PanelMapa>
     )
   }
 
@@ -331,7 +344,9 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
   // idioma—. En columna: en móvil una fila horizontal de tres botones no cabe, y en
   // columna queda siempre centrada.
   return (
-    <Box sx={{ my: 2, display: 'flex', flexDirection: 'column', gap: 1.25, width: 'fit-content', mx: 'auto' }}>
+    // Los pasos sobre el panel «mapa»: el flujo arranca en el botón GPX del propio mapa.
+    <PanelMapa>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, width: 'fit-content' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Paso n={1} />
         {/* El botón «GPX» del mapa: un FAB redondo, fondo del papel y letras en azul. */}
@@ -348,7 +363,8 @@ function Ilustracion({ tipo, ui }: { tipo: Ilustra; ui: Ui }) {
         <Paso n={3} />
         <BotonMock contained>{ui.gpx}</BotonMock>
       </Box>
-    </Box>
+      </Box>
+    </PanelMapa>
   )
 }
 
