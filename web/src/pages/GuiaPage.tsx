@@ -136,7 +136,57 @@ const ES: Contenido = {
   },
 }
 
-const POR_IDIOMA: Partial<Record<Lang, Contenido>> = { ca: CA, es: ES }
+const EN: Contenido = {
+  titulo: 'How FontApp works',
+  intro:
+    'FontApp tells you whether a fountain is running before you go out of your way. The people who pass do it: each one notes whether water is flowing, trickling or dry, so the next person already knows. Here’s how to use it in a minute.',
+  secciones: [
+    {
+      titulo: '1. Find water near you',
+      ilustra: 'pins',
+      parrafos: [
+        'Open the map and let it locate you. Each pin is a fountain, and the colour tells you how the water is: green if it’s flowing, amber if it’s trickling, red if it’s dry, and blue if nobody has checked it yet. Tap one to see the last report and when.',
+      ],
+    },
+    {
+      titulo: '2. Say how a fountain is (the gesture that holds it all up)',
+      ilustra: 'chips',
+      parrafos: [
+        'This is the most important part, and it takes one tap. From the map popup or the fountain page, say whether it’s flowing, trickling or dry. That changes the colour for everyone, and the next hiker knows before making a detour. If someone already said it and it’s still the same, you can confirm it with a tap instead of repeating it.',
+        'Looking asks nothing; to contribute, a half-minute account. And it works even with no signal: it’s saved on your phone and sent on its own when the network is back — which is exactly where you are when a fountain is in front of you, in the middle of nowhere.',
+      ],
+    },
+    {
+      titulo: '3. Water on your route',
+      ilustra: 'gpx',
+      parrafos: [
+        'This is where it changes. If you plan routes (Wikiloc, Strava, Komoot…): on the map tap the GPX button, open «Water on my route» and choose your file. FontApp tells you which fountains are along the way, at which kilometre and how far off the track. The file never leaves your phone.',
+        'And the thing that really decides whether you carry one bottle or two: the longest stretch with no water. A real example from a 14 km route across Barcelona —167 fountains along the way, but none checked recently—: the truly dry stretch isn’t 2 km, it’s the full 14, the whole route. You want to know that before you set off, not halfway.',
+        'You can download the fountains to your GPS (Garmin) and, when you’re back, say how they were with a tap: that way the route you did helps the next person.',
+      ],
+    },
+    {
+      titulo: '4. Take it to the mountains',
+      parrafos: [
+        'Before you go, save the area and the map and the fountains work with no signal. Install it to your home screen so it opens like an app and you don’t have to look for it in the browser.',
+      ],
+    },
+  ],
+  cierre:
+    'It’s free and collaborative: the more people say how the water is, the more useful it is for everyone. If you make it yours, pass it on to whoever does routes —that’s how it grows.',
+  verMapa: 'Open the map',
+  ui: {
+    pins: { flowing: 'flowing', trickle: 'trickle', dry: 'dry', unknown: 'unchecked' },
+    fuenteEjemplo: 'Valley Spring',
+    chips: { flowing: 'Flowing', trickle: 'Trickle', dry: 'Dry' },
+    pista: 'tap how it is',
+    ruta: 'Water on my route',
+    gpx: 'Choose a GPX file',
+    enElMapa: 'on the map',
+  },
+}
+
+const POR_IDIOMA: Partial<Record<Lang, Contenido>> = { ca: CA, es: ES, en: EN }
 
 /** La gota coloreada del pin del mapa, a escala pequeña para la leyenda. */
 function Pin({ color }: { color: string }) {

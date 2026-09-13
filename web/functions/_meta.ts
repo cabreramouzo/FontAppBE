@@ -77,9 +77,10 @@ export const MUNI_META: Record<ShareLang, { title: string; description: string }
  * cuerpo en catalán es el desajuste que penaliza Google—, así que quien pida otro idioma
  * recibe la meta en CA, igual que el cuerpo.
  */
-export const GUIA_META: Record<'ca' | 'es', { title: string; description: string }> = {
+export const GUIA_META: Record<'ca' | 'es' | 'en', { title: string; description: string }> = {
   ca: { title: 'Com funciona FontApp', description: "Guia ràpida per fer servir FontApp: troba fonts d'aigua a prop, digues si ragen amb un toc i, pujant el teu GPX, mira quines fonts hi ha per la teva ruta i el tram més llarg sense aigua." },
   es: { title: 'Cómo funciona FontApp', description: 'Guía rápida para usar FontApp: encuentra fuentes de agua cerca, di si manan con un toque y, subiendo tu GPX, mira qué fuentes hay por tu ruta y el tramo más largo sin agua.' },
+  en: { title: 'How FontApp works', description: 'A quick guide to using FontApp: find water fountains nearby, say whether they’re flowing with one tap, and upload your GPX to see the fountains on your route and the longest dry stretch.' },
 }
 
 /**

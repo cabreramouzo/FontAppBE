@@ -25,6 +25,7 @@ const ESTATICAS: [string, string][] = [
   ['/', '1.0'],
   ['/activity', '0.7'],
   ['/guia', '0.6'],
+  ['/guide', '0.6'],
   ['/places', '0.6'],
   ['/zones', '0.7'],
   ['/gamification', '0.5'],
