@@ -1,4 +1,4 @@
-import { apiOrigin, esc, recorta, SHARE_META, shareCard, shareLang, siteOrigin, type Env } from '../_meta'
+import { apiOrigin, esc, estadoTarjeta, recorta, SHARE_META, shareCard, shareLang, siteOrigin, type Env } from '../_meta'
 
 /**
  * Etiquetas propias para cada ficha de fuente.
@@ -40,6 +40,9 @@ interface FontDTO {
   country: string | null
   duplicateOf: string | null
   retiredAt: string | null
+  lastWaterStatus: string | null
+  lastUpdate: string | null
+  statusConflict: boolean
 }
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
@@ -76,12 +79,15 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const nombre = font.name?.trim() || meta.unnamed
   const titulo = `${nombre} · FontApp`
 
-  // Si hay descripción, manda: la ha escrito una persona, dice algo de verdad y ya está
-  // en el idioma que toca. La de repuesto es casi solo nombres propios a propósito —
-  // aquí no hay a quién preguntarle qué idioma lee, así que cuanto menos texto, mejor.
-  const descripcion = font.description?.trim()
-    ? recorta(font.description, 200)
-    : recorta([nombre, zona].filter(Boolean).join(' · ') + ` · ${meta.unnamed} · FontApp`, 200)
+  // La descripción de la tarjeta **empieza por el estado del agua** —«💧 Sale agua ·
+  // hace 2 días», «🚱 Seca», «Sin comprobar todavía»—, que es lo que trae a quien la
+  // comparte: antes de desviarse quiere saber si raja. Detrás va el texto libre si lo
+  // hay (lo escribió una persona y dice algo de verdad) y, si no, la zona. La mayoría de
+  // fuentes no tienen descripción o solo llevan la atribución del importador, así que sin
+  // el estado la tarjeta salía vacía o con «© ICGC/ACA».
+  const estado = estadoTarjeta(font, lang)
+  const cola = font.description?.trim() ? recorta(font.description, 160) : zona
+  const descripcion = recorta([estado, cola].filter(Boolean).join(' · '), 200)
 
   const propia = !!font.image
   const imagen = font.image

@@ -1485,6 +1485,41 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// `GET /fonts/:id` pega el estado del agua a la ficha (`FontDetail`), y lo hace
+    /// **fusionando** el `encode` de `Font` con tres claves más. El riesgo es que el
+    /// segundo container pise los campos de la fuente: aquí se comprueba que salen las dos
+    /// cosas. Lo necesita la tarjeta social para decir «sale agua» o «seca».
+    func testFontDetailIncludesWaterStatus() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "estado")
+            let tok = try await login(app, username: "estado")
+            let fontID = try await createFont(app, token: tok, name: "Con estado", lat: 41, long: 2)
+
+            // Sin ninguna reseña: la ficha existe y el estado es nulo (sin comprobar).
+            try await app.test(.GET, "fonts/\(fontID)") { res in
+                XCTAssertEqual(res.status, .ok)
+                let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                XCTAssertEqual(json?["name"] as? String, "Con estado", "el encode de Font se ha pisado")
+                XCTAssertTrue(json?.keys.contains("lastWaterStatus") == true)
+                XCTAssertTrue(json?.keys.contains("statusConflict") == true)
+                XCTAssertEqual(json?["statusConflict"] as? Bool, false)
+                XCTAssertTrue(json?["lastWaterStatus"] is NSNull, "sin reseñas, sin estado")
+            }
+
+            // Con una reseña «sale agua», la ficha lo refleja.
+            try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(tok), beforeRequest: { req in
+                try req.content.encode(CreateCommentDTO(body: "raja", rating: nil, waterStatus: "flowing", image: nil, confirmIfUnchanged: nil))
+            }, afterResponse: { _ in })
+
+            try await app.test(.GET, "fonts/\(fontID)") { res in
+                XCTAssertEqual(res.status, .ok)
+                let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                XCTAssertEqual(json?["lastWaterStatus"] as? String, "flowing")
+                XCTAssertNotNil(json?["lastUpdate"], "un parte deja fecha")
+            }
+        }
+    }
+
     /// "Borrar" la cuenta la anonimiza: las fuentes se conservan, los datos
     /// personales se eliminan y el login deja de funcionar.
     func testDeleteAccountAnonymizes() async throws {

@@ -31,6 +31,70 @@ export const SHARE_META: Record<ShareLang, { locale: string; title: string; desc
 }
 
 /**
+ * El estado del agua para la tarjeta social, por idioma.
+ *
+ * Va aquí y no en el diccionario del cliente por lo de siempre: un scraper no ejecuta
+ * React, solo lee el `<head>`. Son las cinco etiquetas de estado (las de
+ * `WATER_STATUS_OPTIONS` menos `unknown`, que para la tarjeta es «sin comprobar»), el
+ * conflicto, el «sin comprobar» y la frescura relativa. `{n}` es el número.
+ *
+ * No lleva verbo («comprovada»/«checked»): el estado y la fecha uno detrás del otro
+ * («💧 Raja · fa 2 dies») ya se entienden, y así se evita la concordancia de género y el
+ * orden de palabras en ocho idiomas —el euskera es postposicional— por una línea de
+ * tarjeta.
+ */
+export const STATUS_META: Record<ShareLang, {
+  flowing: string; trickle: string; dry: string; broken: string; gone: string
+  conflict: string; unchecked: string
+  today: string; yesterday: string; days: string; months: string
+}> = {
+  ca: { flowing: 'Raja', trickle: 'Poca aigua', dry: 'Seca', broken: 'Avariada', gone: 'Ja no hi és', conflict: 'Dades contradictòries', unchecked: 'Encara sense comprovar', today: 'avui', yesterday: 'ahir', days: 'fa {n} dies', months: 'fa {n} mesos' },
+  es: { flowing: 'Sale agua', trickle: 'Poca agua', dry: 'Seca', broken: 'Averiada', gone: 'Ya no existe', conflict: 'Datos contradictorios', unchecked: 'Sin comprobar todavía', today: 'hoy', yesterday: 'ayer', days: 'hace {n} días', months: 'hace {n} meses' },
+  gl: { flowing: 'Sae auga', trickle: 'Pouca auga', dry: 'Seca', broken: 'Avariada', gone: 'Xa non existe', conflict: 'Datos contraditorios', unchecked: 'Sen comprobar aínda', today: 'hoxe', yesterday: 'onte', days: 'hai {n} días', months: 'hai {n} meses' },
+  eu: { flowing: 'Ura badario', trickle: 'Ur gutxi', dry: 'Lehorra', broken: 'Hondatuta', gone: 'Jada ez dago', conflict: 'Datu kontraesankorrak', unchecked: 'Oraindik egiaztatu gabe', today: 'gaur', yesterday: 'atzo', days: 'duela {n} egun', months: 'duela {n} hilabete' },
+  en: { flowing: 'Water flowing', trickle: 'Little water', dry: 'Dry', broken: 'Broken', gone: 'Gone', conflict: 'Conflicting reports', unchecked: 'Not checked yet', today: 'today', yesterday: 'yesterday', days: '{n} days ago', months: '{n} months ago' },
+  fr: { flowing: "De l'eau coule", trickle: "Peu d'eau", dry: 'À sec', broken: 'En panne', gone: "N'existe plus", conflict: 'Rapports contradictoires', unchecked: 'Pas encore vérifiée', today: "aujourd'hui", yesterday: 'hier', days: 'il y a {n} jours', months: 'il y a {n} mois' },
+  pt: { flowing: 'Sai água', trickle: 'Pouca água', dry: 'Seca', broken: 'Avariada', gone: 'Já não existe', conflict: 'Dados contraditórios', unchecked: 'Ainda por verificar', today: 'hoje', yesterday: 'ontem', days: 'há {n} dias', months: 'há {n} meses' },
+  it: { flowing: 'Acqua che scorre', trickle: 'Poca acqua', dry: 'Asciutta', broken: 'Guasta', gone: 'Non esiste più', conflict: 'Dati contraddittori', unchecked: 'Non ancora verificata', today: 'oggi', yesterday: 'ieri', days: '{n} giorni fa', months: '{n} mesi fa' },
+}
+
+/** La frescura relativa de un parte para la tarjeta. `''` si la fecha no es válida. */
+export function frescuraRelativa(iso: string, lang: ShareLang, now: number = Date.now()): string {
+  const t = new Date(iso).getTime()
+  if (!isFinite(t)) return ''
+  const m = STATUS_META[lang]
+  const dias = Math.floor((now - t) / 86_400_000)
+  if (dias <= 0) return m.today
+  if (dias === 1) return m.yesterday
+  // El corte a meses es a 60 días para no decir «hace 59 días»; por debajo, días.
+  if (dias < 60) return m.days.replace('{n}', String(dias))
+  return m.months.replace('{n}', String(Math.floor(dias / 30)))
+}
+
+/**
+ * Una frase corta con el estado del agua para liderar la descripción de la tarjeta:
+ * «💧 Sale agua · hace 2 días», «🚱 Seca · ayer», «⚠️ Datos contradictorios» o
+ * «Sin comprobar todavía».
+ *
+ * `unknown` (alguien miró y no supo decirlo) cae en «sin comprobar» **sin fecha**: decir
+ * «sin comprobar · hace 2 días» es contradictorio, y es el estado más raro de todos.
+ */
+export function estadoTarjeta(
+  s: { lastWaterStatus: string | null; lastUpdate: string | null; statusConflict: boolean },
+  lang: ShareLang,
+  now: number = Date.now(),
+): string {
+  const m = STATUS_META[lang]
+  if (s.statusConflict) return `⚠️ ${m.conflict}`
+  const emoji: Record<string, string> = { flowing: '💧', trickle: '💦', dry: '🚱', broken: '🛠️', gone: '🪦' }
+  const label: Record<string, string> = { flowing: m.flowing, trickle: m.trickle, dry: m.dry, broken: m.broken, gone: m.gone }
+  const st = s.lastWaterStatus
+  if (!st || !(st in label)) return m.unchecked
+  const fresca = s.lastUpdate ? frescuraRelativa(s.lastUpdate, lang, now) : ''
+  return `${emoji[st]} ${label[st]}${fresca ? ` · ${fresca}` : ''}`
+}
+
+/**
  * Los textos de una página de pueblo, por idioma.
  *
  * Van aquí y no en el diccionario del cliente porque un rastreador **no ejecuta React**:

@@ -628,8 +628,43 @@ struct FontController: RouteCollection {
         return try await query.paginate(SafePage.from(req))
     }
 
-    @Sendable func show(req: Request) async throws -> Font {
-        try await find(req)
+    /// La ficha con el resumen del estado del agua pegado.
+    ///
+    /// Es aditivo: `Font.encode` escribe sus campos públicos y aquí se añaden tres más
+    /// (`lastWaterStatus`, `lastUpdate`, `statusConflict`), así que un cliente viejo los
+    /// ignora. Los necesita la tarjeta social de `functions/fonts/[id].ts` para decir
+    /// «sale agua» o «seca» en vez de solo el texto libre —que la mayoría de fuentes no
+    /// tienen—, y el estado sale de la **misma** consulta que el mapa (`Font.summaries`),
+    /// no de reconstruir la confianza aquí. Es una fuente por visita a la ficha: una
+    /// consulta compacta más entre las que ya se hacen.
+    struct FontDetail: Content {
+        let font: Font
+        let lastWaterStatus: String?
+        let lastUpdate: Date?
+        let statusConflict: Bool
+
+        func encode(to encoder: any Encoder) throws {
+            try font.encode(to: encoder)
+            var c = encoder.container(keyedBy: Key.self)
+            try c.encode(lastWaterStatus, forKey: .lastWaterStatus)
+            try c.encode(lastUpdate, forKey: .lastUpdate)
+            try c.encode(statusConflict, forKey: .statusConflict)
+        }
+        private enum Key: String, CodingKey { case lastWaterStatus, lastUpdate, statusConflict }
+    }
+
+    @Sendable func show(req: Request) async throws -> FontDetail {
+        let font = try await find(req)
+        // `summaries(for:)` devuelve siempre un elemento por fuente: el resumen SQL si hay
+        // reseñas o el de repuesto (todo nulo) si no. Una fuente sin comprobar nunca da
+        // `nil`, cae en la rama «sin comprobar» de la tarjeta.
+        let resumen = try await Font.summaries(for: [font], on: req.db).first
+        return FontDetail(
+            font: font,
+            lastWaterStatus: resumen?.lastWaterStatus,
+            lastUpdate: resumen?.lastUpdate,
+            statusConflict: resumen?.recentStatusConflict ?? false,
+        )
     }
 
     @Sendable func update(req: Request) async throws -> Font {
