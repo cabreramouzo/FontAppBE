@@ -2264,17 +2264,24 @@ export function MapPage() {
               se queda detrás de `user`**: un gesto oculto que te saca a una pantalla de
               acceso es peor que no tenerlo, y encima puede dispararse sin querer. */}
           <Fab variant="extended" color="primary"
-               onPointerDown={empiezaDeseo}
-               onPointerUp={cancelaDeseo}
-               onPointerCancel={cancelaDeseo}
-               onPointerLeave={cancelaDeseo}
-               onContextMenu={(e) => { if (wishConsumed.current) e.preventDefault() }}
+               // Safari/iOS convierte una pulsación larga en selección o menú contextual
+               // y puede cancelar pointerup. Touch lleva su carril propio; pointer queda
+               // para ratón/lápiz y no se arma dos veces con el mismo dedo.
+               onTouchStart={empiezaDeseo}
+               onTouchEnd={cancelaDeseo}
+               onTouchCancel={cancelaDeseo}
+               onPointerDown={(e) => { if (e.pointerType !== 'touch') empiezaDeseo() }}
+               onPointerUp={(e) => { if (e.pointerType !== 'touch') cancelaDeseo() }}
+               onPointerCancel={(e) => { if (e.pointerType !== 'touch') cancelaDeseo() }}
+               onPointerLeave={(e) => { if (e.pointerType !== 'touch') cancelaDeseo() }}
+               onContextMenu={(e) => e.preventDefault()}
                onClick={() => {
                  if (wishConsumed.current) { wishConsumed.current = false; return }
                  trackInteraction(user ? 'map_add_font_button' : 'map_add_font_signed_out')
                  if (!user) { navigate('/login'); return }
                  startPlacing()
-               }}>
+               }}
+               sx={{ WebkitTouchCallout: 'none', userSelect: 'none', touchAction: 'manipulation' }}>
             <AddIcon sx={{ mr: 1 }} /> {noEmoji(t('map.addFont'))}
           </Fab>
         </div>
