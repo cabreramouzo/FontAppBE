@@ -31,6 +31,16 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const googleButton = useRef<HTMLDivElement>(null)
+  // `loginWithGoogle` y `t` cambian de identidad en cada render de `AuthProvider`/i18n. Si
+  // el efecto de abajo dependiera de ellos, se re-ejecutaría en cada render y volvería a
+  // llamar a `initialize` + `renderButton`, **destruyendo y reconstruyendo el botón de
+  // Google** — que en pantalla se ve como un parpadeo/vibración de unos segundos
+  // (reportado en el móvil). Se leen por `ref` para que el callback siga fresco sin volver
+  // a montar el botón: el efecto corre **una sola vez**.
+  const loginGoogleRef = useRef(loginWithGoogle)
+  loginGoogleRef.current = loginWithGoogle
+  const tRef = useRef(t)
+  tRef.current = t
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -45,12 +55,12 @@ export function LoginPage() {
           setError('')
           setBusy(true)
           try {
-            await loginWithGoogle(credential)
+            await loginGoogleRef.current(credential)
             await trackInteraction('auth_google_success')
             window.location.assign('/')
           } catch (err) {
             trackInteraction('auth_google_error')
-            setError(describeError(err, t))
+            setError(describeError(err, tRef.current))
             setBusy(false)
           }
         },
@@ -71,11 +81,12 @@ export function LoginPage() {
       script.async = true
       script.dataset.fontappGoogle = '1'
       script.addEventListener('load', render, { once: true })
-      script.addEventListener('error', () => { if (!cancelled) setError(t('login.googleUnavailable')) }, { once: true })
+      script.addEventListener('error', () => { if (!cancelled) setError(tRef.current('login.googleUnavailable')) }, { once: true })
       document.head.appendChild(script)
     }
     return () => { cancelled = true }
-  }, [loginWithGoogle, t])
+    // Una sola vez: los valores que cambian se leen por `ref` (ver arriba).
+  }, [])
 
   async function submit(e: FormEvent) {
     e.preventDefault()
