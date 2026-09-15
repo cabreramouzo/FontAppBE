@@ -152,18 +152,49 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
     chemistry: { emoji: 'H₂O', title: t('egg.chemistryTitle'), body: t('egg.chemistryBody') },
   }
   const c = contenido[sorpresa]
+  const icono = sorpresa === 'wish' ? (
+    <Box className="egg-wish" sx={{ position: 'relative', height: 76, width: 100, mx: 'auto' }}>
+      <span className="egg-coin">🪙</span>
+      <span className="egg-fountain">⛲</span>
+      <span className="egg-ripple" />
+    </Box>
+  ) : (
+    <span className={`egg-icon egg-${sorpresa}`}>{c.emoji}</span>
+  )
   return (
-    <Box aria-live="polite" sx={{ position: 'fixed', inset: 0, zIndex: 1999, pointerEvents: 'none', overflow: 'hidden' }}>
-      {sorpresa === 'underwater' && <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,120,190,.18), rgba(0,42,100,.48))', backdropFilter: 'hue-rotate(12deg) saturate(1.25)' }} />}
+    <Box className={reducedMotion ? 'egg-reduced' : ''} aria-live="polite" sx={{ position: 'fixed', inset: 0, zIndex: 1999, pointerEvents: 'none', overflow: 'hidden' }}>
+      {sorpresa === 'underwater' && <Box className="egg-water" sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,120,190,.18), rgba(0,42,100,.48))', backdropFilter: 'hue-rotate(12deg) saturate(1.25)' }}>
+        {Array.from({ length: 12 }, (_, i) => <i key={i} style={{ left: `${6 + (i * 17) % 90}%`, animationDelay: `${(i % 5) * .23}s`, width: 5 + (i % 4) * 3, height: 5 + (i % 4) * 3 }} />)}
+      </Box>}
       {sorpresa === 'ocean' && <Typography sx={{ position: 'absolute', left: '12%', bottom: '12%', fontSize: { xs: 88, sm: 130 }, animation: reducedMotion ? 'none' : 'eggWhale 3.4s ease-in-out both' }}>🐋</Typography>}
       <Fade in appear timeout={reducedMotion ? 0 : undefined}>
         <Box sx={{ position: 'absolute', left: '50%', top: '45%', transform: 'translate(-50%,-50%)', textAlign: 'center', bgcolor: 'rgba(255,255,255,.92)', color: '#123', borderRadius: 4, boxShadow: 8, px: 3, py: 2.25, minWidth: 240, maxWidth: '82vw', '@media (prefers-color-scheme: dark)': { bgcolor: 'rgba(15,22,30,.94)', color: '#fff' } }}>
-          <Typography sx={{ fontSize: 48, lineHeight: 1.1 }}>{c.emoji}</Typography>
+          <Typography component="div" sx={{ fontSize: 48, lineHeight: 1.1 }}>{icono}</Typography>
           <Typography variant="h6" sx={{ mt: 1, fontWeight: 800 }}>{c.title}</Typography>
           <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.8 }}>{c.body}</Typography>
         </Box>
       </Fade>
-      <style>{`@keyframes eggWhale { 0% { transform: translate(-30vw,30px) rotate(-8deg); opacity:0 } 25% {opacity:1} 100% { transform: translate(95vw,-90px) rotate(5deg); opacity:0 } }`}</style>
+      <style>{`
+        .egg-icon { display:inline-block; transform-origin:50% 70% }
+        .egg-coin { position:absolute; z-index:2; left:38px; top:-4px; font-size:29px; animation:eggCoin 1.55s cubic-bezier(.34,.02,.72,1) both }
+        .egg-fountain { position:absolute; z-index:1; left:22px; bottom:0; font-size:56px; animation:eggFountain 1.8s ease-in-out .9s both }
+        .egg-ripple { position:absolute; z-index:3; left:43px; bottom:9px; width:16px; height:5px; border:2px solid #42bcec; border-radius:50%; opacity:0; animation:eggRipple 1.4s ease-out 1.05s both }
+        .egg-underwater { animation:eggSwim 2.4s ease-in-out infinite }
+        .egg-midnight { animation:eggShine 1.5s ease-in-out infinite alternate }
+        .egg-cartographers { animation:eggMap 1.4s ease-in-out infinite }
+        .egg-chemistry { animation:eggMolecule 1.1s ease-in-out infinite alternate }
+        .egg-water i { position:absolute; bottom:-20px; display:block; border:2px solid rgba(255,255,255,.7); border-radius:50%; animation:eggBubble 2.8s ease-in infinite }
+        @keyframes eggCoin { 0% { transform:translateY(-42px) rotateY(0); opacity:0 } 18% {opacity:1} 72% { transform:translateY(37px) rotateY(540deg); opacity:1 } 100% { transform:translateY(45px) rotateY(720deg) scale(.45); opacity:0 } }
+        @keyframes eggRipple { 0% { transform:scale(.3); opacity:.9 } 100% { transform:scale(3.2,2); opacity:0 } }
+        @keyframes eggFountain { 0%,100% { transform:scale(1) } 45% { transform:scale(1.08) translateY(-2px) } }
+        @keyframes eggSwim { 0%,100% { transform:translateX(-9px) rotate(-3deg) } 50% { transform:translateX(9px) rotate(3deg) } }
+        @keyframes eggShine { from { transform:scale(.92); filter:drop-shadow(0 0 1px #ffd76a) } to { transform:scale(1.08); filter:drop-shadow(0 0 12px #ffd76a) } }
+        @keyframes eggMap { 0%,100% { transform:rotate(-3deg) scale(1) } 50% { transform:rotate(3deg) scale(1.08) } }
+        @keyframes eggMolecule { from { transform:translateY(3px) rotate(-2deg) } to { transform:translateY(-4px) rotate(2deg) } }
+        @keyframes eggBubble { 0% { transform:translateY(0) scale(.5); opacity:0 } 18% {opacity:.8} 100% { transform:translateY(-105vh) translateX(24px) scale(1.3); opacity:0 } }
+        @keyframes eggWhale { 0% { transform:translate(-30vw,30px) rotate(-8deg); opacity:0 } 25% {opacity:1} 100% { transform:translate(95vw,-90px) rotate(5deg); opacity:0 } }
+        .egg-reduced *, .egg-reduced *::before, .egg-reduced *::after { animation:none !important }
+      `}</style>
     </Box>
   )
 }
