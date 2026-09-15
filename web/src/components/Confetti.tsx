@@ -38,58 +38,41 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
       ? ['#3fa9f5', '#7fd3ff', '#2b7fc4', '#5bc0eb', '#a8e0ff']
       : ['#3fa9f5', '#7fd3ff', '#f2c14e', '#e8a33d', '#ffffff', '#2b7fc4']
     const color = () => colores[Math.floor(Math.random() * colores.length)]
-    // El confeti cae desde arriba; las gotas del easter egg **estallan desde el centro**
-    // (donde sale la ventanita con la cifra) y después llueven. Por eso las gotas caen con
-    // más gravedad —si no, el estallido tardaría seis segundos en volver al suelo— y son
-    // más grandes y muchas más, para que tenga pega.
-    const gravedad = forma === 'gotas' ? 0.14 : 0.045
+    // El confeti cae desde arriba; las gotas del easter egg estallan desde el centro y
+    // después llueven. No hacen falta miles: además de tapar el mapa, rasterizar tantos
+    // emoji por fotograma castigaba especialmente a Safari en un iPhone.
+    const gravedad = forma === 'gotas' ? 0.12 : 0.045
     const cx = ancho / 2
     const cy = alto / 2
 
     type Pieza = {
       x: number; y: number; w: number; h: number; vx: number; vy: number
-      giro: number; vGiro: number; color: string
-      // Solo las gotas «adheridas» al cristal: cuentan `espera` fotogramas quietas y luego
-      // resbalan (`pegada`), dejando un reguero desde `y0`. `fase` da el bamboleo del agua.
-      espera?: number; pegada?: boolean; y0?: number; fase?: number
+      giro: number; vGiro: number; color: string; alpha?: number
     }
 
     const piezas: Pieza[] = forma === 'gotas'
       ? [
           // Estallido: todas parten del centro y salen en todas direcciones, con un
           // pelín de empuje hacia arriba para que dibujen un arco antes de caer.
-          ...Array.from({ length: 800 }, () => {
+          ...Array.from({ length: 90 }, () => {
             const ang = Math.random() * Math.PI * 2
-            const v = 5 + Math.random() * 12
+            const v = 4 + Math.random() * 8
             return {
               x: cx, y: cy,
-              w: 9 + Math.random() * 11, h: 16 + Math.random() * 18,
-              vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 2.5,
-              giro: 0, vGiro: 0, color: color(),
+              w: 14 + Math.random() * 16, h: 14 + Math.random() * 16,
+              vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 1.5,
+              giro: 0, vGiro: 0, color: color(), alpha: 0.72 + Math.random() * 0.28,
             }
           }),
           // Lluvia de después: escalonada muy por encima del borde para que siga cayendo
           // cuando el estallido ya ha bajado.
-          ...Array.from({ length: 1200 }, () => ({
+          ...Array.from({ length: 130 }, () => ({
             x: Math.random() * ancho,
-            y: -20 - Math.random() * alto * 1.2,
-            w: 7 + Math.random() * 9, h: 13 + Math.random() * 15,
-            vx: -1 + Math.random() * 2, vy: 2.5 + Math.random() * 3.5,
-            giro: 0, vGiro: 0, color: color(),
+            y: -30 - Math.random() * alto * 0.85,
+            w: 12 + Math.random() * 15, h: 12 + Math.random() * 15,
+            vx: -0.55 + Math.random() * 1.1, vy: 2 + Math.random() * 2.8,
+            giro: 0, vGiro: 0, color: color(), alpha: 0.58 + Math.random() * 0.38,
           })),
-          // Adheridas al cristal: aparecen quietas repartidas por la pantalla (como
-          // salpicaduras del estallido), aguantan ~1 s y luego resbalan hacia abajo
-          // dejando un reguero. `espera` en fotogramas (~0,6–1,4 s a 60 fps).
-          ...Array.from({ length: 80 }, () => {
-            const y = alto * (0.15 + Math.random() * 0.5)
-            return {
-              x: ancho * (0.1 + Math.random() * 0.8), y,
-              w: 10 + Math.random() * 9, h: 13 + Math.random() * 12,
-              vx: 0, vy: 0, giro: 0, vGiro: 0, color: color(),
-              espera: 56 + Math.floor(Math.random() * 48),
-              pegada: true, y0: y, fase: Math.random() * Math.PI * 2,
-            }
-          }),
         ]
       : Array.from({ length: 110 }, () => ({
           x: Math.random() * ancho,
@@ -109,56 +92,32 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
 
     let raf = 0
     let vivo = true
-    let frame = 0
     function paso() {
       if (!vivo || !ctx) return
-      frame++
       ctx.clearRect(0, 0, ancho, alto)
       let quedan = 0
       for (const p of piezas) {
-        if (p.espera && p.espera > 0) {
-          // Pegada al cristal, quieta, mientras aguanta la tensión superficial.
-          p.espera--
-          quedan++
-        } else if (p.pegada) {
-          // Ya se soltó: resbala hacia abajo —más despacio que caer, por el roce con el
-          // cristal (`gravedad * 0.55`)— con un leve bamboleo, como el agua real.
-          p.x += Math.sin(frame * 0.12 + (p.fase ?? 0)) * 0.4
-          p.y += p.vy
-          p.vy += gravedad * 0.55
-          if (p.y < alto + 30) quedan++
-        } else {
-          p.x += p.vx
-          p.y += p.vy
-          p.vy += gravedad
-          p.giro += p.vGiro
-          if (p.y < alto + 30) quedan++
-        }
-        // Reguero de la gota que resbala: una línea tenue desde donde estaba pegada
-        // hasta donde va, acotada a ~46 px para que sea una estela y no un rayón.
-        if (p.pegada && (!p.espera || p.espera <= 0) && p.y0 != null && p.y > p.y0 + 2) {
-          ctx.save()
-          ctx.strokeStyle = p.color
-          ctx.globalAlpha = 0.2
-          ctx.lineWidth = Math.max(1.5, p.w * 0.3)
-          ctx.lineCap = 'round'
-          ctx.beginPath()
-          ctx.moveTo(p.x, Math.max(p.y0, p.y - 46))
-          ctx.lineTo(p.x, p.y)
-          ctx.stroke()
-          ctx.restore()
-        }
+        p.x += p.vx
+        p.y += p.vy
+        p.vy += gravedad
+        p.giro += p.vGiro
+        if (p.y < alto + 40) quedan++
         ctx.save()
         ctx.translate(p.x, p.y)
         ctx.fillStyle = p.color
         if (forma === 'gotas') {
-          // Una gota: cae recta (sin giro), punta arriba y panza abajo con dos curvas.
-          const r = p.w / 2
-          ctx.beginPath()
-          ctx.moveTo(0, -p.h / 2)
-          ctx.quadraticCurveTo(r, 0, 0, p.h / 2)
-          ctx.quadraticCurveTo(-r, 0, 0, -p.h / 2)
-          ctx.fill()
+          // El emoji conserva el lenguaje visual que ya usa FontApp. Su punta se orienta
+          // en la dirección contraria al movimiento: gira al salir del estallido y la
+          // gravedad lo endereza poco a poco mientras cae, sin dar vueltas artificiales.
+          const orientacion = Math.atan2(p.vy, p.vx) - Math.PI / 2
+          ctx.rotate(orientacion)
+          ctx.globalAlpha = p.alpha ?? 1
+          ctx.font = `${p.w}px system-ui, "Apple Color Emoji", "Segoe UI Emoji"`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.shadowColor = 'rgba(18, 111, 170, 0.22)'
+          ctx.shadowBlur = Math.max(2, p.w * 0.18)
+          ctx.fillText('💧', 0, 0)
         } else {
           ctx.rotate(p.giro)
           // Escalar el alto por el coseno del giro finge que la pieza es plana y da la
