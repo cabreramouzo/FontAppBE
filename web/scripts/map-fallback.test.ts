@@ -16,9 +16,10 @@ test('con zona guardada, el fallo cae a las fuentes de la zona', () => {
   assert.equal(fuentesTrasFalloDeRed(previas, deZona), deZona)
 })
 
-test('nunca devuelve vacío teniendo algo que enseñar', () => {
+test('nunca reduce a vacío lo que ya se veía, ni con null ni con []', () => {
   const previas = [{ id: 'a' }]
-  assert.deepEqual(fuentesTrasFalloDeRed(previas, null), previas)
-  // Una zona vacía (caja fuera de lo guardado) SÍ manda: es una respuesta, no un fallo.
-  assert.deepEqual(fuentesTrasFalloDeRed(previas, []), [])
+  assert.equal(fuentesTrasFalloDeRed(previas, null), previas)
+  // El agujero real: con zona guardada pero fuera de su caja, `enCaja` da [] — y eso NO
+  // puede vaciar el mapa. Antes `[] ?? previas` devolvía [] y borraba los marcadores.
+  assert.equal(fuentesTrasFalloDeRed(previas, []), previas)
 })
