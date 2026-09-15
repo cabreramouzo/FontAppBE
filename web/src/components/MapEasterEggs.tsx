@@ -57,21 +57,60 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
     if (!map) return
     const container = map.getContainer()
     let inicio: [number, number] | null = null
+    let touchID: number | null = null
     let pasos: string[] = []
-    const down = (e: PointerEvent) => { inicio = [e.clientX, e.clientY] }
+    let ultimaDireccion = 0
+    let ultimoTouch = 0
+    const registra = (dx: number, dy: number) => {
+      const now = Date.now()
+      if (now - ultimaDireccion > 8000) pasos = []
+      ultimaDireccion = now
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 36) return
+      const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')
+      pasos = [...pasos, dir].slice(-KONAMI.length)
+      if (pasos.join() === KONAMI.join()) { pasos = []; muestra('underwater') }
+    }
+    const down = (e: PointerEvent) => {
+      // En iOS llegan touch + pointer para el mismo dedo. Allí manda touch, que Leaflet
+      // no puede cancelar porque lo escuchamos en window durante la captura.
+      if (Date.now() - ultimoTouch < 500) return
+      inicio = [e.clientX, e.clientY]
+    }
     const up = (e: PointerEvent) => {
       if (!inicio) return
       const dx = e.clientX - inicio[0]
       const dy = e.clientY - inicio[1]
       inicio = null
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < 42) return
-      const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')
-      pasos = [...pasos, dir].slice(-KONAMI.length)
-      if (pasos.join() === KONAMI.join()) { pasos = []; muestra('underwater') }
+      registra(dx, dy)
+    }
+    const touchStart = (e: TouchEvent) => {
+      if (!(e.target instanceof Node) || !container.contains(e.target) || e.touches.length !== 1) return
+      const touch = e.touches[0]
+      ultimoTouch = Date.now()
+      touchID = touch.identifier
+      inicio = [touch.clientX, touch.clientY]
+    }
+    const touchEnd = (e: TouchEvent) => {
+      if (!inicio || touchID === null) return
+      const touch = Array.from(e.changedTouches).find((item) => item.identifier === touchID)
+      if (!touch) return
+      const dx = touch.clientX - inicio[0]
+      const dy = touch.clientY - inicio[1]
+      inicio = null
+      touchID = null
+      ultimoTouch = Date.now()
+      registra(dx, dy)
     }
     container.addEventListener('pointerdown', down)
     container.addEventListener('pointerup', up)
-    return () => { container.removeEventListener('pointerdown', down); container.removeEventListener('pointerup', up) }
+    window.addEventListener('touchstart', touchStart, { capture: true, passive: true })
+    window.addEventListener('touchend', touchEnd, { capture: true, passive: true })
+    return () => {
+      container.removeEventListener('pointerdown', down)
+      container.removeEventListener('pointerup', up)
+      window.removeEventListener('touchstart', touchStart, { capture: true })
+      window.removeEventListener('touchend', touchEnd, { capture: true })
+    }
   }, [map])
 
   useEffect(() => {
