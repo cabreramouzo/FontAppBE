@@ -4,6 +4,7 @@ import { ApiError, apiFetch, getToken, googleLoginRequest, loginRequest, loginWi
 import { saveSessionForSync } from '../lib/outbox'
 import { storedSource } from '../lib/campaign'
 import { forgetCapabilities } from '../lib/capabilities'
+import { guardaUsuarioCache, olvidaUsuarioCache, sesionCaducada, usuarioCache } from '../lib/offlineSession'
 
 interface AuthState {
   user: UserResponse | null
@@ -70,14 +71,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const yo = await recuperaSesion()
           setUser(yo)
+          guardaUsuarioCache(yo)
           // Con el id, para que la cola sepa de quién es cada cosa que guarda.
           void saveSessionForSync(stored, yo.id)
         } catch (e) {
-          // La sesión SOLO se cierra si el servidor dice que el token no vale. Un fallo
-          // de red no dice nada del token: antes se borraba ante cualquier error, así
-          // que recargar sin cobertura —o mientras el servidor despertaba— te dejaba
-          // fuera. Y sin sesión, la bandeja de salida tampoco puede enviar lo encolado.
-          if (e instanceof ApiError && e.status === 401) setToken(null)
+          // La sesión SOLO se cierra si el servidor dice que el token no vale (401). Un
+          // fallo de red no dice nada del token.
+          if (sesionCaducada(e)) {
+            setToken(null)
+            olvidaUsuarioCache()
+          } else {
+            // Sin cobertura: la sesión sigue valiendo. Se usa el último usuario conocido
+            // para no aparecer deslogueado en el monte —«Mi perfil» al acceso, añadir sin
+            // sesión, la cola sin dueño—, que fue justo lo reportado. El token está
+            // intacto; en cuanto vuelva la red, `recuperaSesion` lo confirma.
+            const cache = usuarioCache<UserResponse>()
+            if (cache) {
+              setUser(cache)
+              void saveSessionForSync(stored, cache.id)
+            }
+          }
         }
       }
       setLoading(false)
@@ -108,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await loginRequest(username, password)
     setToken(res.token)
     setUser(res.user)
+    guardaUsuarioCache(res.user)
     // Lo que abría el nivel de la sesión anterior no vale para esta.
     forgetCapabilities()
     // El service worker necesita el token en IndexedDB para poder enviar la cola
@@ -120,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await googleLoginRequest(credential)
     setToken(res.token)
     setUser(res.user)
+    guardaUsuarioCache(res.user)
     forgetCapabilities()
     void saveSessionForSync(res.token, res.user.id)
     // Google también puede CREAR la cuenta. El servidor lo distingue para que esa
@@ -131,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await loginWithPasskeyRequest()
     setToken(res.token)
     setUser(res.user)
+    guardaUsuarioCache(res.user)
     forgetCapabilities()
     void saveSessionForSync(res.token, res.user.id)
   }
@@ -158,7 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function refresh() {
     if (!getToken()) return
     try {
-      setUser(await apiFetch<UserResponse>('/auth/me'))
+      const yo = await apiFetch<UserResponse>('/auth/me')
+      setUser(yo)
+      guardaUsuarioCache(yo)
     } catch {
       // si falla, dejamos el usuario como está
     }
@@ -172,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setToken(null)
     setUser(null)
+    olvidaUsuarioCache()
     forgetCapabilities()
     void saveSessionForSync(null)
   }

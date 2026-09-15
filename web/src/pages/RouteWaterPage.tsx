@@ -182,7 +182,7 @@ export function RouteWaterPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function cuenta(fontID: string, estado: string) {
+  async function cuenta(fontID: string, estado: string, fontName?: string) {
     setContadas((c) => ({ ...c, [fontID]: estado }))
     try {
       await createComment(fontID, { waterStatus: estado })
@@ -191,7 +191,7 @@ export function RouteWaterPage() {
       if (isOffline(e)) {
         // En el monte y sin cobertura es justo donde se sabe cómo estaba la fuente. La
         // bandeja de salida ya existe para esto y la vacía sola al volver la red.
-        await enqueue({ kind: 'comment', fontID, data: { waterStatus: estado } })
+        await enqueue({ kind: 'comment', fontID, fontName, data: { waterStatus: estado } })
         toast.show(t('offline.savedUpdate'))
       } else {
         setContadas((c) => { const n = { ...c }; delete n[fontID]; return n })
@@ -528,7 +528,7 @@ export function RouteWaterPage() {
                   key={claves[i]}
                   x={x}
                   contado={x.fuente.id ? contadas[x.fuente.id] : undefined}
-                  onCuenta={user && x.fuente.id ? (estado) => void cuenta(x.fuente.id!, estado) : undefined}
+                  onCuenta={user && x.fuente.id ? (estado) => void cuenta(x.fuente.id!, estado, nombreFuente(x.fuente, t)) : undefined}
                   movil={movil}
                   // Con una sola fuente no hay nada que elegir, así que no se pinta la
                   // casilla: sería un control que solo puede dejarte sin fichero.

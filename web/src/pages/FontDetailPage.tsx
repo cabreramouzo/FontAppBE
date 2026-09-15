@@ -724,7 +724,7 @@ export function FontDetailPage() {
       // Sin cobertura se queda en el móvil y sube sola al volver la red. Es justo el caso:
       // delante de una fuente sin foto es donde peor se está de cobertura.
       if (isOffline(e)) {
-        await enqueue({ kind: 'photo', fontID: font.id, photo, photoName: photo.name, photoMeta: meta })
+        await enqueue({ kind: 'photo', fontID: font.id, fontName: nombreFuente(font, t), photo, photoName: photo.name, photoMeta: meta })
         toast.show(t('offline.savedPhoto'))
         // También sin cobertura: la reseña tiene su propia cola, y el estado del agua
         // caduca mucho más deprisa que la foto.
@@ -745,7 +745,7 @@ export function FontDetailPage() {
       load()
     } catch (e) {
       if (isOffline(e)) {
-        await enqueue({ kind: 'comment', fontID: font.id, data: { waterStatus: estado } })
+        await enqueue({ kind: 'comment', fontID: font.id, fontName: nombreFuente(font, t), data: { waterStatus: estado } })
         toast.show(t('offline.savedUpdate'))
       } else {
         setError(describeError(e, t))

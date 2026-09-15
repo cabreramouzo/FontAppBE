@@ -67,6 +67,7 @@ import { ApiError, apiFetch, createComment, createFont, describeError, nearbyFon
 import { cajaRedondeada, paramsDeCaja } from '../lib/cajaMapa'
 import { casillaDe } from '../lib/casilla'
 import { cercanasEn, enCaja } from '../lib/zonaOffline'
+import { fuentesTrasFalloDeRed } from '../lib/mapFallback'
 import { zonaGuardada } from '../lib/zonaAlmacen'
 import { nombreFuente } from '../lib/fontName'
 import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
@@ -430,10 +431,15 @@ function FontMarkers({
         setTopeHasta(Date.now() + (error.retryAfterSeconds ?? 60) * 1000)
       }
       const zona = await zonaGuardada()
-      const fonts = zona ? enCaja(zona, caja) : []
-      setMapData((prev) => (
-        firmaDeFuentes(prev.fonts) === firmaDeFuentes(fonts) ? prev : { fonts, clusters: [] }
-      ))
+      const deZona = zona ? enCaja(zona, caja) : null
+      // Sin zona guardada NO se vacía el mapa: se conservan los marcadores que ya
+      // estaban (ver `fuentesTrasFalloDeRed`). Vaciar era el bug reportado en el campo —
+      // al perder cobertura desaparecían todos los puntos que ya se veían. Va en la forma
+      // funcional para leer `prev` sin capturar un `mapData` viejo en este `useCallback`.
+      setMapData((prev) => {
+        const fonts = fuentesTrasFalloDeRed(prev.fonts, deZona)
+        return firmaDeFuentes(prev.fonts) === firmaDeFuentes(fonts) ? prev : { fonts, clusters: [] }
+      })
     } finally {
       if (activeRequest.current === controller) activeRequest.current = null
     }

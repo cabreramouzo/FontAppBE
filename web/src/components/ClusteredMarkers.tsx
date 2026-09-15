@@ -238,7 +238,7 @@ export function ClusteredMarkers({
             // tal cual y el servidor decide al recibirla, con los datos de ese momento.
             // Por eso sin cobertura pasa exactamente lo mismo que con ella, y `sw.js` no
             // ha tenido que aprender nada — sigue publicando el `data` que encuentre.
-            await enqueue({ kind: 'comment', fontID, data: { waterStatus: estado, confirmIfUnchanged: true } })
+            await enqueue({ kind: 'comment', fontID, fontName: caja.dataset.nombre, data: { waterStatus: estado, confirmIfUnchanged: true } })
             caja.innerHTML = `<span class="muted small">${escapeHtml(t('offline.savedUpdate'))}</span>`
             // También sin cobertura, que es donde más se está delante de la fuente: la
             // foto se encola igual. Las gotas no se sabrán si el baremo no está cacheado,
@@ -288,7 +288,7 @@ export function ClusteredMarkers({
         } catch (e) {
           if (isOffline(e)) {
             // Delante de una fuente sin foto es justo donde peor se está de cobertura.
-            await enqueue({ kind: 'photo', fontID, photo, photoName: photo.name, photoMeta: meta })
+            await enqueue({ kind: 'photo', fontID, fontName: caja.dataset.nombre, photo, photoName: photo.name, photoMeta: meta })
             caja.innerHTML = `<span class="muted small">${escapeHtml(t('offline.savedUpdate'))}</span>`
           } else {
             caja.innerHTML = `<span class="muted small">${escapeHtml(describeError(e, t))}</span>`
@@ -342,7 +342,7 @@ export function ClusteredMarkers({
           <div class="muted small" title="${escapeHtml(t(confidenceDetailKey(confidence)))}">${CONFIDENCE_EMOJI[confidence]} ${escapeHtml(t(confidenceLabelKey(confidence)))}</div>
           ${f.lastUpdate ? `<div class="muted small">${t('popup.updated', { when: timeAgo(f.lastUpdate, t) })}${stale ? ' ⚠️' : ''}</div>` : ''}
         </div>
-        ${user && !reseñadaHacePoco(f.id) ? `<div class="popup-quick" data-font="${f.id}" data-antes="${f.lastWaterStatus ?? ''}" data-sinfoto="${f.image ? '' : '1'}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
+        ${user && !reseñadaHacePoco(f.id) ? `<div class="popup-quick" data-font="${f.id}" data-nombre="${escapeHtml(nombreFuente(f, t))}" data-antes="${f.lastWaterStatus ?? ''}" data-sinfoto="${f.image ? '' : '1'}" role="group" aria-label="${escapeHtml(t('popup.howIsIt'))}">
           <span class="muted small">${escapeHtml(t('popup.howIsIt'))}</span>
           <div class="popup-quick-row">
             ${ESTADOS_RAPIDOS.map((e) => {

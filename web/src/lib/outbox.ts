@@ -1,4 +1,5 @@
 import { apuntaResena } from './misResenas'
+import { desmontaFoto, fotoDe, tieneFoto } from './outboxPhoto'
 import type { PhotoUploadMeta } from './image'
 import { ApiError, createComment, createFont, setFontPhoto, trackInteraction, uploadImage, type NewComment, type NewFont } from '../api/client'
 
@@ -31,16 +32,31 @@ export type OutboxItem =
   // Alta de fuente. `waterStatus` viaja aquí (no como item aparte) para no encolar una
   // reseña que apunte a una fuente que todavía no existe.
   | { kind: 'font'; data: NewFont; waterStatus?: string; photo?: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
-  // Actualización/reseña sobre una fuente que YA existe.
-  | { kind: 'comment'; fontID: string; data: NewComment; photo?: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
+  // Actualización/reseña sobre una fuente que YA existe. `fontName` es solo para que el
+  // inspector «ver mis datos» enseñe el nombre y no un UUID: la cola solo tiene el id de
+  // la fuente, y a quien mira sus pendientes le dice más «Font del Faig» que el UUID. No
+  // se envía al servidor (que ya sabe el nombre por el id); si falta, se cae al id.
+  | { kind: 'comment'; fontID: string; fontName?: string; data: NewComment; photo?: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
   // Solo la foto de una fuente que ya existe, sin reseña. Está en la cola por lo mismo
   // que las otras dos: cuando estás delante de una fuente sin foto es justo cuando peor
   // cobertura hay, y perder la foto por eso sería perder la única aportación posible
   // desde ahí.
-  | { kind: 'photo'; fontID: string; photo: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
+  | { kind: 'photo'; fontID: string; fontName?: string; photo: Blob; photoName?: string; photoMeta?: PhotoUploadMeta }
 
 type StoredItem = OutboxItem & {
   id: number; queuedAt: number; attempts: number; claimedAt?: number
+  /**
+   * La foto guardada como BYTES, no como Blob.
+   *
+   * En iOS/WebKit un `Blob` recuperado de IndexedDB deja de poder leerse en cuanto se
+   * cierra la transacción que lo sacó: `URL.createObjectURL` da una imagen rota y `fetch`
+   * al subirlo falla como si no hubiera red. La primera vez va —el Blob sigue en memoria
+   * recién capturado— y a la siguiente apertura ya no. Era el bug reportado en el campo:
+   * la foto se veía en el inspector la primera vez y luego salía el «?», y la subida se
+   * quedaba atascada a 0 intentos (error de red → transitorio → reintentar para siempre).
+   * Un `ArrayBuffer` sí sobrevive intacto; el Blob se reconstruye al usarlo (`fotoDe`).
+   */
+  photoBytes?: ArrayBuffer; photoType?: string
   /** La sesión caducó al intentar enviarlo: hace falta volver a entrar. */
   needsAuth?: boolean
   /**
@@ -155,7 +171,9 @@ export async function enqueue(item: OutboxItem): Promise<void> {
   // Se apunta de quién es AL ENCOLAR y no al enviar, que es justo el fallo que esto
   // arregla: entre las dos cosas puede pasar un cambio de cuenta.
   const userID = await quienSoy()
-  await tx('readwrite', (s) => s.add({ ...item, userID, queuedAt: Date.now(), attempts: 0 } as unknown as StoredItem))
+  // La foto se guarda como bytes (ver `photoBytes`): un Blob de IDB muere en iOS.
+  const guardable = await paraGuardar(item)
+  await tx('readwrite', (s) => s.add({ ...guardable, userID, queuedAt: Date.now(), attempts: 0 } as unknown as StoredItem))
   // Reseña con estado encolada offline: cuenta como «ya he dicho cómo está» (ver misResenas).
   if (item.kind === 'comment' && item.data?.waterStatus) apuntaResena(item.fontID)
   notifyChanged()
@@ -263,7 +281,7 @@ export interface PendingView {
 }
 
 function fieldsOf(item: StoredItem): Record<string, unknown> {
-  const base = { hasPhoto: Boolean(item.photo) }
+  const base = { hasPhoto: tieneFoto(item) }
   if (item.kind === 'font') {
     const d = item.data
     return {
@@ -276,11 +294,11 @@ function fieldsOf(item: StoredItem): Record<string, unknown> {
   if (item.kind === 'comment') {
     const d = item.data
     return {
-      ...base, type: 'review', fontID: item.fontID,
+      ...base, type: 'review', name: item.fontName ?? null, fontID: item.fontID,
       waterStatus: d.waterStatus ?? null, rating: d.rating ?? null, text: d.body ?? null,
     }
   }
-  return { ...base, type: 'photo', fontID: item.fontID }
+  return { ...base, type: 'photo', name: item.fontName ?? null, fontID: item.fontID }
 }
 
 /** The queued contributions, readable and in queue order (oldest first). */
@@ -291,7 +309,7 @@ export async function listPending(): Promise<PendingView[]> {
     .sort((a, b) => a.queuedAt - b.queuedAt)
     .map((it) => ({
       id: it.id, kind: it.kind, queuedAt: it.queuedAt, attempts: it.attempts,
-      needsAuth: it.needsAuth, mine: esMia(it, yo), fields: fieldsOf(it), photo: it.photo,
+      needsAuth: it.needsAuth, mine: esMia(it, yo), fields: fieldsOf(it), photo: fotoDe(it),
     }))
 }
 
@@ -307,6 +325,20 @@ export function isOffline(e: unknown): boolean {
 
 function toFile(blob: Blob, name?: string): File {
   return new File([blob], name || 'photo.jpg', { type: blob.type || 'image/jpeg' })
+}
+
+/**
+ * Deja el elemento listo para IndexedDB: la foto pasa a BYTES y se quita el Blob, que no
+ * debe llegar nunca al almacén (ver `photoBytes` y `outboxPhoto`). Los bytes se leen
+ * aquí, con el Blob todavía fresco en memoria recién capturado.
+ */
+async function paraGuardar(item: OutboxItem): Promise<Record<string, unknown>> {
+  const conFoto = item as { photo?: Blob }
+  if (!conFoto.photo) return { ...item }
+  const { photoBytes, photoType } = await desmontaFoto(conFoto.photo)
+  const copia = { ...item } as Record<string, unknown>
+  delete copia.photo
+  return { ...copia, photoBytes, photoType }
 }
 
 let flushing = false
@@ -352,8 +384,11 @@ export async function flushOutbox(forzado = false): Promise<number> {
         // El EXIF se guardó al encolar, no ahora: lo que hay en la cola ya está
         // comprimido y por tanto sin metadatos. Y es justo aquí donde más importa —
         // sin cobertura estabas delante de la fuente, y esto puede subirse días después.
-        const image = item.photo
-          ? await uploadImage(toFile(item.photo, item.photoName), item.photoMeta)
+        // Blob fresco desde los bytes: el que sale de IDB viene muerto en iOS y la subida
+        // fallaría como si no hubiera red, dejando la aportación atascada para siempre.
+        const foto = fotoDe(item)
+        const image = foto
+          ? await uploadImage(toFile(foto, item.photoName), item.photoMeta)
           : undefined
         if (item.kind === 'font') {
           const font = await createFont({ ...item.data, image: image ?? item.data.image }, true)
