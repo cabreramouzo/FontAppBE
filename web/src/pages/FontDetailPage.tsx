@@ -92,6 +92,7 @@ import { BadgeArt } from '../components/BadgeArt'
 import { BADGE_ART } from '../lib/levelBadges'
 import { enqueue, isOffline } from '../lib/outbox'
 import { fuenteDe } from '../lib/zonaOffline'
+import { fuenteVista } from '../lib/fuentesVistas'
 import { zonaGuardada } from '../lib/zonaAlmacen'
 import { PhotoExifNote } from '../components/PhotoExifNote'
 import { ZoomableImage } from '../components/ZoomableImage'
@@ -820,8 +821,12 @@ export function FontDetailPage() {
       // una pantalla en blanco — con la fuente guardada en el móvil, que es la situación
       // exacta para la que se guarda. Y es justo la ficha la que lleva la flecha de los
       // últimos metros, o sea lo único que sirve estando delante.
+      // Sin cobertura, lo que haya en la zona guardada; y si no guardaste zona, la fuente
+      // que ya viste en el mapa (`fuenteVista`) — si ves el pin, tocarlo tiene que abrir
+      // algo. En ambos casos es un resumen: sin reseñas, pero con lo esencial y la flecha
+      // de los últimos metros. Se dice en pantalla (`setDesdeZona`).
       const zona = isOffline(e) ? await zonaGuardada() : null
-      const guardada = zona ? fuenteDe(zona, id) : null
+      const guardada = (zona ? fuenteDe(zona, id) : null) ?? (isOffline(e) ? fuenteVista<Font>(id) : null)
       if (!guardada) throw e
       f = guardada
       // Reseñas e incidencias no se guardan: la zona son las fuentes. Se dice en pantalla

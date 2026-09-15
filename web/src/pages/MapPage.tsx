@@ -68,6 +68,7 @@ import { cajaRedondeada, paramsDeCaja } from '../lib/cajaMapa'
 import { casillaDe } from '../lib/casilla'
 import { cercanasEn, enCaja } from '../lib/zonaOffline'
 import { fuentesTrasFalloDeRed } from '../lib/mapFallback'
+import { recuerdaVistas } from '../lib/fuentesVistas'
 import { zonaGuardada } from '../lib/zonaAlmacen'
 import { nombreFuente } from '../lib/fontName'
 import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
@@ -412,6 +413,9 @@ function FontMarkers({
         nuevas = { total: fonts.length, fonts, clusters: [] }
       }
       if (mine !== requestNumber.current) return
+      // Apunta lo cargado para que la ficha funcione offline sin haber guardado zona:
+      // si ves el pin, tocarlo debe abrir su info aunque se vaya la cobertura.
+      recuerdaVistas(nuevas.fonts)
       // Se conserva el array anterior si lo que se pinta no ha cambiado. Cambiar su
       // identidad reconstruye TODOS los marcadores, que es caro y además se lleva por
       // delante el popup abierto — y recentrar el mapa estando parado devuelve
