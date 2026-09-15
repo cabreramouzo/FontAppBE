@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Fade from '@mui/material/Fade'
 import Typography from '@mui/material/Typography'
@@ -12,8 +12,9 @@ import { useI18n } from '../i18n/I18nContext'
  * Android, y coherente con la casa: celebra el dato del que va la app.
  *
  * La cifra viene de `GET /stats` (cacheada), y se dice con la mitad honesta —cuántas ha
- * comprobado alguien— que es justo lo que invita a aportar. Se cierra al tocar o solo a
- * los seis segundos. Con `prefers-reduced-motion` el confeti no cae (lo decide él), pero
+ * comprobado alguien— que es justo lo que invita a aportar. Se cierra solo a los seis
+ * segundos: los toques de más no deben apagar accidentalmente el premio que acaban de
+ * descubrir. Con `prefers-reduced-motion` el confeti no cae (lo decide él), pero
  * el cartel con la cifra sale igual.
  */
 export function EasterEggFuentes(
@@ -21,13 +22,8 @@ export function EasterEggFuentes(
 ) {
   const { t, lang } = useI18n()
   const [stats, setStats] = useState<Stats | null>(precargado ?? null)
-  // Momento de apertura: un margen para que el toque reflejo justo después del séptimo no
-  // la cierre de golpe (era el «al 8º se quita»). Pasado ese margen, tocar sí cierra.
-  const abiertoEn = useRef(0)
-
   useEffect(() => {
     if (!abierto) return
-    abiertoEn.current = Date.now()
     let vivo = true
     // Si ya venía precargada (se pidió en el primer toque), no se vuelve a pedir.
     if (!precargado) void getStats().then((s) => { if (vivo) setStats(s) }).catch(() => {})
@@ -38,15 +34,15 @@ export function EasterEggFuentes(
 
   if (!abierto) return null
   const nf = new Intl.NumberFormat(lang)
-  const cerrarSiToca = () => { if (Date.now() - abiertoEn.current > 1200) onClose() }
   return (
     <>
       <Confetti activo forma="gotas" />
       <Box
-        onClick={cerrarSiToca}
         sx={{
           position: 'fixed', inset: 0, zIndex: 2001,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          // La capa absorbe los toques 5º, 6º… pero no los interpreta como cierre ni deja
+          // que activen por accidente los controles del mapa que hay debajo.
         }}
       >
         <Fade in appear>

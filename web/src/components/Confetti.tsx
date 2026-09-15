@@ -41,7 +41,7 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
     // El confeti cae desde arriba; las gotas del easter egg estallan desde el centro y
     // después llueven. No hacen falta miles: además de tapar el mapa, rasterizar tantos
     // emoji por fotograma castigaba especialmente a Safari en un iPhone.
-    const gravedad = forma === 'gotas' ? 0.12 : 0.045
+    const gravedad = forma === 'gotas' ? 0.18 : 0.045
     const cx = ancho / 2
     const cy = alto / 2
 
@@ -56,11 +56,11 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
           // pelín de empuje hacia arriba para que dibujen un arco antes de caer.
           ...Array.from({ length: 90 }, () => {
             const ang = Math.random() * Math.PI * 2
-            const v = 4 + Math.random() * 8
+            const v = 5.5 + Math.random() * 9.5
             return {
               x: cx, y: cy,
               w: 14 + Math.random() * 16, h: 14 + Math.random() * 16,
-              vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 1.5,
+              vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 2,
               giro: 0, vGiro: 0, color: color(), alpha: 0.72 + Math.random() * 0.28,
             }
           }),
@@ -70,7 +70,7 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
             x: Math.random() * ancho,
             y: -30 - Math.random() * alto * 0.85,
             w: 12 + Math.random() * 15, h: 12 + Math.random() * 15,
-            vx: -0.55 + Math.random() * 1.1, vy: 2 + Math.random() * 2.8,
+            vx: -0.7 + Math.random() * 1.4, vy: 3.5 + Math.random() * 3,
             giro: 0, vGiro: 0, color: color(), alpha: 0.58 + Math.random() * 0.38,
           })),
         ]
