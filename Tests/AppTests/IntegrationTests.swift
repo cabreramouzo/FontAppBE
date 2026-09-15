@@ -1529,6 +1529,31 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// `GET /stats` cuenta las fuentes visibles y las comprobadas (el número del easter
+    /// egg del logo). Es público y va cacheado; se limpia la caché estática que los tests
+    /// comparten para no leer la cifra de otro caso.
+    func testStatsCountsFountains() async throws {
+        try await withApp { app in
+            await StatsController.cache.clear()
+            _ = try await register(app, username: "statsuser")
+            let tok = try await login(app, username: "statsuser")
+            let f1 = try await createFont(app, token: tok, name: "Una", lat: 41, long: 2)
+            _ = try await createFont(app, token: tok, name: "Dos", lat: 41.2, long: 2.2)
+            // Una reseña con estado sobre f1 → cuenta como «comprobada».
+            try await app.test(.POST, "fonts/\(f1)/comments", headers: bearer(tok), beforeRequest: { req in
+                req.headers.add(name: .userAgent, value: navegadorUA)
+                try req.content.encode(CreateCommentDTO(body: "raja", rating: nil, waterStatus: "flowing", image: nil, confirmIfUnchanged: nil))
+            }, afterResponse: { _ in })
+
+            try await app.test(.GET, "stats") { res in
+                XCTAssertEqual(res.status, .ok)
+                let s = try res.content.decode(StatsController.StatsResponse.self)
+                XCTAssertEqual(s.total, 2)
+                XCTAssertEqual(s.checked, 1)
+            }
+        }
+    }
+
     /// "Borrar" la cuenta la anonimiza: las fuentes se conservan, los datos
     /// personales se eliminan y el login deja de funcionar.
     func testDeleteAccountAnonymizes() async throws {

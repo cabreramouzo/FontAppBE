@@ -200,6 +200,10 @@ export function trackPlatformOnce() {
 export const getCampaignStats = (days: 30 | 180 | 'all' = 30) =>
   apiFetch<CampaignSummary[]>(`/admin/analytics/campaigns${days === 'all' ? '' : `?days=${days}`}`)
 
+/** Cifras globales de la base (el easter egg del logo, y reutilizable). */
+export interface Stats { total: number; checked: number }
+export const getStats = () => apiFetch<Stats>('/stats')
+
 export const getInteractionStats = (days: 30 | 180 | 'all' = 30) =>
   apiFetch<InteractionSummary[]>(`/admin/analytics${days === 'all' ? '' : `?days=${days}`}`)
 

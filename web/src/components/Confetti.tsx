@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react'
  * preferencia pide que no ocurra. El diálogo que lo acompaña sigue apareciendo entero,
  * así que quien la tiene puesta se entera igual de lo que ha ganado.
  */
-export function Confetti({ activo }: { activo: boolean }) {
+export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma?: 'confeti' | 'gotas' }) {
   const ref = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -33,7 +33,10 @@ export function Confetti({ activo }: { activo: boolean }) {
 
     // Azules y dorados: el agua de la aplicación y el metal de las medallas. Un arcoíris
     // genérico no tendría nada que ver con lo que se está celebrando.
-    const colores = ['#3fa9f5', '#7fd3ff', '#f2c14e', '#e8a33d', '#ffffff', '#2b7fc4']
+    // En modo `gotas` (el easter egg del logo) solo agua, sin el dorado de las medallas.
+    const colores = forma === 'gotas'
+      ? ['#3fa9f5', '#7fd3ff', '#2b7fc4', '#5bc0eb', '#a8e0ff']
+      : ['#3fa9f5', '#7fd3ff', '#f2c14e', '#e8a33d', '#ffffff', '#2b7fc4']
     const piezas = Array.from({ length: 110 }, () => ({
       x: Math.random() * ancho,
       // Escalonadas por encima del borde, o el primer fotograma es una franja sólida de
@@ -64,11 +67,21 @@ export function Confetti({ activo }: { activo: boolean }) {
         if (p.y < alto + 30) quedan++
         ctx.save()
         ctx.translate(p.x, p.y)
-        ctx.rotate(p.giro)
         ctx.fillStyle = p.color
-        // Escalar el alto por el coseno del giro finge que la pieza es plana y da la
-        // vuelta, que es lo que hace que parezca papel y no un cuadrado que rota.
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.giro)))
+        if (forma === 'gotas') {
+          // Una gota: cae recta (sin giro), punta arriba y panza abajo con dos curvas.
+          const r = p.w / 2
+          ctx.beginPath()
+          ctx.moveTo(0, -p.h / 2)
+          ctx.quadraticCurveTo(r, 0, 0, p.h / 2)
+          ctx.quadraticCurveTo(-r, 0, 0, -p.h / 2)
+          ctx.fill()
+        } else {
+          ctx.rotate(p.giro)
+          // Escalar el alto por el coseno del giro finge que la pieza es plana y da la
+          // vuelta, que es lo que hace que parezca papel y no un cuadrado que rota.
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.giro)))
+        }
         ctx.restore()
       }
       if (quedan === 0) return   // todas fuera: se deja de pintar
@@ -77,7 +90,7 @@ export function Confetti({ activo }: { activo: boolean }) {
     raf = requestAnimationFrame(paso)
 
     return () => { vivo = false; cancelAnimationFrame(raf) }
-  }, [activo])
+  }, [activo, forma])
 
   if (!activo) return null
   return (

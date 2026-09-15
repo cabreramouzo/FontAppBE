@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import AppBar from '@mui/material/AppBar'
 import Toolbar from '@mui/material/Toolbar'
@@ -19,7 +19,7 @@ import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
-import { getFlags, getNewUsers, trackInteraction, trackPlatformOnce } from '../api/client'
+import { getFlags, getNewUsers, getStats, trackInteraction, trackPlatformOnce, type Stats } from '../api/client'
 import { lastSeenAt } from '../lib/newUsers'
 import { marcarNovedadesVistas, programarZumbidos } from '../lib/newsNudge'
 import { Footer } from './Footer'
@@ -34,6 +34,7 @@ import { AppUpdatePrompt } from './AppUpdatePrompt'
 import { RoleChip, StaffStripe, staffRole } from './StaffBadge'
 import { NotificationBell } from './NotificationBell'
 import { MoreMenu } from './MoreMenu'
+import { EasterEggFuentes } from './EasterEggFuentes'
 import { TabBar } from './TabBar'
 import { mainSection } from '../lib/navigation'
 
@@ -72,6 +73,22 @@ export function Layout({ children }: { children: ReactNode }) {
   const [flagCount, setFlagCount] = useState(0)
   const [newUsers, setNewUsers] = useState(0)
   const [confirmLogout, setConfirmLogout] = useState(false)
+  // Easter egg: siete toques seguidos en el logo hacen llover gotas con el número de
+  // fuentes. El contador vive en refs (no re-renderiza al tocar) y sobrevive a la
+  // navegación a «/» del propio logo porque `Layout` no se desmonta entre rutas.
+  const [eggAbierto, setEggAbierto] = useState(false)
+  const [eggStats, setEggStats] = useState<Stats | null>(null)
+  const toquesLogo = useRef(0)
+  const ultimoToque = useRef(0)
+  const alTocarLogo = () => {
+    if (eggAbierto) return // ya abierta: los toques 8, 9, 11… no cuentan ni la reabren
+    const ahora = Date.now()
+    toquesLogo.current = ahora - ultimoToque.current < 600 ? toquesLogo.current + 1 : 1
+    ultimoToque.current = ahora
+    // Al empezar la ráfaga se precarga la cifra: para el 7º toque ya está y no parpadea «…».
+    if (toquesLogo.current === 1) void getStats().then(setEggStats).catch(() => {})
+    if (toquesLogo.current >= 7) { toquesLogo.current = 0; setEggAbierto(true) }
+  }
   // El icono de Novedades se mueve un momento para que se sepa que está ahí (ver
   // `lib/newsNudge.ts`, que es quien decide si toca y lleva la cuenta).
   // Un contador y no un booleano: con `zumbando: true/false`, el segundo zumbido vuelve
@@ -165,6 +182,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <Typography
                 component={RouterLink}
                 to="/"
+                onClick={alTocarLogo}
                 variant="h6"
                 sx={{
                   fontWeight: 800, color: 'primary.main', textDecoration: 'none',
@@ -381,6 +399,8 @@ export function Layout({ children }: { children: ReactNode }) {
         <InstallPrompt />
       </FranjaDeAvisos>
       <Box component="main" className="main">{children}</Box>
+
+      <EasterEggFuentes abierto={eggAbierto} onClose={() => setEggAbierto(false)} precargado={eggStats} />
 
       <Dialog open={confirmLogout} onClose={() => setConfirmLogout(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>{t('logout.confirmTitle')}</DialogTitle>
