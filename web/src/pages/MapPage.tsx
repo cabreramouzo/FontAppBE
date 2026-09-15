@@ -99,6 +99,7 @@ import { ExportGpxButton } from '../components/ExportGpxButton'
 import UploadIcon from '@mui/icons-material/UploadFileOutlined'
 import CloudDownloadIcon from '@mui/icons-material/CloudDownloadOutlined'
 import { NuevoBadge } from '../components/NuevoBadge'
+import { RelocateFont } from '../components/RelocateFont'
 import { MapEasterEggs } from '../components/MapEasterEggs'
 import { parseSavedMapView, vistaAlAbrir, type SavedMapView } from '../lib/mapView'
 
@@ -1185,6 +1186,7 @@ function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f
 function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [number, number] | null; onCancel: () => void; onCreated: () => void }) {
   const { t } = useI18n()
   const toast = useToast()
+  const movil = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [source, setSource] = useState<WaterSource | ''>('')
@@ -1200,6 +1202,9 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
   const [saving, setSaving] = useState(false)
   // Ubicación efectiva: el clic del usuario, que la foto puede sugerir cambiar.
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: pos.lat, lng: pos.lng })
+  // Punto con el que se abrió el formulario. No cambia al recolocar el pin y permite que
+  // «deshacer» tenga un significado estable dentro del mapa móvil.
+  const [original] = useState({ lat: pos.lat, lng: pos.lng })
   const [gpsHint, setGpsHint] = useState<GpsCoords | null>(null)
   const meCoords = me ? { lat: me[0], lng: me[1] } : null
   const remote = isRemotePlacement(coords, meCoords)
@@ -1299,14 +1304,23 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
     }
   }
 
-  return (
-    <div className="panel">
-      <Typography variant="h6">{t('newFont.title')}</Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-        Lat {coords.lat.toFixed(5)}, Long {coords.lng.toFixed(5)}
-      </Typography>
-      <Typography variant="caption" color="text.secondary">{t('newFont.tapToMove')}</Typography>
-      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+  const campos = (
+    <>
+      {movil ? (
+        <RelocateFont
+          lat={coords.lat}
+          lng={coords.lng}
+          original={original}
+          onChange={(lat, lng) => setCoords({ lat, lng })}
+        />
+      ) : (
+        <>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            Lat {coords.lat.toFixed(5)}, Long {coords.lng.toFixed(5)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">{t('newFont.tapToMove')}</Typography>
+        </>
+      )}
         {remote && remoteKm != null && (
           <Alert severity="info">
             <Typography variant="body2" sx={{ fontWeight: 700 }}>
@@ -1381,10 +1395,75 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
             )}
           </Alert>
         )}
-        <Stack direction="row" spacing={1}>
-          <Button type="submit" variant="contained" disableElevation disabled={saving}>{saving ? t('form.saving') : t('form.create')}</Button>
-          <Button onClick={onCancel}>{t('form.cancel')}</Button>
-        </Stack>
+    </>
+  )
+
+  const acciones = (
+    <>
+      <Button
+        onClick={onCancel}
+        disabled={saving}
+        variant={movil ? 'outlined' : 'text'}
+        color="inherit"
+        sx={{ minHeight: { xs: 48, sm: 36 }, flex: { xs: 1, sm: '0 0 auto' } }}
+      >
+        {t('form.cancel')}
+      </Button>
+      <Button
+        type="submit"
+        variant="contained"
+        disableElevation
+        disabled={saving}
+        sx={{ minHeight: { xs: 48, sm: 36 }, flex: { xs: 1, sm: '0 0 auto' } }}
+      >
+        {saving ? t('form.saving') : t('form.create')}
+      </Button>
+    </>
+  )
+
+  if (movil) {
+    return (
+      <Dialog fullScreen open onClose={saving ? undefined : onCancel}>
+        {/* Una pantalla y no un popup: el mapa de ubicación forma parte del formulario,
+            el contenido puede desplazarse con el teclado abierto y las acciones quedan
+            siempre al alcance del pulgar, por encima del indicador de inicio del iPhone. */}
+        <Box component="form" onSubmit={submit} sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+          <Paper
+            square
+            elevation={0}
+            sx={{
+              position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'center',
+              gap: 1, px: 1, pt: 'env(safe-area-inset-top)', borderBottom: 1, borderColor: 'divider',
+            }}
+          >
+            <IconButton onClick={onCancel} disabled={saving} aria-label={t('form.cancel')} size="large">
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>{t('newFont.title')}</Typography>
+          </Paper>
+          <DialogContent sx={{ flex: 1, px: 2, py: 2, overflowY: 'auto' }}>
+            <Stack spacing={2}>{campos}</Stack>
+          </DialogContent>
+          <Box
+            sx={{
+              position: 'sticky', bottom: 0, zIndex: 2, display: 'flex', gap: 1,
+              px: 2, pt: 1, pb: 'max(12px, env(safe-area-inset-bottom))',
+              bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider',
+            }}
+          >
+            {acciones}
+          </Box>
+        </Box>
+      </Dialog>
+    )
+  }
+
+  return (
+    <div className="panel">
+      <Typography variant="h6">{t('newFont.title')}</Typography>
+      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+        {campos}
+        <Stack direction="row" spacing={1}>{acciones}</Stack>
       </Box>
     </div>
   )
