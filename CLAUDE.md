@@ -4183,8 +4183,10 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - Son decorativos: nunca conceden gotas, permisos, insignias ni generan analítica. El
   logotipo abre el contador global con cuatro toques; mantener «Añadir fuente» 850 ms
   lanza la fuente de los deseos; `H2O`, la secuencia Konami (teclado o deslizamientos),
-  siete toques en la atribución, una fuente a medianoche y cuatro arrastres sobre el mar
-  activan los demás. `MapEasterEggs` concentra los gestos para no dispersarlos por el mapa.
+  siete toques en la atribución, una fuente a medianoche y cuatro arrastres sobre el
+  Atlántico abierto a zoom ≤ 6 activan los demás. La ballena sale como máximo una vez por
+  sesión: nunca debe interrumpir movimientos normales por tierra. `MapEasterEggs`
+  concentra los gestos para no dispersarlos por el mapa.
 - La lluvia real solo cambia `💧` por `💧☂️`. `/weather/rain` valida y redondea la
   coordenada a una décima (~11 km), consulta Open-Meteo desde el servidor y guarda el
   booleano 30 minutos **solo en memoria**. No toca PostgreSQL, no identifica al usuario y

@@ -10,8 +10,10 @@ type Sorpresa = 'wish' | 'underwater' | 'midnight' | 'cartographers' | 'ocean' |
 
 const KONAMI = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right']
 const OCEAN_BOXES = [
-  { minLat: 15, maxLat: 68, minLng: -45, maxLng: -11 }, // Atlántico
-  { minLat: 30, maxLat: 46, minLng: 2, maxLng: 6 },     // Mediterráneo occidental
+  // Solo alta mar. La primera versión incluía un rectángulo mediterráneo (2–6 E,
+  // 30–46 N) que también cubría Cataluña y Francia: cuatro movimientos normales podían
+  // sacar una ballena en tierra. Es preferible que el secreto sea difícil a que moleste.
+  { minLat: 22, maxLat: 61, minLng: -40, maxLng: -15 },
 ]
 
 function enOceano(lat: number, lng: number) {
@@ -58,6 +60,7 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
     let taps = 0
     let primero = 0
     let arrastres: number[] = []
+    let ballenaVista = (() => { try { return sessionStorage.getItem('fontapp_whale_seen') === '1' } catch { return false } })()
     let inicioArrastre: LatLng | null = null
     let konami: string[] = []
     let ultimoPaso = 0
@@ -94,10 +97,17 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
         inicioArrastre = null
       }
       const c = map.getCenter()
-      if (!enOceano(c.lat, c.lng)) { arrastres = []; return }
+      // A zoom cercano incluso una caja conservadora puede contener una isla. La ballena
+      // pertenece a explorar el océano, no a desplazarse por una calle o una ruta.
+      if (ballenaVista || map.getZoom() > 6 || !enOceano(c.lat, c.lng)) { arrastres = []; return }
       const now = Date.now()
       arrastres = [...arrastres.filter((n) => now - n < 12000), now]
-      if (arrastres.length >= 4) { arrastres = []; muestra('ocean') }
+      if (arrastres.length >= 4) {
+        arrastres = []
+        ballenaVista = true
+        try { sessionStorage.setItem('fontapp_whale_seen', '1') } catch { /* memoria privada */ }
+        muestra('ocean')
+      }
     }
     map.getContainer().addEventListener('click', click)
     map.on('dragstart', dragStart)
