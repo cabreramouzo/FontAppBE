@@ -8,7 +8,12 @@ import { useI18n } from '../i18n/I18nContext'
 
 // Selector de imagen con aspecto de botón (no el input de archivos nativo).
 // En móvil abre cámara/galería; muestra miniatura al elegir foto.
-export function ImagePicker({ file, onChange }: { file: File | null; onChange: (f: File | null) => void }) {
+export function ImagePicker({ file, onChange, placeholder = false }: {
+  file: File | null
+  onChange: (f: File | null) => void
+  /** Zona grande para formularios móviles donde la foto es una parte principal. */
+  placeholder?: boolean
+}) {
   const { t } = useI18n()
   const [preview, setPreview] = useState<string | null>(null)
 
@@ -39,7 +44,24 @@ export function ImagePicker({ file, onChange }: { file: File | null; onChange: (
   }
 
   return (
-    <Button component="label" variant="outlined" startIcon={<PhotoCameraIcon />} sx={{ alignSelf: 'flex-start', borderStyle: 'dashed' }}>
+    <Button
+      component="label"
+      variant="outlined"
+      startIcon={<PhotoCameraIcon />}
+      fullWidth={placeholder}
+      sx={{
+        alignSelf: placeholder ? 'stretch' : 'flex-start',
+        borderStyle: 'dashed',
+        ...(placeholder && {
+          minHeight: 96,
+          flexDirection: 'column',
+          gap: 0.75,
+          bgcolor: 'action.hover',
+          '& .MuiButton-startIcon': { m: 0 },
+          '& .MuiSvgIcon-root': { fontSize: 28 },
+        }),
+      }}
+    >
       {t('image.add').replace(/^[^\p{L}]+/u, '')}
       <input type="file" accept="image/*" hidden onChange={(e) => onChange(e.target.files?.[0] ?? null)} />
     </Button>

@@ -1359,7 +1359,7 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
           </TextField>
           <DrinkableHelpButton />
         </Box>
-        <ImagePicker file={file} onChange={pickFile} />
+        <ImagePicker file={file} onChange={pickFile} placeholder={movil} />
         {gpsHint && (
           <Alert
             severity="info"
