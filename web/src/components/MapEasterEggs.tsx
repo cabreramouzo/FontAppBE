@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import Fade from '@mui/material/Fade'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import type { Map as LeafletMap } from 'leaflet'
+import type { LatLng, Map as LeafletMap } from 'leaflet'
 import { useI18n } from '../i18n/I18nContext'
 
 type Sorpresa = 'wish' | 'underwater' | 'midnight' | 'cartographers' | 'ocean' | 'chemistry'
@@ -55,69 +55,12 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
 
   useEffect(() => {
     if (!map) return
-    const container = map.getContainer()
-    let inicio: [number, number] | null = null
-    let touchID: number | null = null
-    let pasos: string[] = []
-    let ultimaDireccion = 0
-    let ultimoTouch = 0
-    const registra = (dx: number, dy: number) => {
-      const now = Date.now()
-      if (now - ultimaDireccion > 8000) pasos = []
-      ultimaDireccion = now
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < 36) return
-      const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')
-      pasos = [...pasos, dir].slice(-KONAMI.length)
-      if (pasos.join() === KONAMI.join()) { pasos = []; muestra('underwater') }
-    }
-    const down = (e: PointerEvent) => {
-      // En iOS llegan touch + pointer para el mismo dedo. Allí manda touch, que Leaflet
-      // no puede cancelar porque lo escuchamos en window durante la captura.
-      if (Date.now() - ultimoTouch < 500) return
-      inicio = [e.clientX, e.clientY]
-    }
-    const up = (e: PointerEvent) => {
-      if (!inicio) return
-      const dx = e.clientX - inicio[0]
-      const dy = e.clientY - inicio[1]
-      inicio = null
-      registra(dx, dy)
-    }
-    const touchStart = (e: TouchEvent) => {
-      if (!(e.target instanceof Node) || !container.contains(e.target) || e.touches.length !== 1) return
-      const touch = e.touches[0]
-      ultimoTouch = Date.now()
-      touchID = touch.identifier
-      inicio = [touch.clientX, touch.clientY]
-    }
-    const touchEnd = (e: TouchEvent) => {
-      if (!inicio || touchID === null) return
-      const touch = Array.from(e.changedTouches).find((item) => item.identifier === touchID)
-      if (!touch) return
-      const dx = touch.clientX - inicio[0]
-      const dy = touch.clientY - inicio[1]
-      inicio = null
-      touchID = null
-      ultimoTouch = Date.now()
-      registra(dx, dy)
-    }
-    container.addEventListener('pointerdown', down)
-    container.addEventListener('pointerup', up)
-    window.addEventListener('touchstart', touchStart, { capture: true, passive: true })
-    window.addEventListener('touchend', touchEnd, { capture: true, passive: true })
-    return () => {
-      container.removeEventListener('pointerdown', down)
-      container.removeEventListener('pointerup', up)
-      window.removeEventListener('touchstart', touchStart, { capture: true })
-      window.removeEventListener('touchend', touchEnd, { capture: true })
-    }
-  }, [map])
-
-  useEffect(() => {
-    if (!map) return
     let taps = 0
     let primero = 0
     let arrastres: number[] = []
+    let inicioArrastre: LatLng | null = null
+    let konami: string[] = []
+    let ultimoPaso = 0
     const click = (event: MouseEvent) => {
       const target = event.target as Element | null
       // Los enlaces de atribución siguen funcionando normalmente. El secreto vive en el
@@ -130,7 +73,26 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
       }
       if (target?.closest('.leaflet-marker-icon') && new Date().getHours() === 0) muestra('midnight')
     }
+    const dragStart = () => { inicioArrastre = map.getCenter() }
     const drag = () => {
+      // Leaflet es quien decide que hubo arrastre. Esto es más fiable que touch/pointer
+      // en Safari: al terminar, el antiguo centro aparece desplazado en pantalla justo
+      // en la dirección que siguió el dedo, incluso si el mapa está girado.
+      if (inicioArrastre) {
+        const centro = map.getSize().divideBy(2)
+        const anterior = map.latLngToContainerPoint(inicioArrastre)
+        const dx = anterior.x - centro.x
+        const dy = anterior.y - centro.y
+        const now = Date.now()
+        if (now - ultimoPaso > 20_000) konami = []
+        ultimoPaso = now
+        if (Math.max(Math.abs(dx), Math.abs(dy)) >= 28) {
+          const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')
+          konami = [...konami, dir].slice(-KONAMI.length)
+          if (konami.join() === KONAMI.join()) { konami = []; muestra('underwater') }
+        }
+        inicioArrastre = null
+      }
       const c = map.getCenter()
       if (!enOceano(c.lat, c.lng)) { arrastres = []; return }
       const now = Date.now()
@@ -138,8 +100,13 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
       if (arrastres.length >= 4) { arrastres = []; muestra('ocean') }
     }
     map.getContainer().addEventListener('click', click)
+    map.on('dragstart', dragStart)
     map.on('dragend', drag)
-    return () => { map.getContainer().removeEventListener('click', click); map.off('dragend', drag) }
+    return () => {
+      map.getContainer().removeEventListener('click', click)
+      map.off('dragstart', dragStart)
+      map.off('dragend', drag)
+    }
   }, [map])
 
   if (!sorpresa) return null
