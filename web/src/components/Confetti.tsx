@@ -46,7 +46,15 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
     const cx = ancho / 2
     const cy = alto / 2
 
-    const piezas = forma === 'gotas'
+    type Pieza = {
+      x: number; y: number; w: number; h: number; vx: number; vy: number
+      giro: number; vGiro: number; color: string
+      // Solo las gotas «adheridas» al cristal: cuentan `espera` fotogramas quietas y luego
+      // resbalan (`pegada`), dejando un reguero desde `y0`. `fase` da el bamboleo del agua.
+      espera?: number; pegada?: boolean; y0?: number; fase?: number
+    }
+
+    const piezas: Pieza[] = forma === 'gotas'
       ? [
           // Estallido: todas parten del centro y salen en todas direcciones, con un
           // pelín de empuje hacia arriba para que dibujen un arco antes de caer.
@@ -69,6 +77,19 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
             vx: -1 + Math.random() * 2, vy: 2.5 + Math.random() * 3.5,
             giro: 0, vGiro: 0, color: color(),
           })),
+          // Adheridas al cristal: aparecen quietas repartidas por la pantalla (como
+          // salpicaduras del estallido), aguantan ~1 s y luego resbalan hacia abajo
+          // dejando un reguero. `espera` en fotogramas (~0,6–1,4 s a 60 fps).
+          ...Array.from({ length: 28 }, () => {
+            const y = alto * (0.15 + Math.random() * 0.5)
+            return {
+              x: ancho * (0.1 + Math.random() * 0.8), y,
+              w: 10 + Math.random() * 9, h: 13 + Math.random() * 12,
+              vx: 0, vy: 0, giro: 0, vGiro: 0, color: color(),
+              espera: 36 + Math.floor(Math.random() * 48),
+              pegada: true, y0: y, fase: Math.random() * Math.PI * 2,
+            }
+          }),
         ]
       : Array.from({ length: 110 }, () => ({
           x: Math.random() * ancho,
@@ -88,16 +109,45 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
 
     let raf = 0
     let vivo = true
+    let frame = 0
     function paso() {
       if (!vivo || !ctx) return
+      frame++
       ctx.clearRect(0, 0, ancho, alto)
       let quedan = 0
       for (const p of piezas) {
-        p.x += p.vx
-        p.y += p.vy
-        p.vy += gravedad
-        p.giro += p.vGiro
-        if (p.y < alto + 30) quedan++
+        if (p.espera && p.espera > 0) {
+          // Pegada al cristal, quieta, mientras aguanta la tensión superficial.
+          p.espera--
+          quedan++
+        } else if (p.pegada) {
+          // Ya se soltó: resbala hacia abajo —más despacio que caer, por el roce con el
+          // cristal (`gravedad * 0.55`)— con un leve bamboleo, como el agua real.
+          p.x += Math.sin(frame * 0.12 + (p.fase ?? 0)) * 0.4
+          p.y += p.vy
+          p.vy += gravedad * 0.55
+          if (p.y < alto + 30) quedan++
+        } else {
+          p.x += p.vx
+          p.y += p.vy
+          p.vy += gravedad
+          p.giro += p.vGiro
+          if (p.y < alto + 30) quedan++
+        }
+        // Reguero de la gota que resbala: una línea tenue desde donde estaba pegada
+        // hasta donde va, acotada a ~46 px para que sea una estela y no un rayón.
+        if (p.pegada && (!p.espera || p.espera <= 0) && p.y0 != null && p.y > p.y0 + 2) {
+          ctx.save()
+          ctx.strokeStyle = p.color
+          ctx.globalAlpha = 0.2
+          ctx.lineWidth = Math.max(1.5, p.w * 0.3)
+          ctx.lineCap = 'round'
+          ctx.beginPath()
+          ctx.moveTo(p.x, Math.max(p.y0, p.y - 46))
+          ctx.lineTo(p.x, p.y)
+          ctx.stroke()
+          ctx.restore()
+        }
         ctx.save()
         ctx.translate(p.x, p.y)
         ctx.fillStyle = p.color
