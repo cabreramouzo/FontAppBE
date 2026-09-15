@@ -74,7 +74,10 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
         taps++
         if (taps >= 7) { taps = 0; muestra('cartographers') }
       }
-      if (target?.closest('.leaflet-marker-icon') && new Date().getHours() === 0) muestra('midnight')
+      const now = new Date()
+      if (target?.closest('.leaflet-marker-icon') && now.getHours() === 0 && now.getMinutes() < 15) {
+        muestra('midnight')
+      }
     }
     const dragStart = () => { inicioArrastre = map.getCenter() }
     const drag = () => {
