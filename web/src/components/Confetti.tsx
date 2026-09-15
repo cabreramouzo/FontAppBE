@@ -37,21 +37,54 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
     const colores = forma === 'gotas'
       ? ['#3fa9f5', '#7fd3ff', '#2b7fc4', '#5bc0eb', '#a8e0ff']
       : ['#3fa9f5', '#7fd3ff', '#f2c14e', '#e8a33d', '#ffffff', '#2b7fc4']
-    const piezas = Array.from({ length: 110 }, () => ({
-      x: Math.random() * ancho,
-      // Escalonadas por encima del borde, o el primer fotograma es una franja sólida de
-      // confeti cruzando la pantalla. El escalón es medio alto de pantalla y no uno
-      // entero: con más, la última pieza tarda casi un segundo en asomar y la fiesta
-      // empieza cuando ya has leído el diálogo.
-      y: -20 - Math.random() * alto * 0.45,
-      w: 5 + Math.random() * 6,
-      h: 8 + Math.random() * 8,
-      vx: -1 + Math.random() * 2,
-      vy: 2 + Math.random() * 3.5,
-      giro: Math.random() * Math.PI,
-      vGiro: -0.15 + Math.random() * 0.3,
-      color: colores[Math.floor(Math.random() * colores.length)],
-    }))
+    const color = () => colores[Math.floor(Math.random() * colores.length)]
+    // El confeti cae desde arriba; las gotas del easter egg **estallan desde el centro**
+    // (donde sale la ventanita con la cifra) y después llueven. Por eso las gotas caen con
+    // más gravedad —si no, el estallido tardaría seis segundos en volver al suelo— y son
+    // más grandes y muchas más, para que tenga pega.
+    const gravedad = forma === 'gotas' ? 0.14 : 0.045
+    const cx = ancho / 2
+    const cy = alto / 2
+
+    const piezas = forma === 'gotas'
+      ? [
+          // Estallido: todas parten del centro y salen en todas direcciones, con un
+          // pelín de empuje hacia arriba para que dibujen un arco antes de caer.
+          ...Array.from({ length: 150 }, () => {
+            const ang = Math.random() * Math.PI * 2
+            const v = 5 + Math.random() * 12
+            return {
+              x: cx, y: cy,
+              w: 9 + Math.random() * 11, h: 16 + Math.random() * 18,
+              vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 2.5,
+              giro: 0, vGiro: 0, color: color(),
+            }
+          }),
+          // Lluvia de después: escalonada muy por encima del borde para que siga cayendo
+          // cuando el estallido ya ha bajado.
+          ...Array.from({ length: 90 }, () => ({
+            x: Math.random() * ancho,
+            y: -20 - Math.random() * alto * 1.2,
+            w: 7 + Math.random() * 9, h: 13 + Math.random() * 15,
+            vx: -1 + Math.random() * 2, vy: 2.5 + Math.random() * 3.5,
+            giro: 0, vGiro: 0, color: color(),
+          })),
+        ]
+      : Array.from({ length: 110 }, () => ({
+          x: Math.random() * ancho,
+          // Escalonadas por encima del borde, o el primer fotograma es una franja sólida
+          // de confeti cruzando la pantalla. El escalón es medio alto de pantalla y no uno
+          // entero: con más, la última pieza tarda casi un segundo en asomar y la fiesta
+          // empieza cuando ya has leído el diálogo.
+          y: -20 - Math.random() * alto * 0.45,
+          w: 5 + Math.random() * 6,
+          h: 8 + Math.random() * 8,
+          vx: -1 + Math.random() * 2,
+          vy: 2 + Math.random() * 3.5,
+          giro: Math.random() * Math.PI,
+          vGiro: -0.15 + Math.random() * 0.3,
+          color: color(),
+        }))
 
     let raf = 0
     let vivo = true
@@ -62,7 +95,7 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
       for (const p of piezas) {
         p.x += p.vx
         p.y += p.vy
-        p.vy += 0.045          // gravedad
+        p.vy += gravedad
         p.giro += p.vGiro
         if (p.y < alto + 30) quedan++
         ctx.save()
