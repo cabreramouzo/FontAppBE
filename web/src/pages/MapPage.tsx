@@ -1423,7 +1423,12 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
 
   if (movil) {
     return (
-      <Dialog fullScreen open onClose={saving ? undefined : onCancel}>
+      <Dialog
+        fullScreen
+        open
+        onClose={saving ? undefined : onCancel}
+        slotProps={{ paper: { sx: { bgcolor: 'background.default', backgroundImage: 'none' } } }}
+      >
         {/* Una pantalla y no un popup: el mapa de ubicación forma parte del formulario,
             el contenido puede desplazarse con el teclado abierto y las acciones quedan
             siempre al alcance del pulgar, por encima del indicador de inicio del iPhone. */}
@@ -1434,6 +1439,7 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
             sx={{
               position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'center',
               gap: 1, px: 1, pt: 'env(safe-area-inset-top)', borderBottom: 1, borderColor: 'divider',
+              bgcolor: 'background.default',
             }}
           >
             <IconButton onClick={onCancel} disabled={saving} aria-label={t('form.cancel')} size="large">
@@ -1448,7 +1454,7 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
             sx={{
               position: 'sticky', bottom: 0, zIndex: 2, display: 'flex', gap: 1,
               px: 2, pt: 1, pb: 'max(12px, env(safe-area-inset-bottom))',
-              bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider',
+              bgcolor: 'background.default', borderTop: 1, borderColor: 'divider',
             }}
           >
             {acciones}
