@@ -679,7 +679,7 @@ export async function guardedFonts(): Promise<Guarded[]> {
 /** Un aviso de la campana. `fontID` nulo = la fuente ya no existe. */
 export interface NotificationItem {
   id: string
-  kind: 'mention' | 'staleGuarded' | 'fontUpdate' | 'sourceLimit' | 'userOnFire' | 'commentLike'
+  kind: 'mention' | 'staleGuarded' | 'fontUpdate' | 'sourceLimit' | 'userOnFire' | 'commentLike' | 'mayorTaken'
   actorName: string
   fontID: string | null
   fontName: string | null

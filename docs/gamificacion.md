@@ -2,6 +2,8 @@
 
 > Documento de trabajo · agosto de 2026
 > Versión en catalán al final: [Pla de gamificació](#pla-de-gamificació-ca)
+> Ideación aparte sobre incentivar la visita física (check-in, guardián, colección):
+> [Ideas de gamificación — Visitas a fuentes](gamificacion-visitas.md).
 
 ## Pagar por información, no por actividad
 

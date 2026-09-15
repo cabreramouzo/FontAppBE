@@ -642,6 +642,9 @@ struct FontController: RouteCollection {
         let lastWaterStatus: String?
         let lastUpdate: Date?
         let statusConflict: Bool
+        /// El guardián de la fuente (quien más la ha comprobado en 60 días), o `nil` si
+        /// nadie llega al mínimo. Se calcula en vivo: ver `FountainMayor`.
+        let mayor: FountainMayor.Mayor?
 
         func encode(to encoder: any Encoder) throws {
             try font.encode(to: encoder)
@@ -649,8 +652,11 @@ struct FontController: RouteCollection {
             try c.encode(lastWaterStatus, forKey: .lastWaterStatus)
             try c.encode(lastUpdate, forKey: .lastUpdate)
             try c.encode(statusConflict, forKey: .statusConflict)
+            // Explícito, no `encodeIfPresent`: el cliente distingue «sin guardián» de un
+            // campo ausente, misma disciplina que el resto de opcionales de esta API.
+            try c.encode(mayor, forKey: .mayor)
         }
-        private enum Key: String, CodingKey { case lastWaterStatus, lastUpdate, statusConflict }
+        private enum Key: String, CodingKey { case lastWaterStatus, lastUpdate, statusConflict, mayor }
     }
 
     @Sendable func show(req: Request) async throws -> FontDetail {
@@ -659,11 +665,13 @@ struct FontController: RouteCollection {
         // reseñas o el de repuesto (todo nulo) si no. Una fuente sin comprobar nunca da
         // `nil`, cae en la rama «sin comprobar» de la tarjeta.
         let resumen = try await Font.summaries(for: [font], on: req.db).first
+        let mayor = try await FountainMayor.of(fontID: try font.requireID(), on: req.db)
         return FontDetail(
             font: font,
             lastWaterStatus: resumen?.lastWaterStatus,
             lastUpdate: resumen?.lastUpdate,
             statusConflict: resumen?.recentStatusConflict ?? false,
+            mayor: mayor,
         )
     }
 

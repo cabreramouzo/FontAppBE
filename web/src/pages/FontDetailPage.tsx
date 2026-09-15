@@ -38,6 +38,7 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp'
 import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 import EditIcon from '@mui/icons-material/Edit'
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
@@ -1295,6 +1296,26 @@ export function FontDetailPage() {
               </Tooltip>
             </Abrible>
           )}
+        </Typography>
+      )}
+
+      {/* El guardián: quien más ha comprobado esta fuente en 60 días. Es la mecánica
+          del "mayor" de Foursquare, y a diferencia del pionero es reconquistable —por eso
+          se dice cuántas comprobaciones lleva, para que se vea lo que falta para superarlo.
+          Solo sale cuando de verdad hay uno (dos comprobaciones o más en la ventana). */}
+      {font.mayor && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Tooltip title={t('detail.mayorHelp')}>
+            <EmojiEventsIcon fontSize="small" sx={{ color: 'warning.main' }} />
+          </Tooltip>
+          <span>
+            {t('detail.mayorBy')}{' '}
+            <Link component={RouterLink} to={`/users/${encodeURIComponent(font.mayor.username)}`}>@{font.mayor.username}</Link>
+            {' · '}
+            <Box component="span" sx={{ color: 'text.disabled' }}>
+              {t('detail.mayorReviews', { n: String(font.mayor.reviews) })}
+            </Box>
+          </span>
         </Typography>
       )}
 

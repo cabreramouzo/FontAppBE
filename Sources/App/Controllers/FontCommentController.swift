@@ -196,6 +196,7 @@ struct FontCommentController: RouteCollection {
         // perder la reseña por no poder avisar sería absurdo.
         let userID = try user.requireID()
         let estado = dto.waterStatus
+        let commentID = try comment.requireID()
         let db = req.db
         let push = PushEnvio(req.application)
         Task.detached {
@@ -208,6 +209,11 @@ struct FontCommentController: RouteCollection {
                                                actorID: userID, on: db, push: push,
                                                tambienPushA: avisaron)
             }
+            // Si esta reseña te ha convertido en guardián de la fuente, avisa a quien lo
+            // era. Solo campana (ver `FountainMayor`), y después de guardar como todo lo
+            // demás: la reseña ya está, esto es un gancho social que no puede costarla.
+            await FountainMayor.notifyIfDethroned(fontID: fontID, newComment: commentID,
+                                                  reviewerID: userID, on: db)
         }
 
         let response = Response(status: .created)

@@ -26,6 +26,9 @@ export interface Font {
   retiredAt?: string | null
   /** `pending` o `hidden_*` si la fuente está en cuarentena de moderación. */
   moderationState?: string
+  /** El guardián de la fuente: quien más la ha comprobado en los últimos 60 días.
+   *  `null` si nadie llega al mínimo. Solo lo trae la ficha (`GET /fonts/:id`). */
+  mayor?: { userID: string; username: string; reviews: number } | null
 }
 
 export type UserRole = 'user' | 'moderator' | 'admin' | 'owner'

@@ -64,6 +64,12 @@ final class Notification: Model, @unchecked Sendable {
         /// El `excerpt` lleva **un trozo del comentario**, no un código: son tus propias
         /// palabras, así que no hay nada que traducir. Igual que `mention`.
         case commentLike
+        /// Alguien te ha superado como **guardián** de una fuente (ver `FountainMayor`).
+        ///
+        /// **Campana y no push**, como `commentLike`: perder un título es un gancho social,
+        /// no cambia lo que vas a hacer. El `actor` es quien te superó y el `excerpt` va
+        /// vacío — el texto lo compone el cliente con el nombre del actor y el de la fuente.
+        case mayorTaken
     }
 
     @ID(key: .id) var id: UUID?
