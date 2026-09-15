@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import Fade from '@mui/material/Fade'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import type { LatLng, Map as LeafletMap } from 'leaflet'
+import type { Map as LeafletMap } from 'leaflet'
 import { useI18n } from '../i18n/I18nContext'
 
 type Sorpresa = 'wish' | 'underwater' | 'midnight' | 'cartographers' | 'ocean' | 'chemistry'
@@ -61,9 +61,9 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
     let primero = 0
     let arrastres: number[] = []
     let ballenaVista = (() => { try { return sessionStorage.getItem('fontapp_whale_seen') === '1' } catch { return false } })()
-    let inicioArrastre: LatLng | null = null
     let konami: string[] = []
     let ultimoPaso = 0
+    let inicioDedo: { x: number; y: number } | null = null
     const click = (event: MouseEvent) => {
       const target = event.target as Element | null
       // Los enlaces de atribución siguen funcionando normalmente. El secreto vive en el
@@ -79,26 +79,30 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
         muestra('midnight')
       }
     }
-    const dragStart = () => { inicioArrastre = map.getCenter() }
+    const touchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) { inicioDedo = null; return }
+      inicioDedo = { x: event.touches[0].clientX, y: event.touches[0].clientY }
+    }
+    const touchEnd = (event: TouchEvent) => {
+      const fin = event.changedTouches[0]
+      if (!inicioDedo || !fin) { inicioDedo = null; return }
+      // Se lee el dedo y no se intenta reconstruirlo desde el centro final de Leaflet:
+      // en iOS la inercia continúa después de levantarlo y a veces convertía un gesto
+      // corto o diagonal en otra dirección. Captura permite verlo aunque Leaflet pare la
+      // propagación del evento durante el arrastre.
+      const dx = fin.clientX - inicioDedo.x
+      const dy = fin.clientY - inicioDedo.y
+      inicioDedo = null
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 28) return
+      const now = Date.now()
+      if (now - ultimoPaso > 20_000) konami = []
+      ultimoPaso = now
+      const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')
+      konami = [...konami, dir].slice(-KONAMI.length)
+      if (konami.join() === KONAMI.join()) { konami = []; muestra('underwater') }
+    }
+    const touchCancel = () => { inicioDedo = null }
     const drag = () => {
-      // Leaflet es quien decide que hubo arrastre. Esto es más fiable que touch/pointer
-      // en Safari: al terminar, el antiguo centro aparece desplazado en pantalla justo
-      // en la dirección que siguió el dedo, incluso si el mapa está girado.
-      if (inicioArrastre) {
-        const centro = map.getSize().divideBy(2)
-        const anterior = map.latLngToContainerPoint(inicioArrastre)
-        const dx = anterior.x - centro.x
-        const dy = anterior.y - centro.y
-        const now = Date.now()
-        if (now - ultimoPaso > 20_000) konami = []
-        ultimoPaso = now
-        if (Math.max(Math.abs(dx), Math.abs(dy)) >= 28) {
-          const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')
-          konami = [...konami, dir].slice(-KONAMI.length)
-          if (konami.join() === KONAMI.join()) { konami = []; muestra('underwater') }
-        }
-        inicioArrastre = null
-      }
       const c = map.getCenter()
       // A zoom cercano incluso una caja conservadora puede contener una isla. La ballena
       // pertenece a explorar el océano, no a desplazarse por una calle o una ruta.
@@ -112,12 +116,17 @@ export function MapEasterEggs({ map, wish }: { map: LeafletMap | null; wish: num
         muestra('ocean')
       }
     }
+    const container = map.getContainer()
     map.getContainer().addEventListener('click', click)
-    map.on('dragstart', dragStart)
+    container.addEventListener('touchstart', touchStart, { passive: true, capture: true })
+    container.addEventListener('touchend', touchEnd, { passive: true, capture: true })
+    container.addEventListener('touchcancel', touchCancel, { passive: true, capture: true })
     map.on('dragend', drag)
     return () => {
-      map.getContainer().removeEventListener('click', click)
-      map.off('dragstart', dragStart)
+      container.removeEventListener('click', click)
+      container.removeEventListener('touchstart', touchStart, { capture: true })
+      container.removeEventListener('touchend', touchEnd, { capture: true })
+      container.removeEventListener('touchcancel', touchCancel, { capture: true })
       map.off('dragend', drag)
     }
   }, [map])
