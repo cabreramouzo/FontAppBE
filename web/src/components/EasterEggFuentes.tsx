@@ -22,14 +22,23 @@ export function EasterEggFuentes(
 ) {
   const { t, lang } = useI18n()
   const [stats, setStats] = useState<Stats | null>(precargado ?? null)
+  const [puedeCerrar, setPuedeCerrar] = useState(false)
   useEffect(() => {
     if (!abierto) return
     let vivo = true
+    setPuedeCerrar(false)
     // Si ya venía precargada (se pidió en el primer toque), no se vuelve a pedir.
     if (!precargado) void getStats().then((s) => { if (vivo) setStats(s) }).catch(() => {})
     else setStats(precargado)
-    const timer = window.setTimeout(onClose, 6000)
-    return () => { vivo = false; window.clearTimeout(timer) }
+    // Tres segundos para ver la cifra y el estallido; después cualquier toque permite
+    // seguir usando la app. Si nadie toca nada conserva el cierre automático original.
+    const habilitaCierre = window.setTimeout(() => setPuedeCerrar(true), 3000)
+    const cierreAutomatico = window.setTimeout(onClose, 6000)
+    return () => {
+      vivo = false
+      window.clearTimeout(habilitaCierre)
+      window.clearTimeout(cierreAutomatico)
+    }
   }, [abierto, onClose, precargado])
 
   if (!abierto) return null
@@ -38,11 +47,19 @@ export function EasterEggFuentes(
     <>
       <Confetti activo forma="gotas" />
       <Box
+        onClick={(event) => {
+          // La capa sigue absorbiendo el toque: cerrar el cartel no debe abrir además
+          // una fuente o un control del mapa que casualmente estuviera debajo.
+          event.stopPropagation()
+          if (puedeCerrar) onClose()
+        }}
         sx={{
           position: 'fixed', inset: 0, zIndex: 2001,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: puedeCerrar ? 'pointer' : 'default',
           // La capa absorbe los toques 5º, 6º… pero no los interpreta como cierre ni deja
-          // que activen por accidente los controles del mapa que hay debajo.
+          // que activen por accidente los controles del mapa que hay debajo. Pasados tres
+          // segundos sí los interpreta como cierre, pero nunca los deja atravesar.
         }}
       >
         <Fade in appear>
