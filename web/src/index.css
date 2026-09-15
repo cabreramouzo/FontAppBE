@@ -983,6 +983,51 @@ select:not([class*="Mui"]) {
   .popup-photo { min-height: 48px; }
 }
 
+/* La posición que se está eligiendo para una fuente nueva debe sobrevivir visualmente a
+   un mapa lleno de pines. El halo marca el punto exacto y el pin morado con + expresa
+   «nuevo» sin apropiarse de ninguno de los colores de estado. */
+.leaflet-container .placement-pin {
+  position: relative;
+  overflow: visible;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35));
+}
+
+.leaflet-container .placement-pin__marker {
+  position: absolute;
+  left: 15px;
+  top: 10px;
+  width: 34px;
+  height: 48px;
+  z-index: 1;
+}
+
+.leaflet-container .placement-pin__halo {
+  position: absolute;
+  left: 12px;
+  top: 38px;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #7c3aed;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.18);
+  transform: scale(0.45);
+  transform-origin: center;
+  animation: placement-pulse 1.4s ease-out infinite;
+}
+
+@keyframes placement-pulse {
+  0% { opacity: 1; transform: scale(0.35); }
+  75%, 100% { opacity: 0; transform: scale(1.2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-container .placement-pin__halo {
+    animation: none;
+    opacity: 0.8;
+    transform: scale(0.7);
+  }
+}
+
 
 /* Agregados que ya vienen calculados por el servidor. No entran en markercluster:
    cada círculo representa el recuento real de su celda, no una muestra del LIMIT. */

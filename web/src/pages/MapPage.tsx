@@ -72,7 +72,7 @@ import { recuerdaVistas } from '../lib/fuentesVistas'
 import { zonaGuardada } from '../lib/zonaAlmacen'
 import { nombreFuente } from '../lib/fontName'
 import { distanceMetres, isRemotePlacement, newFontPosition } from '../lib/newFontPlacement'
-import { statusIcon } from '../lib/statusMarker'
+import { placementIcon, statusIcon } from '../lib/statusMarker'
 import { clearRecentHistory, recentFountains, recentSearches, rememberFountain, rememberSearch, type RecentFountain } from '../lib/recentHistory'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -2170,11 +2170,10 @@ export function MapPage() {
             }}
           />
         )}
-        {/* El mismo pin azul que una fuente que nadie ha comprobado todavía, que es
-            exactamente lo que va a ser dentro de un momento. Con el marcador por defecto
-            de Leaflet salía un pin de otro estilo, y la fuente que estás creando parecía
-            de otra cosa. `statusIcon(null)` es el que pinta el mapa para ese caso. */}
-        {pos && <Marker position={pos} icon={statusIcon(null)} />}
+        {/* Mientras se está creando no es todavía una fuente ni tiene estado. Un marcador
+            propio evita perderlo entre los pines azules y no confunde el morado temporal
+            con verde/ámbar/rojo, que sí tienen significado en el mapa. */}
+        {pos && <Marker position={pos} icon={placing ? placementIcon() : statusIcon(null)} zIndexOffset={placing ? 1000 : 0} />}
       </MapContainer>
 
       <SearchBox me={me} historyScope={user?.id ?? 'anonymous'} onSelect={(f) => { setGoto([f.latitude, f.longitude]); setSelectedID(f.id) }} onSelectPlace={setPlace} />

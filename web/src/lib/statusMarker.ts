@@ -46,3 +46,25 @@ export function statusIcon(status: string | null, selected = false): L.DivIcon {
     popupAnchor: [0, -cajaH + 4],
   })
 }
+
+/**
+ * Marcador temporal mientras se elige la posición de una fuente nueva.
+ *
+ * No reutiliza ningún color de estado: en particular, el rojo ya significa «seca».
+ * El morado, el signo + y el halo lo separan visualmente de las fuentes existentes
+ * incluso en una zona muy poblada, sin alterar el significado del mapa.
+ */
+export function placementIcon(): L.DivIcon {
+  return L.divIcon({
+    html: `<div class="placement-pin__halo" aria-hidden="true"></div>
+      <div class="placement-pin__marker" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="48" viewBox="0 0 26 38" overflow="visible">
+          <path d="M13 0C5.8 0 0 5.8 0 13c0 9.7 13 25 13 25s13-15.3 13-25C26 5.8 20.2 0 13 0z" fill="#7c3aed" stroke="white" stroke-width="1.8"/>
+          <path d="M13 7.5v11M7.5 13h11" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>`,
+    className: 'placement-pin',
+    iconSize: [64, 64],
+    iconAnchor: [32, 58],
+  })
+}
