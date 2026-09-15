@@ -92,15 +92,25 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
 
     let raf = 0
     let vivo = true
-    function paso() {
+    let fotogramaAnterior: number | null = null
+    function paso(ahora: number) {
       if (!vivo || !ctx) return
+      // Las velocidades históricas están afinadas para 60 fps. Aplicarlas una vez por
+      // `requestAnimationFrame` hacía que un iPhone Pro a 120 Hz moviese las gotas casi
+      // al doble que una pantalla de 60 Hz. El factor expresa cuánto tiempo real ha
+      // pasado en «fotogramas de 60 Hz». Se limita a 2 para que al volver de una pestaña
+      // suspendida Safari no teletransporte de golpe todas las piezas fuera del canvas.
+      const fotogramas60 = fotogramaAnterior == null
+        ? 1
+        : Math.min((ahora - fotogramaAnterior) / (1000 / 60), 2)
+      fotogramaAnterior = ahora
       ctx.clearRect(0, 0, ancho, alto)
       let quedan = 0
       for (const p of piezas) {
-        p.x += p.vx
-        p.y += p.vy
-        p.vy += gravedad
-        p.giro += p.vGiro
+        p.x += p.vx * fotogramas60
+        p.y += p.vy * fotogramas60
+        p.vy += gravedad * fotogramas60
+        p.giro += p.vGiro * fotogramas60
         if (p.y < alto + 40) quedan++
         ctx.save()
         ctx.translate(p.x, p.y)
