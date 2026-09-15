@@ -10,8 +10,11 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
+import IconButton from '@mui/material/IconButton'
 import MyLocationIcon from '@mui/icons-material/MyLocation'
 import UndoIcon from '@mui/icons-material/Undo'
+import OpenInFullIcon from '@mui/icons-material/OpenInFull'
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen'
 import { useI18n } from '../i18n/I18nContext'
 import { haversineKm, formatDist } from '../lib/geo'
 import { BaseLayerTile, LayerPicker, useBaseLayer } from './BaseLayers'
@@ -25,12 +28,18 @@ function PickOnMap({ onPick }: { onPick: (p: LatLng) => void }) {
 // El mapa nace dentro de un formulario que aún se está colocando, así que Leaflet
 // mide mal el contenedor y solo pinta teselas en un trozo. Al montar le decimos que
 // vuelva a medirse.
-function AjustaTamaño() {
+function AjustaTamaño({ lat, lng, ampliado }: { lat: number; lng: number; ampliado: boolean }) {
   const map = useMap()
   useEffect(() => {
-    const id = setTimeout(() => map.invalidateSize(), 100)
+    const id = setTimeout(() => {
+      map.invalidateSize()
+      // `center` solo se lee al montar. Al usar el GPS el marcador cambiaba de sitio,
+      // pero el mapa seguía mirando el punto anterior y parecía que el botón no había
+      // hecho nada. También mantiene visible el pin cuando se toca cerca de un borde.
+      map.setView([lat, lng], map.getZoom(), { animate: false })
+    }, 100)
     return () => clearTimeout(id)
-  }, [map])
+  }, [map, lat, lng, ampliado])
   return null
 }
 
@@ -60,6 +69,7 @@ export function RelocateFont({
   const { layer, setLayer } = useBaseLayer()
   const [geoError, setGeoError] = useState('')
   const [buscando, setBuscando] = useState(false)
+  const [ampliado, setAmpliado] = useState(false)
   // Precisión declarada por el móvil en la última lectura, en metros.
   const [precision, setPrecision] = useState<number | null>(null)
 
@@ -68,6 +78,13 @@ export function RelocateFont({
   const PRECISION_MALA = 25
 
   const movido = haversineKm(original.lat, original.lng, lat, lng) * 1000
+
+  useEffect(() => {
+    if (!ampliado) return
+    const salir = (event: KeyboardEvent) => { if (event.key === 'Escape') setAmpliado(false) }
+    window.addEventListener('keydown', salir)
+    return () => window.removeEventListener('keydown', salir)
+  }, [ampliado])
 
   function usarMiUbicacion() {
     setGeoError('')
@@ -97,19 +114,39 @@ export function RelocateFont({
         {t('relocate.hint')}
       </Typography>
 
-      <Box sx={{ position: 'relative', height: 220, borderRadius: 2, overflow: 'hidden', border: 1, borderColor: 'divider' }}>
+      <Box sx={ampliado
+        ? {
+            position: 'fixed', inset: 0, zIndex: (theme) => theme.zIndex.modal + 1,
+            bgcolor: 'background.default', overflow: 'hidden',
+          }
+        : {
+            position: 'relative', height: 220, borderRadius: 2, overflow: 'hidden',
+            border: 1, borderColor: 'divider',
+          }}>
         {/* El selector va encima del mapa, no dentro: es un control de MUI. El z-index
             lo pone por encima de los paneles de Leaflet (que llegan a 800). */}
         <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 900 }}>
           <LayerPicker layer={layer} onChange={setLayer} size="small" />
         </Box>
+        <IconButton
+          onClick={() => setAmpliado((value) => !value)}
+          aria-label={t(ampliado ? 'gpxIn.collapseMap' : 'gpxIn.expandMap')}
+          size="small"
+          sx={{
+            position: 'absolute', top: 8, left: 8, zIndex: 900,
+            bgcolor: 'background.paper', boxShadow: 2,
+            '&:hover': { bgcolor: 'background.paper' },
+          }}
+        >
+          {ampliado ? <CloseFullscreenIcon fontSize="small" /> : <OpenInFullIcon fontSize="small" />}
+        </IconButton>
         {/* `key` con la posición original: si se abre el formulario de otra fuente,
             el mapa se recrea en su sitio en vez de quedarse donde estaba. */}
         <MapContainer key={`${original.lat},${original.lng}`} center={[lat, lng]} zoom={17} style={{ height: '100%', width: '100%' }}>
           <BaseLayerTile layer={layer} />
           <Marker position={[lat, lng]} />
           <PickOnMap onPick={(p) => onChange(p.lat, p.lng)} />
-          <AjustaTamaño />
+          <AjustaTamaño lat={lat} lng={lng} ampliado={ampliado} />
         </MapContainer>
       </Box>
 
