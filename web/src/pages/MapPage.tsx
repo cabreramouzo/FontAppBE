@@ -63,7 +63,7 @@ import {
 import 'leaflet-rotate'
 
 import type { Drinkable, Font, FontSummary, MapCluster, MapResponse, Page, WaterSource } from '../api/types'
-import { ApiError, apiFetch, createComment, createFont, describeError, nearbyFonts, requestSourceLimitExemption, trackInteraction, uploadImage } from '../api/client'
+import { ApiError, apiFetch, createComment, createFont, describeError, getRain, nearbyFonts, requestSourceLimitExemption, trackInteraction, uploadImage } from '../api/client'
 import { cajaRedondeada, paramsDeCaja } from '../lib/cajaMapa'
 import { casillaDe } from '../lib/casilla'
 import { cercanasEn, enCaja } from '../lib/zonaOffline'
@@ -99,6 +99,7 @@ import { ExportGpxButton } from '../components/ExportGpxButton'
 import UploadIcon from '@mui/icons-material/UploadFileOutlined'
 import CloudDownloadIcon from '@mui/icons-material/CloudDownloadOutlined'
 import { NuevoBadge } from '../components/NuevoBadge'
+import { MapEasterEggs } from '../components/MapEasterEggs'
 import { parseSavedMapView, vistaAlAbrir, type SavedMapView } from '../lib/mapView'
 
 // Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
@@ -1588,6 +1589,14 @@ export function MapPage() {
   const [pos, setPos] = useState<LatLng | null>(null)
   const [nonce, setNonce] = useState(0)
   const [me, setMe] = useState<[number, number] | null>(null)
+  useEffect(() => {
+    if (!me) return
+    let alive = true
+    void getRain(me[0], me[1])
+      .then(({ raining }) => { if (alive) window.dispatchEvent(new CustomEvent('fontapp:rain', { detail: raining })) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [me && Math.round(me[0] * 10), me && Math.round(me[1] * 10)])
   // Última posición conocida, para pintar un punto atenuado al abrir cuando el permiso ha
   // caducado (iOS). Se siembra del almacén una vez; en cuanto llega `me` en vivo, sobra.
   const [meStale] = useState<[number, number] | null>(() => leeFix())
@@ -1635,9 +1644,26 @@ export function MapPage() {
   const [showNearby, setShowNearby] = useState(false)
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [missionsOpen, setMissionsOpen] = useState(false)
+  const [wish, setWish] = useState(0)
+  const wishTimer = useRef<number | null>(null)
+  const wishConsumed = useRef(false)
+  useEffect(() => () => { if (wishTimer.current !== null) window.clearTimeout(wishTimer.current) }, [])
   const [place, setPlace] = useState<Place | null>(null)
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
+  const empiezaDeseo = () => {
+    wishConsumed.current = false
+    wishTimer.current = window.setTimeout(() => {
+      wishTimer.current = null
+      wishConsumed.current = true
+      setWish((n) => n + 1)
+      navigator.vibrate?.(25)
+    }, 850)
+  }
+  const cancelaDeseo = () => {
+    if (wishTimer.current !== null) window.clearTimeout(wishTimer.current)
+    wishTimer.current = null
+  }
   // La invitación a crear cuenta tras una pulsación larga sin sesión. El reloj vive en una
   // `ref` y se limpia al desmontar, por lo mismo que el del formulario: salir del mapa
   // dentro de esos segundos no debe tocar el estado de una pantalla que ya no está.
@@ -2238,7 +2264,13 @@ export function MapPage() {
               se queda detrás de `user`**: un gesto oculto que te saca a una pantalla de
               acceso es peor que no tenerlo, y encima puede dispararse sin querer. */}
           <Fab variant="extended" color="primary"
+               onPointerDown={empiezaDeseo}
+               onPointerUp={cancelaDeseo}
+               onPointerCancel={cancelaDeseo}
+               onPointerLeave={cancelaDeseo}
+               onContextMenu={(e) => { if (wishConsumed.current) e.preventDefault() }}
                onClick={() => {
+                 if (wishConsumed.current) { wishConsumed.current = false; return }
                  trackInteraction(user ? 'map_add_font_button' : 'map_add_font_signed_out')
                  if (!user) { navigate('/login'); return }
                  startPlacing()
@@ -2267,6 +2299,7 @@ export function MapPage() {
         center={me}
         onFocus={(target) => { setGoto([target.latitude, target.longitude]); setSelectedID(target.id) }}
       />
+      <MapEasterEggs map={map} wish={wish} />
     </div>
   )
 }

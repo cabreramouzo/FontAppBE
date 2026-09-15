@@ -208,6 +208,10 @@ export const getInteractionStats = (days: 30 | 180 | 'all' = 30) =>
   apiFetch<InteractionSummary[]>(`/admin/analytics${days === 'all' ? '' : `?days=${days}`}`)
 
 export const getOnlineUsers = () => apiFetch<OnlineUser[]>('/users/stats/online')
+
+/** Lluvia aproximada (coordenadas redondeadas y cacheadas por el backend). */
+export const getRain = (lat: number, lng: number) =>
+  apiFetch<{ raining: boolean }>(`/weather/rain?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}`)
 export const getUserActivityRanking = () => apiFetch<UserActivityRanking>('/users/stats/activity-ranking')
 
 export async function loginWithPasskeyRequest(): Promise<LoginResponse> {

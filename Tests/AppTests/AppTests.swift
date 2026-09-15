@@ -70,6 +70,20 @@ final class AppTests: XCTestCase {
         try await app.asyncShutdown()
     }
 
+    func testRainRejectsInvalidCoordinatesWithoutCallingProvider() async throws {
+        let app = try await Application.make(.testing)
+        do {
+            try routes(app)
+            try app.test(.GET, "weather/rain?lat=999&lng=2") { res in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+        } catch {
+            try? await app.asyncShutdown()
+            throw error
+        }
+        try await app.asyncShutdown()
+    }
+
     /// De qué cabecera sale la IP del cliente al meter Cloudflare delante de Fly.
     ///
     /// Los tres casos son el contrato entero: sin secreto no cambia nada (se puede

@@ -72,6 +72,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const { t } = useI18n()
   const [flagCount, setFlagCount] = useState(0)
   const [newUsers, setNewUsers] = useState(0)
+  const [raining, setRaining] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
   // Easter egg: siete toques seguidos en el logo hacen llover gotas con el número de
   // fuentes. El contador vive en refs (no re-renderiza al tocar) y sobrevive a la
@@ -101,6 +102,12 @@ export function Layout({ children }: { children: ReactNode }) {
   const seccionActiva = mainSection(pathname)
 
   useEffect(() => { trackPlatformOnce() }, [])
+
+  useEffect(() => {
+    const update = (event: Event) => setRaining(Boolean((event as CustomEvent<boolean>).detail))
+    window.addEventListener('fontapp:rain', update)
+    return () => window.removeEventListener('fontapp:rain', update)
+  }, [])
 
   useEffect(() => {
     // Entrar a Novedades apaga el gesto para siempre: ya se ha descubierto la sección.
@@ -180,6 +187,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 que es quien puede no caber. Recortar aquí solo podía mutilar al vecino. */}
             <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.25, minWidth: 0, maxWidth: '100%' }}>
               <Typography
+                data-fontapp-logo
                 component={RouterLink}
                 to="/"
                 onClick={alTocarLogo}
@@ -194,7 +202,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   '@media (max-width:359.95px)': { fontSize: '1.05rem' },
                 }}
               >
-                💧 FontApp
+                {raining ? '💧☂️ FontApp' : '💧 FontApp'}
               </Typography>
               <Chip
                 label="beta"

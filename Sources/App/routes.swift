@@ -35,4 +35,5 @@ func routes(_ app: Application) throws {
     try app.register(collection: PlaceController())
     try app.register(collection: SitemapController())
     try app.register(collection: StatsController())
+    try app.register(collection: WeatherController())
 }

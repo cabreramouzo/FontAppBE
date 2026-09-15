@@ -70,6 +70,7 @@ function LegalCA() {
         <li>El teu <strong>nom d'usuari i nom</strong>, la teva <strong>adreça de correu</strong> i la teva <strong>contrasenya</strong> (desada xifrada amb bcrypt, mai en clar).</li>
         <li>El <strong>contingut que publiques</strong>: fonts, ressenyes, valoracions, fotos i incidències.</li>
         <li>La teva <strong>ubicació precisa</strong> del navegador només s'utilitza, si l'autoritzes, per mostrar-te fonts properes; <strong>no es desa</strong> al servidor.</li>
+        <li>Per indicar pluja al logotip, el servidor consulta <strong>Open-Meteo</strong> amb la ubicació arrodonida a uns 11 km. No es desa ni s'associa al teu compte, i Open-Meteo no rep la teva IP.</li>
         <li>De les <strong>fotos que puges</strong> desem, si en porten, la <strong>data i les coordenades que hi escriu el mòbil</strong> (EXIF). Només serveix per <strong>moderar</strong> —comprovar que una foto és del lloc i del moment que diu— i <strong>només ho veuen els administradors</strong>. La imatge que es publica va sense aquestes dades.</li>
         <li>En <strong>registrar-te</strong> desem la teva <strong>regió aproximada</strong> (país/regió deduïts de la IP, <strong>no la IP</strong>) i l'<strong>idioma</strong> de la interfície, per a estadística d'ús i per escriure't en la teva llengua.</li>
         <li>Si arribes des d'un <strong>cartell o una campanya</strong> amb codi (<code>fontapp.net/?p=castellcir</code>), desem aquest codi amb l'alta per saber quin cartell funciona. No identifica cap persona.</li>
@@ -171,6 +172,7 @@ function LegalES() {
         <li>Tu <strong>nombre de usuario y nombre</strong>, tu <strong>dirección de correo</strong> y tu <strong>contraseña</strong> (almacenada cifrada con bcrypt, nunca en claro).</li>
         <li>El <strong>contenido que publicas</strong>: fuentes, reseñas, valoraciones, fotos e incidencias.</li>
         <li>Tu <strong>ubicación precisa</strong> del navegador solo se usa, si tú lo autorizas, para mostrarte fuentes cercanas; <strong>no se almacena</strong> en el servidor.</li>
+        <li>Para indicar lluvia en el logotipo, el servidor consulta <strong>Open-Meteo</strong> con la ubicación redondeada a unos 11 km. No se guarda ni se asocia a tu cuenta, y Open-Meteo no recibe tu IP.</li>
         <li>De las <strong>fotos que subes</strong> guardamos, si las llevan, la <strong>fecha y las coordenadas que escribe el móvil</strong> (EXIF). Solo sirve para <strong>moderar</strong> —comprobar que una foto es del sitio y del momento que dice— y <strong>solo lo ven los administradores</strong>. La imagen que se publica va sin esos datos.</li>
         <li>Al <strong>registrarte</strong> guardamos tu <strong>región aproximada</strong> (país/región deducidos de la IP, <strong>no la IP</strong>) y el <strong>idioma</strong> de la interfaz, para estadística de uso y para escribirte en tu lengua.</li>
         <li>Si llegas desde un <strong>cartel o una campaña</strong> con código (<code>fontapp.net/?p=castellcir</code>), guardamos ese código con el alta para saber qué cartel funciona. No identifica a ninguna persona.</li>
@@ -272,6 +274,7 @@ function LegalPT() {
         <li>O teu <strong>nome de utilizador e nome</strong>, o teu <strong>endereço de email</strong> e a tua <strong>palavra-passe</strong> (armazenada com hash bcrypt, nunca em texto simples).</li>
         <li>O <strong>conteúdo que publicas</strong>: fontes, avaliações, classificações, fotografias e ocorrências.</li>
         <li>A tua <strong>localização exata</strong> no navegador só é utilizada, com a tua autorização, para mostrar fontes próximas; <strong>não é armazenada</strong> no servidor.</li>
+        <li>Para indicar chuva no logótipo, o servidor consulta o <strong>Open-Meteo</strong> com a localização arredondada para cerca de 11 km. Não é guardada nem associada à tua conta e o Open-Meteo não recebe o teu IP.</li>
         <li>Das <strong>fotografias que carregas</strong> guardamos, quando existirem, a <strong>data e as coordenadas registadas pelo telemóvel</strong> (EXIF). Servem apenas para <strong>moderação</strong> — confirmar o local e o momento da fotografia — e <strong>só os administradores lhes têm acesso</strong>. A imagem publicada não contém estes dados.</li>
         <li>Ao <strong>registares-te</strong>, guardamos a tua <strong>região aproximada</strong> (país/região deduzidos a partir do IP, <strong>não o próprio IP</strong>) e o <strong>idioma</strong> da interface, para estatísticas de utilização e para comunicarmos contigo no teu idioma.</li>
         <li>Se chegares através de um <strong>cartaz ou campanha</strong> com um código (<code>fontapp.net/?p=castellcir</code>), associamos esse código ao registo para saber que cartaz funciona. Não identifica qualquer pessoa.</li>
@@ -378,6 +381,7 @@ function LegalIT() {
         <li>Il tuo <strong>nome utente e nome</strong>, il tuo <strong>indirizzo email</strong> e la tua <strong>password</strong> (salvata con hash bcrypt, mai in chiaro).</li>
         <li>Il <strong>contenuto che pubblichi</strong>: fontane, recensioni, valutazioni, fotografie e segnalazioni.</li>
         <li>La tua <strong>posizione esatta</strong> nel browser viene usata solo, con il tuo permesso, per mostrarti le fontane vicine; <strong>non viene salvata</strong> sul server.</li>
+        <li>Per indicare la pioggia nel logo, il server consulta <strong>Open-Meteo</strong> con la posizione arrotondata a circa 11 km. Non viene salvata né associata al tuo account e Open-Meteo non riceve il tuo IP.</li>
         <li>Delle <strong>fotografie che carichi</strong> conserviamo, quando ci sono, la <strong>data e le coordinate registrate dal telefono</strong> (EXIF). Servono solo per la <strong>moderazione</strong> — confermare il luogo e il momento dello scatto — e <strong>vi hanno accesso solo gli amministratori</strong>. L’immagine pubblicata non contiene questi dati.</li>
         <li>Quando ti <strong>registri</strong>, conserviamo la tua <strong>regione approssimativa</strong> (paese/regione dedotti dall’IP, <strong>non l’IP stesso</strong>) e la <strong>lingua</strong> dell’interfaccia, per statistiche d’uso e per scriverti nella tua lingua.</li>
         <li>Se arrivi da un <strong>volantino o da una campagna</strong> con un codice (<code>fontapp.net/?p=castellcir</code>), associamo quel codice all’iscrizione per sapere quale volantino funziona. Non identifica nessuna persona.</li>
@@ -484,6 +488,7 @@ function LegalEN() {
         <li>Your <strong>username and name</strong>, your <strong>email address</strong> and your <strong>password</strong> (stored hashed with bcrypt, never in clear text).</li>
         <li>The <strong>content you publish</strong>: fountains, reviews, ratings, photos and issues.</li>
         <li>Your <strong>browser location</strong> is only used, if you allow it, to show you nearby fountains; it is <strong>not stored</strong> on the server.</li>
+        <li>To show rain in the logo, the server asks <strong>Open-Meteo</strong> using a location rounded to roughly 11 km. It is neither stored nor linked to your account, and Open-Meteo does not receive your IP.</li>
         <li>From the <strong>photos you upload</strong> we store, when present, the <strong>date and coordinates your phone writes into them</strong> (EXIF). It is used only for <strong>moderation</strong> — checking a photo is from the place and moment it claims — and <strong>only administrators can see it</strong>. The published image carries none of it.</li>
         <li>When you <strong>sign up</strong> we store your <strong>approximate region</strong> (country/region derived from your IP — <strong>not the IP</strong>) and your interface <strong>language</strong>, for usage statistics and to write to you in your language.</li>
         <li>If you arrive from a <strong>poster or campaign</strong> carrying a code (<code>fontapp.net/?p=castellcir</code>), we store that code with your sign-up to learn which poster works. It identifies no one.</li>
@@ -584,6 +589,7 @@ function LegalFR() {
         <li>Votre <strong>nom d’utilisateur et votre nom</strong>, votre <strong>adresse e-mail</strong> et votre <strong>mot de passe</strong> (haché avec bcrypt, jamais stocké en clair).</li>
         <li>Le <strong>contenu publié</strong> : fontaines, avis, évaluations, photos et signalements.</li>
         <li>Votre <strong>position</strong> sert uniquement, avec votre autorisation, à afficher les fontaines proches ; elle <strong>n’est pas stockée</strong> sur le serveur.</li>
+        <li>Pour signaler la pluie dans le logo, le serveur interroge <strong>Open-Meteo</strong> avec une position arrondie à environ 11 km. Elle n’est ni conservée ni associée à votre compte, et Open-Meteo ne reçoit pas votre IP.</li>
         <li>Pour les <strong>photos envoyées</strong>, nous conservons, lorsqu’elles existent, la date et les coordonnées EXIF, uniquement à des fins de <strong>modération</strong>. <strong>Seuls les administrateurs y ont accès</strong> et l’image publiée ne les contient pas.</li>
         <li>À l’<strong>inscription</strong>, nous conservons votre <strong>région approximative</strong> (déduite de l’IP, <strong>pas l’IP elle-même</strong>) et la <strong>langue</strong> de l’interface, pour les statistiques et pour vous écrire dans votre langue.</li>
         <li>Si vous venez d’une <strong>affiche ou campagne</strong> munie d’un code (<code>fontapp.net/?p=castellcir</code>), ce code est associé à l’inscription pour mesurer son efficacité. Il n’identifie personne.</li>
@@ -676,6 +682,7 @@ function LegalGL() {
         <li>O teu <strong>nome de usuario e nome</strong>, o teu <strong>enderezo de correo</strong> e o teu <strong>contrasinal</strong> (gardado cifrado con bcrypt, nunca en claro).</li>
         <li>O <strong>contido que publicas</strong>: fontes, reseñas, valoracións, fotos e incidencias.</li>
         <li>A túa <strong>localización precisa</strong> do navegador só se usa, se ti o autorizas, para amosarche fontes próximas; <strong>non se garda</strong> no servidor.</li>
+        <li>Para indicar chuvia no logotipo, o servidor consulta <strong>Open-Meteo</strong> coa localización redondeada a uns 11 km. Non se garda nin se asocia á túa conta, e Open-Meteo non recibe o teu IP.</li>
         <li>Das <strong>fotos que subes</strong> gardamos, se as levan, a <strong>data e as coordenadas que escribe o móbil</strong> (EXIF). Só serve para <strong>moderar</strong> e <strong>só o ven os administradores</strong>. A imaxe que se publica vai sen eses datos.</li>
         <li>Ao <strong>rexistrarte</strong> gardamos a túa <strong>rexión aproximada</strong> (país/rexión deducidos da IP, <strong>non a IP</strong>) e o <strong>idioma</strong> da interface, para estatística de uso e para escribirche na túa lingua.</li>
         <li>Se chegas desde un <strong>cartel ou unha campaña</strong> con código (<code>fontapp.net/?p=castellcir</code>), gardamos ese código coa alta para saber que cartel funciona. Non identifica a ninguén.</li>
@@ -779,6 +786,7 @@ function LegalEU() {
         <li>Zure <strong>erabiltzaile-izena eta izena</strong>, zure <strong>helbide elektronikoa</strong> eta zure <strong>pasahitza</strong> (bcrypt-ekin zifratuta gordeta, inoiz ez testu lauan).</li>
         <li><strong>Argitaratzen duzun edukia</strong>: iturriak, iritziak, balorazioak, argazkiak eta oharrak.</li>
         <li>Nabigatzailearen <strong>kokapen zehatza</strong> baimentzen baduzu bakarrik erabiltzen da, inguruko iturriak erakusteko; <strong>ez da gordetzen</strong> zerbitzarian.</li>
+        <li>Logotipoan euria adierazteko, zerbitzariak <strong>Open-Meteo</strong> kontsultatzen du kokapena 11 km ingurura biribilduta. Ez da gordetzen edo zure kontuarekin lotzen, eta Open-Meteok ez du zure IPa jasotzen.</li>
         <li><strong>Igotzen dituzun argazkietatik</strong>, baldin badakartzate, mugikorrak idazten dituen <strong>data eta koordenatuak</strong> gordetzen ditugu (EXIF). <strong>Moderatzeko</strong> baino ez da —argazkia dioen lekukoa eta unekoa den egiaztatzeko— eta <strong>administratzaileek soilik ikusten dute</strong>. Argitaratzen den irudiak ez darama datu horietako bat ere.</li>
         <li><strong>Izena ematean</strong> zure <strong>gutxi gorabeherako eskualdea</strong> (IPtik ondorioztatutako herrialdea/eskualdea, <strong>ez IPa</strong>) eta interfazearen <strong>hizkuntza</strong> gordetzen ditugu, erabilera-estatistiketarako eta zure hizkuntzan idazteko.</li>
         <li>Kodea duen <strong>kartel edo kanpaina</strong> batetik iristen bazara (<code>fontapp.net/?p=castellcir</code>), kode hori altarekin batera gordetzen dugu, zein kartelek funtzionatzen duen jakiteko. Ez du inor identifikatzen.</li>

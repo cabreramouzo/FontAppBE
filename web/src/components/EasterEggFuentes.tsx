@@ -7,7 +7,7 @@ import { getStats, type Stats } from '../api/client'
 import { useI18n } from '../i18n/I18nContext'
 
 /**
- * El easter egg del logo: siete toques a 💧 FontApp → llueven gotas y sale el número de
+ * El easter egg del logo: cuatro toques a 💧 FontApp → llueven gotas y sale el número de
  * fuentes cartografiadas. Escondido pero descubrible, como el tap del número de versión en
  * Android, y coherente con la casa: celebra el dato del que va la app.
  *

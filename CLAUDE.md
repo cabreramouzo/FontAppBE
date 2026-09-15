@@ -4178,6 +4178,21 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - El mapa ofrece **Solo confirmadas**. El filtro excluye las recientes sin respaldo, las
   contradictorias, las antiguas y las nunca comprobadas.
 
+## Guiños ocultos del mapa
+
+- Son decorativos: nunca conceden gotas, permisos, insignias ni generan analítica. El
+  logotipo abre el contador global con cuatro toques; mantener «Añadir fuente» 850 ms
+  lanza la fuente de los deseos; `H2O`, la secuencia Konami (teclado o deslizamientos),
+  siete toques en la atribución, una fuente a medianoche y cuatro arrastres sobre el mar
+  activan los demás. `MapEasterEggs` concentra los gestos para no dispersarlos por el mapa.
+- La lluvia real solo cambia `💧` por `💧☂️`. `/weather/rain` valida y redondea la
+  coordenada a una décima (~11 km), consulta Open-Meteo desde el servidor y guarda el
+  booleano 30 minutos **solo en memoria**. No toca PostgreSQL, no identifica al usuario y
+  el proveedor ve la IP de Fly, no la del navegador. La página legal lo explica en los
+  ocho idiomas. Un fallo meteorológico es silencioso: nunca debe afectar al mapa.
+- Los efectos no capturan controles mientras se muestran y deben respetar
+  `prefers-reduced-motion`; tampoco se añaden dependencias para una broma de segundos.
+
 ## No hacer
 - No commitear `.build/`, secrets ni `env.*` (salvo `env.development`).
 - No poner el proyecto en iCloud Drive (rompe builds y satura la sincronización).
