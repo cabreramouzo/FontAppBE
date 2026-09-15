@@ -58,7 +58,7 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
       ? [
           // Estallido: todas parten del centro y salen en todas direcciones, con un
           // pelín de empuje hacia arriba para que dibujen un arco antes de caer.
-          ...Array.from({ length: 150 }, () => {
+          ...Array.from({ length: 800 }, () => {
             const ang = Math.random() * Math.PI * 2
             const v = 5 + Math.random() * 12
             return {
@@ -70,7 +70,7 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
           }),
           // Lluvia de después: escalonada muy por encima del borde para que siga cayendo
           // cuando el estallido ya ha bajado.
-          ...Array.from({ length: 90 }, () => ({
+          ...Array.from({ length: 1200 }, () => ({
             x: Math.random() * ancho,
             y: -20 - Math.random() * alto * 1.2,
             w: 7 + Math.random() * 9, h: 13 + Math.random() * 15,
@@ -80,13 +80,13 @@ export function Confetti({ activo, forma = 'confeti' }: { activo: boolean; forma
           // Adheridas al cristal: aparecen quietas repartidas por la pantalla (como
           // salpicaduras del estallido), aguantan ~1 s y luego resbalan hacia abajo
           // dejando un reguero. `espera` en fotogramas (~0,6–1,4 s a 60 fps).
-          ...Array.from({ length: 28 }, () => {
+          ...Array.from({ length: 80 }, () => {
             const y = alto * (0.15 + Math.random() * 0.5)
             return {
               x: ancho * (0.1 + Math.random() * 0.8), y,
               w: 10 + Math.random() * 9, h: 13 + Math.random() * 12,
               vx: 0, vy: 0, giro: 0, vGiro: 0, color: color(),
-              espera: 36 + Math.floor(Math.random() * 48),
+              espera: 56 + Math.floor(Math.random() * 48),
               pegada: true, y0: y, fase: Math.random() * Math.PI * 2,
             }
           }),

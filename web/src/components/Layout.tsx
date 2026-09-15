@@ -87,7 +87,7 @@ export function Layout({ children }: { children: ReactNode }) {
     ultimoToque.current = ahora
     // Al empezar la ráfaga se precarga la cifra: para el 7º toque ya está y no parpadea «…».
     if (toquesLogo.current === 1) void getStats().then(setEggStats).catch(() => {})
-    if (toquesLogo.current >= 7) { toquesLogo.current = 0; setEggAbierto(true) }
+    if (toquesLogo.current >= 4) { toquesLogo.current = 0; setEggAbierto(true) }
   }
   // El icono de Novedades se mueve un momento para que se sepa que está ahí (ver
   // `lib/newsNudge.ts`, que es quien decide si toca y lleva la cuenta).
