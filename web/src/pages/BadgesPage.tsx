@@ -71,9 +71,17 @@ export function BadgesPage() {
    */
   function detalleEspecial(s: SpecialStanding, conseguida: boolean, agotada: boolean) {
     if (conseguida) {
-      return t('badges.specialEarnedOn', {
+      const fecha = t('badges.specialEarnedOn', {
         d: new Date(s.earnedAt!).toLocaleDateString(lang, { year: 'numeric', month: 'long', day: 'numeric' }),
       })
+      // Ganarla no vuelve irrelevante el cupo: precisamente quien ya es betatester es
+      // quien más probablemente quiera contarle a otra persona que todavía quedan
+      // plazas. Antes la fecha sustituía ese dato y solo lo veía quien aún no la tenía.
+      if (s.remaining == null) return fecha
+      const cupo = s.remaining === 0
+        ? t('badges.specialGone')
+        : t('badges.specialLeft', { n: s.remaining.toLocaleString(lang) })
+      return `${fecha} · ${cupo}`
     }
     if (agotada) return t('badges.specialGone')
     if (s.remaining != null) return t('badges.specialLeft', { n: s.remaining.toLocaleString(lang) })
