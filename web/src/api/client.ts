@@ -169,6 +169,10 @@ export function trackCampaignVisit(source: string) {
 
 /** Best-effort: la analítica nunca debe bloquear ni mostrar un error al visitante. */
 export function trackInteraction(event: string) {
+  // La automatización no es una visita. El servidor ya filtra por user-agent; esto pilla
+  // además al headless que declara `webdriver` con un UA de navegador normal. Los
+  // crawlers falseaban el contador (medido: 96 % del recuento eran bots del sitemap).
+  if (typeof navigator !== 'undefined' && navigator.webdriver) return Promise.resolve()
   return apiFetch<void>('/analytics', {
     method: 'POST', body: JSON.stringify({ event, session: analyticsSession() }),
   }).catch(() => {})

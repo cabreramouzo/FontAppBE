@@ -5,6 +5,11 @@ import XCTVapor
 import WebAuthn
 @testable import App
 
+/// UA de un navegador real: el ingest de analítica descarta los que huelen a bot
+/// (`InteractionAnalyticsController.looksLikeBot`), y `app.test` no manda ninguno, así
+/// que sin esto una petición de test se tomaría por bot y no insertaría nada.
+private let navegadorUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
+
 private struct StubGoogleVerifier: GoogleTokenVerifying {
     let profile: GoogleProfile
     func verify(_ credential: String, clientID: String, on client: any Client) async throws -> GoogleProfile {
@@ -288,12 +293,14 @@ final class IntegrationTests: XCTestCase {
                 """).run()
             for session in [firstSession, firstSession, secondSession] {
                 try await app.test(.POST, "analytics", beforeRequest: { req in
+                    req.headers.add(name: .userAgent, value: navegadorUA)
                     try req.content.encode(InteractionDTO(event: "support_heart", session: session))
                 }) { res in
                     XCTAssertEqual(res.status, .noContent)
                 }
             }
             try await app.test(.POST, "analytics", beforeRequest: { req in
+                req.headers.add(name: .userAgent, value: navegadorUA)
                 try req.content.encode(InteractionDTO(event: "invented_event", session: firstSession))
             }) { res in
                 XCTAssertEqual(res.status, .badRequest)
@@ -330,12 +337,14 @@ final class IntegrationTests: XCTestCase {
 
             // Sin token sigue contando en el agregado, pero no se atribuye a nadie.
             try await app.test(.POST, "analytics", beforeRequest: { req in
+                req.headers.add(name: .userAgent, value: navegadorUA)
                 try req.content.encode(InteractionDTO(event: "support_heart", session: UUID().uuidString))
             }) { res in
                 XCTAssertEqual(res.status, .noContent)
             }
             for _ in 0..<2 {
                 try await app.test(.POST, "analytics", headers: bearer(token), beforeRequest: { req in
+                    req.headers.add(name: .userAgent, value: navegadorUA)
                     try req.content.encode(InteractionDTO(event: "support_aixeta", session: UUID().uuidString))
                 }) { res in
                     XCTAssertEqual(res.status, .noContent)
@@ -2936,18 +2945,22 @@ final class IntegrationTests: XCTestCase {
             struct DTO: Content { let source: String; let session: String }
             // Sin ninguna cabecera de sesión: quien viene de un post no tiene cuenta.
             try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                req.headers.add(name: .userAgent, value: navegadorUA)
                 try req.content.encode(DTO(source: "linkedin", session: sesion.uuidString))
             }, afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
             // La misma pestaña otra vez no es otra llegada.
             try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                req.headers.add(name: .userAgent, value: navegadorUA)
                 try req.content.encode(DTO(source: "linkedin", session: sesion.uuidString))
             }, afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
             try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                req.headers.add(name: .userAgent, value: navegadorUA)
                 try req.content.encode(DTO(source: "linkedin", session: UUID().uuidString))
             }, afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
 
             // Un código con cualquier forma llenaría la tabla: la ruta es pública.
             try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                req.headers.add(name: .userAgent, value: navegadorUA)
                 try req.content.encode(DTO(source: "https://malo.example/x", session: UUID().uuidString))
             }, afterResponse: { res in XCTAssertEqual(res.status, .badRequest) })
 
@@ -2974,6 +2987,7 @@ final class IntegrationTests: XCTestCase {
         try await withApp { app in
             struct DTO: Content { let source: String; let session: String }
             try await app.test(.POST, "/analytics/visit", beforeRequest: { req in
+                req.headers.add(name: .userAgent, value: navegadorUA)
                 try req.content.encode(DTO(source: "cartel", session: UUID().uuidString))
             }, afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
 

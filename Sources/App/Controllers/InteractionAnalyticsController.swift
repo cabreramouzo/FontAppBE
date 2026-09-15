@@ -51,6 +51,29 @@ struct InteractionAnalyticsController: RouteCollection {
     ]
     static let identifiedSupportEvents: Set<String> = ["support_heart", "support_aixeta"]
 
+    /// Trozos de user-agent que delatan un bot. Se comparan en minúsculas y por
+    /// inclusión: `bot`/`crawl`/`spider`/`slurp` cubren a la mayoría (googlebot, bingbot,
+    /// bytespider, ahrefsbot…) y el resto son los que NO llevan esas palabras (headless,
+    /// librerías HTTP, unfurlers de mensajería). Un navegador real no contiene ninguno.
+    static let botTokens = [
+        "bot", "crawl", "spider", "slurp", "headless", "phantom", "puppeteer",
+        "playwright", "selenium", "webdriver", "python", "go-http", "okhttp",
+        "node-fetch", "axios", "curl", "wget", "libwww", "httpx", "scrapy",
+        "java/", "apache-httpclient", "facebookexternalhit", "embedly", "whatsapp",
+        "telegram", "discord", "slack", "lighthouse", "gtmetrix", "dataforseo",
+    ]
+
+    /// ¿El user-agent es de un bot? Se **mira y se descarta**, nunca se guarda: el
+    /// principio de privacidad es no ALMACENAR el UA, no ignorarlo para lo que sí es
+    /// legítimo. Sin esto, los crawlers que renderizan JS rastreando las miles de fichas
+    /// del sitemap cuentan como «visitas de escritorio» y falsean el número —medido, el
+    /// 06/09/2026 el escritorio pasó de ~15 sesiones/día a miles, y de 15.868 sesiones
+    /// solo 10 hicieron algo—. Un cliente sin UA no es un navegador: también fuera.
+    static func looksLikeBot(_ ua: String?) -> Bool {
+        guard let ua = ua?.lowercased(), !ua.isEmpty else { return true }
+        return botTokens.contains { ua.contains($0) }
+    }
+
     func boot(routes: RoutesBuilder) throws {
         routes.grouped(UserToken.authenticator())
             .grouped(RateLimitMiddleware(scope: "interaction-analytics", max: 120, window: 5 * 60))
@@ -78,6 +101,7 @@ struct InteractionAnalyticsController: RouteCollection {
     /// cuenta, y contar solo a quien la crea es exactamente lo que dejaba ciego el
     /// embudo. Guarda código, día y UUID de pestaña; nada más.
     @Sendable func visit(req: Request) async throws -> HTTPStatus {
+        guard !Self.looksLikeBot(req.headers.first(name: .userAgent)) else { return .noContent }
         struct DTO: Content { let source: String; let session: String }
         let dto = try req.content.decode(DTO.self)
         let source = dto.source.lowercased()
@@ -134,6 +158,9 @@ struct InteractionAnalyticsController: RouteCollection {
     }
 
     @Sendable func record(req: Request) async throws -> HTTPStatus {
+        // Un bot no es una visita. Se descarta en silencio (204, no un error) para que el
+        // cliente no lo tome por fallo transitorio y reintente.
+        guard !Self.looksLikeBot(req.headers.first(name: .userAgent)) else { return .noContent }
         let dto = try req.content.decode(InteractionDTO.self)
         guard Self.allowed.contains(dto.event), let sessionID = UUID(uuidString: dto.session),
               let sql = req.db as? SQLDatabase else { throw Abort(.badRequest) }
