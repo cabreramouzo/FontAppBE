@@ -27,6 +27,7 @@ struct GamificationController: RouteCollection {
         let g = routes.grouped("gamification").grouped(UserToken.authenticator(), User.guardMiddleware())
         g.get("me", use: me)
         g.get("guarded", use: guarded)
+        g.get("collection", use: collection)
 
         // Solo para la felicitación. Va aparte de `me` porque cuenta lo pendiente y `me`
         // no debe: el marcador, la vitrina y todo lo demás siguen con las 72 h.
@@ -347,6 +348,17 @@ struct GamificationController: RouteCollection {
         return try await Guardianship.of(try user.requireID(), on: req.db)
     }
 
+    /// GET /gamification/collection — la «Pokédex»: fuentes visitadas y tipos coleccionados.
+    ///
+    /// 204 si apagó la gamificación, igual que `me`: es una mecánica de puntos y apagarla
+    /// deja de gastar consultas. Es dato propio y solo suyo.
+    @Sendable func collection(req: Request) async throws -> Response {
+        let user = try req.auth.require(User.self)
+        guard !user.gamificationOptOut else { return Response(status: .noContent) }
+        let resumen = try await VisitedCollection.of(try user.requireID(), on: req.db)
+        return try await resumen.encodeResponse(for: req)
+    }
+
     /// GET /gamification/me — marcador, nivel, insignias e impacto del usuario autenticado.
     ///
     /// Devuelve 204 si el usuario ha apagado la gamificación. No es un error: es que no
@@ -388,6 +400,9 @@ struct GamificationController: RouteCollection {
         // Fase 6: qué abre el nivel, y si no abre nada, por qué. Un botón desactivado sin
         // explicación se lee como una avería.
         perfil.grant = try await Capabilities.of(user, on: req.db)
+        // De cuántas fuentes es guardián: cierra el bucle del título que sale en la ficha.
+        // Solo aquí y no en `profile()` — las rutas de insignias no lo necesitan.
+        perfil.mayorCount = try await FountainMayor.countFor(userID, on: req.db)
         return try await perfil.encodeResponse(for: req)
     }
 }

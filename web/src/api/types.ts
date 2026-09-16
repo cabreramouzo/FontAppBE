@@ -300,6 +300,9 @@ export interface GamificationProfile {
     fontsYouKeepFresh: number
     fontsYouPutOnTheMap: number
   }
+  /** De cuántas fuentes eres guardián (quien más las comprueba en 60 días).
+   *  Solo lo trae `/gamification/me`. */
+  mayorCount?: number
   /** Los puntos todavía se pueden recalcular; se avisa en la interfaz. */
   provisional: boolean
   /** Fase 6: qué abre tu nivel y, si no abre nada, por qué. */

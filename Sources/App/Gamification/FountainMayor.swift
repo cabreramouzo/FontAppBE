@@ -91,6 +91,43 @@ enum FountainMayor {
         return Mayor(userID: f.user_id, username: f.username, reviews: f.n)
     }
 
+    /// De cuántas fuentes **visibles** es guardián esta persona ahora mismo.
+    ///
+    /// Cierra el bucle del título: un motivo para defenderlo. Es una sola consulta con una
+    /// ventana (`row_number`) que corona a la de cabeza por fuente y cuenta las que salen a
+    /// nombre de este usuario, así que no cuesta un `of` por fuente.
+    ///
+    /// Filtra por `Font.visibleSQL`, a diferencia de `of` (que sirve una ficha suelta
+    /// alcanzable por enlace viejo aunque esté escondida): en un recuento, contar fuentes
+    /// que ya no están en el mapa lo inflaría. Mismo criterio que la lista de `Guardianship`.
+    static func countFor(_ userID: UUID, on db: any Database, now: Date = Date()) async throws -> Int {
+        guard let sql = db as? any SQLDatabase else { return 0 }
+        let since = now.addingTimeInterval(-windowDays * 86_400)
+        struct Fila: Decodable { let n: Int }
+        let filas = try await sql.raw("""
+            WITH counts AS (
+              SELECT c.font_id, c.user_id, count(*) AS reviews, min(c.created_at) AS first_at
+              FROM font_comments c
+              JOIN users u ON u.id = c.user_id
+              JOIN fonts f ON f.id = c.font_id
+              WHERE c.created_at >= \(bind: since)
+                AND u.gamification_opt_out = false
+                AND u.anonymized_at IS NULL
+                AND \(unsafeRaw: Font.visibleSQL)
+              GROUP BY c.font_id, c.user_id
+            ),
+            ranked AS (
+              SELECT font_id, user_id, reviews,
+                     row_number() OVER (PARTITION BY font_id ORDER BY reviews DESC, first_at ASC) AS rk
+              FROM counts
+            )
+            SELECT count(*) AS n
+            FROM ranked
+            WHERE rk = 1 AND reviews >= \(bind: minReviews) AND user_id = \(bind: userID)
+            """).all(decoding: Fila.self)
+        return filas.first?.n ?? 0
+    }
+
     /// Avisa al guardián anterior de que le han quitado el puesto, si es que ha pasado.
     ///
     /// **Solo campana, sin push.** El criterio de siempre para la notificación del sistema

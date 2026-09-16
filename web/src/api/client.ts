@@ -676,6 +676,22 @@ export async function guardedFonts(): Promise<Guarded[]> {
   return apiFetch<Guarded[]>('/gamification/guarded')
 }
 
+/** La colección («Pokédex»): fuentes visitadas y tipos coleccionados. */
+export interface VisitedCollection {
+  /** Fuentes distintas que has reseñado (visibles). */
+  visited: number
+  /** Un elemento por tipo de `WaterSource`, en orden fijo; `count` 0 = aún no lo tienes. */
+  types: { source: WaterSource; count: number }[]
+}
+
+/**
+ * La Pokédex de fuentes. Aparte de `/gamification/me` por lo mismo que `guardedFonts`:
+ * su propio coste y solo la paga quien abre el perfil. `null` si apagó la gamificación (204).
+ */
+export async function visitedCollection(): Promise<VisitedCollection | null> {
+  return (await apiFetch<VisitedCollection | undefined>('/gamification/collection')) ?? null
+}
+
 /** Un aviso de la campana. `fontID` nulo = la fuente ya no existe. */
 export interface NotificationItem {
   id: string

@@ -349,6 +349,12 @@ enum ContributionLedger {
         /// cupo. Van aparte de `collection` porque no tienen progreso que enseñar —o la
         /// tienes o no— y porque una con cupo agotado ya no es «te falta», es «se acabó».
         var special: [SpecialStanding] = []
+        /// De cuántas fuentes es **guardián** ahora mismo (ver `FountainMayor`). Lo rellena
+        /// solo `/gamification/me`, no el cálculo: es una consulta aparte y las rutas de
+        /// insignias no la necesitan. Opcional para que ahí se omita en vez de mentir con
+        /// un 0. Es una cifra sobre el mapa, no un contador de puntos, así que cabe al lado
+        /// del impacto.
+        var mayorCount: Int?
     }
 
     /// Una insignia especial vista desde el perfil de alguien.

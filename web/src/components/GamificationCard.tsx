@@ -14,6 +14,7 @@ import WaterDropOutlinedIcon from '@mui/icons-material/WaterDropOutlined'
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined'
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import AddLocationAltOutlinedIcon from '@mui/icons-material/AddLocationAltOutlined'
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined'
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined'
 import { getGamification } from '../api/client'
 import type { GamificationProfile } from '../api/types'
@@ -66,6 +67,9 @@ export function GamificationCard() {
     { icon: <PhotoCameraOutlinedIcon fontSize="small" />, n: impact.fontsWithPhotoThanksToYou, label: t('game.impact.photos') },
     { icon: <VisibilityOutlinedIcon fontSize="small" />, n: impact.fontsYouKeepFresh, label: t('game.impact.fresh') },
     { icon: <AddLocationAltOutlinedIcon fontSize="small" />, n: impact.fontsYouPutOnTheMap, label: t('game.impact.created') },
+    // De cuántas fuentes eres guardián. Como el resto, solo se pinta si es > 0: una
+    // baldosa a cero invita a nada. Ver `FountainMayor`.
+    { icon: <EmojiEventsOutlinedIcon fontSize="small" />, n: data.mayorCount ?? 0, label: t('game.impact.guardian') },
   ].filter((i) => i.n > 0)
 
   // Progreso hacia el siguiente nivel. Sin siguiente (nivel máximo) no se pinta barra.

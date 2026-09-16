@@ -18,6 +18,7 @@ import { waterStatusInfo } from '../lib/waterStatus'
 import { timeAgo } from '../lib/time'
 import { canModerate } from '../lib/roles'
 import { GamificationCard } from '../components/GamificationCard'
+import { VisitedCollection } from '../components/VisitedCollection'
 import { GuardedFonts } from '../components/GuardedFonts'
 import { TextoLargo } from '../components/TextoLargo'
 import { ListaConTope } from '../components/ListaConTope'
@@ -117,6 +118,10 @@ export function ProfilePage() {
       </Box>
 
       {!user.gamificationOptOut && <GamificationCard />}
+
+      {/* La Pokédex: colección de fuentes visitadas y tipos. Como el marcador, se calla si
+          la gamificación está apagada (204) o si aún no has visitado nada. */}
+      {!user.gamificationOptOut && <VisitedCollection />}
 
       {/* Va después del marcador: es lo accionable de esta pantalla. Y **no** depende de
           `gamificationOptOut` — cuidar una fuente no es puntuar, y quien apagó los puntos

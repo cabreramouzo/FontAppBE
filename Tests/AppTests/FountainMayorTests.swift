@@ -152,6 +152,42 @@ final class FountainMayorTests: XCTestCase {
         }
     }
 
+    /// El recuento del perfil: cuenta las fuentes que guardas y solo esas.
+    func testCountForCuentaSoloLasQueGuardas() async throws {
+        try await withApp { app in
+            let a = try await usuario(app, "guardiana")
+            let b = try await usuario(app, "otra")
+            // Dos fuentes donde A manda.
+            let f1 = try await fuente(app)
+            try await resena(app, f1, de: a, hace: 4); try await resena(app, f1, de: a, hace: 1)
+            let f2 = try await fuente(app)
+            try await resena(app, f2, de: a, hace: 3); try await resena(app, f2, de: a, hace: 2)
+            // Una donde manda B (A solo pasó una vez): no cuenta para A.
+            let f3 = try await fuente(app)
+            try await resena(app, f3, de: b, hace: 3); try await resena(app, f3, de: b, hace: 2)
+            try await resena(app, f3, de: a, hace: 1)
+
+            let n = try await FountainMayor.countFor(try a.requireID(), on: app.db)
+            XCTAssertEqual(n, 2, "solo las dos que guarda, no la que lidera otra persona")
+        }
+    }
+
+    /// Una fuente escondida no cuenta en el recuento, aunque su ficha aún enseñe guardián.
+    func testCountForIgnoraEscondidas() async throws {
+        try await withApp { app in
+            let a = try await usuario(app, "guarda")
+            let f = try await fuente(app)
+            try await resena(app, f, de: a, hace: 2); try await resena(app, f, de: a, hace: 1)
+            let antes = try await FountainMayor.countFor(try a.requireID(), on: app.db)
+            XCTAssertEqual(antes, 1)
+            // Se retira del mapa: deja de contar.
+            f.retiredAt = Date()
+            try await f.save(on: app.db)
+            let despues = try await FountainMayor.countFor(try a.requireID(), on: app.db)
+            XCTAssertEqual(despues, 0)
+        }
+    }
+
     /// Y no avisa a nadie si no ha cambiado de manos: aguantar el puesto no es una noticia.
     func testSinDestronamientoNoAvisa() async throws {
         try await withApp { app in
@@ -165,6 +201,29 @@ final class FountainMayorTests: XCTestCase {
                 reviewerID: try a.requireID(), on: app.db)
             let n = try await App.Notification.query(on: app.db).count()
             XCTAssertEqual(n, 0)
+        }
+    }
+
+    /// El cableado de verdad: `GET /fonts/:id` expone el guardián. Es una ruta pública, así
+    /// que se prueba sin token, y sin guardián el campo llega como `null` (no ausente).
+    func testFichaExponeElGuardian() async throws {
+        struct Detalle: Content { struct M: Content { let username: String; let reviews: Int }; let mayor: M? }
+        try await withApp { app in
+            let a = try await usuario(app, "guardaficha")
+            let f = try await fuente(app)
+            // Sin guardián todavía: una sola comprobación.
+            try await resena(app, f, de: a, hace: 1)
+            try await app.test(.GET, "fonts/\(try f.requireID())") { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertNil(try res.content.decode(Detalle.self).mayor)
+            }
+            // La segunda lo corona.
+            try await resena(app, f, de: a, hace: 0)
+            try await app.test(.GET, "fonts/\(try f.requireID())") { res in
+                let m = try XCTUnwrap(try res.content.decode(Detalle.self).mayor)
+                XCTAssertEqual(m.username, a.username)
+                XCTAssertEqual(m.reviews, 2)
+            }
         }
     }
 }
