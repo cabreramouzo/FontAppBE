@@ -10,6 +10,7 @@ import FingerprintIcon from '@mui/icons-material/Fingerprint'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ApiError, describeError, trackInteraction } from '../api/client'
+import { safeNext, withNext } from '../lib/nextParam'
 
 // Formulario de INICIO DE SESIÓN, en su propia URL y sin mezclarse con el registro.
 //
@@ -57,7 +58,7 @@ export function LoginPage() {
           try {
             await loginGoogleRef.current(credential)
             await trackInteraction('auth_google_success')
-            window.location.assign('/')
+            window.location.assign(safeNext() ?? '/')
           } catch (err) {
             trackInteraction('auth_google_error')
             setError(describeError(err, tRef.current))
@@ -97,7 +98,7 @@ export function LoginPage() {
       await trackInteraction('auth_password_success')
       // Navegación REAL (no client-side): así el navegador ve una transición de página
       // tras enviar el formulario, que es lo que dispara el "¿guardar contraseña?".
-      window.location.assign('/')
+      window.location.assign(safeNext() ?? '/')
     } catch (err) {
       trackInteraction('auth_password_error')
       // Aquí un 401 no es "se te ha caducado la sesión" (el mensaje genérico), sino
@@ -112,7 +113,7 @@ export function LoginPage() {
   async function passkeyLogin() {
     trackInteraction('auth_passkey')
     setError(''); setBusy(true)
-    try { await loginWithPasskey(); await trackInteraction('auth_passkey_success'); window.location.assign('/') }
+    try { await loginWithPasskey(); await trackInteraction('auth_passkey_success'); window.location.assign(safeNext() ?? '/') }
     catch (err) {
       trackInteraction('auth_passkey_error')
       if (err instanceof DOMException && err.name === 'NotAllowedError') setError(t('passkey.cancelled'))
@@ -186,7 +187,7 @@ export function LoginPage() {
         <Link href="/forgot-password">{t('login.forgot')}</Link>
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-        {t('login.noAccount')} <Link href="/register">{t('login.signup')}</Link>
+        {t('login.noAccount')} <Link href={withNext('/register', safeNext())}>{t('login.signup')}</Link>
       </Typography>
     </Box>
   )

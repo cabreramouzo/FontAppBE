@@ -37,6 +37,7 @@ import { MoreMenu } from './MoreMenu'
 import { EasterEggFuentes } from './EasterEggFuentes'
 import { TabBar } from './TabBar'
 import { mainSection } from '../lib/navigation'
+import { loginNext } from '../lib/nextParam'
 
 const desktopTabSx = (selected: boolean) => ({
   display: { xs: 'none', sm: 'inline-flex' },
@@ -390,7 +391,7 @@ export function Layout({ children }: { children: ReactNode }) {
           ) : (
             // Enlace normal (no client-side): carga el documento para que el formulario
             // de acceso exista cuando el navegador lo analiza (autorrelleno fiable).
-            <Button component="a" href="/login" variant="contained" size="small" disableElevation onClick={() => trackInteraction('nav_login')}>{t('nav.enter')}</Button>
+            <Button component="a" href={loginNext()} variant="contained" size="small" disableElevation onClick={() => trackInteraction('nav_login')}>{t('nav.enter')}</Button>
           )}
           {/* El último de la fila, que es donde se busca un menú de desbordamiento. */}
           <Box sx={{ display: { xs: 'inline-flex', sm: 'none' } }}>

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
+import { loginNext } from '../../lib/nextParam'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Link from '@mui/material/Link'
@@ -37,7 +38,7 @@ export function useAjustes() {
   // Sin sesión no hay ajustes que tocar. `replace` y no `navigate` para que el botón de
   // atrás no devuelva a una pantalla que va a volver a echarte.
   useEffect(() => {
-    if (!loading && !user) window.location.replace('/login')
+    if (!loading && !user) window.location.replace(loginNext())
   }, [loading, user])
 
   async function guardar(patch: Ajuste): Promise<boolean> {

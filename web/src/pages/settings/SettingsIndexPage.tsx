@@ -26,6 +26,7 @@ import { useI18n } from '../../i18n/I18nContext'
 import { estado as estadoPush, type EstadoPush } from '../../lib/push'
 import { ocupado } from '../../lib/almacen'
 import { formateaTamano } from '../../lib/tamanos'
+import { loginNext } from '../../lib/nextParam'
 
 /**
  * El índice de los ajustes: una pantalla por tema, como los del teléfono.
@@ -60,7 +61,7 @@ export function SettingsIndexPage() {
   const { lang } = useI18n()
 
   useEffect(() => {
-    if (!loading && !user) window.location.replace('/login')
+    if (!loading && !user) window.location.replace(loginNext())
   }, [loading, user])
 
   // El estado de las dos filas que no se pueden deducir del perfil: el push lo concede el

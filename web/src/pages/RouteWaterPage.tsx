@@ -37,6 +37,7 @@ import {
   cajaDe, fuentesEnRuta, largoKm, leeGPX, perfil, simplifica, subidaEntre, tramoMasSeco,
   tramosSecos, CORREDOR_M, type EnRuta,
 } from '../lib/gpxImport'
+import { loginNext } from '../lib/nextParam'
 import { RouteProfile } from '../components/RouteProfile'
 
 /**
@@ -513,7 +514,7 @@ export function RouteWaterPage() {
                 </>
               ) : (
                 <Typography variant="body2">
-                  <Link component={RouterLink} to="/login">{t('gpxIn.reportLogin')}</Link>
+                  <Link component={RouterLink} to={loginNext()}>{t('gpxIn.reportLogin')}</Link>
                 </Typography>
               )}
             </Alert>

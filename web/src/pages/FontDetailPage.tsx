@@ -120,6 +120,7 @@ import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 import { ConfidenceChip } from '../components/ConfidenceChip'
 import { evidenceFromReports } from '../lib/confidence'
 import { rememberFountain } from '../lib/recentHistory'
+import { loginNext } from '../lib/nextParam'
 import { ConfidenceHelpButton } from '../components/ConfidenceHelp'
 import { FinalApproach } from '../components/FinalApproach'
 
@@ -1064,7 +1065,7 @@ export function FontDetailPage() {
   // Guarda / deja de guardar la fuente en favoritos (requiere sesión).
   async function toggleFavorite() {
     if (!id) return
-    if (!user) { window.location.assign('/login'); return }
+    if (!user) { window.location.assign(loginNext()); return }
     setSavingFavorite(true)
     try {
       const next = await setFavorite(id, !favorite?.favorited)
@@ -1569,7 +1570,7 @@ export function FontDetailPage() {
                   </Collapse>
                 </>
               ) : (
-                <Typography color="text.secondary" sx={{ my: 1.5 }}><Link href="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+                <Typography color="text.secondary" sx={{ my: 1.5 }}><Link href={loginNext()}>{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
               )}
             </>
           ) : (
@@ -1585,7 +1586,7 @@ export function FontDetailPage() {
                   <UpdateForm fontID={font.id} hasPhoto={!!font.image} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
                 )
               ) : (
-                <Typography color="text.secondary" sx={{ my: 1 }}><Link href="/login">{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+                <Typography color="text.secondary" sx={{ my: 1 }}><Link href={loginNext()}>{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
               )}
             </>
           )}
@@ -1803,7 +1804,7 @@ export function FontDetailPage() {
           {user ? (
             <ReportForm fontID={font.id} onPosted={load} borrador={borrador} />
           ) : (
-            <Typography color="text.secondary"><Link href="/login">{t('nav.enter')}</Link> {t('report.loginToReport')}</Typography>
+            <Typography color="text.secondary"><Link href={loginNext()}>{t('nav.enter')}</Link> {t('report.loginToReport')}</Typography>
           )}
         </Box>
         </Box>

@@ -10,6 +10,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { trackInteraction } from '../api/client'
 import { mainSection } from '../lib/navigation'
+import { loginNext } from '../lib/nextParam'
 
 /**
  * Navegación principal en móvil, abajo, como espera cualquiera que use un teléfono.
@@ -69,7 +70,7 @@ export function TabBar() {
             key={p.ruta}
             aria-current={p.seccion === seccionActiva ? 'page' : undefined}
             // Sin sesión, «Yo» lleva a entrar: una pestaña que da 401 no es una pestaña.
-            onClick={p.ruta === '/me' && !user ? (e) => { e.preventDefault(); navigate('/login') } : undefined}
+            onClick={p.ruta === '/me' && !user ? (e) => { e.preventDefault(); navigate(loginNext('/me')) } : undefined}
             label={t(p.clave)}
             icon={p.icono}
             sx={{

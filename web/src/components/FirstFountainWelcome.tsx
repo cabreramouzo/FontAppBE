@@ -13,6 +13,7 @@ import type { FontSummary } from '../api/types'
 import { constaAgua } from '../lib/confidence'
 import { firstFountainKind, type FirstFountainKind } from '../lib/firstFountain'
 import { haversineKm } from '../lib/geo'
+import { loginNext } from '../lib/nextParam'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 
@@ -147,7 +148,7 @@ export function FirstFountainWelcome() {
     try { if (user) await setFavorite(nearest.id, true) } catch { /* best effort */ }
     marcaVisto()
     setState(null)
-    if (!user) navigate('/login')
+    if (!user) navigate(loginNext())
   }
 
   function añadir() {

@@ -9,6 +9,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { escribiendoCorreo, esNombreValido } from '../lib/username'
 import { describeError, trackInteraction } from '../api/client'
+import { safeNext, withNext } from '../lib/nextParam'
 
 // Formulario de ALTA, en su propia URL (ver la nota de LoginPage: un propósito por
 // página para que los gestores de contraseñas clasifiquen bien el formulario).
@@ -46,7 +47,8 @@ export function RegisterPage() {
     try {
       await register(name, username, email, password)
       // Navegación real: el navegador ve la transición y ofrece guardar la credencial.
-      window.location.assign('/')
+      // Y vuelve a donde ibas (la fuente que querías reseñar), no a la portada.
+      window.location.assign(safeNext() ?? '/')
     } catch (err) {
       setError(describeError(err, t))
       setBusy(false)
@@ -121,7 +123,7 @@ export function RegisterPage() {
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
       <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-        {t('login.haveAccount')} <Link href="/login">{t('login.enter')}</Link>
+        {t('login.haveAccount')} <Link href={withNext('/login', safeNext())}>{t('login.enter')}</Link>
       </Typography>
     </Box>
   )

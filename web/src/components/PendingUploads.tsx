@@ -11,6 +11,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff'
 import CloudDoneIcon from '@mui/icons-material/CloudDone'
 import SyncProblemIcon from '@mui/icons-material/SyncProblem'
 import { descartaPendientes, flushOutbox, isOutboxSyncing, onOutboxChanged, onOutboxSyncState, pendingStatus } from '../lib/outbox'
+import { loginNext } from '../lib/nextParam'
 import { PendingDetails } from './PendingDetails'
 import { useI18n } from '../i18n/I18nContext'
 import { ChipDeAviso, TarjetaDeAviso } from './Avisos'
@@ -225,7 +226,7 @@ export function PendingUploads() {
       </Box>
       {count > 0 && online && needsAuth ? (
         // Reintentar no sirve hasta que vuelva a haber sesión: le llevamos al acceso.
-        <Button size="small" variant="contained" disableElevation component="a" href="/login">
+        <Button size="small" variant="contained" disableElevation component="a" href={loginNext()}>
           {t('nav.enter')}
         </Button>
       ) : count > 0 && online && ajenas < count ? (

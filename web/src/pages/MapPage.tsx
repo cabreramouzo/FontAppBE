@@ -102,6 +102,7 @@ import { NuevoBadge } from '../components/NuevoBadge'
 import { RelocateFont } from '../components/RelocateFont'
 import { MapEasterEggs } from '../components/MapEasterEggs'
 import { parseSavedMapView, vistaAlAbrir, type SavedMapView } from '../lib/mapView'
+import { loginNext } from '../lib/nextParam'
 
 // Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
 // península aproximadamente centrada y el zoom 5 permite verla entera también en móvil.
@@ -2362,7 +2363,7 @@ export function MapPage() {
                onClick={() => {
                  if (wishConsumed.current) { wishConsumed.current = false; return }
                  trackInteraction(user ? 'map_add_font_button' : 'map_add_font_signed_out')
-                 if (!user) { navigate('/login'); return }
+                 if (!user) { navigate(loginNext()); return }
                  startPlacing()
                }}
                sx={{ WebkitTouchCallout: 'none', userSelect: 'none', touchAction: 'manipulation' }}>

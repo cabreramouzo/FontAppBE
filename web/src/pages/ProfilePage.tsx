@@ -28,6 +28,7 @@ import StarBorderIcon from '@mui/icons-material/StarBorder'
 import AddLocationAltOutlinedIcon from '@mui/icons-material/AddLocationAltOutlined'
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined'
 import { nombreFuente, rotulo } from '../lib/fontName'
+import { loginNext } from '../lib/nextParam'
 
 /**
  * Tu perfil: **lo tuyo**, y nada de lo que se toca.
@@ -53,7 +54,7 @@ export function ProfilePage() {
   useEffect(() => {
     if (loading) return // esperamos a que se restaure la sesión antes de decidir
     if (!user) {
-      window.location.replace('/login')
+      window.location.replace(loginNext())
       return
     }
     getMyFonts().then(setFonts).catch(() => setFonts([]))
