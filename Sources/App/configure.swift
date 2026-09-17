@@ -193,7 +193,16 @@ public func configure(_ app: Application) async throws {
     // y puntúa unos segundos después, fuera de la petición. Ningún controlador la conoce.
     // Sin GAMIFICATION_WORKER=true no arranca y el recuento se hace por cron
     // (`gamification-sync`). Ver docs/gamificacion.md.
-    if Environment.get("GAMIFICATION_WORKER") == "true" {
+    //
+    // **Nunca en tests.** `env.development` lleva `GAMIFICATION_WORKER=true` y correr la
+    // suite con ese entorno exportado arrancaba el worker: su `scheduleRepeatedTask` vive en
+    // el `EventLoopGroup` **compartido** de `.testing` (que `asyncShutdown` no cierra), y a
+    // los 30 s disparaba `tick` sobre un app ya apagado → «Core not configured», tumbando el
+    // test que corriera en ese instante. Y aunque no crashease, el barrido de fondo compite
+    // por la base con los tests. El suite dirige el recuento a mano (`ContributionLedger`/
+    // `gamification-sync`); el trabajador no pinta nada aquí. CI ya iba bien porque no
+    // exporta ese entorno — esto protege al que sí lo hace en local.
+    if Environment.get("GAMIFICATION_WORKER") == "true" && app.environment != .testing {
         GamificationWorker.shared.start(on: app)
     }
 
