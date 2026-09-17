@@ -58,8 +58,8 @@ export function VisitedCollection() {
             >
               <Box
                 sx={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  width: 52, minHeight: 52, borderRadius: 2, px: 0.5, py: 0.75,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
+                  width: 64, minHeight: 52, borderRadius: 2, px: 0.5, py: 0.75,
                   bgcolor: tiene ? 'action.hover' : 'transparent',
                   border: '1px solid', borderColor: 'divider',
                   opacity: tiene ? 1 : 0.4,
@@ -67,6 +67,14 @@ export function VisitedCollection() {
                 }}
               >
                 <Box component="span" sx={{ fontSize: '1.5rem', lineHeight: 1 }}>{SOURCE_EMOJI[tp.source]}</Box>
+                {/* El rótulo bajo cada emoji: sin él, un cubo (que es un pozo) o una gota
+                    no dicen qué tipo son. Una palabra (`source.short.*`), no la frase larga
+                    de `source.*`, que no cabe bajo un icono de 64 px. */}
+                <Typography
+                  sx={{ fontSize: '0.6rem', lineHeight: 1.2, mt: 0.25, textAlign: 'center', color: 'text.secondary' }}
+                >
+                  {t(`source.short.${tp.source}`)}
+                </Typography>
                 {tiene && (
                   <Typography sx={{ fontWeight: 700, fontSize: '0.75rem', lineHeight: 1.4 }}>{tp.count}</Typography>
                 )}
