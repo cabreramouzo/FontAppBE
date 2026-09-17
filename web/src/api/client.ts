@@ -790,6 +790,22 @@ export async function getPulse(): Promise<PulseSnapshot> {
   return apiFetch('/activity/pulse')
 }
 
+/** La fuente de la semana: una olvidada cerca de ti, para ir a comprobarla. */
+export interface FeaturedFountain {
+  fontID: string
+  name: string | null
+  source: WaterSource | null
+  /** Días desde la última comprobación; `null` si nunca. */
+  days: number | null
+  neverChecked: boolean
+}
+
+/** `null` si no se mandan coordenadas o si alrededor no hay ninguna olvidada (204). */
+export async function getFeaturedFountain(pos: [number, number]): Promise<FeaturedFountain | null> {
+  return (await apiFetch<FeaturedFountain | undefined>(
+    `/activity/featured?lat=${pos[0]}&long=${pos[1]}`)) ?? null
+}
+
 /**
  * Insignias conseguidas por alguien. Público, y solo lo conseguido: familia y grado,
  * sin el progreso que sí lleva la vitrina propia.

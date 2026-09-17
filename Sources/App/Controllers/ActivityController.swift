@@ -24,11 +24,41 @@ struct ActivityController: RouteCollection {
             .grouped(RateLimitMiddleware(scope: "activity", max: 120, window: 60 * 60))
         activity.get(use: index)
         activity.get("pulse", use: pulse)
+        activity.get("featured", use: featured)
     }
 
     /// Compartida entre peticiones, como la de zonas: una agregación sobre la tabla de
     /// aportaciones que vale igual durante minutos.
     static let pulseCache = ZoneCache()
+
+    /// La fuente de la semana, cacheada como el resto: cambia por semana, no por segundo.
+    static let featuredCache = ZoneCache()
+
+    /// GET /activity/featured?lat=&long= — la fuente olvidada de la semana, cerca de ti.
+    ///
+    /// Pública y cacheada. Devuelve 204 si no llegan coordenadas o si alrededor no hay
+    /// ninguna fuente olvidada: sin candidata no se inventa nada. Ver `FeaturedFountain`.
+    @Sendable func featured(req: Request) async throws -> Response {
+        guard let latCruda = req.query[Double.self, at: "lat"],
+              let longCruda = req.query[Double.self, at: "long"] else {
+            return Response(status: .noContent)
+        }
+        // Mismas coordenadas redondeadas que `/activity`, para que la caché sirva y los
+        // vecinos vean la misma fuente. El paso es el del radio de `FeaturedFountain`.
+        let step = Self.coordStep(forKm: FeaturedFountain.maxKm)
+        let lat = Self.snap(latCruda, step: step)
+        let long = Self.snap(longCruda, step: step)
+        // La semana entra en la clave: al cambiar de semana, la caché vieja deja de valer.
+        let clave = "featured:\(FeaturedFountain.weekIndex(Date())):\(lat):\(long)"
+        if let cacheada = await Self.featuredCache.get(clave, as: FeaturedFountain.Featured.self) {
+            return try await cacheada.encodeResponse(for: req)
+        }
+        guard let f = try await FeaturedFountain.of(lat: lat, long: long, on: req.db) else {
+            return Response(status: .noContent)
+        }
+        await Self.featuredCache.set(clave, f)
+        return try await f.encodeResponse(for: req)
+    }
 
     /// GET /activity/pulse — quién ha subido de nivel y quién está a punto.
     ///
