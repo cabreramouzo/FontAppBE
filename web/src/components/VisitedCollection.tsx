@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Tooltip from '@mui/material/Tooltip'
+import LinearProgress from '@mui/material/LinearProgress'
 import CollectionsBookmarkOutlinedIcon from '@mui/icons-material/CollectionsBookmarkOutlined'
 import { visitedCollection } from '../api/client'
 import type { VisitedCollection as Collection } from '../api/client'
 import { SOURCE_EMOJI } from '../lib/waterType'
+import { positionIfAllowed } from '../lib/quietPosition'
 import { useI18n } from '../i18n/I18nContext'
 import { TituloDeSeccion } from './TituloDeSeccion'
 
@@ -22,15 +24,25 @@ import { TituloDeSeccion } from './TituloDeSeccion'
  * Pokédex vacía el primer día no invita, solo dice que vas último.
  */
 export function VisitedCollection() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [data, setData] = useState<Collection | null>(null)
 
   useEffect(() => {
-    visitedCollection().then(setData).catch(() => setData(null))
+    // La posición **sin pedir permiso**: un perfil no debe lanzar el diálogo de ubicación
+    // a bocajarro. Si ya estaba concedido, se añade el objetivo local; si no, la Pokédex
+    // se ve igual sin ese bloque. No se espera a la posición para nada más.
+    let vivo = true
+    positionIfAllowed()
+      .then((pos) => (vivo ? visitedCollection(pos) : null))
+      .then((d) => { if (vivo && d) setData(d) })
+      .catch(() => { if (vivo) setData(null) })
+    return () => { vivo = false }
   }, [])
 
   if (!data || data.visited === 0) return null
   const conseguidos = data.types.filter((tp) => tp.count > 0).length
+  const local = data.local
+  const localPct = local && local.nearby > 0 ? Math.round((local.visited / local.nearby) * 100) : 0
 
   return (
     <Box component="section" sx={{ mb: 3 }}>
@@ -42,6 +54,21 @@ export function VisitedCollection() {
         <Typography sx={{ fontWeight: 800, fontSize: '1.4rem', lineHeight: 1 }}>{data.visited}</Typography>
         <Typography variant="body2" color="text.secondary">{t('game.collection.visited')}</Typography>
       </Box>
+
+      {/* El objetivo **terminable**: de tu alrededor, cuántas llevas. Solo si el navegador
+          ya tenía la ubicación concedida y hay fuentes cerca. Es lo que convierte el
+          contador de por vida en una misión que se puede completar. */}
+      {local && local.nearby > 0 && (
+        <Box sx={{ mb: 2, maxWidth: 420 }}>
+          <Typography variant="body2" sx={{ mb: 0.5 }}>
+            {t('game.collection.localGoal', { v: String(local.visited), n: String(local.nearby) })}
+          </Typography>
+          <LinearProgress variant="determinate" value={localPct} sx={{ height: 8, borderRadius: 4 }} />
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+            {t('game.collection.localRadius', { km: local.radiusKm.toLocaleString(lang) })}
+          </Typography>
+        </Box>
+      )}
 
       {/* Los seis tipos, en fila. El que tienes va en color con su recuento; el que falta,
           apagado — «5 de 6» invita, esconder el que falta no. */}

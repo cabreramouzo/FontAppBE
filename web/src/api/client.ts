@@ -682,14 +682,21 @@ export interface VisitedCollection {
   visited: number
   /** Un elemento por tipo de `WaterSource`, en orden fijo; `count` 0 = aún no lo tienes. */
   types: { source: WaterSource; count: number }[]
+  /** El objetivo terminable: de las que tienes cerca, cuántas has visitado. Solo si se
+   *  mandaron coordenadas y hay fuentes alrededor. */
+  local?: { nearby: number; visited: number; radiusKm: number } | null
 }
 
 /**
  * La Pokédex de fuentes. Aparte de `/gamification/me` por lo mismo que `guardedFonts`:
  * su propio coste y solo la paga quien abre el perfil. `null` si apagó la gamificación (204).
+ *
+ * Con coordenadas añade el objetivo local («N de las 30 de tu alrededor»). Se pasan solo
+ * si el navegador ya tenía el permiso; sin ellas se ve igual, sin ese bloque.
  */
-export async function visitedCollection(): Promise<VisitedCollection | null> {
-  return (await apiFetch<VisitedCollection | undefined>('/gamification/collection')) ?? null
+export async function visitedCollection(pos?: [number, number] | null): Promise<VisitedCollection | null> {
+  const q = pos ? `?lat=${pos[0]}&long=${pos[1]}` : ''
+  return (await apiFetch<VisitedCollection | undefined>(`/gamification/collection${q}`)) ?? null
 }
 
 /** Un aviso de la campana. `fontID` nulo = la fuente ya no existe. */

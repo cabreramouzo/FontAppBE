@@ -355,7 +355,14 @@ struct GamificationController: RouteCollection {
     @Sendable func collection(req: Request) async throws -> Response {
         let user = try req.auth.require(User.self)
         guard !user.gamificationOptOut else { return Response(status: .noContent) }
-        let resumen = try await VisitedCollection.of(try user.requireID(), on: req.db)
+        let userID = try user.requireID()
+        var resumen = try await VisitedCollection.of(userID, on: req.db)
+        // El objetivo local solo si el cliente manda coordenadas: la Pokédex se ve sin
+        // ubicación (la colección de por vida), y el objetivo terminable se añade encima
+        // cuando el navegador ya tiene el permiso concedido. Nunca se pide a bocajarro.
+        if let lat = req.query[Double.self, at: "lat"], let long = req.query[Double.self, at: "long"] {
+            resumen.local = try await VisitedCollection.local(userID, lat: lat, long: long, on: req.db)
+        }
         return try await resumen.encodeResponse(for: req)
     }
 

@@ -34,7 +34,12 @@ final class VisitedCollectionTests: XCTestCase {
     }
 
     private func fuente(_ app: Application, _ source: WaterSource?) async throws -> Font {
-        let f = Font(name: "Font", latitude: 41.75, longitude: 2.16)
+        try await fuenteEn(app, 41.75, 2.16, source)
+    }
+
+    private func fuenteEn(_ app: Application, _ lat: Double, _ long: Double,
+                          _ source: WaterSource?) async throws -> Font {
+        let f = Font(name: "Font", latitude: lat, longitude: long)
         f.source = source
         try await f.save(on: app.db)
         return f
@@ -93,6 +98,40 @@ final class VisitedCollectionTests: XCTestCase {
             XCTAssertEqual(despues.visited, 0)
             let well = despues.types.first { $0.source == "well" }?.count
             XCTAssertEqual(well, 0)
+        }
+    }
+
+    /// El objetivo local: de las cercanas, cuántas has visitado tú. Las de otra persona no
+    /// cuentan para ti, y una lejana no entra en el conjunto.
+    func testObjetivoLocal() async throws {
+        try await withApp { app in
+            let u = try await usuario(app, "local")
+            let otra = try await usuario(app, "vecina")
+            let lat = 41.75, long = 2.16
+            let a = try await fuenteEn(app, lat, long, .tap)
+            let b = try await fuenteEn(app, lat + 0.001, long + 0.001, .spring)
+            let c = try await fuenteEn(app, lat + 0.002, long, .well)
+            // Tú visitas dos de las tres cercanas.
+            try await resena(app, a, de: u)
+            try await resena(app, b, de: u)
+            // La tercera la reseña otra persona: no cuenta como tuya.
+            try await resena(app, c, de: otra)
+            // Y una lejana (fuera de los 25 km) no entra en el conjunto.
+            _ = try await fuenteEn(app, lat + 1.0, long, .fountain)
+
+            let g = try await VisitedCollection.local(try u.requireID(), lat: lat, long: long, on: app.db)
+            let goal = try XCTUnwrap(g)
+            XCTAssertEqual(goal.nearby, 3, "las tres cercanas, no la lejana")
+            XCTAssertEqual(goal.visited, 2, "solo tus dos, no la de la vecina")
+        }
+    }
+
+    /// Sin fuentes cerca no hay objetivo: `nil`, no un «0 de 0».
+    func testObjetivoLocalNilSinCercanas() async throws {
+        try await withApp { app in
+            let u = try await usuario(app, "aislada")
+            let goal = try await VisitedCollection.local(try u.requireID(), lat: 0, long: 0, on: app.db)
+            XCTAssertNil(goal)
         }
     }
 

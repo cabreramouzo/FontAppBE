@@ -34,6 +34,23 @@ enum VisitedCollection {
         let count: Int
     }
 
+    /// El objetivo **terminable**: de las fuentes que tienes cerca, cuántas has visitado.
+    ///
+    /// Es lo que convierte la Pokédex de un contador que solo crece en una misión que se
+    /// puede completar, que es lo que engancha. El denominador son **las 30 más cercanas**
+    /// (`ZoneStats.localFonts`), no la demarcación ni el país: «has visitado 8 de 160.000»
+    /// no invita a nada, «8 de 30 aquí al lado» sí. Mismo criterio y mismas constantes que
+    /// `ZoneStats.local`, de donde sale la máquina de las 30 más cercanas.
+    struct LocalGoal: Content, Sendable {
+        /// Cuántas hay cerca (hasta 30; menos si alrededor no hay más).
+        let nearby: Int
+        /// De ésas, cuántas has reseñado alguna vez.
+        let visited: Int
+        /// Hasta dónde llegan esas fuentes, en km: «8 de 30» no es lo mismo a 600 m que a
+        /// 5 km, y sin esto no se sabe si el objetivo es un paseo o una excursión.
+        let radiusKm: Double
+    }
+
     struct Summary: Content, Sendable {
         /// Fuentes **distintas** que has reseñado alguna vez (visibles). No es el número de
         /// reseñas: diez reseñas de la misma fuente son una visita a efectos de colección.
@@ -42,6 +59,9 @@ enum VisitedCollection {
         /// Se devuelven todos —también los de cuenta 0— para que el cliente pinte la casilla
         /// gris del que aún no tienes: «5 de 6» invita, esconder el que falta no.
         let types: [TypeStat]
+        /// El objetivo local, solo si el cliente mandó coordenadas (y hay fuentes cerca).
+        /// Lo rellena el controlador, no `of`: depende de dónde estás, no de tu historial.
+        var local: LocalGoal?
     }
 
     static func of(_ userID: UUID, on db: any Database) async throws -> Summary {
@@ -74,5 +94,45 @@ enum VisitedCollection {
             TypeStat(source: $0.rawValue, count: cuentas[$0.rawValue] ?? 0)
         }
         return Summary(visited: total.first?.n ?? 0, types: types)
+    }
+
+    /// Cuántas de tus 30 fuentes más cercanas has visitado. `nil` si no hay ninguna cerca.
+    ///
+    /// Reutiliza la caja + haversine + `LIMIT 30` de `ZoneStats.local` (mismas constantes),
+    /// y sobre ese conjunto cuenta las que has reseñado. Va en una sola consulta, así que
+    /// no carga las fuentes ni cuesta un recorrido por tu historial.
+    static func local(_ userID: UUID, lat rawLat: Double, long rawLong: Double,
+                      on db: any Database) async throws -> LocalGoal? {
+        guard let sql = db as? any SQLDatabase else { return nil }
+        let lat = ZoneStats.snapLocal(rawLat)
+        let long = ZoneStats.snapLocal(rawLong)
+        let dLat = ZoneStats.localMaxKm / 111.0
+        let dLong = ZoneStats.localMaxKm / (111.0 * max(cos(lat * .pi / 180), 0.01))
+
+        struct Fila: Decodable { let nearby: Int; let visited: Int; let radius_km: Double }
+        let fila = try await sql.raw("""
+            WITH cercanas AS (
+                SELECT f.id,
+                       sqrt(power((f.latitude - \(bind: lat)) * 111.0, 2)
+                          + power((f.longitude - \(bind: long)) * 111.0
+                                  * cos(radians(\(bind: lat))), 2)) AS km
+                FROM fonts f
+                WHERE f.latitude  BETWEEN \(bind: lat - dLat)  AND \(bind: lat + dLat)
+                  AND f.longitude BETWEEN \(bind: long - dLong) AND \(bind: long + dLong)
+                  AND \(unsafeRaw: Font.visibleSQL)
+                ORDER BY km
+                LIMIT \(bind: ZoneStats.localFonts)
+            ),
+            dentro AS (SELECT * FROM cercanas WHERE km <= \(bind: ZoneStats.localMaxKm))
+            SELECT count(*) AS nearby, coalesce(max(km), 0) AS radius_km,
+                   (SELECT count(DISTINCT font_id) FROM font_comments
+                     WHERE user_id = \(bind: userID)
+                       AND font_id IN (SELECT id FROM dentro)) AS visited
+            FROM dentro
+            """).first(decoding: Fila.self)
+
+        guard let fila, fila.nearby > 0 else { return nil }
+        return LocalGoal(nearby: fila.nearby, visited: fila.visited,
+                         radiusKm: (fila.radius_km * 10).rounded() / 10)
     }
 }
