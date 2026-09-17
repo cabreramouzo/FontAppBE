@@ -5,11 +5,13 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Link from '@mui/material/Link'
 import Alert from '@mui/material/Alert'
+import Divider from '@mui/material/Divider'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { escribiendoCorreo, esNombreValido } from '../lib/username'
 import { describeError, trackInteraction } from '../api/client'
 import { safeNext, withNext } from '../lib/nextParam'
+import { GoogleSignInButton } from '../components/GoogleSignInButton'
 
 // Formulario de ALTA, en su propia URL (ver la nota de LoginPage: un propósito por
 // página para que los gestores de contraseñas clasifiquen bien el formulario).
@@ -58,6 +60,16 @@ export function RegisterPage() {
   return (
     <Box className="pad auth" sx={{ maxWidth: 360, mx: 'auto' }}>
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>{t('login.createAccount')}</Typography>
+
+      {/* Google arriba del todo: la gran mayoría de las cuentas entran por aquí, así que
+          es la vía principal y el formulario de correo es la alternativa. El mismo botón
+          crea la cuenta —para el servidor login y alta con Google son lo mismo—. */}
+      {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+        <>
+          <GoogleSignInButton setBusy={setBusy} setError={setError} />
+          <Divider sx={{ my: 2 }}>{t('login.or')}</Divider>
+        </>
+      )}
 
       <Box component="form" onSubmit={(e) => { trackInteraction('auth_register'); void submit(e) }} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <TextField

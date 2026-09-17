@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
@@ -11,6 +11,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ApiError, describeError, trackInteraction } from '../api/client'
 import { safeNext, withNext } from '../lib/nextParam'
+import { GoogleSignInButton } from '../components/GoogleSignInButton'
 
 // Formulario de INICIO DE SESIÓN, en su propia URL y sin mezclarse con el registro.
 //
@@ -25,69 +26,12 @@ import { safeNext, withNext } from '../lib/nextParam'
 // - `autocomplete`: username + current-password, y la etiqueta NO menciona "correo"
 //   (Safari la lee y clasificaría el campo como email de Contactos).
 export function LoginPage() {
-  const { login, loginWithGoogle, loginWithPasskey } = useAuth()
+  const { login, loginWithPasskey } = useAuth()
   const { t } = useI18n()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const googleButton = useRef<HTMLDivElement>(null)
-  // `loginWithGoogle` y `t` cambian de identidad en cada render de `AuthProvider`/i18n. Si
-  // el efecto de abajo dependiera de ellos, se re-ejecutaría en cada render y volvería a
-  // llamar a `initialize` + `renderButton`, **destruyendo y reconstruyendo el botón de
-  // Google** — que en pantalla se ve como un parpadeo/vibración de unos segundos
-  // (reportado en el móvil). Se leen por `ref` para que el callback siga fresco sin volver
-  // a montar el botón: el efecto corre **una sola vez**.
-  const loginGoogleRef = useRef(loginWithGoogle)
-  loginGoogleRef.current = loginWithGoogle
-  const tRef = useRef(t)
-  tRef.current = t
-
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-    if (!clientId) return
-    let cancelled = false
-    const render = () => {
-      if (cancelled || !googleButton.current || !window.google) return
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async ({ credential }) => {
-          trackInteraction('auth_google')
-          setError('')
-          setBusy(true)
-          try {
-            await loginGoogleRef.current(credential)
-            await trackInteraction('auth_google_success')
-            window.location.assign(safeNext() ?? '/')
-          } catch (err) {
-            trackInteraction('auth_google_error')
-            setError(describeError(err, tRef.current))
-            setBusy(false)
-          }
-        },
-      })
-      googleButton.current.replaceChildren()
-      window.google.accounts.id.renderButton(googleButton.current, {
-        type: 'standard', theme: 'outline', size: 'large', width: 320,
-        text: 'continue_with', shape: 'rectangular',
-      })
-    }
-    const existing = document.querySelector<HTMLScriptElement>('script[data-fontapp-google]')
-    if (existing) {
-      if (window.google) render()
-      else existing.addEventListener('load', render, { once: true })
-    } else {
-      const script = document.createElement('script')
-      script.src = 'https://accounts.google.com/gsi/client'
-      script.async = true
-      script.dataset.fontappGoogle = '1'
-      script.addEventListener('load', render, { once: true })
-      script.addEventListener('error', () => { if (!cancelled) setError(tRef.current('login.googleUnavailable')) }, { once: true })
-      document.head.appendChild(script)
-    }
-    return () => { cancelled = true }
-    // Una sola vez: los valores que cambian se leen por `ref` (ver arriba).
-  }, [])
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -128,7 +72,7 @@ export function LoginPage() {
 
       {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
         <>
-          <Box ref={googleButton} sx={{ minHeight: 44, display: 'flex', justifyContent: 'center', mt: 1 }} />
+          <GoogleSignInButton setBusy={setBusy} setError={setError} />
           <Divider sx={{ my: 2 }}>{t('login.or')}</Divider>
         </>
       )}
