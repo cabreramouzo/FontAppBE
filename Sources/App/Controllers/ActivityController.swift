@@ -94,13 +94,22 @@ struct ActivityController: RouteCollection {
         let region = req.query[String.self, at: "region"]?.trimmingCharacters(in: .whitespaces)
         let country = req.query[String.self, at: "country"]?.trimmingCharacters(in: .whitespaces)
 
+        // Cursor de paginación: "dame lo anterior a esta fecha". Es el primitivo correcto
+        // para un feed que MEZCLA cuatro consultas por fecha — un `OFFSET` por subconsulta
+        // sería incorrecto, porque el elemento nº 60 de la mezcla puede venir de cualquiera
+        // de los cuatro streams a un offset distinto. Con `before`, cada subconsulta pide
+        // "los N más nuevos anteriores a X" y la mezcla vuelve a dar los N globales
+        // siguientes. Viaja en epoch (segundos) para no depender de cómo se serialicen las
+        // fechas. El cliente lo calcula como el createdAt MÍNIMO de la página anterior.
+        let before = req.query[Double.self, at: "before"].map { Date(timeIntervalSince1970: $0) }
+
         // Cada visita son cuatro consultas más la resolución de la zona, y lo que
         // devuelven cambia como mucho cada pocos minutos. La caché evita repetir todo
         // eso en cada recarga; es especialmente importante de cara a abrir la página
         // al público, donde el coste ya no lo paga un puñado de administradores.
         // El ámbito entra en la clave: sin eso, la respuesta de un admin (que lleva
         // ediciones) se le serviría al siguiente visitante anónimo.
-        let clave = try cacheKey(req, limit: limit, region: region, country: country, esAdmin: esAdmin)
+        let clave = try cacheKey(req, limit: limit, region: region, country: country, before: before, esAdmin: esAdmin)
         if let guardado = await Self.cache.get(clave) { return guardado }
 
         // Acotar por zona es acotar el conjunto de fuentes, y después buscar movimientos
@@ -111,10 +120,10 @@ struct ActivityController: RouteCollection {
 
         // Cada tipo trae como mucho `limit`: al mezclar y recortar, el resultado es el
         // mismo que si hubiéramos ordenado todo junto, sin traernos tablas enteras.
-        async let newFontsTask = fetchNewFonts(req, limit: limit, ambito: ambito)
-        async let commentsTask = fetchComments(req, limit: limit, ambito: ambito)
-        async let reportsTask = fetchReports(req, limit: limit, ambito: ambito)
-        async let editsTask = esAdmin ? fetchEdits(req, limit: limit, ambito: ambito) : []
+        async let newFontsTask = fetchNewFonts(req, limit: limit, ambito: ambito, before: before)
+        async let commentsTask = fetchComments(req, limit: limit, ambito: ambito, before: before)
+        async let reportsTask = fetchReports(req, limit: limit, ambito: ambito, before: before)
+        async let editsTask = esAdmin ? fetchEdits(req, limit: limit, ambito: ambito, before: before) : []
         let items = try await newFontsTask + commentsTask + reportsTask + editsTask
 
         let ordenados = items.sorted { $0.createdAt > $1.createdAt }
@@ -186,14 +195,17 @@ struct ActivityController: RouteCollection {
 
     static func snap(_ v: Double, step: Double) -> Double { (v / step).rounded() * step }
 
-    private func cacheKey(_ req: Request, limit: Int, region: String?, country: String?, esAdmin: Bool) throws -> String {
+    private func cacheKey(_ req: Request, limit: Int, region: String?, country: String?, before: Date?, esAdmin: Bool) throws -> String {
         let ambito = esAdmin ? "a" : "p"
+        // El cursor entra en la clave: la página 2 (con `before`) no puede servirse desde
+        // la caché de la página 1.
+        let b = before.map { String($0.timeIntervalSince1970) } ?? ""
         if let lat = req.query[Double.self, at: "lat"], let long = req.query[Double.self, at: "long"] {
             let km = min(max(req.query[Double.self, at: "km"] ?? Self.defaultRadiusKm, 1), Self.maxRadiusKm)
             let step = Self.coordStep(forKm: km)
-            return "\(ambito):n:\(limit):\(Self.snap(lat, step: step)):\(Self.snap(long, step: step)):\(km)"
+            return "\(ambito):n:\(limit):\(Self.snap(lat, step: step)):\(Self.snap(long, step: step)):\(km):\(b)"
         }
-        return "\(ambito):r:\(limit):\(region ?? ""):\(country ?? "")"
+        return "\(ambito):r:\(limit):\(region ?? ""):\(country ?? ""):\(b)"
     }
 
     /// Cómo se acota la actividad a una zona.
@@ -281,7 +293,7 @@ struct ActivityController: RouteCollection {
 
     // MARK: - Cada fuente de actividad
 
-    private func fetchNewFonts(_ req: Request, limit: Int, ambito: Ambito?) async throws -> [ActivityItem] {
+    private func fetchNewFonts(_ req: Request, limit: Int, ambito: Ambito?, before: Date?) async throws -> [ActivityItem] {
         // **Solo las que ha puesto una persona.** Una importación no es actividad: al
         // cargar el Pirineo francés entraron 11.043 fuentes de golpe y se comieron la
         // portada entera, tapando lo único que esta pantalla existe para enseñar — lo que
@@ -292,6 +304,7 @@ struct ActivityController: RouteCollection {
         let query = Font.visible(on: req.db)
             .filter(\.$creator.$id != nil)
             .sort(\.$createdAt, .descending).limit(limit)
+        if let before { query.filter(\.$createdAt < before) }
         switch ambito {
         case .fuentes(let ids): query.filter(\.$id ~~ ids)
         case .pais(let pais): query.filter(\.$country == pais)
@@ -303,12 +316,13 @@ struct ActivityController: RouteCollection {
             guard let id = f.id, let date = f.createdAt else { return nil }
             return ActivityItem(kind: .fontAdded, fontID: id, fontName: f.name, region: f.region,
                                 author: f.$creator.id.flatMap { authors[$0] }, waterStatus: nil,
-                                text: f.description, image: f.image, createdAt: date)
+                                text: f.description, image: f.image, createdAt: date, cursor: date.timeIntervalSince1970)
         }
     }
 
-    private func fetchComments(_ req: Request, limit: Int, ambito: Ambito?) async throws -> [ActivityItem] {
+    private func fetchComments(_ req: Request, limit: Int, ambito: Ambito?, before: Date?) async throws -> [ActivityItem] {
         let query = FontComment.query(on: req.db).sort(\.$createdAt, .descending).limit(limit)
+        if let before { query.filter(\.$createdAt < before) }
         // Acotar por país va como **join** y no resolviendo a identificadores: España son
         // 52.341 fuentes y esto son cuatro consultas por visita. Ojo, el join no filtra
         // por `Font.visible`, igual que no lo hace el camino de los identificadores;
@@ -328,17 +342,18 @@ struct ActivityController: RouteCollection {
                                 author: c.$user.id.flatMap { authors[$0] }, waterStatus: c.waterStatus,
                                 // La foto de la reseña manda: es la más reciente y la
                                 // que ilustra justo lo que se está contando.
-                                text: c.body.isEmpty ? nil : c.body, image: c.image ?? font.image, createdAt: date)
+                                text: c.body.isEmpty ? nil : c.body, image: c.image ?? font.image, createdAt: date, cursor: date.timeIntervalSince1970)
         }
     }
 
-    private func fetchReports(_ req: Request, limit: Int, ambito: Ambito?) async throws -> [ActivityItem] {
+    private func fetchReports(_ req: Request, limit: Int, ambito: Ambito?, before: Date?) async throws -> [ActivityItem] {
         // **Solo las incidencias salen en novedades**, y esto es la mitad del arreglo:
         // un comentario de organización —«¿puedes añadir una foto?»— no tiene por qué
         // tener protagonismo en la portada. Lo que pasa con las fuentes, sí.
         let query = FontReport.query(on: req.db)
             .filter(\.$isIncident == true)
             .sort(\.$createdAt, .descending).limit(limit)
+        if let before { query.filter(\.$createdAt < before) }
         // Acotar por país va como **join** y no resolviendo a identificadores: España son
         // 52.341 fuentes y esto son cuatro consultas por visita. Ojo, el join no filtra
         // por `Font.visible`, igual que no lo hace el camino de los identificadores;
@@ -356,12 +371,13 @@ struct ActivityController: RouteCollection {
             guard let date = r.createdAt, let font = fonts[r.$font.id] else { return nil }
             return ActivityItem(kind: .report, fontID: r.$font.id, fontName: font.name, region: font.region,
                                 author: r.$user.id.flatMap { authors[$0] }, waterStatus: nil,
-                                text: r.message, image: font.image, createdAt: date)
+                                text: r.message, image: font.image, createdAt: date, cursor: date.timeIntervalSince1970)
         }
     }
 
-    private func fetchEdits(_ req: Request, limit: Int, ambito: Ambito?) async throws -> [ActivityItem] {
+    private func fetchEdits(_ req: Request, limit: Int, ambito: Ambito?, before: Date?) async throws -> [ActivityItem] {
         let query = FontEdit.query(on: req.db).sort(\.$createdAt, .descending).limit(limit)
+        if let before { query.filter(\.$createdAt < before) }
         // Acotar por país va como **join** y no resolviendo a identificadores: España son
         // 52.341 fuentes y esto son cuatro consultas por visita. Ojo, el join no filtra
         // por `Font.visible`, igual que no lo hace el camino de los identificadores;
@@ -379,7 +395,7 @@ struct ActivityController: RouteCollection {
             guard let date = e.createdAt, let font = fonts[e.$font.id] else { return nil }
             return ActivityItem(kind: .edit, fontID: e.$font.id, fontName: font.name, region: font.region,
                                 author: e.$editor.id.flatMap { authors[$0] }, waterStatus: nil,
-                                text: nil, image: font.image, createdAt: date)
+                                text: nil, image: font.image, createdAt: date, cursor: date.timeIntervalSince1970)
         }
     }
 
@@ -450,6 +466,14 @@ struct ActivityItem: Content, Sendable {
     /// ser nula (la mayoría de fuentes importadas aún no tienen ninguna).
     let image: String?
     let createdAt: Date
+    /// Cursor de paginación: el mismo instante que `createdAt` pero en epoch (segundos) y
+    /// con **precisión completa**. Existe porque el `createdAt` que se serializa va en
+    /// ISO8601 **truncado al segundo** (el encoder por defecto de Vapor), y con eso el
+    /// cursor no podría avanzar dentro de un mismo segundo. Un `Double` conserva los
+    /// microsegundos de la base, así que `before` distingue elementos del mismo segundo sin
+    /// tocar el formato de fecha de toda la API. El cliente pagina con este campo, no con
+    /// `createdAt`.
+    let cursor: Double
 }
 
 

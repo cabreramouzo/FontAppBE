@@ -30,10 +30,11 @@ export function NewsPage() {
       {/* Antes del mosaico y no después: es corto, y detrás de treinta piezas no lo ve
           nadie. Se pinta solo si hay algo que contar, así que no roba sitio en vacío. */}
       <PulseStrip />
-      {/* 60 y no 30: había poco que ver y se acababa enseguida. El servidor admite hasta
-          100 y la rejilla ya carga las fotos en diferido, así que el coste es una consulta
-          un poco mayor —cacheada— a cambio de bastante más scroll. */}
-      <ActivityGrid limit={60} />
+      {/* 60 por página y hasta 5 páginas con «Ver más»: se arranca ligero (una consulta
+          cacheada) y quien quiera seguir va pidiendo de 60 en 60 hasta 300. Cada página es
+          un cursor por fecha (`before`), no un OFFSET, que en un feed que mezcla cuatro
+          consultas daría resultados mal ordenados. */}
+      <ActivityGrid limit={60} maxPages={5} />
     </Box>
   )
 }

@@ -291,7 +291,11 @@ function leeRadio(): number {
 }
 function guardaRadio(v: number) { try { localStorage.setItem(RADIO_KEY, String(v)) } catch { /* nada que hacer */ } }
 
-export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: number; showFilter?: boolean }) {
+/**
+ * @param maxPages  Cuántas páginas de `limit` se pueden llegar a pedir con «Ver más».
+ *   1 (por defecto) = una sola carga, sin botón. Novedades usa 5 → hasta 5×60.
+ */
+export function ActivityGrid({ limit = 24, showFilter = false, maxPages = 1 }: { limit?: number; showFilter?: boolean; maxPages?: number }) {
   const { t, lang } = useI18n()
   const theme = useTheme()
   const compacto = useMediaQuery(theme.breakpoints.down('sm'))
@@ -300,6 +304,11 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
   // Un fallo de carga NO es una zona tranquila. Se distinguen porque el remedio es el
   // contrario: ante un error hay que reintentar, y ante una zona vacía, traer gente.
   const [fallo, setFallo] = useState(false)
+  // Paginación por cursor. `agotado` = el servidor devolvió menos de `limit`, o sea que no
+  // queda nada más que pedir. `paginas` = cuántas se han cargado ya (tope: `maxPages`).
+  const [cargandoMas, setCargandoMas] = useState(false)
+  const [agotado, setAgotado] = useState(false)
+  const [paginas, setPaginas] = useState(1)
   const [intento, setIntento] = useState(0)
   const [region, setRegion] = useState('')
   const [pos, setPos] = useState<[number, number] | null>(null)
@@ -339,23 +348,72 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
     setRegion('')
   }
 
-  useEffect(() => {
-    if (ubicando) return
-    setItems(null)
-    setFallo(false)
+  // Filtros actuales, compartidos por la carga inicial y por «Ver más». La cercanía manda:
+  // con posición se pide por coordenadas; si no, por país/demarcación.
+  function filtros() {
     const zona = cerca && pos ? { lat: pos[0], long: pos[1], km } : {}
-    getActivity({
+    return {
       limit,
       region: cerca ? undefined : region || undefined,
       country: cerca || pais === TODOS ? undefined : pais,
       ...zona,
-    })
-      .then(setItems)
+    }
+  }
+
+  useEffect(() => {
+    if (ubicando) return
+    setItems(null)
+    setFallo(false)
+    setAgotado(false)
+    setPaginas(1)
+    getActivity(filtros())
+      .then((nuevos) => {
+        setItems(nuevos)
+        // Menos de `limit` = no hay más que pedir. Con esto el botón no aparece cuando la
+        // primera página ya trae todo lo que hay.
+        if (nuevos.length < limit) setAgotado(true)
+      })
       .catch(() => {
         setFallo(true)
         setItems([])
       })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limit, region, pais, cerca, pos, km, ubicando, intento])
+
+  /**
+   * «Ver más»: pide la página siguiente con el cursor `before` = createdAt MÍNIMO de lo ya
+   * cargado. Se usa el mínimo y no el último elemento porque `separaRepetidas` reordena la
+   * página en el servidor, así que el último visible no es necesariamente el más antiguo;
+   * el mínimo sí lo es, y es lo que el servidor necesita para darnos lo estrictamente
+   * anterior. De-duplica por si un empate exacto de fecha en el borde solapara un elemento.
+   */
+  async function cargarMas() {
+    if (!items || items.length === 0 || cargandoMas || agotado) return
+    // El cursor va por `cursor` (epoch con precisión completa) y no por `createdAt`, que
+    // llega truncado al segundo: con varios elementos en el mismo segundo, paginar por
+    // `createdAt` no avanzaría.
+    const before = Math.min(...items.map((i) => i.cursor))
+    // Un backend viejo (durante un despliegue escalonado) no manda `cursor`, así que
+    // `before` saldría NaN y la petición no tendría sentido. Mejor no paginar que pedir
+    // basura: se para en silencio hasta que el backend nuevo esté arriba.
+    if (!Number.isFinite(before)) { setAgotado(true); return }
+    setCargandoMas(true)
+    try {
+      const nuevos = await getActivity({ ...filtros(), before })
+      const vistos = new Set(items.map((i) => `${i.kind}-${i.fontID}-${i.cursor}`))
+      const filtrados = nuevos.filter((n) => !vistos.has(`${n.kind}-${n.fontID}-${n.cursor}`))
+      setItems([...items, ...filtrados])
+      // Menos de `limit` = no hay más. Y si una página no aporta nada nuevo (todo eran
+      // duplicados del borde), también se para: un botón que no añade nada es peor que no
+      // tenerlo.
+      if (nuevos.length < limit || filtrados.length === 0) setAgotado(true)
+      setPaginas((p) => p + 1)
+    } catch {
+      show(t('activity.errorBody'))
+    } finally {
+      setCargandoMas(false)
+    }
+  }
 
   /**
    * Invitar: la hoja de compartir del sistema si la hay, y si no, el enlace al
@@ -472,6 +530,18 @@ export function ActivityGrid({ limit = 24, showFilter = false }: { limit?: numbe
           )
         })}
       </Box>
+
+      {/* «Ver más»: solo si se permite paginar (`maxPages > 1`), hay elementos, queda algo
+          por pedir y no se ha llegado al tope. Botón explícito y no scroll infinito: es
+          predecible, no engancha un listener al scroll y pone un techo claro al gasto —cada
+          página son cuatro consultas, aunque vayan cacheadas. */}
+      {maxPages > 1 && !fallo && items && items.length > 0 && !agotado && paginas < maxPages && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Button variant="outlined" onClick={cargarMas} disabled={cargandoMas}>
+            {t('activity.loadMore')}
+          </Button>
+        </Box>
+      )}
 
       {/* Se ha caído la petición: decirlo y ofrecer reintentar. Antes esto enseñaba la
           fuente seca invitando a traer amigos, que es el mensaje justo al revés — no

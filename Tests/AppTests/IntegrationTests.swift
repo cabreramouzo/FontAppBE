@@ -2047,6 +2047,52 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Paginación por cursor: `before` trae lo estrictamente anterior a una fecha.
+    ///
+    /// Es el primitivo correcto para un feed que MEZCLA cuatro consultas por fecha; un
+    /// `OFFSET` por subconsulta daría resultados mal ordenados. Se comprueba que la página
+    /// 2 avanza de verdad: llega a la fuente más antigua (que la página 1 no traía) y no
+    /// repite la más nueva.
+    func testActivityPaginatesWithCursor() async throws {
+        try await withApp { app in
+            try await register(app, username: "page-user")
+            let tok = try await login(app, username: "page-user")
+
+            // Cuatro fuentes en orden: cada `createFont` es una petición aparte, así que
+            // sus fechas de creación quedan estrictamente ordenadas. f4 es la más nueva.
+            let f1 = try await createFont(app, token: tok, name: "Font 1", lat: 41.8, long: 2.1)
+            _ = try await createFont(app, token: tok, name: "Font 2", lat: 41.8, long: 2.1)
+            _ = try await createFont(app, token: tok, name: "Font 3", lat: 41.8, long: 2.1)
+            let f4 = try await createFont(app, token: tok, name: "Font 4", lat: 41.8, long: 2.1)
+
+            var pagina1: [ActivityItem] = []
+            try await app.test(.GET, "activity?limit=2", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                pagina1 = try res.content.decode([ActivityItem].self)
+                XCTAssertEqual(pagina1.count, 2, "la página 1 trae exactamente `limit`")
+                // La más antigua no cabe en la primera página.
+                XCTAssertFalse(pagina1.contains { $0.fontID == f1 },
+                               "f1 (la más antigua) no debe salir en la página 1")
+            })
+
+            // Cursor = `cursor` MÍNIMO de la página 1 (epoch con precisión completa). Se
+            // usa `cursor` y no `createdAt` justamente porque este último va truncado al
+            // segundo: con cuatro fuentes creadas en el mismo segundo, paginar por
+            // `createdAt` no avanzaría.
+            let before = pagina1.map(\.cursor).min()!
+            try await app.test(.GET, "activity?limit=2&before=\(before)", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let pagina2 = try res.content.decode([ActivityItem].self)
+                let ids = Set(pagina2.map(\.fontID))
+                XCTAssertTrue(ids.contains(f1), "la página 2 debe llegar a la fuente más antigua")
+                XCTAssertFalse(ids.contains(f4), "la página 2 no debe repetir la más nueva")
+                // Todo lo de la página 2 es estrictamente anterior al cursor.
+                XCTAssertTrue(pagina2.allSatisfy { $0.cursor < before },
+                              "la página 2 solo trae lo anterior al cursor")
+            })
+        }
+    }
+
     /// El perfil se encuentra escribas el nombre como lo escribas.
     ///
     /// Las dos mitades de una mención decían cosas distintas: `MentionNotifier` resuelve
@@ -2318,7 +2364,7 @@ final class IntegrationTests: XCTestCase {
         let items = orden.enumerated().map { i, id in
             ActivityItem(kind: .review, fontID: id, fontName: "F", region: nil, author: nil,
                          waterStatus: nil, text: nil, image: nil,
-                         createdAt: ahora.addingTimeInterval(-Double(i)))
+                         createdAt: ahora.addingTimeInterval(-Double(i)), cursor: 0)
         }
         let salida = ActivityController.separaRepetidas(items)
         XCTAssertEqual(salida.count, items.count)
@@ -2340,7 +2386,7 @@ final class IntegrationTests: XCTestCase {
         let items = (0..<3).map { i in
             ActivityItem(kind: .review, fontID: id, fontName: "F", region: nil, author: nil,
                          waterStatus: nil, text: nil, image: nil,
-                         createdAt: ahora.addingTimeInterval(-Double(i)))
+                         createdAt: ahora.addingTimeInterval(-Double(i)), cursor: 0)
         }
         let salida = ActivityController.separaRepetidas(items)
         XCTAssertEqual(salida.map(\.createdAt), items.map(\.createdAt))

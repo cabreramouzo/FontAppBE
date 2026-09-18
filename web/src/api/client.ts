@@ -745,14 +745,19 @@ export interface ActivityItem {
   /** Foto de la reseña o de la fuente; nula si no hay ninguna. */
   image: string | null
   createdAt: string
+  /** Cursor de paginación (epoch en segundos, precisión completa). Se usa para pedir la
+   *  página siguiente con `before`; `createdAt` va truncado al segundo y no sirve. */
+  cursor: number
 }
 
 export async function getActivity(
-  opts: { limit?: number; region?: string; country?: string; lat?: number; long?: number; km?: number } = {},
+  opts: { limit?: number; region?: string; country?: string; lat?: number; long?: number; km?: number; before?: number } = {},
 ): Promise<ActivityItem[]> {
   const q = new URLSearchParams()
   if (opts.limit) q.set('limit', String(opts.limit))
   if (opts.region) q.set('region', opts.region)
+  // Cursor de paginación: epoch en segundos. El servidor devuelve lo anterior a esta fecha.
+  if (opts.before !== undefined) q.set('before', String(opts.before))
   // El país es el corte ancho y la demarcación el fino; el servidor prefiere el más
   // concreto si llegan los dos, igual que hace con la cercanía.
   if (opts.country) q.set('country', opts.country)
