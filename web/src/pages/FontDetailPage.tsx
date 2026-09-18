@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { puedoConfirmarMiReseña } from '../lib/selfConfirm'
 import { reseñadaHacePoco } from '../lib/misResenas'
 import { capabilities, capabilityLevels } from '../lib/capabilities'
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
@@ -259,12 +259,15 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
   )
 }
 
-function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; hasPhoto: boolean; onPosted: () => void; onCancel?: () => void }) {
+function UpdateForm({ fontID, hasPhoto, onPosted, onCancel, initialStatus }: { fontID: string; hasPhoto: boolean; onPosted: () => void; onCancel?: () => void; initialStatus?: string }) {
   const { t } = useI18n()
   const toast = useToast()
   const [body, setBody] = useState('')
   const [rating, setRating] = useState(0)
-  const [waterStatus, setWaterStatus] = useState('')
+  // `initialStatus` = el estado que el usuario iba a marcar antes de que le mandaran a
+  // entrar. Llega desde `?review=<estado>` y hace que la reseña vuelva **medio empezada**,
+  // no solo la fuente. Solo semilla del valor inicial: luego lo maneja el propio campo.
+  const [waterStatus, setWaterStatus] = useState(initialStatus ?? '')
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -329,6 +332,38 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel }: { fontID: string; 
         </Button>
         {onCancel && <Button onClick={onCancel} disabled={saving}>{t('form.cancel')}</Button>}
       </Stack>
+    </Box>
+  )
+}
+
+/**
+ * Lo que ve quien no tiene sesión donde iría el formulario de reseña.
+ *
+ * Nivel oro de la fricción: en vez de un enlace pelado a «entrar», ofrece los tres estados
+ * a un toque —los mismos del globo del mapa: sale agua / poca / seca; nada de `unknown` ni
+ * `gone`—. Al tocar uno se va a login llevando `?review=<estado>` en el destino, así que al
+ * volver la reseña aparece **medio empezada** con ese estado puesto, no solo la fuente.
+ * Debajo queda el enlace de texto para quien quiera entrar y escribir algo más.
+ */
+function AnonReviewPrompt({ fontID }: { fontID: string }) {
+  const { t } = useI18n()
+  const quick = ['flowing', 'trickle', 'dry'] as const
+  return (
+    <Box sx={{ my: 1.5 }}>
+      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1, mb: 1 }}>
+        {quick.map((s) => (
+          <Chip
+            key={s}
+            clickable
+            onClick={() => { trackInteraction('font_update'); window.location.assign(loginNext(`/fonts/${fontID}?review=${s}`)) }}
+            label={`${WATER_STATUS[s].emoji} ${t(`status.${s}`)}`}
+            sx={{ fontWeight: 600 }}
+          />
+        ))}
+      </Stack>
+      <Typography color="text.secondary" variant="body2">
+        <Link href={loginNext(`/fonts/${fontID}`)}>{t('nav.enter')}</Link> {t('detail.loginToUpdate')}
+      </Typography>
     </Box>
   )
 }
@@ -695,6 +730,12 @@ export function FontDetailPage() {
   const [confirming, setConfirming] = useState(false)
   const [updating, setUpdating] = useState(false) // formulario de nueva actualización desplegado
   const [flagFontOpen, setFlagFontOpen] = useState(false)
+  // Nivel oro de la fricción: al volver del login, retomar la reseña que ibas a dejar.
+  // El estado que ibas a marcar viaja en `?review=<estado>` (lo pone el enlace anónimo), y
+  // al volver se abre el formulario con ese estado ya puesto y se hace scroll hasta él.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [initialStatus, setInitialStatus] = useState<string | undefined>(undefined)
+  const reviewRef = useRef<HTMLDivElement>(null)
   const toast = useToast()
   // Poner la foto es una acción sola: se elige el fichero y se sube, y ya está. Antes
   // esto abría el formulario de reseña y bajaba hasta él, que era pedirle al usuario el
@@ -860,6 +901,26 @@ export function FontDetailPage() {
   useEffect(() => {
     load().catch((e) => setError(describeError(e, t)))
   }, [load, t])
+
+  // Retomar la reseña tras el login (`?review=<estado>`). Solo cuando ya hay sesión y la
+  // ficha ha cargado: abre el formulario, siembra el estado y baja hasta él. Y limpia el
+  // parámetro de la URL, para que un refresco o un enlace compartido no lo vuelvan a
+  // disparar. Un estado desconocido abre igualmente el formulario (retoma la intención),
+  // solo que sin preseleccionar nada.
+  useEffect(() => {
+    if (!user || !font) return
+    const intent = searchParams.get('review')
+    if (!intent) return
+    setUpdating(true)
+    if (WATER_STATUS[intent]) setInitialStatus(intent)
+    const limpio = new URLSearchParams(searchParams)
+    limpio.delete('review')
+    setSearchParams(limpio, { replace: true })
+    const timer = setTimeout(() => reviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120)
+    return () => clearTimeout(timer)
+    // Solo depende de que aparezcan sesión y ficha; el resto se lee dentro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, font])
 
   // Al volver la red, se reintenta solo. Sin esto la pantalla se quedaba en «sin conexión»
   // para siempre aunque el móvil ya tuviera cobertura, y no había forma de recargar sin
@@ -1513,7 +1574,7 @@ export function FontDetailPage() {
       {/* Columna derecha: lo que la gente ha contado. */}
       <Box>
 
-        <Box component="section" sx={{ mt: { xs: 3, md: 0 } }}>
+        <Box component="section" ref={reviewRef} sx={{ mt: { xs: 3, md: 0 } }}>
           {/* Se dice que esto viene del móvil y no del servidor: sin el aviso, una ficha
               sin reseñas parece una fuente que nadie ha comprobado nunca, que es lo
               contrario de lo que pasa — no se sabe. */}
@@ -1565,12 +1626,12 @@ export function FontDetailPage() {
                   <Collapse in={updating} unmountOnExit>
                     <Box sx={{ my: 1.5 }}>
                       <Typography variant="subtitle2">{t('detail.newUpdate')}</Typography>
-                      <UpdateForm fontID={font.id} hasPhoto={!!font.image} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+                      <UpdateForm fontID={font.id} hasPhoto={!!font.image} initialStatus={initialStatus} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
                     </Box>
                   </Collapse>
                 </>
               ) : (
-                <Typography color="text.secondary" sx={{ my: 1.5 }}><Link href={loginNext()}>{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+                <AnonReviewPrompt fontID={font.id} />
               )}
             </>
           ) : (
@@ -1583,10 +1644,10 @@ export function FontDetailPage() {
                     {t('detail.reportStatus')}
                   </Button>
                 ) : (
-                  <UpdateForm fontID={font.id} hasPhoto={!!font.image} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+                  <UpdateForm fontID={font.id} hasPhoto={!!font.image} initialStatus={initialStatus} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
                 )
               ) : (
-                <Typography color="text.secondary" sx={{ my: 1 }}><Link href={loginNext()}>{t('nav.enter')}</Link> {t('detail.loginToUpdate')}</Typography>
+                <AnonReviewPrompt fontID={font.id} />
               )}
             </>
           )}

@@ -25,6 +25,16 @@ test('la raíz es un destino válido', () => {
   assert.equal(safeNext('?next=/'), '/')
 })
 
+test('conserva la query interna (nivel oro: retomar la reseña)', () => {
+  // El destino lleva la intención en su propia query (`?review=flowing`); tiene que
+  // sobrevivir entera al ida y vuelta del login, o la reseña no volvería medio empezada.
+  assert.equal(safeNext('?next=%2Ffonts%2Fabc%3Freview%3Dflowing'), '/fonts/abc?review=flowing')
+})
+
+test('un open redirect con query sigue rechazado', () => {
+  assert.equal(safeNext('?next=%2F%2Fevil.com%3Freview%3Dflowing'), null)
+})
+
 test('loginNext codifica el destino', () => {
   assert.equal(loginNext('/fonts/x?y=1'), '/login?next=%2Ffonts%2Fx%3Fy%3D1')
 })
