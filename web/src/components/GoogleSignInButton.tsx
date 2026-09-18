@@ -45,6 +45,13 @@ export function GoogleSignInButton({ setBusy, setError }: {
     let cancelled = false
     const render = () => {
       if (cancelled || !box.current || !window.google) return
+      // Idempotente: si el botón ya está en el contenedor, no se vuelve a pintar. GSI mete
+      // su `<div>` de forma síncrona, así que un segundo `render()` —remontaje, carrera del
+      // script de GSI, o un reajuste del viewport en móvil— encuentra el contenedor lleno y
+      // se calla en vez de destruir y reconstruir el botón, que es el parpadeo/vibración
+      // que se reportó (más visible en móvil). El contenedor lo reserva el `<Box>` con
+      // `minHeight`, así que tampoco hay salto de layout mientras carga.
+      if (box.current.childElementCount > 0) return
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: async ({ credential }) => {
@@ -62,7 +69,6 @@ export function GoogleSignInButton({ setBusy, setError }: {
           }
         },
       })
-      box.current.replaceChildren()
       window.google.accounts.id.renderButton(box.current, {
         type: 'standard', theme: 'outline', size: 'large', width: 320,
         text: 'continue_with', shape: 'rectangular',
