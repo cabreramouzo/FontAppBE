@@ -699,6 +699,24 @@ export async function visitedCollection(pos?: [number, number] | null): Promise<
   return (await apiFetch<VisitedCollection | undefined>(`/gamification/collection${q}`)) ?? null
 }
 
+/** Una fuente visitada de la colección, con lo justo para pintar su fila. */
+export interface CollectionFont {
+  id: string
+  name: string | null
+  source: WaterSource | null
+  municipality: string | null
+  region: string | null
+}
+
+/**
+ * Tus fuentes visitadas de un tipo, la más reciente primero. Es lo que se ve al tocar un
+ * medallón de la Pokédex: ves el número y quieres saber cuáles son. Bajo demanda, no en el
+ * resumen, para no cargar todo el historial de golpe.
+ */
+export async function collectionFonts(source: WaterSource): Promise<CollectionFont[]> {
+  return apiFetch<CollectionFont[]>(`/gamification/collection/fonts?source=${encodeURIComponent(source)}`)
+}
+
 /** Un aviso de la campana. `fontID` nulo = la fuente ya no existe. */
 export interface NotificationItem {
   id: string

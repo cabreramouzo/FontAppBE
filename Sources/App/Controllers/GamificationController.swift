@@ -28,6 +28,7 @@ struct GamificationController: RouteCollection {
         g.get("me", use: me)
         g.get("guarded", use: guarded)
         g.get("collection", use: collection)
+        g.get("collection", "fonts", use: collectionFonts)
 
         // Solo para la felicitación. Va aparte de `me` porque cuenta lo pendiente y `me`
         // no debe: el marcador, la vitrina y todo lo demás siguen con las 72 h.
@@ -364,6 +365,22 @@ struct GamificationController: RouteCollection {
             resumen.local = try await VisitedCollection.local(userID, lat: lat, long: long, on: req.db)
         }
         return try await resumen.encodeResponse(for: req)
+    }
+
+    /// GET /gamification/collection/fonts?source=<tipo> — tus fuentes visitadas de un tipo.
+    ///
+    /// Lo que se ve al tocar un medallón de la Pokédex. 204 si apagó la gamificación, igual
+    /// que el resto. Un `source` que no sea un `WaterSource` válido es una petición mal
+    /// formada, no una lista vacía: 400.
+    @Sendable func collectionFonts(req: Request) async throws -> Response {
+        let user = try req.auth.require(User.self)
+        guard !user.gamificationOptOut else { return Response(status: .noContent) }
+        guard let raw = req.query[String.self, at: "source"], let source = WaterSource(rawValue: raw) else {
+            throw Abort(.badRequest, reason: "Unknown or missing source type")
+        }
+        let userID = try user.requireID()
+        let fonts = try await VisitedCollection.fonts(userID, source: source, on: req.db)
+        return try await fonts.encodeResponse(for: req)
     }
 
     /// GET /gamification/me — marcador, nivel, insignias e impacto del usuario autenticado.

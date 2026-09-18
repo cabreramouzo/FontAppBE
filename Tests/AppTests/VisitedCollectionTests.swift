@@ -83,6 +83,33 @@ final class VisitedCollectionTests: XCTestCase {
         }
     }
 
+    /// La lista de un tipo: solo ese tipo, solo tuyas, solo visibles, la más reciente primero.
+    func testFuentesDeUnTipo() async throws {
+        try await withApp { app in
+            let u = try await usuario(app, "cazadora")
+            let otra = try await usuario(app, "otra")
+
+            let vieja = try await fuente(app, .mountain)
+            try await resena(app, vieja, de: u)
+            let nueva = try await fuente(app, .mountain)
+            try await resena(app, nueva, de: u)
+            // De otro tipo: no debe salir en la lista de montaña.
+            try await resena(app, try await fuente(app, .tap), de: u)
+            // De otra persona: no es tuya.
+            try await resena(app, try await fuente(app, .mountain), de: otra)
+            // Escondida: fuera.
+            let oculta = try await fuente(app, .mountain)
+            oculta.retiredAt = Date()
+            try await oculta.save(on: app.db)
+            try await resena(app, oculta, de: u)
+
+            let lista = try await VisitedCollection.fonts(try u.requireID(), source: .mountain, on: app.db)
+            XCTAssertEqual(lista.map(\.id), [try nueva.requireID(), try vieja.requireID()],
+                           "solo tus fuentes de montaña visibles, la más reciente primero")
+            XCTAssertTrue(lista.allSatisfy { $0.source == "mountain" })
+        }
+    }
+
     /// Una fuente escondida no cuenta ni en el total ni en los tipos.
     func testEscondidasNoCuentan() async throws {
         try await withApp { app in

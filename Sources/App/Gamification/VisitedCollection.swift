@@ -96,6 +96,41 @@ enum VisitedCollection {
         return Summary(visited: total.first?.n ?? 0, types: types)
     }
 
+    /// Una fuente visitada, con lo justo para pintar una fila del perfil (`FilaDeFuente`).
+    struct VisitedFont: Content, Sendable {
+        let id: UUID
+        /// `nil` si no tiene topónimo; el rótulo lo compone el cliente (`nombreFuente`).
+        let name: String?
+        let source: String?
+        let municipality: String?
+        let region: String?
+    }
+
+    /// Tus fuentes visitadas **de un tipo**, la más reciente primero.
+    ///
+    /// Es la respuesta a la pregunta natural que hace la Pokédex: ves un emoji con un número
+    /// debajo y quieres saber cuáles son esas fuentes. No lo cubre «Tus reseñas» del perfil,
+    /// que no se puede filtrar por tipo; aquí el corte por tipo es justo lo que aporta.
+    ///
+    /// Bajo demanda (una consulta al tocar un tipo), no dentro del resumen: meter todas las
+    /// fuentes agrupadas por tipo en `/collection` crecería con el historial de cada uno.
+    /// Tope de 200: es una colección para hojear, no un volcado; el cliente además recorta a
+    /// unas pocas con «ver todas».
+    static func fonts(_ userID: UUID, source: WaterSource, on db: any Database) async throws -> [VisitedFont] {
+        guard let sql = db as? any SQLDatabase else { return [] }
+        return try await sql.raw("""
+            SELECT f.id, f.name, f.source, f.municipality, f.region, max(c.created_at) AS last_at
+            FROM font_comments c
+            JOIN fonts f ON f.id = c.font_id
+            WHERE c.user_id = \(bind: userID)
+              AND f.source = \(bind: source.rawValue)
+              AND \(unsafeRaw: Font.visibleSQL)
+            GROUP BY f.id, f.name, f.source, f.municipality, f.region
+            ORDER BY last_at DESC
+            LIMIT 200
+            """).all(decoding: VisitedFont.self)
+    }
+
     /// Cuántas de tus 30 fuentes más cercanas has visitado. `nil` si no hay ninguna cerca.
     ///
     /// Reutiliza la caja + haversine + `LIMIT 30` de `ZoneStats.local` (mismas constantes),

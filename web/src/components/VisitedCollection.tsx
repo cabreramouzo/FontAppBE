@@ -3,13 +3,19 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Tooltip from '@mui/material/Tooltip'
 import LinearProgress from '@mui/material/LinearProgress'
+import Collapse from '@mui/material/Collapse'
 import CollectionsBookmarkOutlinedIcon from '@mui/icons-material/CollectionsBookmarkOutlined'
-import { visitedCollection } from '../api/client'
-import type { VisitedCollection as Collection } from '../api/client'
+import { collectionFonts, visitedCollection } from '../api/client'
+import type { CollectionFont, VisitedCollection as Collection } from '../api/client'
+import type { WaterSource } from '../api/types'
 import { SOURCE_EMOJI } from '../lib/waterType'
 import { positionIfAllowed } from '../lib/quietPosition'
 import { useI18n } from '../i18n/I18nContext'
+import { nombreFuente } from '../lib/fontName'
 import { TituloDeSeccion } from './TituloDeSeccion'
+import { ListaConTope } from './ListaConTope'
+import { FilaDeFuente } from './FilaDeFuente'
+import { Skeleton } from './Skeleton'
 
 /**
  * La «Pokédex»: fuentes visitadas y tipos coleccionados. Fase de colección del plan de
@@ -26,6 +32,19 @@ import { TituloDeSeccion } from './TituloDeSeccion'
 export function VisitedCollection() {
   const { t, lang } = useI18n()
   const [data, setData] = useState<Collection | null>(null)
+  // El tipo desplegado y su lista de fuentes. Uno a la vez: tocar otro cierra el anterior,
+  // para no llenar el perfil. `fuentes === null` mientras carga esa lista.
+  const [abierto, setAbierto] = useState<WaterSource | null>(null)
+  const [fuentes, setFuentes] = useState<CollectionFont[] | null>(null)
+
+  function alternarTipo(source: WaterSource) {
+    if (abierto === source) { setAbierto(null); return }
+    setAbierto(source)
+    setFuentes(null)
+    collectionFonts(source)
+      .then((fs) => { setFuentes(fs) })
+      .catch(() => { setFuentes([]) })
+  }
 
   useEffect(() => {
     // La posición **sin pedir permiso**: un perfil no debe lanzar el diálogo de ubicación
@@ -78,19 +97,31 @@ export function VisitedCollection() {
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
         {data.types.map((tp) => {
           const tiene = tp.count > 0
+          const activo = abierto === tp.source
           return (
             <Tooltip
               key={tp.source}
               title={`${t(`source.${tp.source}`)}${tiene ? ` · ${tp.count}` : ''}`}
             >
+              {/* Con fuentes coleccionadas el medallón es un botón: ves el número y lo
+                  natural es tocarlo para ver cuáles son. El tipo que aún no tienes no es
+                  pulsable —no hay lista que enseñar—. */}
               <Box
+                component={tiene ? 'button' : 'div'}
+                type={tiene ? 'button' : undefined}
+                onClick={tiene ? () => alternarTipo(tp.source) : undefined}
+                aria-expanded={tiene ? activo : undefined}
                 sx={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
                   width: 64, minHeight: 52, borderRadius: 2, px: 0.5, py: 0.75,
-                  bgcolor: tiene ? 'action.hover' : 'transparent',
-                  border: '1px solid', borderColor: 'divider',
+                  font: 'inherit', color: 'inherit', textAlign: 'center',
+                  cursor: tiene ? 'pointer' : 'default',
+                  bgcolor: activo ? 'action.selected' : tiene ? 'action.hover' : 'transparent',
+                  border: '1px solid', borderColor: activo ? 'primary.main' : 'divider',
                   opacity: tiene ? 1 : 0.4,
                   filter: tiene ? 'none' : 'grayscale(1)',
+                  transition: 'background-color .15s ease, border-color .15s ease',
+                  '&:hover': tiene ? { bgcolor: 'action.selected' } : undefined,
                 }}
               >
                 <Box component="span" sx={{ fontSize: '1.5rem', lineHeight: 1 }}>{SOURCE_EMOJI[tp.source]}</Box>
@@ -110,6 +141,34 @@ export function VisitedCollection() {
           )
         })}
       </Box>
+
+      {/* La lista del tipo abierto, desplegada en el sitio. Filtrar la colección por tipo es
+          justo lo que «Tus reseñas» no puede hacer, así que no es otra lista repetida. Con
+          `ListaConTope` para que un tipo con muchas fuentes no estire el perfil. */}
+      <Collapse in={abierto !== null} unmountOnExit>
+        <Box sx={{ mt: 1.5 }}>
+          {abierto !== null && (
+            <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+              {SOURCE_EMOJI[abierto]} {t(`source.${abierto}`)}
+            </Typography>
+          )}
+          {fuentes === null && <Skeleton lines={3} />}
+          {fuentes && fuentes.length > 0 && (
+            <ListaConTope
+              items={fuentes}
+              clave={(f) => f.id}
+              fila={(f) => (
+                <FilaDeFuente
+                  to={`/fonts/${f.id}`}
+                  source={f.source}
+                  primary={nombreFuente(f, t)}
+                  secondary={f.municipality ?? f.region ?? undefined}
+                />
+              )}
+            />
+          )}
+        </Box>
+      </Collapse>
     </Box>
   )
 }
