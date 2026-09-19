@@ -291,6 +291,15 @@ function leeRadio(): number {
 }
 function guardaRadio(v: number) { try { localStorage.setItem(RADIO_KEY, String(v)) } catch { /* nada que hacer */ } }
 
+// «Cerca de mí» vs «en todas partes» también se recuerda, como el radio y el país: si no,
+// al entrar en una fuente y volver, la elección explícita («en todas partes») se perdía y
+// la página volvía a «cerca de mí». Por defecto, cerca.
+const CERCA_KEY = 'activity:cerca'
+function leeCerca(): boolean {
+  try { return localStorage.getItem(CERCA_KEY) !== '0' } catch { return true }
+}
+function guardaCerca(v: boolean) { try { localStorage.setItem(CERCA_KEY, v ? '1' : '0') } catch { /* nada que hacer */ } }
+
 /**
  * @param maxPages  Cuántas páginas de `limit` se pueden llegar a pedir con «Ver más».
  *   1 (por defecto) = una sola carga, sin botón. Novedades usa 5 → hasta 5×60.
@@ -312,9 +321,10 @@ export function ActivityGrid({ limit = 24, showFilter = false, maxPages = 1 }: {
   const [intento, setIntento] = useState(0)
   const [region, setRegion] = useState('')
   const [pos, setPos] = useState<[number, number] | null>(null)
-  // Arranca en "cerca de mí" y cae a "todo" si no hay ubicación: una portada global es
-  // casi inútil para quien vive lejos de donde se mueve la cosa.
-  const [cerca, setCerca] = useState(true)
+  // Arranca en la última elección recordada (por defecto "cerca de mí") y cae a "todo" si
+  // no hay ubicación: una portada global es casi inútil para quien vive lejos de donde se
+  // mueve la cosa.
+  const [cerca, setCerca] = useState(leeCerca)
   const [ubicando, setUbicando] = useState(true)
   const [km, setKm] = useState<number>(leeRadio)
 
@@ -426,11 +436,12 @@ export function ActivityGrid({ limit = 24, showFilter = false, maxPages = 1 }: {
 
   /** "Cerca de mí" pulsado sin tener posición: ahí sí se puede pedir permiso. */
   async function activarCerca() {
-    if (pos) { setCerca(true); return }
+    if (pos) { setCerca(true); guardaCerca(true); return }
     const p = await askPosition()
     if (!p) { show(t('map.geoFailed')); return }
     setPos(p)
     setCerca(true)
+    guardaCerca(true)
   }
 
   const regions = [...new Set((items ?? []).map((i) => i.region).filter(Boolean))] as string[]
@@ -456,7 +467,7 @@ export function ActivityGrid({ limit = 24, showFilter = false, maxPages = 1 }: {
           label={t('activity.everywhere')}
           color={!cerca ? 'primary' : 'default'}
           variant={!cerca ? 'filled' : 'outlined'}
-          onClick={() => setCerca(false)}
+          onClick={() => { setCerca(false); guardaCerca(false) }}
         />
         {/* Radio elegible: solo con «cerca de mí» y posición, que es cuando el círculo
             existe. Sin posición «cerca de mí» cae a global y el radio no pinta nada. */}
