@@ -31,6 +31,7 @@ struct FontPhotoController: RouteCollection {
 
         let protected = fotos.grouped(UserToken.authenticator(), User.guardMiddleware())
         protected.post(use: create)
+        protected.patch(":photoID", use: updateCaption)
         protected.delete(":photoID", use: destroy)
     }
 
@@ -144,6 +145,39 @@ struct FontPhotoController: RouteCollection {
     /// Moderador y no solo admin: esto es contenido de otra persona en una ficha pública,
     /// que es exactamente lo que modera un moderador. El creador de la fuente **no** entra
     /// aquí: la ficha no es suya y no debería poder borrar el análisis que aportó alguien.
+    struct UpdatePhotoDTO: Content {
+        let caption: String?
+    }
+
+    /// PATCH /fonts/:fontID/photos/:photoID — corrige solo la descripción.
+    ///
+    /// La foto no se puede cambiar (subir otra es subir otra); lo que se corrige es el
+    /// texto, que es donde se cuela la errata. Quien la subió o un moderador, la misma
+    /// puerta que borrar. No toca `createdAt` ni el orden.
+    @Sendable func updateCaption(req: Request) async throws -> PhotoResponse {
+        let user = try req.auth.require(User.self)
+        guard let photoID = req.parameters.get("photoID", as: UUID.self),
+              let foto = try await FontPhoto.find(photoID, on: req.db) else {
+            throw AppError(.notFound, "photo.notFound", "Foto no encontrada")
+        }
+        let userID = try user.requireID()
+        guard foto.$uploader.id == userID || user.canModerate else {
+            throw AppError(.forbidden, "photo.editForbidden", "No puedes editar esta foto")
+        }
+        let dto = try req.content.decode(UpdatePhotoDTO.self)
+        let limpio = dto.caption?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let limpio, limpio.count > 200 {
+            throw AppError(.badRequest, "photo.captionTooLong", "La descripción es demasiado larga")
+        }
+        foto.caption = (limpio?.isEmpty ?? true) ? nil : limpio
+        try await foto.save(on: req.db)
+        try await foto.$uploader.load(on: req.db)
+        return PhotoResponse(
+            id: try foto.requireID(), url: foto.url, kind: foto.kind, caption: foto.caption,
+            createdAt: foto.createdAt,
+            uploader: .init(id: foto.$uploader.id, username: foto.uploader?.username))
+    }
+
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
         guard let photoID = req.parameters.get("photoID", as: UUID.self),

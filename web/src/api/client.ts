@@ -324,6 +324,13 @@ export async function deleteFontPhoto(fontID: string, photoID: string): Promise<
   await apiFetch(`/fonts/${fontID}/photos/${photoID}`, { method: 'DELETE' })
 }
 
+/** Corrige solo la descripción de una foto de la galería (quien la subió o un moderador). */
+export async function updateFontPhoto(fontID: string, photoID: string, caption: string): Promise<FontPhoto> {
+  return apiFetch<FontPhoto>(`/fonts/${fontID}/photos/${photoID}`, {
+    method: 'PATCH', body: JSON.stringify({ caption: caption.trim() || null }),
+  })
+}
+
 export async function updateFont(id: string, data: NewFont): Promise<Font> {
   return apiFetch<Font>(`/fonts/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 }

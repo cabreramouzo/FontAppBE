@@ -15,8 +15,9 @@ import MenuItem from '@mui/material/MenuItem'
 import CollectionsIcon from '@mui/icons-material/CollectionsOutlined'
 import DescriptionIcon from '@mui/icons-material/DescriptionOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import { Link as RouterLink } from 'react-router-dom'
-import { addFontPhoto, ApiError, assetUrl, deleteFontPhoto, describeError, getFontPhotos, getGamification, uploadImage } from '../api/client'
+import { addFontPhoto, ApiError, assetUrl, deleteFontPhoto, describeError, getFontPhotos, getGamification, updateFontPhoto, uploadImage } from '../api/client'
 import type { FontPhoto, PhotoKind } from '../api/client'
 import type { GamificationProfile } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
@@ -130,6 +131,14 @@ export function FontGallery({ fontID }: { fontID: string }) {
     }
   }
 
+  async function editar(p: FontPhoto, caption: string) {
+    setError('')
+    const actualizada = await updateFontPhoto(fontID, p.id, caption)
+    setFotos((f) => (f ?? []).map((x) => (x.id === p.id ? actualizada : x)))
+  }
+
+  const puedeGestionar = (p: FontPhoto) => !!user && (user.id === p.uploader.id || !!user.isAdmin)
+
   const documentos = (fotos ?? []).filter((p) => p.kind === 'document')
   const imagenes = (fotos ?? []).filter((p) => p.kind !== 'document')
 
@@ -152,7 +161,7 @@ export function FontGallery({ fontID }: { fontID: string }) {
           {imagenes.length > 0 && (
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)' }, gap: 1 }}>
               {imagenes.map((p) => (
-                <Foto key={p.id} p={p} puedeBorrar={!!user && (user.id === p.uploader.id || !!user.isAdmin)} onBorrar={() => borrar(p)} />
+                <Foto key={p.id} p={p} puedeGestionar={puedeGestionar(p)} onBorrar={() => borrar(p)} onGuardar={(c) => editar(p, c)} />
               ))}
             </Box>
           )}
@@ -170,7 +179,7 @@ export function FontGallery({ fontID }: { fontID: string }) {
               </Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
                 {documentos.map((p) => (
-                  <Foto key={p.id} p={p} puedeBorrar={!!user && (user.id === p.uploader.id || !!user.isAdmin)} onBorrar={() => borrar(p)} />
+                  <Foto key={p.id} p={p} puedeGestionar={puedeGestionar(p)} onBorrar={() => borrar(p)} onGuardar={(c) => editar(p, c)} />
                 ))}
               </Box>
             </Box>
@@ -178,10 +187,15 @@ export function FontGallery({ fontID }: { fontID: string }) {
 
           {user && (
             <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>{t('gallery.add')}</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{t('gallery.add')}</Typography>
+              {/* El formulario confundía: no quedaba claro que el tipo y la descripción son
+                  de la imagen que vas a elegir a continuación. Se dice en una línea. */}
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                {t('gallery.addHelp')}
+              </Typography>
               <TextField
                 select size="small" value={kind} onChange={(e) => setKind(e.target.value as PhotoKind)}
-                label={t('gallery.kind')} sx={{ minWidth: 200, mb: 1 }}
+                label={t('gallery.kind')} fullWidth sx={{ mb: 1 }}
               >
                 <MenuItem value="fountain">{t('gallery.kind.fountain')}</MenuItem>
                 <MenuItem value="document">{t('gallery.kind.document')}</MenuItem>
@@ -220,23 +234,70 @@ export function FontGallery({ fontID }: { fontID: string }) {
   )
 }
 
-function Foto({ p, puedeBorrar, onBorrar }: { p: FontPhoto; puedeBorrar: boolean; onBorrar: () => void }) {
+function Foto({ p, puedeGestionar, onBorrar, onGuardar }: {
+  p: FontPhoto
+  puedeGestionar: boolean
+  onBorrar: () => void
+  onGuardar: (caption: string) => Promise<void>
+}) {
   const { t } = useI18n()
+  const [editando, setEditando] = useState(false)
+  const [borrador, setBorrador] = useState(p.caption ?? '')
+  const [guardando, setGuardando] = useState(false)
+
+  async function guardar() {
+    setGuardando(true)
+    try { await onGuardar(borrador); setEditando(false) }
+    catch { /* el error lo pinta el padre */ }
+    finally { setGuardando(false) }
+  }
+
   return (
     <Box sx={{ position: 'relative' }}>
       <ZoomableImage src={assetUrl(p.url)} alt={p.caption ?? ''} className="gallery-thumb" />
       {p.kind === 'context' && (
         <Chip size="small" label={t('gallery.kind.context')} sx={{ position: 'absolute', top: 6, left: 6, height: 20 }} />
       )}
-      {p.caption && (
-        <Typography variant="caption" sx={{ display: 'block', mt: 0.25 }}>{p.caption}</Typography>
+
+      {/* La descripción, editable en el sitio por quien la subió: antes no había forma de
+          corregir una errata sin borrar la foto y volver a subirla. */}
+      {editando ? (
+        <Box sx={{ mt: 0.5 }}>
+          <TextField
+            size="small" fullWidth multiline maxRows={4} autoFocus
+            value={borrador} onChange={(e) => setBorrador(e.target.value)}
+            slotProps={{ htmlInput: { maxLength: 200 } }}
+            placeholder={t('gallery.caption')}
+          />
+          <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+            <Button size="small" variant="contained" disableElevation onClick={guardar} disabled={guardando}>
+              {guardando ? t('gallery.uploading') : t('form.save')}
+            </Button>
+            <Button size="small" onClick={() => { setBorrador(p.caption ?? ''); setEditando(false) }} disabled={guardando}>
+              {t('form.cancel')}
+            </Button>
+          </Box>
+        </Box>
+      ) : (
+        p.caption && <Typography variant="caption" sx={{ display: 'block', mt: 0.25 }}>{p.caption}</Typography>
       )}
-      {p.uploader.username && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-          <Link component={RouterLink} to={`/users/${encodeURIComponent(p.uploader.username)}`}>@{p.uploader.username}</Link>
-        </Typography>
-      )}
-      {puedeBorrar && (
+
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5 }}>
+        {p.uploader.username ? (
+          <Typography variant="caption" color="text.secondary">
+            <Link component={RouterLink} to={`/users/${encodeURIComponent(p.uploader.username)}`}>@{p.uploader.username}</Link>
+          </Typography>
+        ) : <span />}
+        {/* Editar la descripción va como lápiz junto al nombre, sin tapar la foto: es una
+            acción menor. Borrar sí va sobre la foto, en rojo, porque es destructiva. */}
+        {puedeGestionar && !editando && (
+          <IconButton size="small" onClick={() => { setBorrador(p.caption ?? ''); setEditando(true) }} aria-label={t('form.edit')}>
+            <EditOutlinedIcon fontSize="small" />
+          </IconButton>
+        )}
+      </Box>
+
+      {puedeGestionar && (
         <IconButton
           size="small" color="error" onClick={onBorrar} aria-label={t('detail.delete')}
           sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'rgba(0,0,0,0.45)', color: 'common.white' }}
