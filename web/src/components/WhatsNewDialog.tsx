@@ -12,10 +12,13 @@ import ListItemText from '@mui/material/ListItemText'
 import ExploreIcon from '@mui/icons-material/ExploreOutlined'
 import RouteIcon from '@mui/icons-material/RouteOutlined'
 import HistoryIcon from '@mui/icons-material/HistoryOutlined'
+import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmarkOutlined'
+import EmojiEventsIcon from '@mui/icons-material/EmojiEventsOutlined'
+import WaterDropIcon from '@mui/icons-material/WaterDropOutlined'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { sesiones, useTurno } from '../lib/asks'
-import { debeVerNovedades, marcaNovedadesVistas } from '../lib/whatsNew'
+import { debeVerNovedades, marcaDe, marcaNovedadesVistas } from '../lib/whatsNew'
 
 /**
  * «Qué hay de nuevo»: lo que ha cambiado **desde la última vez que estuviste**.
@@ -52,8 +55,27 @@ export function WhatsNewDialog() {
   const { t } = useI18n()
   const { user } = useAuth()
   const scope = user?.id ?? 'anonymous'
+
+  // Cada novedad lleva la versión en que se estrenó. Se muestran **solo las posteriores a
+  // la última que viste**: quien ya leyó las de la v1 ve solo lo de la v2, no otra vez todo.
+  // Quien nunca vio ninguna (usuario que ya estaba antes de que esto existiera) las ve
+  // todas. `desde` es 0 en ese caso, así que pasan todas.
+  const TODAS = [
+    { icono: <ExploreIcon color="primary" />, k: 'approach', v: 1 },
+    { icono: <RouteIcon color="primary" />, k: 'gpx', v: 1 },
+    { icono: <HistoryIcon color="primary" />, k: 'history', v: 1 },
+    { icono: <CollectionsBookmarkIcon color="primary" />, k: 'collection', v: 2 },
+    { icono: <EmojiEventsIcon color="primary" />, k: 'featured', v: 2 },
+    { icono: <WaterDropIcon color="primary" />, k: 'drywater', v: 2 },
+  ]
+  const desde = marcaDe(scope)?.v ?? 0
+  const novedades = TODAS.filter((n) => n.v > desde)
+
   const [listo, setListo] = useState(false)
-  const abierto = useTurno('news', listo)
+  // Además de que le toque, tiene que haber algo que contar: si el filtro deja la lista
+  // vacía no se abre nada (no debería pasar —cada versión añade al menos una— pero así no
+  // aparece un diálogo en blanco por accidente).
+  const abierto = useTurno('news', listo) && novedades.length > 0
 
   useEffect(() => {
     setListo(debeVerNovedades(scope, sesiones() > 1))
@@ -63,12 +85,6 @@ export function WhatsNewDialog() {
     marcaNovedadesVistas(scope, sesiones())
     setListo(false)
   }
-
-  const novedades = [
-    { icono: <ExploreIcon color="primary" />, k: 'approach' },
-    { icono: <RouteIcon color="primary" />, k: 'gpx' },
-    { icono: <HistoryIcon color="primary" />, k: 'history' },
-  ]
 
   return (
     <Dialog open={abierto} onClose={cerrar} fullWidth maxWidth="xs">

@@ -51,11 +51,13 @@ test('el distintivo «nuevo» no le sale a quien acaba de llegar', () => {
 test('el distintivo se enciende AL LEER las novedades, no antes', () => {
   // La primera version lo hacia al reves y por eso no lo veia nadie: quedaba detras del
   // modal y se apagaba en el mismo gesto que lo cerraba. Se descubrio probandolo.
+  // Se usa una novedad de la versión ACTUAL (`collection`, v2): quien vio la anterior aún
+  // no la ha «leído», así que su distintivo no se enciende hasta que cierra el diálogo.
   conAlmacen()
   marcaNovedadesVistas('ana', 5, VERSION_NOVEDADES - 1)
-  assert.equal(esNuevoParaTi('gpx', 'ana', 5), false, 'aun no las ha leido')
+  assert.equal(esNuevoParaTi('collection', 'ana', 5), false, 'aun no las ha leido')
   marcaNovedadesVistas('ana', 5)
-  assert.equal(esNuevoParaTi('gpx', 'ana', 5), true, 'ya las ha leido: ahora se le ensena donde')
+  assert.equal(esNuevoParaTi('collection', 'ana', 5), true, 'ya las ha leido: ahora se le ensena donde')
 })
 
 test('y dura unas cuantas visitas SUYAS, no unos dias', () => {

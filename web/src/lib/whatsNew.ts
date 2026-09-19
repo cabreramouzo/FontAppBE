@@ -43,13 +43,16 @@ export const SESIONES_CON_DISTINTIVO = 3
  * cada despliegue: si se subiera siempre, el aviso saldría por un arreglo de un margen y
  * dejaría de creerse.
  */
-export const VERSION_NOVEDADES = 1
+export const VERSION_NOVEDADES = 2
 
 /** Qué se estrenó en cada versión. La clave la usan los distintivos «nuevo». */
 export const NOVEDADES: Record<string, number> = {
-  approach: 1,   // la flecha de los últimos metros
-  gpx: 1,        // descargar fuentes y «agua en mi ruta»
-  history: 1,    // historial de búsquedas
+  approach: 1,     // la flecha de los últimos metros
+  gpx: 1,          // descargar fuentes y «agua en mi ruta»
+  history: 1,      // historial de búsquedas
+  collection: 2,   // la Pokédex de fuentes visitadas
+  featured: 2,     // la fuente de la semana
+  drywater: 2,     // fuente seca → la de agua confirmada más cercana
 }
 
 /**
