@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 
 // Identificador compartido por el bundle y `/version.json`. Lleva la hora además del
 // commit porque un redespliegue del mismo commit puede cambiar variables VITE_*.
@@ -52,6 +52,23 @@ export default defineConfig({
           fileName: 'version.json',
           source: JSON.stringify({ version: buildId }),
         })
+      },
+    },
+    {
+      // Estampa el id del build en el service worker (marcador `__SHELL_BUILD__`), para que
+      // el nombre del `SHELL_CACHE` cambie en cada despliegue y el SW se reinstale solo. El
+      // SW vive en `public/`, que Vite copia tal cual, así que se reescribe en `dist` tras
+      // el copiado (`closeBundle`). Si el marcador no está, se **falla el build**: shippear
+      // un SW con el nombre 'dev' lo dejaría congelado y nunca volvería a actualizar.
+      name: 'fontapp-sw-build-stamp',
+      apply: 'build',
+      closeBundle() {
+        const p = new URL('./dist/sw.js', import.meta.url)
+        const original = readFileSync(p, 'utf8')
+        if (!original.includes('__SHELL_BUILD__')) {
+          throw new Error('sw.js no contiene el marcador __SHELL_BUILD__: el SHELL_CACHE no se versionaría por build')
+        }
+        writeFileSync(p, original.replaceAll('__SHELL_BUILD__', buildId))
       },
     },
   ],

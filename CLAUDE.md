@@ -3088,8 +3088,13 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   sobrevive a la Cache API. `/index.html` responde **308 hacia `/`** en Cloudflare Pages,
   así que el `addAll` del precache dejaba el shell envenenado y la app fallaba al quedarse
   sin cobertura. Se pide `/` y se guarda bajo las dos claves; `sinRedirecciones()` limpia
-  cualquier respuesta antes de cachearla o devolverla. **Al tocar el SW hay que subir la
-  versión del caché** (`fontapp-shell-vN`) o los usuarios se quedan con lo viejo.
+  cualquier respuesta antes de cachearla o devolverla. **El nombre del `SHELL_CACHE` se
+  versiona solo por build**: `sw.js` lleva el marcador `__SHELL_BUILD__` y el plugin
+  `fontapp-sw-build-stamp` de `vite.config.ts` lo sustituye por el id del build en `dist`,
+  así CADA despliegue cambia los bytes del SW → se reinstala → `activate` reprecacha el
+  shell → el arranque en frío trae código fresco sin bumps manuales ni depender del aviso
+  de «actualizar». El plugin **falla el build** si el marcador no está (shippear
+  `fontapp-shell-dev` lo congelaría). Ya no hay que subir `fontapp-shell-vN` a mano.
 - Compresión de imágenes: en el cliente (canvas). El borrado del fichero al eliminar fuente/reseña es best-effort (`try?`).
 - Roles jerárquicos (`users.role`, ver `UserRole`): `user` < `moderator` < `admin` < `owner`,
   comprobados por umbral (`user.canModerate`/`isAdmin`/`isOwner`). Moderador: modera contenido ajeno
@@ -3878,20 +3883,21 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   iOS 26.6 con el código actual** — o sea, no era un bug del código ni de la versión de
   WebKit (se descartó el lookbehind, que solo rompe en Safari < 16.4), sino que la PWA
   servía un bundle viejo con un fallo ya corregido.
-  · **Por qué matar la app no bastó:** el navegador solo reinstala el service worker si
-    `sw.js` cambia de bytes, y una tanda de despliegues que solo tocan `src/` deja `sw.js`
-    **idéntico**. Sin cambio, el SW nunca se reinstala y sigue sirviendo el shell y los
-    trozos viejos, apertura tras apertura. El `AppUpdatePrompt` (por `version.json`) debería
-    cazarlo, pero en este aparato no lo desatascó.
-  · **El remedio fiable:** subir `SHELL_CACHE` (`fontapp-shell-vN`). Al cambiar `sw.js`, el
-    navegador baja el worker nuevo, tira el shell viejo en `activate` y reprecacha uno
-    fresco → `index.html` nuevo, hashes de trozo nuevos, código nuevo. Es la otra cara de
-    la regla de siempre: normalmente subes la versión al TOCAR el SW; aquí se sube **a
-    propósito, sin tocar el SW**, solo para forzar la actualización de las PWAs pegadas.
-    Los demás cachés (teselas, API, fotos, fijado) NO se tocan — lo fija `sw-routing.test`.
-  · **Regla para el futuro:** si un despliegue arregla un **crash que la gente ya está
-    sufriendo en la PWA instalada**, sube `SHELL_CACHE` en el mismo cambio; no confíes en
-    que un despliegue de solo `src/` llegue solo a un aparato ya atascado.
+  · **Por qué matar la app no bastaba (ANTES):** el navegador solo reinstala el service
+    worker si `sw.js` cambia de bytes, y una tanda de despliegues que solo tocaban `src/`
+    dejaba `sw.js` **idéntico**. Sin cambio, el SW no se reinstalaba y seguía sirviendo el
+    shell y los trozos viejos, apertura tras apertura. Reportado varias veces: el botón
+    «cargar más» no aparecía hasta matar la app, pestañas con código viejo, etc.
+  · **El arreglo, ahora AUTOMÁTICO:** el `SHELL_CACHE` lleva el id del build
+    (`__SHELL_BUILD__`, estampado por `vite.config.ts`), así que `sw.js` cambia de bytes en
+    **cada** despliegue → el SW se reinstala → `activate` tira el shell viejo y reprecacha
+    uno fresco → matar y reabrir la PWA trae SIEMPRE el código nuevo. Ya no hay que subir
+    `fontapp-shell-vN` a mano ni depender de que el usuario vea el aviso de «actualizar»
+    (que además solo sale en PWA instalada y suspendida). Los demás cachés (teselas, API,
+    fotos, fijado) NO se tocan — lo fija `sw-routing.test`.
+  · El plugin **falla el build** si el marcador `__SHELL_BUILD__` no está: shippear
+    `fontapp-shell-dev` congelaría el shell para siempre, que es peor que el problema
+    original.
   · **Receta de diagnóstico** para «funciona en el Mac, falla en el iPhone instalado»:
     (1) versión de iOS —descarta rarezas por versión de motor, como el lookbehind—;
     (2) cargar la misma página en el **simulador de iOS** (WebKit de verdad) con el código

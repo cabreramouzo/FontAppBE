@@ -3,7 +3,15 @@
 // - Teselas del mapa (OSM, otro dominio): cache-first con tope (LRU sencillo).
 // - API GET del mismo origen: stale-while-revalidate (sirve al instante, refresca si hay red).
 // - Navegación SPA: network-first con respaldo en el shell.
-const SHELL_CACHE = 'fontapp-shell-v18'
+// El nombre del shell lleva el id del build, estampado en el build (ver vite.config.ts).
+// Así CADA despliegue cambia los bytes de este fichero → el navegador instala un SW nuevo
+// → `activate` tira el shell viejo y reprecacha uno fresco → al matar y reabrir la PWA
+// llega SIEMPRE el código nuevo, sin depender de subir la versión a mano ni de que el
+// usuario vea el aviso de «actualizar». En `dev` el marcador se queda sin sustituir y cae
+// a un nombre fijo. Si el build no lo sustituyera, preferimos que falle (ver el plugin),
+// no arrastrar un nombre 'dev' en producción que ya no cambiaría nunca.
+const SHELL_BUILD = '__SHELL_BUILD__'
+const SHELL_CACHE = SHELL_BUILD.startsWith('__') ? 'fontapp-shell-dev' : `fontapp-shell-${SHELL_BUILD}`
 const TILE_CACHE = 'fontapp-tiles-v2'
 const API_CACHE = 'fontapp-api-v3'
 // El nombre NO sube de versión al guardar las fotos: no ha cambiado el formato de nada, y

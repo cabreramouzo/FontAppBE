@@ -28,9 +28,14 @@ function cargaSW(hrefDelSW: string, extras: { caches?: unknown; Response?: unkno
   return fn(self, extras.caches ?? {}, () => {}, extras.Response ?? class {}, {})
 }
 
-test('el shell actual invalida el bundle persistente anterior', () => {
+test('el shell se versiona por build (marcador que el build sustituye)', () => {
   const codigo = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
-  assert.match(codigo, /const SHELL_CACHE = 'fontapp-shell-v18'/)
+  // El nombre del shell ya no es un `vN` a mano: lleva `__SHELL_BUILD__`, que el build
+  // sustituye por el id del despliegue. Así CADA versión reinstala el SW y el arranque en
+  // frío trae código fresco sin bumps manuales. Si el marcador desaparece, el shell dejaría
+  // de invalidarse por build y volveríamos a las pestañas con código viejo.
+  assert.match(codigo, /const SHELL_BUILD = '__SHELL_BUILD__'/)
+  assert.match(codigo, /fontapp-shell-\$\{SHELL_BUILD\}/)
   // El remedio no debe borrar mapas ni respuestas offline. Este test ya ha cazado un
   // intento de subir `API_CACHE` sin que hubiera cambiado ningún formato: habría tirado
   // lo guardado de todo el mundo en el cambio que existía para conservarlo mejor.
@@ -38,6 +43,15 @@ test('el shell actual invalida el bundle persistente anterior', () => {
   assert.match(codigo, /const API_CACHE = 'fontapp-api-v3'/)
   assert.match(codigo, /const PHOTO_CACHE = 'fontapp-photos-v1'/)
   assert.match(codigo, /const PINNED_CACHE = 'fontapp-pinned-v1'/)
+})
+
+test('el build estampa el id en el shell (marcador sustituido, sin quedar «dev»)', () => {
+  const config = readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8')
+  // El plugin reescribe dist/sw.js y FALLA si el marcador no está: shippear 'fontapp-shell-dev'
+  // congelaría el shell para siempre. Se fija aquí para que nadie quite esa red.
+  assert.match(config, /__SHELL_BUILD__/)
+  assert.match(config, /replaceAll\('__SHELL_BUILD__'/)
+  assert.match(config, /throw new Error/)
 })
 
 const PROD = cargaSW('https://fontapp.net/sw.js?api=https%3A%2F%2Ffontapp.fly.dev')
