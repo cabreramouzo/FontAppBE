@@ -41,6 +41,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined'
 import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
 import HideImageIcon from '@mui/icons-material/HideImageOutlined'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
@@ -494,11 +495,17 @@ function ReportForm({ fontID, onPosted, borrador }: {
         </Box>
       )}
       {error && <Alert severity="error">{error}</Alert>}
+      {/* Un comentario NO es un botón azul lleno: eso lo reserva la reseña («Publicar
+          actualización»), y tenerlos los dos iguales y casi juntos hacía que se pulsara
+          este queriendo enviar la reseña (reportado en el campo). Comentario = secundario
+          (contorno). Una incidencia sí mantiene su color de aviso: es otra acción, no se
+          confunde con el azul de la reseña. */}
       <Button
         type="submit"
         color={esIncidencia ? 'warning' : 'primary'}
-        variant="contained" disableElevation disabled={saving}
-        startIcon={esIncidencia ? <ReportProblemIcon /> : undefined}
+        variant={esIncidencia ? 'contained' : 'outlined'}
+        disableElevation disabled={saving}
+        startIcon={esIncidencia ? <ReportProblemIcon /> : <ChatBubbleOutlineIcon />}
         sx={{ alignSelf: 'flex-start' }}
       >
         {saving ? t('report.sending') : t(esIncidencia ? 'report.submit' : 'comment.submit')}
@@ -1672,6 +1679,9 @@ export function FontDetailPage() {
           )}
         </Box>
 
+        {/* Separador fuerte entre «Estado y reseñas» y «Comentarios»: son dos cosas
+            distintas y sus botones de publicar estaban demasiado cerca. */}
+        <Divider sx={{ mt: 3 }} />
         <Box component="section" sx={{ mt: 3 }} ref={cajaComentarios}>
           {/* «Comentarios» y no «incidencias»: es lo que de verdad hay en esta lista
               desde que la caja dejó de exigir que todo fuera una avería. */}
