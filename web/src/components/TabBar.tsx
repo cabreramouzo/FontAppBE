@@ -54,6 +54,14 @@ export function TabBar() {
         display: { xs: 'block', sm: 'none' },
         position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1100,
         borderTop: 1, borderColor: 'divider', borderRadius: 0,
+        // Se promociona a su propia capa de composición. En iOS, con el contenido
+        // reordenándose durante el scroll —típico con mala cobertura, cuando las imágenes y
+        // los datos de la ficha entran tarde—, un `position: fixed` se «pega» al contenido y
+        // viaja con él hasta que termina el gesto, apareciendo a media pantalla. Reportado
+        // en el campo (una raya de 4G, dentro de una ficha de fuente). `translateZ(0)` fuerza
+        // una capa GPU que WebKit repinta independiente del scroll, sin re-anclar la barra
+        // (no tiene descendientes `fixed`, así que crear un contexto no rompe nada).
+        transform: 'translateZ(0)',
         // El indicador del iPhone se come la fila de abajo: el acolchado va DENTRO de la
         // barra, así que los botones suben y el fondo sigue llegando al borde.
         pb: 'env(safe-area-inset-bottom)',
