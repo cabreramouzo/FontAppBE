@@ -222,7 +222,11 @@ a:hover { text-decoration: underline; }
 .panel {
   position: absolute;
   left: 16px;
-  bottom: 24px;
+  /* Se levanta por encima del teclado. Sin esto, en iOS el panel flota anclado al fondo
+     del layout y su parte baja —descripción y botón de crear— queda DETRÁS del teclado, y
+     no hay scroll que la saque porque la propia caja llega ahí abajo. `--kb` lo publica
+     `NewFontForm` con `visualViewport` (0 en escritorio, donde no hay teclado). */
+  bottom: calc(24px + var(--kb, 0px));
   z-index: 1000;
   width: 300px;
   max-width: calc(100% - 32px);
@@ -235,7 +239,7 @@ a:hover { text-decoration: underline; }
      horizontal el nombre y el botón de crear se salían por encima del mapa y no había
      forma de llegar a ellos. No lo trajo la descripción multilínea —ya pasaba con el
      teclado abierto— pero dejarla crecer sin esto sí lo volvía fácil. */
-  max-height: calc(100% - 48px);
+  max-height: calc(100% - 48px - var(--kb, 0px));
   overflow-y: auto;
 }
 .panel h3 { margin: 0 0 4px; }

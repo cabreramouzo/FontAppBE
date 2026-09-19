@@ -1211,6 +1211,29 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
   const remote = isRemotePlacement(coords, meCoords)
   const remoteKm = meCoords ? distanceMetres(coords, meCoords) / 1000 : null
 
+  // Cuánto tapa el teclado, publicado como `--kb` mientras este formulario está abierto.
+  // El panel flota sobre el mapa y crece hacia arriba; en iOS su parte baja quedaba detrás
+  // del teclado sin forma de sacarla. Con esto el panel se levanta y su alto se recorta al
+  // hueco visible, así el scroll interno alcanza la descripción y el botón. `visualViewport`
+  // es la única medida fiable del teclado; en escritorio no encoge, así que `--kb` = 0.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const root = document.documentElement
+    const update = () => {
+      const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      root.style.setProperty('--kb', `${Math.round(overlap)}px`)
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      root.style.setProperty('--kb', '0px')
+    }
+  }, [])
+
   // El pin se puede seguir moviendo tocando el mapa con el formulario abierto:
   // hay que reflejarlo aquí o crearíamos la fuente en el punto inicial.
   useEffect(() => {
@@ -1344,6 +1367,9 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
         <TextField
           label={t('newFont.descriptionOpt')} value={description}
           onChange={(e) => setDescription(e.target.value)}
+          // Al enfocar, y una vez el teclado ha levantado el panel (de ahí el retardo), se
+          // sube el campo a la vista dentro del scroll del panel.
+          onFocus={(e) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 350) }}
           size="small" multiline minRows={2} maxRows={4}
         />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
