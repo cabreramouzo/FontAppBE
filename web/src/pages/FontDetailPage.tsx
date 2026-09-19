@@ -94,7 +94,7 @@ import { BadgeIcon } from '../components/BadgeIcon'
 import { TIER_COLOR } from '../lib/tierColors'
 import { BadgeArt } from '../components/BadgeArt'
 import { BADGE_ART } from '../lib/levelBadges'
-import { enqueue, isOffline } from '../lib/outbox'
+import { enqueue, isOffline, listPending, onOutboxChanged, onOutboxSyncState, type PendingView } from '../lib/outbox'
 import { fuenteDe } from '../lib/zonaOffline'
 import { fuenteVista } from '../lib/fuentesVistas'
 import { zonaGuardada } from '../lib/zonaAlmacen'
@@ -747,6 +747,9 @@ export function FontDetailPage() {
   const reviewRef = useRef<HTMLDivElement>(null)
   // #4: si esta fuente está seca/rota/ya no está, la fuente con agua confirmada más cercana.
   const [aguaCerca, setAguaCerca] = useState<NearestWater | null>(null)
+  // #3: aportaciones a ESTA fuente que aún están en la cola (sin enviar). Se pintan en la
+  // ficha para que, al guardar sin cobertura, no parezca que no ha pasado nada.
+  const [pendientes, setPendientes] = useState<PendingView[]>([])
   const toast = useToast()
   // Poner la foto es una acción sola: se elige el fichero y se sube, y ya está. Antes
   // esto abría el formulario de reseña y bajaba hasta él, que era pedirle al usuario el
@@ -953,6 +956,30 @@ export function FontDetailPage() {
     window.addEventListener('online', vuelve)
     return () => window.removeEventListener('online', vuelve)
   }, [load])
+
+  // #3: aportaciones a esta fuente que siguen en la cola. Se refrescan cuando la cola
+  // cambia (al guardar sin cobertura aparecen al instante) y, cuando una tanda termina de
+  // enviarse, se recarga la ficha para sustituir el «pendiente» por la reseña de verdad.
+  const refrescaPendientes = useCallback(() => {
+    if (!id) { setPendientes([]); return }
+    listPending()
+      .then((p) => setPendientes(p.filter((x) => x.kind === 'comment' && x.fields.fontID === id)))
+      .catch(() => setPendientes([]))
+  }, [id])
+
+  useEffect(() => {
+    refrescaPendientes()
+    const offCambio = onOutboxChanged(refrescaPendientes)
+    const offSync = onOutboxSyncState((e) => {
+      // Terminó de enviar algo: la reseña ya está en el servidor, así que se recarga la
+      // ficha (antes decía «enviado» y seguía vacía) y se limpian los pendientes.
+      if (!e.syncing && e.sent > 0) {
+        load().then(() => setError('')).catch(() => { /* sin red: se reintentará */ })
+        refrescaPendientes()
+      }
+    })
+    return () => { offCambio(); offSync() }
+  }, [refrescaPendientes, load])
 
   async function removeFont() {
     if (!id || !confirm(t('detail.confirmDeleteFont'))) return
@@ -1607,6 +1634,32 @@ export function FontDetailPage() {
               contrario de lo que pasa — no se sabe. */}
           {desdeZona && <Alert severity="info" sx={{ mb: 1 }}>{t('offline.fromZone')}</Alert>}
           <Typography variant="h6" gutterBottom>{t('detail.statusReviews')}</Typography>
+
+          {/* #3: lo que has aportado y aún no ha salido (sin cobertura). Se pinta arriba y
+              en trazo discontinuo naranja para que se lea como «guardado, en camino» y no
+              como una reseña publicada. Desaparece solo cuando la cola lo envía y la ficha
+              recarga con la reseña de verdad. */}
+          {pendientes.map((p) => {
+            const st = p.fields.waterStatus as string | null
+            const ws = st ? WATER_STATUS[st] : null
+            const texto = p.fields.text as string | null
+            return (
+              <Paper
+                key={p.id}
+                variant="outlined"
+                sx={{ p: 1.5, mb: 1.5, borderStyle: 'dashed', borderColor: 'warning.main' }}
+              >
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                  {ws && <Chip size="small" label={`${ws.emoji} ${t(`status.${st}`)}`} />}
+                  <Typography variant="caption" sx={{ color: 'warning.main', fontWeight: 700 }}>
+                    {t('offline.pendingReview')}
+                  </Typography>
+                </Stack>
+                {texto && <Typography variant="body2" sx={{ mt: 0.5 }}>{texto}</Typography>}
+              </Paper>
+            )
+          })}
+
           {latest ? (
             <>
               {/* Tarjeta con el ESTADO ACTUAL, separada visualmente del formulario. */}
