@@ -1356,6 +1356,9 @@ export function FontDetailPage() {
           que hacía falta y la que antes se quedaba en blanco. Va aquí y no junto al
           estado del agua porque responde a otra pregunta —cuándo, no qué— y porque es lo
           primero que quieres saber antes de fiarte del resto de la ficha. */}
+      {/* Todo lo que sigue hasta el formulario es de solo lectura: editando se oculta, para
+          que solo quede lo que se puede cambiar. */}
+      {!editing && (
       <Stack direction="row" sx={{ mb: 1.5, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
         <FreshnessChip lastCheck={latest?.lastConfirmedAt ?? latest?.createdAt ?? null} />
         {/* El `?` va pegado a su chip y en la MISMA caja, para que al envolver en móvil no
@@ -1365,8 +1368,9 @@ export function FontDetailPage() {
           <ConfidenceHelpButton />
         </Box>
       </Stack>
+      )}
 
-      {creatorName && (
+      {!editing && creatorName && (
         <Typography
           variant="body2"
           color="text.secondary"
@@ -1407,7 +1411,7 @@ export function FontDetailPage() {
           constancia de esta fuente. Va justo bajo el creador porque contesta la misma
           pregunta ("¿de quién es esta ficha?") desde otro ángulo, y la insignia solo
           aparece cuando de verdad se ha ganado (fuentes sin creador) — no como adorno. */}
-      {showPioneer && (
+      {!editing && showPioneer && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <span>
             {t('detail.pioneerBy')}{' '}
@@ -1438,7 +1442,7 @@ export function FontDetailPage() {
           del "mayor" de Foursquare, y a diferencia del pionero es reconquistable —por eso
           se dice cuántas comprobaciones lleva, para que se vea lo que falta para superarlo.
           Solo sale cuando de verdad hay uno (dos comprobaciones o más en la ventana). */}
-      {font.mayor && (
+      {!editing && font.mayor && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Tooltip title={t('detail.mayorHelp')}>
             <EmojiEventsIcon fontSize="small" sx={{ color: 'warning.main' }} />
@@ -1640,11 +1644,13 @@ export function FontDetailPage() {
         )}
 
         {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
-          {dosColumnas && insignias}
-          {dosColumnas && fichaTecnica}
+          {!editing && dosColumnas && insignias}
+          {!editing && dosColumnas && fichaTecnica}
         </Box>
 
-      {/* Columna derecha: lo que la gente ha contado. */}
+      {/* Columna derecha: lo que la gente ha contado. Solo lectura, así que editando no se
+          pinta: la edición se queda con el formulario a la izquierda y nada más. */}
+      {!editing && (
       <Box>
 
         <Box component="section" ref={reviewRef} sx={{ mt: { xs: 3, md: 0 } }}>
@@ -1992,9 +1998,10 @@ export function FontDetailPage() {
           )}
         </Box>
         </Box>
+      )}
       </Box>
 
-      <FontMaintenance font={font} onChanged={() => { load().catch(() => {}) }} />
+      {!editing && <FontMaintenance font={font} onChanged={() => { load().catch(() => {}) }} />}
 
       {/* Señalar un duplicado lo puede hacer cualquiera; decidirlo sigue siendo del nivel
           5. Hasta ahora quien veía el duplicado —el vecino que conoce el pueblo— no tenía
@@ -2025,8 +2032,8 @@ export function FontDetailPage() {
         <DialogActions><Button onClick={() => setFlagFontOpen(false)}>{t('form.cancel')}</Button></DialogActions>
       </Dialog>
 
-      {!dosColumnas && insignias}
-      {!dosColumnas && fichaTecnica}
+      {!editing && !dosColumnas && insignias}
+      {!editing && !dosColumnas && fichaTecnica}
 
       <BadgeShowcase
         open={!!mirando}
