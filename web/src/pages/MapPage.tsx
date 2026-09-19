@@ -1606,7 +1606,10 @@ function legendOpen(): boolean {
   }
 }
 
-const LEYENDA = ['flowing', 'trickle', 'dry'] as const
+// Todos los colores que de verdad salen en el mapa, o la leyenda miente por omisión:
+// faltaban el morado (`broken`) y sobre todo el gris (`gone`, «ya no está»), que se
+// reportó al no saber qué significaba una fuente gris.
+const LEYENDA = ['flowing', 'trickle', 'dry', 'broken', 'gone'] as const
 
 function MapLegend() {
   const { t } = useI18n()

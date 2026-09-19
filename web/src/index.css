@@ -504,7 +504,11 @@ select:not([class*="Mui"]) {
 }
 
 /* Ubicación del usuario, estilo iOS: punto azul + onda expansiva. */
-.me-loc-wrap { background: none; border: none; }
+/* El punto azul NO intercepta toques: si tapa el pin de una fuente (estás justo delante),
+   el toque tiene que llegar al pin de debajo para abrir su popup. El marcador de usuario
+   no es pulsable —«centrar en mí» es un FAB aparte—, así que dejarlo pasar no quita nada.
+   Reportado en el campo: delante de la fuente, el punto tapaba el pin y no salía la ficha. */
+.me-loc-wrap { background: none; border: none; pointer-events: none; }
 .me-loc { position: relative; width: 28px; height: 28px; }
 .me-loc__dot {
   position: absolute; top: 50%; left: 50%; width: 18px; height: 18px;

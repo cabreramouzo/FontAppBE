@@ -1287,10 +1287,14 @@ export function FontDetailPage() {
           que hacía falta y la que antes se quedaba en blanco. Va aquí y no junto al
           estado del agua porque responde a otra pregunta —cuándo, no qué— y porque es lo
           primero que quieres saber antes de fiarte del resto de la ficha. */}
-      <Stack direction="row" sx={{ mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
+      <Stack direction="row" sx={{ mb: 1.5, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
         <FreshnessChip lastCheck={latest?.lastConfirmedAt ?? latest?.createdAt ?? null} />
-        <ConfidenceChip evidence={confidenceEvidence} />
-        <ConfidenceHelpButton />
+        {/* El `?` va pegado a su chip y en la MISMA caja, para que al envolver en móvil no
+            se quede solo en una línea suelto y desalineado (reportado en el campo). */}
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          <ConfidenceChip evidence={confidenceEvidence} />
+          <ConfidenceHelpButton />
+        </Box>
       </Stack>
 
       {creatorName && (
