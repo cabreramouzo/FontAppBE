@@ -595,7 +595,18 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 360, my: 2, pb: { xs: 9, sm: 0 } }}
     >
       <Typography variant="caption" color="text.secondary">{t('detail.editInfoNote')}</Typography>
-      <TextField label={t('newFont.name')} value={name} onChange={(e) => setName(e.target.value)} size="small" />
+      {/* El nombre, primero y grande: es lo que la gente quiere cambiar (muchas son «fuente
+          sin nombre») y antes se les escapaba en un campo pequeño mientras miraban el título
+          de arriba. Sin `size="small"` para que lea como el campo principal, ancho completo,
+          y con un placeholder que invita cuando no tiene nombre. */}
+      <TextField
+        label={t('newFont.name')}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        fullWidth
+        placeholder={t('detail.namePlaceholder')}
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
       {/* Crece con lo que escribes y se para a las 6 líneas: la descripción es el único
           campo libre de esta ficha —de dónde nace el agua, cómo llegar, qué hay al lado—
           y en una sola línea no se relee lo escrito, así que nadie escribe más de cuatro
@@ -1291,9 +1302,16 @@ export function FontDetailPage() {
       <FontHiddenNotice font={font} />
 
       <Stack direction="row" sx={{ mt: 1, justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-        <Typography variant="h4" sx={{ fontWeight: 800 }}>{nombreFuente(font, t)}</Typography>
+        {/* Editando, el título grande deja de mostrar el nombre: si no, compite con el
+            campo «Nombre» del formulario —el ojo va al título de arriba y no ve el campo,
+            que además queda como un nombre duplicado—. Pasa a ser un rótulo de modo. */}
+        <Typography variant="h4" sx={{ fontWeight: 800 }}>
+          {editing ? t('detail.editingTitle') : nombreFuente(font, t)}
+        </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          {/* Guardar en favoritos: visible siempre; sin sesión lleva a login. */}
+          {/* Guardar en favoritos: visible siempre; sin sesión lleva a login. Editando no:
+              es una acción de la vista, no de la edición. */}
+          {!editing && <>
           <IconButton
             size="small"
             color={favorite?.favorited ? 'primary' : 'default'}
@@ -1319,6 +1337,7 @@ export function FontDetailPage() {
           {favorite && favorite.count > 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>{favorite.count}</Typography>
           )}
+          </>}
         {user && !editing && (
           <>
             {/* Edición abierta: cualquiera puede corregir el nombre/info (estilo wiki). */}
