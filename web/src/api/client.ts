@@ -338,6 +338,25 @@ export async function nearbyFonts(lat: number, long: number, quantity = 40): Pro
   return apiFetch<FontSummary[]>(`/fonts/near?lat=${lat}&long=${long}&quantity=${quantity}`)
 }
 
+/** La fuente con agua confirmada más cercana a otra (para cuando esta está seca). */
+export interface NearestWater {
+  id: string
+  name: string | null
+  source: WaterSource | null
+  latitude: number
+  longitude: number
+  distanceKm: number
+  lastWaterStatus: string | null
+}
+
+/**
+ * La fuente con agua **confirmada** más cercana a `fontID`. `null` (204) si no hay ninguna
+ * de fiar cerca: mejor no ofrecer nada que mandar a otra que quizá también esté seca.
+ */
+export async function nearestWater(fontID: string): Promise<NearestWater | null> {
+  return (await apiFetch<NearestWater | undefined>(`/fonts/${fontID}/nearest-water`)) ?? null
+}
+
 /** Historial de cambios de una fuente. Nivel 4 (`viewFontHistory`) o admin. */
 export async function getFontHistory(id: string): Promise<FontEdit[]> {
   return apiFetch<FontEdit[]>(`/fonts/${id}/history`)

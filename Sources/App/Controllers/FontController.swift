@@ -39,6 +39,10 @@ struct FontController: RouteCollection {
         lecturaMapa.get("map", use: mapItems)
         fonts.get(":fontID", use: show)
         fonts.get(":fontID", "photo-author", use: photoAuthor)
+        // La fuente con agua confirmada más cercana: lo que quiere saber quien llega a una
+        // fuente seca. Pública como la ficha, y cara-ish (resumen de vecinas), así que va
+        // con el mismo tope de lectura del mapa.
+        lecturaMapa.get(":fontID", "nearest-water", use: nearestWater)
 
         // Escritura: requiere token Bearer válido.
         let protected = fonts.grouped(UserToken.authenticator(), User.guardMiddleware())
@@ -1057,6 +1061,91 @@ struct FontController: RouteCollection {
         return try await Font.summaries(for: sorted, on: req.db)
     }
 
+
+    /// Hasta dónde se busca una fuente con agua. Más allá de esto, quien está delante de una
+    /// seca ya no se va a desviar «a la de al lado»: se busca otro plan. Es un objetivo
+    /// caminable, no el agua más cercana del mundo.
+    static let nearestWaterMaxKm = 15.0
+
+    /// La respuesta de `nearest-water`: lo justo para una tarjeta y un enlace a su ficha.
+    struct NearestWater: Content {
+        let id: UUID
+        let name: String?
+        let source: WaterSource?
+        let latitude: Double
+        let longitude: Double
+        let distanceKm: Double
+        let lastWaterStatus: String?
+    }
+
+    /// GET /fonts/:id/nearest-water — la fuente con agua **confirmada** más cercana.
+    ///
+    /// Lo que contesta a quien abre una fuente seca: ¿dónde lleno el bidón entonces? Solo
+    /// devuelve una fuente cuyo estado sea agua **de fiar** —la misma regla que `confidenceOf`
+    /// == `verified` en el cliente: último parte `flowing`/`trickle`, reciente (≤30 días), con
+    /// respaldo independiente y sin contradicciones—. No manda a otra que quizá también esté
+    /// seca: más vale no ofrecer nada que ofrecer una promesa que falla estando sediento.
+    /// 204 si no hay ninguna con agua confirmada dentro de `nearestWaterMaxKm`.
+    @Sendable func nearestWater(req: Request) async throws -> Response {
+        guard let font = try await Font.find(req.parameters.get("fontID"), on: req.db) else {
+            throw Abort(.notFound)
+        }
+        let lat = font.latitude, long = font.longitude
+        let selfID = try font.requireID()
+        let maxKm = Self.nearestWaterMaxKm
+        // Prefiltro por caja (indexado por lat/long); la longitud se ensancha por el coseno.
+        let dLat = maxKm / 111.0
+        let dLong = maxKm / (111.0 * max(cos(lat * .pi / 180), 0.01))
+        let cosLat = cos(lat * .pi / 180)
+
+        var candidateIDs: [UUID]
+        if let sql = req.db as? SQLDatabase {
+            struct Row: Decodable { let id: UUID }
+            candidateIDs = try await sql.raw("""
+                SELECT id FROM fonts
+                WHERE \(unsafeRaw: Font.visibleSQL)
+                  AND id <> \(bind: selfID)
+                  AND latitude BETWEEN \(bind: lat - dLat) AND \(bind: lat + dLat)
+                  AND longitude BETWEEN \(bind: long - dLong) AND \(bind: long + dLong)
+                ORDER BY (latitude - \(bind: lat)) * (latitude - \(bind: lat))
+                       + (longitude - \(bind: long)) * (longitude - \(bind: long)) * \(bind: cosLat * cosLat)
+                LIMIT 400
+                """).all(decoding: Row.self).map(\.id)
+        } else {
+            let cs = try await Font.visible(on: req.db)
+                .filter(\.$id != selfID)
+                .filter(\.$latitude >= lat - dLat).filter(\.$latitude <= lat + dLat)
+                .filter(\.$longitude >= long - dLong).filter(\.$longitude <= long + dLong)
+                .limit(400).all()
+            candidateIDs = cs.compactMap { $0.id }
+        }
+
+        // Se resume el conjunto y se elige, entre las que tienen agua confirmada, la más
+        // cercana por haversine (la caja es un cuadrado; el círculo lo recorta la distancia).
+        let summaries = try await Font.summaries(forIDs: candidateIDs, on: req.db)
+        let now = Date()
+        let mejor = summaries
+            .filter { Self.hasConfirmedWater($0, now: now) }
+            .map { ($0, haversineKm(lat, long, $0.latitude, $0.longitude)) }
+            .filter { $0.1 <= maxKm }
+            .min { $0.1 < $1.1 }
+
+        guard let (s, dist) = mejor, let id = s.id else { return Response(status: .noContent) }
+        let out = NearestWater(id: id, name: s.name, source: s.source,
+                               latitude: s.latitude, longitude: s.longitude,
+                               distanceKm: (dist * 10).rounded() / 10, lastWaterStatus: s.lastWaterStatus)
+        return try await out.encodeResponse(for: req)
+    }
+
+    /// Agua de fiar: el mismo criterio que `confidenceOf` == `verified` en el cliente, y
+    /// además que el estado sea **agua** (no una fuente seca «confirmada»). Sin esto, una
+    /// seca bien corroborada saldría como destino, que es lo contrario de lo que se pide.
+    static func hasConfirmedWater(_ s: FontSummary, now: Date) -> Bool {
+        guard let st = s.lastWaterStatus, st == "flowing" || st == "trickle" else { return false }
+        guard !s.recentStatusConflict else { return false }
+        guard let last = s.lastUpdate, now.timeIntervalSince(last) <= 30 * 86_400 else { return false }
+        return s.latestConfirmations > 0 || s.recentStatusReporters > 1
+    }
 
     /// GET /fonts/in-bounds?minLat=&maxLat=&minLong=&maxLong=
     /// Fuentes dentro del área visible de un mapa. Indexado por (latitude, longitude).

@@ -2093,6 +2093,61 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// `nearest-water`: la fuente con agua CONFIRMADA más cercana, para una fuente seca.
+    ///
+    /// Comprueba las dos mitades del criterio: agua de fiar (dos personas distintas, parte
+    /// reciente, sin contradicción) y **solo** eso —una seca, una con agua sin corroborar y
+    /// una lejana con agua no cuentan—.
+    func testNearestWaterReturnsNearestConfirmed() async throws {
+        try await withApp { app in
+            try await register(app, username: "nw-a")
+            let a = try await login(app, username: "nw-a")
+            try await register(app, username: "nw-b")
+            let b = try await login(app, username: "nw-b")
+
+            func estado(_ font: UUID, _ token: String, _ s: String) async throws {
+                try await app.test(.POST, "fonts/\(font)/comments", headers: bearer(token), beforeRequest: { req in
+                    try req.content.encode(CreateCommentDTO(body: nil, rating: nil, waterStatus: s, image: nil, confirmIfUnchanged: nil))
+                }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
+            }
+
+            // La fuente seca desde la que se pregunta.
+            let seca = try await createFont(app, token: a, name: "Seca", lat: 41.800, long: 2.100)
+            try await estado(seca, a, "dry")
+
+            // Cerca y con agua CONFIRMADA (dos personas distintas): la respuesta esperada.
+            let conAgua = try await createFont(app, token: a, name: "Con agua", lat: 41.805, long: 2.100)
+            try await estado(conAgua, a, "flowing")
+            try await estado(conAgua, b, "flowing")
+
+            // Cerca pero con agua SIN corroborar (una sola persona): no cuenta como confirmada.
+            let sinCorroborar = try await createFont(app, token: a, name: "Sin corroborar", lat: 41.802, long: 2.100)
+            try await estado(sinCorroborar, a, "flowing")
+
+            // Cerca pero seca: obviamente no.
+            let otraSeca = try await createFont(app, token: b, name: "Otra seca", lat: 41.801, long: 2.100)
+            try await estado(otraSeca, b, "dry")
+
+            // Con agua confirmada pero LEJOS (>15 km): fuera del alcance.
+            let lejos = try await createFont(app, token: b, name: "Lejos", lat: 42.000, long: 2.100)
+            try await estado(lejos, a, "flowing")
+            try await estado(lejos, b, "flowing")
+
+            try await app.test(.GET, "fonts/\(seca)/nearest-water", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let w = try res.content.decode(FontController.NearestWater.self)
+                XCTAssertEqual(w.id, conAgua, "la única cercana con agua confirmada")
+                XCTAssertGreaterThan(w.distanceKm, 0)
+            })
+
+            // Sobre una fuente sin ninguna con agua confirmada cerca: 204, no una mentira.
+            let aislada = try await createFont(app, token: a, name: "Aislada", lat: 10.0, long: 10.0)
+            try await app.test(.GET, "fonts/\(aislada)/nearest-water", afterResponse: { res in
+                XCTAssertEqual(res.status, .noContent)
+            })
+        }
+    }
+
     /// El perfil se encuentra escribas el nombre como lo escribas.
     ///
     /// Las dos mitades de una mención decían cosas distintas: `MentionNotifier` resuelve

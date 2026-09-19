@@ -78,7 +78,9 @@ import {
   updateComment,
   updateFont,
   uploadImage,
+  nearestWater,
 } from '../api/client'
+import type { NearestWater } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
@@ -717,7 +719,7 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
 export function FontDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const navigate = useNavigate()
   const [font, setFont] = useState<Font | null>(null)
   const [reports, setReports] = useState<ReportResponse[]>([])
@@ -743,6 +745,8 @@ export function FontDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [initialStatus, setInitialStatus] = useState<string | undefined>(undefined)
   const reviewRef = useRef<HTMLDivElement>(null)
+  // #4: si esta fuente está seca/rota/ya no está, la fuente con agua confirmada más cercana.
+  const [aguaCerca, setAguaCerca] = useState<NearestWater | null>(null)
   const toast = useToast()
   // Poner la foto es una acción sola: se elige el fichero y se sube, y ya está. Antes
   // esto abría el formulario de reseña y bajaba hasta él, que era pedirle al usuario el
@@ -928,6 +932,18 @@ export function FontDetailPage() {
     // Solo depende de que aparezcan sesión y ficha; el resto se lee dentro.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, font])
+
+  // #4: si el último parte dice que está seca/rota/ya no está, se busca la fuente con agua
+  // confirmada más cercana. Solo entonces —una fuente que mana no necesita alternativa— y
+  // por el estado, no por cada recarga de comentarios.
+  const ultimoEstado = comments[0]?.waterStatus ?? null
+  useEffect(() => {
+    const seca = ultimoEstado === 'dry' || ultimoEstado === 'broken' || ultimoEstado === 'gone'
+    if (!id || !seca) { setAguaCerca(null); return }
+    let vivo = true
+    nearestWater(id).then((w) => { if (vivo) setAguaCerca(w) }).catch(() => { if (vivo) setAguaCerca(null) })
+    return () => { vivo = false }
+  }, [id, ultimoEstado])
 
   // Al volver la red, se reintenta solo. Sin esto la pantalla se quedaba en «sin conexión»
   // para siempre aunque el móvil ya tuviera cobertura, y no había forma de recargar sin
@@ -1609,6 +1625,27 @@ export function FontDetailPage() {
                   </Typography>
                 )}
               </Box>
+
+              {/* #4: esta fuente está seca → dónde llenar el bidón. Solo con una candidata
+                  con agua CONFIRMADA cerca; si no la hay, no se pinta nada (mejor que
+                  mandar a otra que quizá también esté seca). */}
+              {aguaCerca && (
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 1.5, my: 1.5, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', borderColor: 'primary.main' }}
+                >
+                  <Box component="span" sx={{ fontSize: 24, lineHeight: 1 }}>💧</Box>
+                  <Box sx={{ flexGrow: 1, minWidth: 160 }}>
+                    <Typography sx={{ fontWeight: 700 }}>{t('detail.nearWaterTitle')}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t('detail.nearWaterBody', { km: aguaCerca.distanceKm.toLocaleString(lang) })}
+                    </Typography>
+                  </Box>
+                  <Button component={RouterLink} to={`/fonts/${aguaCerca.id}`} variant="contained" disableElevation>
+                    {t('detail.nearWaterGo')}
+                  </Button>
+                </Paper>
+              )}
 
               {/* Acciones: sigue igual (1 clic) o ha cambiado (abre el formulario). */}
               {user ? (
