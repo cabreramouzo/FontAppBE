@@ -107,7 +107,6 @@ import { RelocateFont } from '../components/RelocateFont'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
 import { DRINKABLE_EMOJI, DRINKABLE_OPTIONS, SOURCE_EMOJI, SOURCE_OPTIONS, drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
-import { FreshnessChip } from '../components/FreshnessChip'
 import { freshnessOf } from '../lib/freshness'
 import { FontBadges } from '../components/FontBadges'
 import { FichaTecnica } from '../components/FichaTecnica'
@@ -1301,6 +1300,41 @@ export function FontDetailPage() {
       </Button>
     </Paper>
   )
+  // El mismo resumen abre la ficha en móvil y encabeza la columna útil en escritorio.
+  // Mantener una sola definición evita que el estado más importante de la fuente termine
+  // expresándose de dos maneras distintas según el tamaño de pantalla.
+  const resumenEstado = (incluyeAguaCerca: boolean) => (
+    <Paper variant="outlined" sx={{ p: 1.5, my: 1.5 }}>
+      {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : <>
+        <Typography variant="overline">{t('detail.currentStatus')}</Typography>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          {confidenceEvidence.recentStatusConflict
+            ? t('confidence.disputed')
+            : confidenceEvidence.lastWaterStatus
+              ? `${WATER_STATUS[confidenceEvidence.lastWaterStatus]?.emoji ?? ''} ${t(`status.${confidenceEvidence.lastWaterStatus}`)}`
+              : t('confidence.unverified')}
+        </Typography>
+        {confidenceEvidence.lastUpdate && <Typography variant="body2" color="text.secondary">
+          {timeAgo(confidenceEvidence.lastUpdate, t)}
+        </Typography>}
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+          {confidenceEvidence.recentStatusConflict || !confidenceEvidence.lastWaterStatus
+            ? <Typography variant="body2" color="text.secondary">
+                {t(confidenceEvidence.recentStatusConflict ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
+              </Typography>
+            : <ConfidenceChip evidence={confidenceEvidence} />}
+          <ConfidenceHelpButton />
+        </Box>
+      </>}
+      <Button fullWidth variant="contained" disableElevation startIcon={<DirectionsIcon />}
+        sx={{ mt: 1 }} target="_blank" rel="noreferrer"
+        href={`https://www.google.com/maps/dir/?api=1&destination=${font.latitude},${font.longitude}`}
+        onClick={() => trackInteraction('font_directions')}>
+        {t('detail.directions')}
+      </Button>
+      {incluyeAguaCerca && nearbyWaterNotice}
+    </Paper>
+  )
 
   const insignias = (
     <FontBadges
@@ -1387,57 +1421,7 @@ export function FontDetailPage() {
         </Box>
       </Stack>
 
-      {!editing && isMobile && (
-        <Paper variant="outlined" sx={{ p: 1.5, my: 1.5 }}>
-          {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : <>
-            <Typography variant="overline">{t('detail.currentStatus')}</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {confidenceEvidence.recentStatusConflict
-                ? t('confidence.disputed')
-                : confidenceEvidence.lastWaterStatus
-                  ? `${WATER_STATUS[confidenceEvidence.lastWaterStatus]?.emoji ?? ''} ${t(`status.${confidenceEvidence.lastWaterStatus}`)}`
-                  : t('confidence.unverified')}
-            </Typography>
-            {confidenceEvidence.lastUpdate && <Typography variant="body2" color="text.secondary">
-              {timeAgo(confidenceEvidence.lastUpdate, t)}
-            </Typography>}
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-              {confidenceEvidence.recentStatusConflict || !confidenceEvidence.lastWaterStatus
-                ? <Typography variant="body2" color="text.secondary">
-                    {t(confidenceEvidence.recentStatusConflict ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
-                  </Typography>
-                : <ConfidenceChip evidence={confidenceEvidence} />}
-              <ConfidenceHelpButton />
-            </Box>
-          </>}
-          <Button fullWidth variant="contained" disableElevation startIcon={<DirectionsIcon />}
-            sx={{ mt: 1 }} target="_blank" rel="noreferrer"
-            href={`https://www.google.com/maps/dir/?api=1&destination=${font.latitude},${font.longitude}`}
-            onClick={() => trackInteraction('font_directions')}>
-            {t('detail.directions')}
-          </Button>
-          {nearbyWaterNotice}
-        </Paper>
-      )}
-
-      {/* Frescor, justo bajo el nombre. Siempre dice algo: en las miles de fuentes
-          importadas la respuesta es «ningú l'ha comprovada mai», que es precisamente la
-          que hacía falta y la que antes se quedaba en blanco. Va aquí y no junto al
-          estado del agua porque responde a otra pregunta —cuándo, no qué— y porque es lo
-          primero que quieres saber antes de fiarte del resto de la ficha. */}
-      {/* Todo lo que sigue hasta el formulario es de solo lectura: editando se oculta, para
-          que solo quede lo que se puede cambiar. */}
-      {!editing && !isMobile && (
-      <Stack direction="row" sx={{ mb: 1.5, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-        <FreshnessChip lastCheck={latest?.lastConfirmedAt ?? latest?.createdAt ?? null} />
-        {/* El `?` va pegado a su chip y en la MISMA caja, para que al envolver en móvil no
-            se quede solo en una línea suelto y desalineado (reportado en el campo). */}
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-          <ConfidenceChip evidence={confidenceEvidence} />
-          <ConfidenceHelpButton />
-        </Box>
-      </Stack>
-      )}
+      {!editing && isMobile && resumenEstado(true)}
 
       {!editing && creatorName && (
         <Typography
@@ -1700,6 +1684,7 @@ export function FontDetailPage() {
 
       {!editing && dosColumnas && (
         <Box sx={{ gridColumn: '2', minWidth: 0 }}>
+          {resumenEstado(false)}
           {/* La columna derecha reúne lo que sirve para decidir y actuar. Es una tarjeta
               compacta, no un panel desplazable: toda la ficha conserva un único scroll. */}
           <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
@@ -1709,7 +1694,7 @@ export function FontDetailPage() {
                 <Typography>{avg.toFixed(1)} ({rated.length})</Typography>
               </Stack>
             )}
-            <LocationActions font={font} />
+            <LocationActions font={font} showDirections={false} />
           </Paper>
           {insignias}
           {fichaTecnica}
