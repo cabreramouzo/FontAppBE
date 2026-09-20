@@ -114,6 +114,36 @@ enum ZoneStats {
         let checked: Int
     }
 
+    struct PendingFont: Content, Sendable {
+        let id: UUID
+        let name: String?
+        let source: WaterSource?
+        let municipality: String?
+        let lastCheck: Date?
+    }
+
+    /// Una muestra accionable de las fuentes que explican la parte vacía de la barra.
+    /// El mismo corte de 180 días evita que el número y la lista se contradigan.
+    static func pending(region: String, country: String?, on db: any Database,
+                        now: Date = Date(), limit: Int = 12) async throws -> [PendingFont] {
+        guard let sql = db as? SQLDatabase else { return [] }
+        let corte = now.addingTimeInterval(-freshDays * 86_400)
+        let countryClause: SQLQueryString = country.map { "AND f.country = \(bind: $0)" } ?? ""
+        return try await sql.raw("""
+            SELECT f.id, f.name, f.source, f.municipality,
+                   MAX(c.created_at) AS "lastCheck"
+            FROM fonts f
+            LEFT JOIN font_comments c ON c.font_id = f.id
+            WHERE f.region = \(bind: region)
+              \(countryClause)
+              AND \(unsafeRaw: Font.visibleSQL)
+            GROUP BY f.id, f.name, f.source, f.municipality
+            HAVING MAX(c.created_at) IS NULL OR MAX(c.created_at) < \(bind: corte)
+            ORDER BY MAX(c.created_at) ASC NULLS FIRST, f.name ASC NULLS LAST, f.id ASC
+            LIMIT \(bind: max(1, min(limit, 50)))
+            """).all(decoding: PendingFont.self)
+    }
+
     /// La cobertura de UNA zona, para el correo semanal (no vale la pena traerlas todas).
     static func coverage(ofRegion region: String, on db: any Database,
                          now: Date = Date()) async throws -> Coverage? {

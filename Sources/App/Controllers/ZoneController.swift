@@ -17,7 +17,24 @@ struct ZoneController: RouteCollection {
             .grouped(RateLimitMiddleware(scope: "zones", max: 120, window: 60 * 60))
         zones.get(use: coverage)
         zones.get("local", use: local)
+        zones.get("pending", use: pending)
         zones.get("ranking", use: ranking)
+    }
+
+    struct PendingQuery: Content {
+        let region: String
+        let country: String?
+    }
+
+    /// GET /zones/pending?region=&country= — fuentes de una demarcación que necesitan
+    /// una visita, ordenadas con las nunca comprobadas primero y después las más antiguas.
+    @Sendable func pending(req: Request) async throws -> [ZoneStats.PendingFont] {
+        let q = try req.query.decode(PendingQuery.self)
+        let region = q.region.trimmingCharacters(in: .whitespaces)
+        guard !region.isEmpty, region.count <= 100 else {
+            throw Abort(.badRequest, reason: "Falta la zona")
+        }
+        return try await ZoneStats.pending(region: region, country: q.country, on: req.db)
     }
 
     struct CoverageResponse: Content, Sendable {

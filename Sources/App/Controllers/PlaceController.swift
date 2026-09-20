@@ -1,4 +1,5 @@
 import Fluent
+import SQLKit
 import Vapor
 
 /// Páginas por pueblo: «Fonts a Moià».
@@ -46,11 +47,30 @@ struct PlaceController: RouteCollection {
         let nearby: [PlaceDTO]
     }
 
-    /// GET /places?region=&limit= — el listado, para el índice y el sitemap.
+    /// GET /places?region=&country=&q=&limit= — el listado, para el índice, el sitemap y
+    /// el buscador de Zonas. `q` busca tanto el núcleo como su demarcación y no necesita
+    /// coordenadas: es la alternativa explícita para quien no quiera compartir ubicación.
     @Sendable func index(req: Request) async throws -> [PlaceDTO] {
         let limit = min(max(1, (try? req.query.get(Int.self, at: "limit")) ?? 200), 1000)
         var q = Place.query(on: req.db).filter(\.$fontCount > 0)
         if let region: String = req.query["region"] { q = q.filter(\.$region == region) }
+        if let country: String = req.query["country"] { q = q.filter(\.$country == country) }
+        if let raw: String = req.query["q"], let like = SearchTerm.likePattern(raw) {
+            q.group(.or) { any in
+                // Igual que el buscador de fuentes: los acentos no deciden si un
+                // resultado existe. «moia» tiene que encontrar «Moià».
+                any.filter(.sql(SQLBinaryExpression(
+                    left: SQLFunction("unaccent", args: SQLColumn("name", table: "places")),
+                    op: SQLRaw("ILIKE"),
+                    right: SQLFunction("unaccent", args: SQLBind(like))
+                )))
+                any.filter(.sql(SQLBinaryExpression(
+                    left: SQLFunction("unaccent", args: SQLColumn("region", table: "places")),
+                    op: SQLRaw("ILIKE"),
+                    right: SQLFunction("unaccent", args: SQLBind(like))
+                )))
+            }
+        }
         let lugares = try await q.sort(\.$fontCount, .descending).limit(limit).all()
         return lugares.map(Self.dto)
     }

@@ -391,6 +391,14 @@ export interface ZoneCoverageResponse {
   freshDays: number
 }
 
+export interface ZonePendingFont {
+  id: string
+  name: string | null
+  source: WaterSource | null
+  municipality: string | null
+  lastCheck: string | null
+}
+
 /**
  * El objetivo de barrio: las N fuentes más cercanas a un punto.
  *

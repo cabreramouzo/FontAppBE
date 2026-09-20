@@ -3,7 +3,7 @@ import type { PhotoUploadMeta } from '../lib/image'
 import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
 import { storedSource } from '../lib/campaign'
 import { calientaCacheDeFoto } from '../lib/fijarOffline'
-import type { AdminUser, IncidentKind, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserCapabilityReport, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZoneRanking } from './types'
+import type { AdminUser, IncidentKind, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserCapabilityReport, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZonePendingFont, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -1149,6 +1149,12 @@ export async function getLocalZone(lat: number, long: number): Promise<ZoneLocal
   return apiFetch<ZoneLocal>(`/zones/local?${q}`)
 }
 
+export async function getZonePending(region: string, country?: string | null): Promise<ZonePendingFont[]> {
+  const q = new URLSearchParams({ region })
+  if (country) q.set('country', country)
+  return apiFetch<ZonePendingFont[]>(`/zones/pending?${q}`)
+}
+
 /** Ranking mensual de una zona. `month` en AAAA-MM; si falta, el mes en curso. */
 export async function getZoneRanking(region: string, month?: string): Promise<ZoneRanking> {
   const q = new URLSearchParams({ region })
@@ -1193,9 +1199,11 @@ export async function fetchPlace(slug: string): Promise<PlacePage> {
 
 /** El listado de pueblos con fuentes, para el directorio `/places`. Ordenado por número
  *  de fuentes; con `region` acota a una demarcación (todas), sin él trae los mayores. */
-export async function getPlaces(opts: { region?: string; limit?: number } = {}): Promise<PlaceDTO[]> {
+export async function getPlaces(opts: { region?: string; country?: string; q?: string; limit?: number } = {}): Promise<PlaceDTO[]> {
   const q = new URLSearchParams()
   if (opts.region) q.set('region', opts.region)
+  if (opts.country) q.set('country', opts.country)
+  if (opts.q) q.set('q', opts.q)
   if (opts.limit) q.set('limit', String(opts.limit))
   const s = q.toString()
   return apiFetch<PlaceDTO[]>(`/places${s ? `?${s}` : ''}`)

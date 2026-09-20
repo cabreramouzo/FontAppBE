@@ -1,24 +1,35 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Card from '@mui/material/Card'
 import CardActionArea from '@mui/material/CardActionArea'
 import Collapse from '@mui/material/Collapse'
 import Chip from '@mui/material/Chip'
+import Link from '@mui/material/Link'
+import MenuItem from '@mui/material/MenuItem'
+import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined'
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { getZoneRanking, getZones } from '../api/client'
-import type { ZoneCoverage, ZoneRanking } from '../api/types'
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
+import { getPlaces, getZonePending, getZoneRanking, getZones, type PlaceDTO } from '../api/client'
+import type { ZoneCoverage, ZonePendingFont, ZoneRanking } from '../api/types'
 import { useI18n } from '../i18n/I18nContext'
 import { CoverageBar } from '../components/CoverageBar'
 import { TODOS, nombrePais, paisRecordado, paisesDe, recuerdaPais } from '../lib/countries'
 import { LocalGoalCard } from '../components/LocalGoalCard'
 import { Skeleton } from '../components/Skeleton'
 import { admin1Name } from '../lib/admin1'
+import { nombreFuente } from '../lib/fontName'
+
+type SearchOption =
+  | { kind: 'region'; label: string; region: string; detail: string }
+  | { kind: 'place'; label: string; place: PlaceDTO; detail: string }
 
 /**
  * Las zonas. Fase 5 del plan (docs/gamificacion.md).
@@ -32,6 +43,7 @@ import { admin1Name } from '../lib/admin1'
  */
 export function ZonesPage() {
   const { t, lang } = useI18n()
+  const navigate = useNavigate()
   const [zonas, setZonas] = useState<ZoneCoverage[] | null>(null)
   const [estado, setEstado] = useState<'loading' | 'ok' | 'error'>('loading')
 
@@ -42,6 +54,9 @@ export function ZonesPage() {
   // moleste: alguien que está en Francia mirando España a propósito no quiere que la
   // página se lo deshaga en cada visita.
   const [pais, setPais] = useState<string | null>(paisRecordado)
+  const [busqueda, setBusqueda] = useState('')
+  const [lugares, setLugares] = useState<PlaceDTO[]>([])
+  const [buscando, setBuscando] = useState(false)
 
   function elige(p: string) {
     setPais(p)
@@ -71,7 +86,36 @@ export function ZonesPage() {
   // Un país recordado que ya no está en los datos (o el `*`) no filtra nada, así que se
   // ve todo. Es preferible a no enseñar ninguna zona y parecer que la página está rota.
   const filtra = pais !== null && pais !== TODOS && paises.includes(pais)
-  const visibles = filtra ? (zonas ?? []).filter((z) => z.country === pais) : (zonas ?? [])
+  const delPais = filtra ? (zonas ?? []).filter((z) => z.country === pais) : (zonas ?? [])
+  const aguja = busqueda.trim().toLocaleLowerCase(lang)
+  const visibles = aguja
+    ? delPais.filter((z) => `${z.region} ${z.admin1 ? admin1Name(z.admin1) : ''}`.toLocaleLowerCase(lang).includes(aguja))
+    : delPais
+
+  useEffect(() => {
+    if (busqueda.trim().length < 2) { setLugares([]); setBuscando(false); return }
+    let active = true
+    const timer = window.setTimeout(() => {
+      setBuscando(true)
+      getPlaces({ q: busqueda.trim(), country: filtra ? pais! : undefined, limit: 8 })
+        .then((items) => { if (active) setLugares(items) })
+        .catch(() => { if (active) setLugares([]) })
+        .finally(() => { if (active) setBuscando(false) })
+    }, 250)
+    return () => { active = false; window.clearTimeout(timer) }
+  }, [busqueda, filtra, pais])
+
+  const opciones = useMemo<SearchOption[]>(() => {
+    const regiones: SearchOption[] = delPais
+      .filter((z) => !aguja || `${z.region} ${z.admin1 ? admin1Name(z.admin1) : ''}`.toLocaleLowerCase(lang).includes(aguja))
+      .slice(0, 8)
+      .map((z) => ({ kind: 'region', label: z.region, region: z.region, detail: z.admin1 ? admin1Name(z.admin1) : (z.country ? nombrePais(z.country, t) : t('zones.otherRegions')) }))
+    const places: SearchOption[] = lugares.map((place) => ({
+      kind: 'place', label: place.name, place,
+      detail: [place.region, place.country ? nombrePais(place.country, t) : null].filter(Boolean).join(' · '),
+    }))
+    return [...regiones, ...places]
+  }, [aguja, delPais, lang, lugares, t])
   const admin1Counts = new Map<string, number>()
   for (const z of visibles) if (z.admin1) admin1Counts.set(z.admin1, (admin1Counts.get(z.admin1) ?? 0) + 1)
   const agrupa = [...admin1Counts.values()].some((n) => n > 1)
@@ -112,34 +156,34 @@ export function ZonesPage() {
         <Alert severity="info">{t('zones.none')}</Alert>
       )}
 
-      {/* El selector va **encima** del rótulo «por demarcación», no debajo. Debajo
-          parecía que el rótulo nombraba los chips —y entonces sí habría que llamarlo
-          «por país»—, cuando lo que nombra es la lista de tarjetas, que son
-          demarcaciones y no países. El orden cuenta la verdad: eliges país y dentro
-          ves sus demarcaciones.
-          Y solo aparece si hay entre qué elegir: con un solo país es un control que no
-          hace nada y que además miente sobre el alcance de la app. */}
-      {estado === 'ok' && paises.length > 1 && (
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, overflowX: 'auto', pb: 0.5,
-                   // Que la fila se pueda arrastrar en móvil sin cortar el chip de la
-                   // punta contra el borde de la pantalla.
-                   mx: -2, px: 2, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
-          {paises.map((p) => (
-            <Chip
-              key={p}
-              label={nombrePais(p, t)}
-              onClick={() => elige(p)}
-              color={pais === p ? 'primary' : 'default'}
-              variant={pais === p ? 'filled' : 'outlined'}
-              sx={{ flexShrink: 0 }}
-            />
-          ))}
-          <Chip
-            label={t('zones.allCountries')}
-            onClick={() => elige(TODOS)}
-            color={pais === TODOS || pais === null ? 'primary' : 'default'}
-            variant={pais === TODOS || pais === null ? 'filled' : 'outlined'}
-            sx={{ flexShrink: 0 }}
+      {estado === 'ok' && (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(180px, 240px) minmax(280px, 460px)' }, gap: 1, mb: 2, alignItems: 'start' }}>
+          {paises.length > 1 && (
+            <TextField select size="small" label={t('activity.country')} value={filtra ? pais : TODOS}
+              onChange={(e) => { elige(e.target.value); setBusqueda('') }} fullWidth>
+              <MenuItem value={TODOS}>{t('zones.allCountries')}</MenuItem>
+              {paises.map((p) => <MenuItem key={p} value={p}>{nombrePais(p, t)}</MenuItem>)}
+            </TextField>
+          )}
+          <Autocomplete<SearchOption, false, false, true>
+            freeSolo loading={buscando} options={opciones} filterOptions={(items) => items}
+            inputValue={busqueda}
+            getOptionLabel={(option) => typeof option === 'string' ? option : option.label}
+            isOptionEqualToValue={(a, b) => typeof b !== 'string' && a.kind === b.kind && (a.kind === 'region' ? a.region === (b as Extract<SearchOption, { kind: 'region' }>).region : a.place.slug === (b as Extract<SearchOption, { kind: 'place' }>).place.slug)}
+            onInputChange={(_, value) => setBusqueda(value)}
+            onChange={(_, option) => {
+              if (!option || typeof option === 'string') return
+              if (option.kind === 'place') navigate(`/places/${option.place.slug}`)
+              else setBusqueda(option.region)
+            }}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={`${option.kind}/${option.kind === 'region' ? option.region : option.place.slug}`}>
+                <Box><Typography variant="body2" sx={{ fontWeight: 700 }}>{option.label}</Typography>
+                  <Typography variant="caption" color="text.secondary">{option.kind === 'place' ? t('zones.locality') : t('zones.region')} · {option.detail}</Typography></Box>
+              </Box>
+            )}
+            renderInput={(params) => <TextField {...params} size="small" label={t('zones.search')} placeholder={t('zones.searchPlaceholder')} />}
+            sx={{ gridColumn: paises.length > 1 ? undefined : '1 / -1', maxWidth: 460 }}
           />
         </Box>
       )}
@@ -172,10 +216,13 @@ export function ZonesPage() {
           {visibles.map((z) => <ZonaCard key={`${z.country}/${z.region}`} zona={z} lang={lang} />)}
         </Box>
       )}
+      {estado === 'ok' && aguja && visibles.length === 0 && (
+        <Alert severity="info">{t('zones.noSearchResults')}</Alert>
+      )}
       {estado === 'ok' && agrupa && grupos.map((grupo) => (
         <Box key={grupo.code || 'unknown'} sx={{ mb: 3 }}>
           <Typography variant="h6" sx={{ mb: 1 }}>
-            {grupo.code ? admin1Name(grupo.code) : t('admin.regionUnknown')}
+            {grupo.code ? admin1Name(grupo.code) : t('zones.otherRegions')}
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 1.5, alignItems: 'start' }}>
             {grupo.zones.map((z) => <ZonaCard key={`${z.country}/${z.region}`} zona={z} lang={lang} />)}
@@ -220,6 +267,9 @@ function ZonaCard({ zona, lang }: { zona: ZoneCoverage; lang: string }) {
           pct={zona.freshPct}
           lang={lang}
         />
+        {zona.fonts > zona.checkedRecently && (
+          <Pendientes zona={zona} lang={lang} />
+        )}
       </Box>
 
       <CardActionArea onClick={() => setAbierta((v) => !v)} sx={{ px: 2, py: 1 }}>
@@ -237,6 +287,51 @@ function ZonaCard({ zona, lang }: { zona: ZoneCoverage; lang: string }) {
       </Collapse>
     </Card>
   )
+}
+
+function Pendientes({ zona, lang }: { zona: ZoneCoverage; lang: string }) {
+  const { t } = useI18n()
+  const [abierto, setAbierto] = useState(false)
+  const [datos, setDatos] = useState<ZonePendingFont[] | null>(null)
+  const [error, setError] = useState(false)
+  const total = zona.fonts - zona.checkedRecently
+
+  function toggle() {
+    const next = !abierto
+    setAbierto(next)
+    if (next && datos === null && !error) {
+      void getZonePending(zona.region, zona.country)
+        .then(setDatos)
+        .catch(() => setError(true))
+    }
+  }
+
+  return <Box sx={{ mt: 1 }}>
+    <Button size="small" startIcon={<FactCheckOutlinedIcon />} onClick={toggle} sx={{ textTransform: 'none', px: 0 }}>
+      {t('zones.pendingAction', { n: total.toLocaleString(lang) })}
+    </Button>
+    <Collapse in={abierto} unmountOnExit>
+      <Box sx={{ pt: .5 }}>
+        {error && <Alert severity="warning">{t('zones.pendingFailed')}</Alert>}
+        {datos === null && !error && <Skeleton lines={3} />}
+        {datos?.map((font) => (
+          <Box key={font.id} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, py: .65, borderTop: 1, borderColor: 'divider' }}>
+            <Link component={RouterLink} to={`/fonts/${font.id}`} underline="hover" sx={{ fontWeight: 600 }}>
+              {nombreFuente(font, t)}
+            </Link>
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'right', flexShrink: 0 }}>
+              {font.lastCheck
+                ? t('zones.lastChecked', { date: new Intl.DateTimeFormat(lang, { dateStyle: 'medium' }).format(new Date(font.lastCheck)) })
+                : t('zones.neverChecked')}
+            </Typography>
+          </Box>
+        ))}
+        {datos && total > datos.length && (
+          <Typography variant="caption" color="text.secondary">{t('zones.pendingShowing', { n: String(datos.length), total: total.toLocaleString(lang) })}</Typography>
+        )}
+      </Box>
+    </Collapse>
+  </Box>
 }
 
 function Tabla({ region, lang }: { region: string; lang: string }) {

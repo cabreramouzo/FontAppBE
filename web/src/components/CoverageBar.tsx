@@ -36,7 +36,9 @@ export function CoverageBar({ icon, label, hint, done, total, pct, lang }: {
             estrecha y en euskera —que es el idioma más largo—, se partía como
             «3.641(e)tik 5 ·» / «% 0». Quien cede es la etiqueta, que sí puede. */}
         <Typography variant="body2" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-          {t('zones.ofTotal', { n: done.toLocaleString(lang), m: total.toLocaleString(lang), p: String(pct) })}
+          {done > 0 && pct < 1
+            ? t('zones.ofTotalLessThanOne', { n: done.toLocaleString(lang), m: total.toLocaleString(lang) })
+            : t('zones.ofTotal', { n: done.toLocaleString(lang), m: total.toLocaleString(lang), p: String(pct) })}
         </Typography>
       </Box>
       <LinearProgress

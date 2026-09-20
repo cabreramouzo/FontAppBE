@@ -4227,3 +4227,9 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - On mobile News, the global level-progress strip starts collapsed with its counts visible;
   desktop keeps the full strip. The nearby/global scope controls share one aligned row,
   while country, radius, and region selectors use full-width rows on phones.
+- Zones can be explored without geolocation: its country control matches News and its
+  search combines regions with the local `places` directory. Each zone exposes the
+  fountains outside the same 180-day freshness window used by its coverage bar, with
+  never-checked fountains first. A non-zero value that rounds to zero is labelled as
+  less than 1%, and zones without an `admin1` are grouped as “other regions” rather than
+  the misleading “unknown region”.

@@ -3446,6 +3446,64 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// La parte vacía de la barra lleva a trabajo real: nunca comprobadas primero,
+    /// después las más antiguas, y sin mezclar una demarcación homónima de otro país.
+    func testZonePendingListsOnlyFountainsThatNeedAVisit() async throws {
+        try await withApp { app in
+            let now = Date()
+            func font(_ name: String, country: String = "Spain") async throws -> Font {
+                let f = Font(name: name, latitude: 41.8, longitude: 2.1)
+                f.region = "Test Region"
+                f.country = country
+                try await f.save(on: app.db)
+                return f
+            }
+            let never = try await font("Never checked")
+            let old = try await font("Old check")
+            let fresh = try await font("Fresh check")
+            _ = try await font("Other country", country: "France")
+
+            let oldComment = FontComment(fontID: try old.requireID(), body: "old")
+            try await oldComment.save(on: app.db)
+            oldComment.createdAt = now.addingTimeInterval(-200 * 86_400)
+            try await oldComment.save(on: app.db)
+            let freshComment = FontComment(fontID: try fresh.requireID(), body: "fresh")
+            try await freshComment.save(on: app.db)
+            freshComment.createdAt = now.addingTimeInterval(-10 * 86_400)
+            try await freshComment.save(on: app.db)
+
+            try await app.test(.GET, "zones/pending?region=Test%20Region&country=Spain", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let rows = try res.content.decode([ZoneStats.PendingFont].self)
+                XCTAssertEqual(rows.map(\.name), [never.name, old.name])
+                XCTAssertNil(rows[0].lastCheck)
+                XCTAssertNotNil(rows[1].lastCheck)
+            })
+        }
+    }
+
+    /// Buscar un pueblo no necesita GPS y tampoco exige escribir los acentos exactos.
+    func testPlacesCanBeSearchedByNameOrRegionWithoutCoordinates() async throws {
+        try await withApp { app in
+            let place = Place(slug: "moia-test", name: "Moià", kind: "town", latitude: 41.8, longitude: 2.1)
+            place.country = "Spain"
+            place.region = "Barcelona"
+            place.fontCount = 12
+            try await place.save(on: app.db)
+
+            try await app.test(.GET, "places?q=moia&country=Spain&limit=8", afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode([PlaceController.PlaceDTO].self).map(\.slug), ["moia-test"])
+            })
+            try await app.test(.GET, "places?q=barcelona&country=Spain&limit=8", afterResponse: { res in
+                XCTAssertEqual(try res.content.decode([PlaceController.PlaceDTO].self).map(\.slug), ["moia-test"])
+            })
+            try await app.test(.GET, "places?q=moia&country=France&limit=8", afterResponse: { res in
+                XCTAssertTrue(try res.content.decode([PlaceController.PlaceDTO].self).isEmpty)
+            })
+        }
+    }
+
     /// Quien apaga la gamificación desaparece de la tabla del mes pero **sigue contando
     /// en las barras de la zona**. El interruptor dice que oculta puntos y tablas; si
     /// apagarlo te dejara igualmente en una tabla pública, estaría mintiendo. Las barras
