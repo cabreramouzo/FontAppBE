@@ -592,12 +592,61 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
       // campo, que es justo el que estás rellenando cuando llegas ahí. La barra mide 65
       // (48 del botón + 16 de acolchado + 1 de borde), así que 72 deja holgura; con 64
       // se quedaba 1 px corto, medido.
-      sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 360, my: 2, pb: { xs: 9, sm: 0 } }}
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 7fr) minmax(320px, 5fr)' },
+        columnGap: { xs: 0, md: 4 },
+        rowGap: 2,
+        width: '100%',
+        my: 2,
+        pb: { xs: 9, sm: 0 },
+      }}
     >
-      {/* En escritorio la barra de acciones sube arriba (order sm:-1), así que la nota va
-          antes que ella (order sm:-2) para que se lea: nota → Guardar/Descartar → campos.
-          En móvil todo queda en su orden natural y la barra va anclada abajo. */}
-      <Typography variant="caption" color="text.secondary" sx={{ order: { sm: -2 } }}>{t('detail.editInfoNote')}</Typography>
+      {/* La nota y las acciones ocupan todo el ancho. En escritorio la barra se mantiene
+          disponible bajo la navegación mientras avanza el único scroll de la página; en
+          móvil continúa anclada sobre la barra inferior. */}
+      <Typography variant="caption" color="text.secondary" sx={{ gridColumn: '1 / -1' }}>{t('detail.editInfoNote')}</Typography>
+      <Box
+        sx={{
+          gridColumn: '1 / -1',
+          position: { xs: 'fixed', sm: 'sticky' },
+          top: { sm: 'calc(var(--alto-barra) + 8px)' },
+          left: 0,
+          right: 0,
+          bottom: { xs: 'var(--bajo-el-mapa)', sm: 'auto' },
+          zIndex: (th) => th.zIndex.appBar,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: { sm: 'flex-end' },
+          gap: 1,
+          px: { xs: 2, sm: 1 },
+          py: 1,
+          bgcolor: 'background.paper',
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: { xs: 0, sm: 2 },
+          boxShadow: { xs: 3, sm: 1 },
+        }}
+      >
+        <Button
+          type="submit"
+          variant="contained"
+          disableElevation
+          disabled={saving}
+          sx={{ flexGrow: { xs: 1, sm: 0 }, minHeight: { xs: 48, sm: 36 } }}
+        >
+          {saving ? t('form.saving') : t('form.save')}
+        </Button>
+        <Button
+          color="inherit"
+          onClick={() => (sucio ? setConfirmandoDescarte(true) : onCancel())}
+          disabled={saving}
+          sx={{ minHeight: { xs: 48, sm: 36 } }}
+        >
+          {t('form.discard')}
+        </Button>
+      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       {/* El nombre, primero y grande: es lo que la gente quiere cambiar (muchas son «fuente
           sin nombre») y antes se les escapaba en un campo pequeño mientras miraban el título
           de arriba. Sin `size="small"` para que lea como el campo principal, ancho completo,
@@ -634,6 +683,8 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
         </TextField>
         <DrinkableHelpButton />
       </Box>
+      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       {puedeReubicar ? (
         <RelocateFont
           lat={coords.lat}
@@ -664,64 +715,8 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
           )}
         </Box>
       )}
-      {error && <Alert severity="error">{error}</Alert>}
-      {/* Guardar y descartar. **En móvil van anclados abajo**, sobre la tab bar.
-          En flujo quedaban fuera de la pantalla y nada avisaba de que estuvieran ahí:
-          medido nada más pulsar «editar», con el mapa de reubicar presente y sin haber
-          hecho scroll, el botón caía 223 px por debajo de la zona útil en un iPhone de
-          812 px y 368 px en un SE. Quien edita no ve cómo confirmar.
-          Se levanta con `--bajo-el-mapa`, que es la variable que existe justo para esto:
-          cualquier cosa anclada abajo tiene que usarla o se come la tab bar.
-          **Solo en móvil**: en escritorio se midió y se ven sin scroll, y una barra fija
-          allí sería un préstamo del móvil. Mismo corte que el resto de la app. */}
-      <Box
-        sx={{
-          position: { xs: 'fixed', sm: 'static' },
-          // En escritorio sube al principio del formulario (junto al título del modo
-          // edición), como el «Fet» de iOS: confirmar queda donde estaba «Editar», no al
-          // final. En móvil el header se va con el scroll, así que la barra sigue anclada
-          // abajo —medido: con el mapa de reubicar el guardar caía 223 px fuera de la
-          // pantalla— y `order` no afecta a un elemento `fixed`.
-          order: { sm: -1 },
-          left: 0,
-          right: 0,
-          bottom: { xs: 'var(--bajo-el-mapa)', sm: 'auto' },
-          zIndex: (th) => th.zIndex.appBar,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          px: { xs: 2, sm: 0 },
-          py: { xs: 1, sm: 0 },
-          bgcolor: { xs: 'background.paper', sm: 'transparent' },
-          borderTop: { xs: 1, sm: 0 },
-          borderColor: 'divider',
-        }}
-      >
-        {/* Guardar es lo lleno y lo ancho; descartar, un botón de texto. La jerarquía la
-            da el peso y no el color: el verde/rojo que se propuso choca con que en esta
-            app el rojo ya significa «borrar, y no hay vuelta» y el verde/rojo es
-            justamente el par que se cae con daltonismo — y encima está a dos dedos de los
-            chips de potabilidad, donde ese mismo par significa otra cosa. */}
-        <Button
-          type="submit"
-          variant="contained"
-          disableElevation
-          disabled={saving}
-          // 48 px de alto con el pulgar, que es la medida que ya usan las hojas del mapa;
-          // los 37 de serie son el tamaño de un objetivo de ratón.
-          sx={{ flexGrow: { xs: 1, sm: 0 }, minHeight: { xs: 48, sm: 36 } }}
-        >
-          {saving ? t('form.saving') : t('form.save')}
-        </Button>
-        <Button
-          color="inherit"
-          onClick={() => (sucio ? setConfirmandoDescarte(true) : onCancel())}
-          disabled={saving}
-          sx={{ minHeight: { xs: 48, sm: 36 } }}
-        >
-          {t('form.discard')}
-        </Button>
       </Box>
+      {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
       <Dialog open={confirmandoDescarte} onClose={() => setConfirmandoDescarte(false)} maxWidth="xs" fullWidth>
         <DialogTitle>{t('form.discardTitle')}</DialogTitle>
         <DialogContent>
@@ -1270,10 +1265,9 @@ export function FontDetailPage() {
   const ultimaComprobacion = latest?.lastConfirmedAt ?? latest?.createdAt ?? null
   const frescor = freshnessOf(ultimaComprobacion)
 
-  // La ficha técnica viaja pegada a las insignias por la misma razón que ellas: en dos
-  // columnas va al final de la columna de la fuente, y en una, al final de la página. Se
-  // pinta **una sola vez**, en un hueco o en el otro; dos copias con `display:none`
-  // montarían las dos.
+  // En escritorio la ficha técnica forma la segunda mitad del resumen; en una sola
+  // columna vuelve al final de la página, después de la conversación. Se pinta una sola
+  // vez: dos copias con `display:none` montarían ambas y duplicarían sus controles.
   const fichaTecnica = (
     <FichaTecnica
       font={font}
@@ -1333,12 +1327,19 @@ export function FontDetailPage() {
       <FontHiddenNotice font={font} />
 
       <Stack direction="row" sx={{ mt: 1, justifyContent: "space-between", alignItems: "center", gap: 1 }}>
-        {/* Editando, el título grande deja de mostrar el nombre: si no, compite con el
-            campo «Nombre» del formulario —el ojo va al título de arriba y no ve el campo,
-            que además queda como un nombre duplicado—. Pasa a ser un rótulo de modo. */}
-        <Typography variant="h4" sx={{ fontWeight: 800 }}>
-          {editing ? t('detail.editingTitle') : nombreFuente(font, t)}
-        </Typography>
+        <Box sx={{ minWidth: 0 }}>
+          {/* Al editar se conserva la identidad de la fuente. El modo aparece como una
+              segunda línea discreta, de modo que entrar al formulario no parezca navegar
+              a otra página. */}
+          <Typography variant="h4" sx={{ fontWeight: 800 }}>
+            {nombreFuente(font, t)}
+          </Typography>
+          {editing && (
+            <Typography variant="overline" color="text.secondary">
+              {t('detail.editingTitle')}
+            </Typography>
+          )}
+        </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           {/* Guardar en favoritos: visible siempre; sin sesión lleva a login. Editando no:
               es una acción de la vista, no de la edición. */}
@@ -1526,15 +1527,8 @@ export function FontDetailPage() {
         </Typography>
       )}
 
-      {/* Dos columnas en escritorio: **la fuente a la izquierda y la conversación a la
-          derecha**. En una sola columna de 720 la mitad de la ventana quedaba en blanco
-          (medido: 720 px de margen en una pantalla de 1440) y los cinco botones de acción
-          se partían igualmente en dos filas teniendo ese hueco al lado.
-          El corte no es estético sino de contenido, y por eso cae justo aquí: a un lado
-          lo que ES la fuente —foto, tipo, potabilidad, cómo llegar—, al otro lo que la
-          gente ha contado de ella. Es también la línea por la que ya estaba partido el
-          código.
-          En móvil no cambia nada: una columna, y el ancho sigue siendo 720. */}
+      {/* Dos columnas solo para el resumen de la fuente. La conversación continúa debajo
+          con ancho de lectura y todo participa del mismo scroll de la página. */}
       <Box
         sx={{
           display: 'grid',
@@ -1543,23 +1537,10 @@ export function FontDetailPage() {
           alignItems: 'start',
         }}
       >
-        {/* Columna izquierda: la fuente.
-            **Se queda pegada al hacer scroll** (`sticky`): mide 797 frente a los 1.205 de
-            la derecha, así que sin esto las reseñas se leen contra una columna vacía. Lo
-            que era hueco pasa a ser contexto — la foto, cómo llegar y las coordenadas
-            siguen delante mientras lees lo que ha contado la gente.
-            Lleva **tope de alto y scroll propio** a propósito: sin acotarla, una ficha con
-            descripción larga se pega por arriba y su parte de abajo no hay forma de
-            alcanzarla. La barra interior solo aparece cuando de verdad no cabe.
-            **No mientras se edita**: un formulario dentro de una caja con scroll propio se
-            rellena fatal, y ahí la columna crece con el mapa de reubicar. */}
+        {/* Resumen visual. Editando ocupa las dos columnas y el propio formulario reparte
+            datos y ubicación; en lectura comparte la primera fila con la ficha técnica. */}
         <Box
-          sx={dosColumnas && !editing ? {
-            position: 'sticky',
-            top: 'calc(var(--alto-barra) + 16px)',
-            maxHeight: 'calc(100vh - var(--alto-barra) - 32px)',
-            overflowY: 'auto',
-          } : undefined}
+          sx={{ gridColumn: { xs: '1', md: editing ? '1 / -1' : '1' }, minWidth: 0 }}
         >
         {editing ? (
           <EditFontForm font={font} canManage={!!user && (user.isAdmin || font.creator?.id === user.id)} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load() }} />
@@ -1712,16 +1693,21 @@ export function FontDetailPage() {
         )}
 
         {error && <Alert severity="error" sx={{ my: 1 }}>{error}</Alert>}
-          {!editing && dosColumnas && insignias}
-          {!editing && dosColumnas && fichaTecnica}
         </Box>
 
-      {/* Columna derecha: lo que la gente ha contado. Solo lectura, así que editando no se
-          pinta: la edición se queda con el formulario a la izquierda y nada más. */}
-      {!editing && (
-      <Box>
+      {!editing && dosColumnas && (
+        <Box sx={{ gridColumn: '2', minWidth: 0 }}>
+          {insignias}
+          {fichaTecnica}
+        </Box>
+      )}
 
-        <Box component="section" ref={reviewRef} sx={{ mt: { xs: 3, md: 0 } }}>
+      {/* El historial ocupa una sola columna de lectura bajo el resumen. Al no tener alto
+          máximo ni `overflow`, la rueda y el trackpad controlan siempre la página. */}
+      {!editing && (
+      <Box sx={{ gridColumn: '1 / -1', width: '100%', maxWidth: 820, mx: 'auto', mt: { xs: 3, md: 5 } }}>
+
+        <Box component="section" ref={reviewRef}>
           {/* Se dice que esto viene del móvil y no del servidor: sin el aviso, una ficha
               sin reseñas parece una fuente que nadie ha comprobado nunca, que es lo
               contrario de lo que pasa — no se sabe. */}
@@ -2061,34 +2047,38 @@ export function FontDetailPage() {
 
       {!editing && <FontMaintenance font={font} onChanged={() => { load().catch(() => {}) }} />}
 
-      {/* Señalar un duplicado lo puede hacer cualquiera; decidirlo sigue siendo del nivel
-          5. Hasta ahora quien veía el duplicado —el vecino que conoce el pueblo— no tenía
-          botón ninguno y acababa escribiendo un correo: pasó con una fuente triplicada en
-          Castellcir. Y la capacidad de verdad la alcanza hoy una sola persona que no sea
-          del equipo, así que esperar a que la vea es esperar sentado. */}
-      <SugerirDuplicado font={font} onPosted={() => { load().catch(() => {}) }} />
+      {!editing && (
+        <>
+          {/* Señalar un duplicado lo puede hacer cualquiera; decidirlo sigue siendo del nivel
+              5. Hasta ahora quien veía el duplicado —el vecino que conoce el pueblo— no tenía
+              botón ninguno y acababa escribiendo un correo: pasó con una fuente triplicada en
+              Castellcir. Y la capacidad de verdad la alcanza hoy una sola persona que no sea
+              del equipo, así que esperar a que la vea es esperar sentado. */}
+          <SugerirDuplicado font={font} onPosted={() => { load().catch(() => {}) }} />
 
-      {user && user.id !== font.creator?.id && (
-        <Button size="small" color="inherit" startIcon={<OutlinedFlagIcon />} sx={{ mt: 2, color: 'text.secondary' }}
-                onClick={() => setFlagFontOpen(true)}>
-          {t('flag.font')}
-        </Button>
+          {user && user.id !== font.creator?.id && (
+            <Button size="small" color="inherit" startIcon={<OutlinedFlagIcon />} sx={{ mt: 2, color: 'text.secondary' }}
+                    onClick={() => setFlagFontOpen(true)}>
+              {t('flag.font')}
+            </Button>
+          )}
+
+          <Dialog open={flagFontOpen} onClose={() => setFlagFontOpen(false)} fullWidth maxWidth="xs">
+            <DialogTitle>{t('flag.fontTitle')}</DialogTitle>
+            <DialogContent dividers>
+              <Typography variant="body2" color="text.secondary">{t('flag.fontHelp')}</Typography>
+              <Stack spacing={1} sx={{ mt: 2 }}>
+                {(['fake', 'duplicate', 'nonexistent', 'spam', 'abuse'] as const).map((reason) => (
+                  <Button key={reason} variant="outlined" color="warning" onClick={() => void flagCurrentFont(reason)}>
+                    {t(`flag.reason.${reason}`)}
+                  </Button>
+                ))}
+              </Stack>
+            </DialogContent>
+            <DialogActions><Button onClick={() => setFlagFontOpen(false)}>{t('form.cancel')}</Button></DialogActions>
+          </Dialog>
+        </>
       )}
-
-      <Dialog open={flagFontOpen} onClose={() => setFlagFontOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>{t('flag.fontTitle')}</DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body2" color="text.secondary">{t('flag.fontHelp')}</Typography>
-          <Stack spacing={1} sx={{ mt: 2 }}>
-            {(['fake', 'duplicate', 'nonexistent', 'spam', 'abuse'] as const).map((reason) => (
-              <Button key={reason} variant="outlined" color="warning" onClick={() => void flagCurrentFont(reason)}>
-                {t(`flag.reason.${reason}`)}
-              </Button>
-            ))}
-          </Stack>
-        </DialogContent>
-        <DialogActions><Button onClick={() => setFlagFontOpen(false)}>{t('form.cancel')}</Button></DialogActions>
-      </Dialog>
 
       {!editing && !dosColumnas && insignias}
       {!editing && !dosColumnas && fichaTecnica}
