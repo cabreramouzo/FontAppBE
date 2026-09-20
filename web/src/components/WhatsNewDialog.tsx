@@ -53,7 +53,7 @@ import { debeVerNovedades, marcaDe, marcaNovedadesVistas } from '../lib/whatsNew
  */
 export function WhatsNewDialog() {
   const { t } = useI18n()
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const scope = user?.id ?? 'anonymous'
 
   // Cada novedad lleva la versión en que se estrenó. Se muestran **solo las posteriores a
@@ -77,9 +77,14 @@ export function WhatsNewDialog() {
   // aparece un diálogo en blanco por accidente).
   const abierto = useTurno('news', listo) && novedades.length > 0
 
+  // Se decide **solo cuando la sesión ya está resuelta**. Mientras `loading`, `scope` es
+  // «anonymous» aunque haya sesión, y para quien ya vio las novedades bajo su id eso abría
+  // el diálogo un instante y lo escondía al resolverse el usuario: un parpadeo en cada
+  // entrada, porque la marca «anonymous» nunca llega a escribirse (se cierra solo).
   useEffect(() => {
+    if (loading) return
     setListo(debeVerNovedades(scope, sesiones() > 1))
-  }, [scope])
+  }, [scope, loading])
 
   function cerrar() {
     marcaNovedadesVistas(scope, sesiones())
