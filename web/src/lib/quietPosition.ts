@@ -35,6 +35,24 @@ function reasonOf(err: GeolocationPositionError): GeoFailReason {
  * than a denial, a second one that accepts *any* cached fix (`maximumAge: Infinity`) with a
  * longer timeout. This is exactly the two-step the map already does, factored out.
  */
+/**
+ * Último fix conseguido en esta sesión, compartido por todos los que piden posición.
+ *
+ * El primer `getCurrentPosition` de la sesión suele salir frío (falla o tarda), y hasta que
+ * hay un fix cacheado en el navegador una segunda petición no acierta. Sin este caché, dos
+ * componentes que montan a la vez (la rejilla de novedades y la fuente de la semana) lanzan
+ * dos peticiones frías, y una pantalla que se abre por segunda vez vuelve a empezar de cero
+ * — que es justo el «la primera vez no sale, la segunda sí» que se reportó de la fuente de
+ * la semana. Se guarda el fix y se reutiliza mientras sea reciente.
+ */
+let ultimaPos: { pos: [number, number]; t: number } | null = null
+const FRESCA_MS = 5 * 60 * 1000
+
+/** Devuelve el fix cacheado si es reciente, para no volver a molestar al GPS. */
+export function posicionCacheada(): [number, number] | null {
+  return ultimaPos && Date.now() - ultimaPos.t < FRESCA_MS ? ultimaPos.pos : null
+}
+
 function getPosition(onFail?: (reason: GeoFailReason) => void): Promise<[number, number] | null> {
   if (!navigator.geolocation || !window.isSecureContext) { onFail?.('unavailable'); return Promise.resolve(null) }
   const once = (opts: PositionOptions) =>
@@ -47,17 +65,21 @@ function getPosition(onFail?: (reason: GeoFailReason) => void): Promise<[number,
     })
   return (async () => {
     let r = await once({ enableHighAccuracy: false, timeout: 10_000, maximumAge: 5 * 60 * 1000 })
-    if (Array.isArray(r)) return r
+    if (Array.isArray(r)) { ultimaPos = { pos: r, t: Date.now() }; return r }
     // A denial is the user's call — no point retrying.
     if (r.code === r.PERMISSION_DENIED) { onFail?.('denied'); return null }
     r = await once({ enableHighAccuracy: false, timeout: 15_000, maximumAge: Infinity })
-    if (Array.isArray(r)) return r
+    if (Array.isArray(r)) { ultimaPos = { pos: r, t: Date.now() }; return r }
     onFail?.(reasonOf(r)) // report the second attempt's reason: timeout vs unavailable
     return null
   })()
 }
 
 export async function positionIfAllowed(): Promise<[number, number] | null> {
+  // Un fix reciente ya sirve: evita una segunda petición fría cuando otro componente (o la
+  // visita anterior) ya lo consiguió.
+  const cacheada = posicionCacheada()
+  if (cacheada) return cacheada
   if (!navigator.geolocation || !window.isSecureContext) return null
   try {
     const estado = await navigator.permissions?.query({ name: 'geolocation' })

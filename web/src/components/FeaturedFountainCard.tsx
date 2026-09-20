@@ -40,11 +40,24 @@ export function FeaturedFountainCard() {
 
   useEffect(() => {
     let vivo = true
-    positionIfAllowed()
-      .then((pos) => (vivo && pos ? getFeaturedFountain(pos) : null))
-      .then((d) => { if (vivo && d) setF(d) })
-      .catch(() => { if (vivo) setF(null) })
-    return () => { vivo = false }
+    let reloj: ReturnType<typeof setTimeout> | undefined
+    let intentos = 0
+    // El primer `getCurrentPosition` de la sesión sale frío y `positionIfAllowed` puede
+    // devolver `null`; ese intento calienta el GPS, así que en unos segundos ya hay un fix.
+    // Sin reintentar, la tarjeta solo aparecía al volver a entrar en la pestaña. Con el
+    // caché de `quietPosition`, el reintento acierta en cuanto haya posición.
+    async function intenta() {
+      const pos = await positionIfAllowed().catch(() => null)
+      if (!vivo) return
+      if (pos) {
+        const d = await getFeaturedFountain(pos).catch(() => null)
+        if (vivo && d) setF(d)
+        return
+      }
+      if (intentos++ < 4) reloj = setTimeout(() => { if (vivo) void intenta() }, 3000)
+    }
+    void intenta()
+    return () => { vivo = false; if (reloj) clearTimeout(reloj) }
   }, [])
 
   if (!f) return null
