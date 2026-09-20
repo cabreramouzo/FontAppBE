@@ -4218,3 +4218,9 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   word matches **before pagination**. Ranking is accent/case insensitive and uses bounded,
   escaped, bound parameters; name and ID break ties. Keep the per-word search filters.
 - Search section labels distinguish FontApp fountains from map places.
+- The map legend follows what is actually drawn: concentration while any server or client
+  aggregate is visible, and water status only when all markers are individual. Desktop
+  filters use a bounded side panel so they cannot extend into the compass, location, or
+  add controls.
+- Freshness is a neutral timestamp ("Last report: …"), not a positive state. Keep green
+  for water availability; old evidence may still use warning styling.

@@ -1,9 +1,10 @@
 import Chip from '@mui/material/Chip'
 import Tooltip from '@mui/material/Tooltip'
-import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined'
+import UpdateOutlinedIcon from '@mui/icons-material/UpdateOutlined'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import { freshnessColor, freshnessOf } from '../lib/freshness'
 import { useI18n } from '../i18n/I18nContext'
+import { timeAgo } from '../lib/time'
 
 /**
  * «Comprobada aquesta setmana» / «fa temps» / «ningú l'ha comprovada mai».
@@ -16,15 +17,18 @@ export function FreshnessChip({ lastCheck, size = 'small' }: { lastCheck?: strin
   const { t } = useI18n()
   const f = freshnessOf(lastCheck)
   const nunca = f.level === 'never'
+  const label = nunca || !lastCheck
+    ? t('fresh.never')
+    : t('fresh.lastCheck', { when: timeAgo(lastCheck, t) })
 
   return (
     <Tooltip title={nunca ? t('fresh.neverHint') : t('fresh.hint', { n: String(f.days ?? 0) })}>
       <Chip
         size={size}
-        variant={nunca ? 'outlined' : 'filled'}
+        variant="outlined"
         color={freshnessColor(f.level)}
-        icon={nunca ? <HelpOutlineIcon /> : <EventAvailableOutlinedIcon />}
-        label={t(`fresh.${f.level}`)}
+        icon={nunca ? <HelpOutlineIcon /> : <UpdateOutlinedIcon />}
+        label={label}
         sx={{ fontWeight: 600 }}
       />
     </Tooltip>

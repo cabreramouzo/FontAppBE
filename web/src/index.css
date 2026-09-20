@@ -469,6 +469,15 @@ select:not([class*="Mui"]) {
   gap: 10px;
   align-items: flex-end;
 }
+
+/* Desktop filters occupy a separate bounded panel instead of extending the tools column
+   towards the compass, location and add controls in the lower-right corner. */
+.map-filter-panel {
+  position: absolute;
+  top: calc(72px + var(--alto-avisos));
+  right: 190px;
+  z-index: 1000;
+}
 /* Chips de control estilo Material: pastilla, cristal esmerilado y elevación sutil. */
 .ctrl {
   display: inline-flex;

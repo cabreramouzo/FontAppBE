@@ -18,6 +18,7 @@ import { confirmComment, createComment, deleteComment, describeError, getGamific
 import { prepararFoto } from '../lib/image'
 import { useAuth } from '../auth/AuthContext'
 import { enqueue, isOffline } from '../lib/outbox'
+import { showsDensity, showsHeatmap } from '../lib/mapDensity'
 
 /**
  * Los estados que se pueden decir de un toque desde el globo del mapa.
@@ -56,8 +57,6 @@ function gotasPrimeraFoto(): Promise<number | null> {
   return gotasFoto
 }
 
-const HEATMAP_MAX_ZOOM = 6
-
 function escapeHtml(s: string): string {
   const div = document.createElement('div')
   div.textContent = s
@@ -70,8 +69,13 @@ function escapeHtml(s: string): string {
 // La fuente seleccionada NO entra en el cluster: se añade suelta sobre el mapa para
 // que quede siempre visible (nunca se combina con las demás al alejar el zoom).
 export function ClusteredMarkers({
-  fonts, clusters, selectedID,
-}: { fonts: FontSummary[]; clusters: MapCluster[]; selectedID?: string | null }) {
+  fonts, clusters, selectedID, onDensityModeChange,
+}: {
+  fonts: FontSummary[]
+  clusters: MapCluster[]
+  selectedID?: string | null
+  onDensityModeChange?: (visible: boolean) => void
+}) {
   const map = useMap()
   const navigate = useNavigate()
   const { t } = useI18n()
@@ -412,8 +416,18 @@ export function ClusteredMarkers({
     heatCanvas.setAttribute('aria-hidden', 'true')
     map.getPanes().overlayPane.appendChild(heatCanvas)
     let drawFrame: number | null = null
+    let legendFrame: number | null = null
 
-    const heatIsVisible = () => clusters.length > 0 && map.getZoom() <= HEATMAP_MAX_ZOOM
+    const scheduleLegendMode = () => {
+      if (legendFrame !== null) window.cancelAnimationFrame(legendFrame)
+      legendFrame = window.requestAnimationFrame(() => {
+        legendFrame = null
+        const clientClustersVisible = map.getContainer().querySelector('.marker-cluster') !== null
+        onDensityModeChange?.(showsDensity(clusters.length, clientClustersVisible))
+      })
+    }
+
+    const heatIsVisible = () => showsHeatmap(clusters.length, map.getZoom())
     const drawHeatmap = () => {
       drawFrame = null
       if (!heatIsVisible()) {
@@ -454,6 +468,7 @@ export function ClusteredMarkers({
       if (drawFrame === null) drawFrame = window.requestAnimationFrame(drawHeatmap)
     }
     const syncDensityMode = () => {
+      scheduleLegendMode()
       if (heatIsVisible()) {
         if (map.hasLayer(serverClusters)) map.removeLayer(serverClusters)
       } else if (clusters.length > 0 && !map.hasLayer(serverClusters)) {
@@ -493,7 +508,11 @@ export function ClusteredMarkers({
     reponer()
     // Al hacer zoom, markercluster agrupa y desagrupa: quita el marcador y lo vuelve a
     // poner sin que esto se reconstruya, así que el popup también hay que reponerlo ahí.
-    group.on('animationend', reponer)
+    const afterClusterAnimation = () => {
+      reponer()
+      scheduleLegendMode()
+    }
+    group.on('animationend', afterClusterAnimation)
 
     return () => {
       map.off('click', cerrarAMano)
@@ -502,14 +521,15 @@ export function ClusteredMarkers({
       map.off('click', zoomIntoHeat)
       map.off('move zoom resize', scheduleHeatmap)
       map.off('zoomend', syncDensityMode)
-      group.off('animationend', reponer)
+      group.off('animationend', afterClusterAnimation)
       map.removeLayer(group)
       if (map.hasLayer(serverClusters)) map.removeLayer(serverClusters)
       if (drawFrame !== null) window.cancelAnimationFrame(drawFrame)
+      if (legendFrame !== null) window.cancelAnimationFrame(legendFrame)
       heatCanvas.remove()
       if (selectedMarker) map.removeLayer(selectedMarker)
     }
-  }, [fonts, clusters, map, navigate, t, selectedID])
+  }, [fonts, clusters, map, navigate, t, selectedID, onDensityModeChange])
 
   return null
 }

@@ -42,15 +42,9 @@ export function freshnessLabelKey(level: FreshnessLevel): string {
 }
 
 /**
- * Color semántico. «Nunca comprobada» va en gris y no en rojo a propósito: no es un
- * problema de la fuente, es una tarea pendiente nuestra, y pintar de rojo media Catalunya
- * convertiría el mapa en una alarma constante que se deja de mirar.
+ * Freshness describes when evidence was collected, not whether the fountain is usable.
+ * Recent evidence therefore stays neutral; green is reserved for available water.
  */
-export function freshnessColor(level: FreshnessLevel): 'success' | 'info' | 'warning' | 'default' {
-  switch (level) {
-    case 'week': return 'success'
-    case 'month': return 'info'
-    case 'old': return 'warning'
-    case 'never': return 'default'
-  }
+export function freshnessColor(level: FreshnessLevel): 'warning' | 'default' {
+  return level === 'old' ? 'warning' : 'default'
 }

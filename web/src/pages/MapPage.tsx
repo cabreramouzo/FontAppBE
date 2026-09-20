@@ -358,6 +358,7 @@ function FontMarkers({
   sourceFilter,
   selectedID,
   siguiendoRef,
+  onDensityModeChange,
 }: {
   nonce: number
   onlyWithWater: boolean
@@ -366,6 +367,7 @@ function FontMarkers({
   sourceFilter: WaterSource | 'all'
   selectedID: string | null
   siguiendoRef: React.MutableRefObject<boolean>
+  onDensityModeChange: (visible: boolean) => void
 }) {
   const [mapData, setMapData] = useState<{ fonts: FontSummary[]; clusters: MapCluster[] }>({
     fonts: [], clusters: [],
@@ -536,7 +538,12 @@ function FontMarkers({
   }, [mapData.fonts, hideNonPotable, onlyWithWater, onlyReliable, sourceFilter])
   return (
     <>
-      <ClusteredMarkers fonts={shown} clusters={mapData.clusters} selectedID={selectedID} />
+      <ClusteredMarkers
+        fonts={shown}
+        clusters={mapData.clusters}
+        selectedID={selectedID}
+        onDensityModeChange={onDensityModeChange}
+      />
       {topeHasta && <AvisoDeTope hasta={topeHasta} onFin={() => { setTopeHasta(null); loadBounds(map) }} />}
     </>
   )
@@ -1637,7 +1644,7 @@ function legendOpen(): boolean {
 // reportó al no saber qué significaba una fuente gris.
 const LEYENDA = ['flowing', 'trickle', 'dry', 'broken', 'gone'] as const
 
-function MapLegend() {
+function MapLegend({ density }: { density: boolean }) {
   const { t } = useI18n()
   const [abierta, setAbierta] = useState(legendOpen)
 
@@ -1655,16 +1662,28 @@ function MapLegend() {
     <Box className="legend" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.75 }}>
       <Collapse in={abierta} unmountOnExit>
         <Paper elevation={3} sx={{ borderRadius: 2, p: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {LEYENDA.map((k) => (
-            <Box key={k} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
-              <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: WATER_STATUS[k].color }} /> {t(`status.${k}`)}
+          <Typography variant="caption" sx={{ fontWeight: 800 }}>
+            {t(density ? 'legend.density' : 'legend.waterStatus')}
+          </Typography>
+          {density ? (
+            <Box sx={{ width: 180 }}>
+              <Box sx={{ height: 10, borderRadius: 99, background: 'linear-gradient(90deg, #66bb6a, #fbc02d, #ef5350)' }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
+                <Typography variant="caption">{t('legend.densityLow')}</Typography>
+                <Typography variant="caption">{t('legend.densityHigh')}</Typography>
+              </Box>
             </Box>
-          ))}
-          {/* El azul es el color de la MAYORÍA del mapa: las fuentes que nadie ha
-              reseñado todavía, casi todas las importadas. */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
-            <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: NO_STATUS_COLOR }} /> {t('status.unknown')}
-          </Box>
+          ) : <>
+            {LEYENDA.map((k) => (
+              <Box key={k} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
+                <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: WATER_STATUS[k].color }} /> {t(`status.${k}`)}
+              </Box>
+            ))}
+            {/* Blue represents the many imported fountains that have no status report yet. */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
+              <Box sx={{ width: 11, height: 11, borderRadius: '50%', bgcolor: NO_STATUS_COLOR }} /> {t('status.unknown')}
+            </Box>
+          </>}
         </Paper>
       </Collapse>
 
@@ -1743,6 +1762,7 @@ export function MapPage() {
   const [controlsOpen, setControlsOpen] = useState(false)
   const [gpxOpen, setGpxOpen] = useState(false)
   const [zonaOpen, setZonaOpen] = useState(false)
+  const [densityVisible, setDensityVisible] = useState(false)
   const { layer, setLayer } = useBaseLayer()
   // Instancia del mapa: hace falta fuera del lienzo para el botón de la brújula.
   const [map, setMap] = useState<LeafletMap | null>(null)
@@ -2038,7 +2058,7 @@ export function MapPage() {
     const enHoja = donde === 'movil'
     const sxChip = (activo: boolean) => (enHoja
       ? { width: '100%', height: 48, borderRadius: 3, justifyContent: 'flex-start', fontSize: 15, '& .MuiChip-label': { flexGrow: 1, textAlign: 'left' } }
-      : chipSx(activo))
+      : { ...chipSx(activo), width: '100%', justifyContent: 'flex-start', '& .MuiChip-label': { flexGrow: 1, textAlign: 'left' } })
     return (
       <>
         {/* Cuenta aparte del FAB de «centrar en mí» (`map_locate`), que hace media cosa:
@@ -2084,6 +2104,7 @@ export function MapPage() {
           sx={enHoja
             ? { height: 48, borderRadius: 3, fontSize: 15 }
             : {
+                width: '100%',
                 height: 40,
                 borderRadius: '20px',
                 bgcolor: 'background.paper',
@@ -2144,7 +2165,16 @@ export function MapPage() {
         fadeAnimation={false}
       >
         <BaseLayerTile layer={layer} />
-        <FontMarkers nonce={nonce} onlyWithWater={onlyWithWater} onlyReliable={onlyReliable} hideNonPotable={hideNonPotable} sourceFilter={sourceFilter} selectedID={selectedID} siguiendoRef={siguiendoRef} />
+        <FontMarkers
+          nonce={nonce}
+          onlyWithWater={onlyWithWater}
+          onlyReliable={onlyReliable}
+          hideNonPotable={hideNonPotable}
+          sourceFilter={sourceFilter}
+          selectedID={selectedID}
+          siguiendoRef={siguiendoRef}
+          onDensityModeChange={setDensityVisible}
+        />
         <PersistView />
         <FocusOn target={goto} marca={movimientoNuestro} />
         <CentraEnMi target={centrame} marca={movimientoNuestro} />
@@ -2214,7 +2244,12 @@ export function MapPage() {
         <Badge color="primary" variant="dot" invisible={controlsOpen || activeFilters === 0} overlap="circular">
           <Fab
             size="medium"
-            onClick={() => { trackInteraction('map_filters'); setControlsOpen((v) => !v) }}
+            onClick={() => {
+              trackInteraction('map_filters')
+              setGpxOpen(false)
+              setZonaOpen(false)
+              setControlsOpen((v) => !v)
+            }}
             aria-label={t(controlsOpen ? 'map.hideTools' : 'map.showTools')}
             title={t(controlsOpen ? 'map.hideTools' : 'map.showTools')}
             sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
@@ -2247,7 +2282,12 @@ export function MapPage() {
         <NuevoBadge clave="gpx">
           <Fab
             size="medium"
-            onClick={() => { trackInteraction('map_gpx'); setGpxOpen((v) => !v) }}
+            onClick={() => {
+              trackInteraction('map_gpx')
+              setControlsOpen(false)
+              setZonaOpen(false)
+              setGpxOpen((v) => !v)
+            }}
             aria-label={t('gpx.group')}
             title={t('gpx.group')}
             sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 800, fontSize: 13,
@@ -2263,7 +2303,12 @@ export function MapPage() {
             en la de GPX tampoco, porque el botón dice «GPX» con letras y esto no lo es. */}
         <Fab
           size="medium"
-          onClick={() => { trackInteraction('map_offline'); setZonaOpen((v) => !v) }}
+          onClick={() => {
+            trackInteraction('map_offline')
+            setControlsOpen(false)
+            setGpxOpen(false)
+            setZonaOpen((v) => !v)
+          }}
           aria-label={t('zonaOff.title')}
           title={t('zonaOff.title')}
           sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
@@ -2288,15 +2333,17 @@ export function MapPage() {
             </Box>
           </Collapse>
         )}
-        {/* En escritorio siguen desplegándose aquí mismo, junto al botón que las abre.
-            En móvil van a una hoja: una columna de chips flotando sobre el mapa tapa
-            justo lo que estás mirando, y son objetivos pequeños para el pulgar. */}
-        {!movil && (
-          <Collapse in={controlsOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
-            {filtros('escritorio')}
-          </Collapse>
-        )}
       </div>
+      {/* Desktop filters have their own bounded surface. Growing the controls column
+          pushed these chips into the compass and location actions on shorter windows. */}
+      {!movil && (
+        <Collapse in={controlsOpen} className="map-filter-panel">
+          <Paper elevation={4} sx={{ width: 250, p: 1.25, maxHeight: 'calc(100dvh - var(--alto-barra) - 150px)', overflowY: 'auto' }}>
+            <Typography sx={{ fontWeight: 800, mb: 1 }}>{t('map.filters')}</Typography>
+            <Stack spacing={1}>{filtros('escritorio')}</Stack>
+          </Paper>
+        </Collapse>
+      )}
       {movil && (
         <BottomSheet open={controlsOpen} onClose={() => setControlsOpen(false)} titulo={t('map.filters')}>
           <Stack spacing={1.25}>{filtros('movil')}</Stack>
@@ -2326,7 +2373,7 @@ export function MapPage() {
       )}
       {geoError && <div className="hint hint-error">{geoError}</div>}
 
-      <MapLegend />
+      <MapLegend density={densityVisible} />
 
       {showNearby && me && (
         <NearbyPanel pos={me} onClose={() => setShowNearby(false)} onFocus={focusFont} selectedID={selectedID} />
