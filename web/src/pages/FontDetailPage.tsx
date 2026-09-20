@@ -1685,8 +1685,11 @@ export function FontDetailPage() {
                 </Stack>
               </Alert>
             )}
-            <LocationActions font={font} showDirections={!isMobile} />
-            {avg != null && (
+            {/* En una sola columna las acciones siguen a la foto. En escritorio viven en
+                el panel derecho: dejarlas aquí obligaba a bajar toda la fotografía para
+                hacer algo con la fuente y dejaba ese panel prácticamente vacío. */}
+            {!dosColumnas && <LocationActions font={font} showDirections={!isMobile} />}
+            {!dosColumnas && avg != null && (
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><StarRating value={avg} size={20} /> <Typography>{avg.toFixed(1)} ({rated.length})</Typography></Stack>
             )}
           </>
@@ -1697,6 +1700,17 @@ export function FontDetailPage() {
 
       {!editing && dosColumnas && (
         <Box sx={{ gridColumn: '2', minWidth: 0 }}>
+          {/* La columna derecha reúne lo que sirve para decidir y actuar. Es una tarjeta
+              compacta, no un panel desplazable: toda la ficha conserva un único scroll. */}
+          <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+            {avg != null && (
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
+                <StarRating value={avg} size={20} />
+                <Typography>{avg.toFixed(1)} ({rated.length})</Typography>
+              </Stack>
+            )}
+            <LocationActions font={font} />
+          </Paper>
           {insignias}
           {fichaTecnica}
         </Box>
