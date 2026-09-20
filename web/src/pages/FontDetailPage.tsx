@@ -594,7 +594,10 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
       // se quedaba 1 px corto, medido.
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 360, my: 2, pb: { xs: 9, sm: 0 } }}
     >
-      <Typography variant="caption" color="text.secondary">{t('detail.editInfoNote')}</Typography>
+      {/* En escritorio la barra de acciones sube arriba (order sm:-1), así que la nota va
+          antes que ella (order sm:-2) para que se lea: nota → Guardar/Descartar → campos.
+          En móvil todo queda en su orden natural y la barra va anclada abajo. */}
+      <Typography variant="caption" color="text.secondary" sx={{ order: { sm: -2 } }}>{t('detail.editInfoNote')}</Typography>
       {/* El nombre, primero y grande: es lo que la gente quiere cambiar (muchas son «fuente
           sin nombre») y antes se les escapaba en un campo pequeño mientras miraban el título
           de arriba. Sin `size="small"` para que lea como el campo principal, ancho completo,
@@ -674,6 +677,12 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
       <Box
         sx={{
           position: { xs: 'fixed', sm: 'static' },
+          // En escritorio sube al principio del formulario (junto al título del modo
+          // edición), como el «Fet» de iOS: confirmar queda donde estaba «Editar», no al
+          // final. En móvil el header se va con el scroll, así que la barra sigue anclada
+          // abajo —medido: con el mapa de reubicar el guardar caía 223 px fuera de la
+          // pantalla— y `order` no afecta a un elemento `fixed`.
+          order: { sm: -1 },
           left: 0,
           right: 0,
           bottom: { xs: 'var(--bajo-el-mapa)', sm: 'auto' },
@@ -1362,8 +1371,12 @@ export function FontDetailPage() {
           </>}
         {user && !editing && (
           <>
-            {/* Edición abierta: cualquiera puede corregir el nombre/info (estilo wiki). */}
-            <IconButton size="small" onClick={() => setEditing(true)} aria-label={t('detail.edit')} title={t('detail.editInfoHint')}><EditIcon /></IconButton>
+            {/* Edición abierta: cualquiera puede corregir el nombre/info (estilo wiki). El
+                botón lleva rótulo «Editar» —como en iOS— y no solo el lápiz: un icono
+                suelto se pierde al lado del título grande, y un usuario motivado (Enric)
+                no lo encontró y acabó pidiendo el cambio por correo. Renombrar una fuente
+                mal nombrada es justo la aportación que la app quiere hacer fácil. */}
+            <Button size="small" startIcon={<EditIcon />} onClick={() => setEditing(true)} title={t('detail.editInfoHint')} sx={{ flexShrink: 0 }}>{t('detail.edit')}</Button>
             {/* Borrar (y reubicar) queda reservado al creador o a un admin. */}
             {(user.isAdmin || font.creator?.id === user.id) && (
               <IconButton size="small" color="error" onClick={removeFont} aria-label={t('detail.delete')}><DeleteOutlineIcon /></IconButton>
