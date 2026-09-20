@@ -1751,7 +1751,13 @@ export function FontDetailPage() {
                   const freshAt = latest.lastConfirmedAt ?? latest.createdAt
                   return freshAt && isStale(freshAt) ? <Alert severity="warning" sx={{ my: 1 }}>{t('detail.stale', { when: timeAgo(freshAt, t) })}</Alert> : null
                 })()}
-                <ReviewCard c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
+                {/* `key` por id: `ReviewCard` inicializa su estado de edición desde las props
+                    una sola vez (al montar). Sin key, esta tarjeta —siempre en la posición 0—
+                    reutilizaba la instancia entre recargas, así que al publicar una reseña
+                    nueva el formulario seguía con el texto de la anterior y editar la última
+                    tocaba la reseña equivocada. Con la key, la identidad sigue al comentario,
+                    igual que las de `rest`. */}
+                <ReviewCard key={latest.id} c={latest} highlight canManage={user?.id === latest.userID || !!user?.isAdmin} canFlag={!!user && user.id !== latest.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
                 {latest.waterStatus && latest.lastConfirmedAt && (
                   <Typography variant="caption" color="text.secondary">
                     {t('confirm.lastConfirmed', { when: timeAgo(latest.lastConfirmedAt, t) })}
