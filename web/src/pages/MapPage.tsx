@@ -5,6 +5,7 @@ import Chip from '@mui/material/Chip'
 import Fab from '@mui/material/Fab'
 import Badge from '@mui/material/Badge'
 import Collapse from '@mui/material/Collapse'
+import Popover from '@mui/material/Popover'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
@@ -1762,6 +1763,10 @@ export function MapPage() {
   const [controlsOpen, setControlsOpen] = useState(false)
   const [gpxOpen, setGpxOpen] = useState(false)
   const [zonaOpen, setZonaOpen] = useState(false)
+  // En escritorio los flotantes de GPX y «sin conexión» salen a la izquierda de su botón,
+  // como el panel de filtros, en vez de caer debajo de la columna. Se anclan al Fab.
+  const gpxBtn = useRef<HTMLButtonElement>(null)
+  const zonaBtn = useRef<HTMLButtonElement>(null)
   const [densityVisible, setDensityVisible] = useState(false)
   const { layer, setLayer } = useBaseLayer()
   // Instancia del mapa: hace falta fuera del lienzo para el botón de la brújula.
@@ -2281,6 +2286,7 @@ export function MapPage() {
             cualquier icono tendría que adivinar igual. */}
         <NuevoBadge clave="gpx">
           <Fab
+            ref={gpxBtn}
             size="medium"
             onClick={() => {
               trackInteraction('map_gpx')
@@ -2302,6 +2308,7 @@ export function MapPage() {
             se cometió metiendo el GPX ahí —un cajón cuyo rótulo dice que son otra cosa— y
             en la de GPX tampoco, porque el botón dice «GPX» con letras y esto no lo es. */}
         <Fab
+          ref={zonaBtn}
           size="medium"
           onClick={() => {
             trackInteraction('map_offline')
@@ -2315,25 +2322,40 @@ export function MapPage() {
         >
           <CloudDownloadIcon />
         </Fab>
-        {!movil && (
-          <Collapse in={zonaOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
-            <Box sx={{ width: 260, ...sobreElMapaSx, borderRadius: 2, p: 1.5 }}>
-              {map && <ZonaOfflineSheet map={map} />}
-            </Box>
-          </Collapse>
-        )}
-        {!movil && (
-          <Collapse in={gpxOpen} sx={{ '& .MuiCollapse-wrapperInner': { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' } }}>
-            <Box sx={{ width: 210, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <ExportGpxButton map={map} sx={sobreElMapaSx} />
-              <Button component={Link} to="/gpx" variant="outlined" startIcon={<UploadIcon />}
-                      sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48, ...sobreElMapaSx }} fullWidth>
-                {t('gpxIn.title')}
-              </Button>
-            </Box>
-          </Collapse>
-        )}
       </div>
+      {/* En escritorio, GPX y «sin conexión» salen a la IZQUIERDA de su botón (como el
+          panel de filtros), no cayendo debajo de la columna. Se anclan al Fab con un
+          Popover: la esquina superior derecha del panel se coloca en la superior izquierda
+          del botón, así queda a su lado y alineado con él sin cálculos de píxeles. */}
+      {!movil && (
+        <Popover
+          open={zonaOpen}
+          anchorEl={zonaBtn.current}
+          onClose={() => setZonaOpen(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          slotProps={{ paper: { sx: { ml: '-10px', width: 260, p: 1.5, borderRadius: 2 } } }}
+        >
+          {map && <ZonaOfflineSheet map={map} onClose={() => setZonaOpen(false)} />}
+        </Popover>
+      )}
+      {!movil && (
+        <Popover
+          open={gpxOpen}
+          anchorEl={gpxBtn.current}
+          onClose={() => setGpxOpen(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          slotProps={{ paper: { sx: { ml: '-10px', width: 220, p: 1.25, borderRadius: 2, display: 'flex', flexDirection: 'column', gap: '10px' } } }}
+        >
+          <ExportGpxButton map={map} />
+          <Button component={Link} to="/gpx" variant="outlined" startIcon={<UploadIcon />}
+                  onClick={() => setGpxOpen(false)}
+                  sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48 }} fullWidth>
+            {t('gpxIn.title')}
+          </Button>
+        </Popover>
+      )}
       {/* Desktop filters have their own bounded surface. Growing the controls column
           pushed these chips into the compass and location actions on shorter windows. */}
       {!movil && (
