@@ -603,8 +603,10 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
     >
       {/* La nota y las acciones ocupan todo el ancho. En escritorio la barra se mantiene
           disponible bajo la navegación mientras avanza el único scroll de la página; en
-          móvil continúa anclada sobre la barra inferior. */}
-      <Typography variant="caption" color="text.secondary" sx={{ gridColumn: '1 / -1' }}>{t('detail.editInfoNote')}</Typography>
+          móvil continúa anclada sobre la barra inferior. En escritorio la nota va DENTRO de
+          la barra (a la izquierda), que si no se quedaba vacía de lado a lado; en móvil la
+          barra va anclada abajo y no cabe, así que la nota se queda como línea suelta. */}
+      <Typography variant="caption" color="text.secondary" sx={{ gridColumn: '1 / -1', display: { sm: 'none' } }}>{t('detail.editInfoNote')}</Typography>
       <Box
         sx={{
           gridColumn: '1 / -1',
@@ -616,9 +618,8 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
           zIndex: (th) => th.zIndex.appBar,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: { sm: 'flex-end' },
           gap: 1,
-          px: { xs: 2, sm: 1 },
+          px: { xs: 2, sm: 1.5 },
           py: 1,
           bgcolor: 'background.paper',
           border: 1,
@@ -627,6 +628,21 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
           boxShadow: { xs: 3, sm: 1 },
         }}
       >
+        {/* Izquierda (solo escritorio): llena la barra y dice el estado. Sin cambios, la
+            nota de que la edición es pública; con cambios, un aviso de que hay algo sin
+            guardar, justo al lado del botón que lo guarda. En móvil se omite: la barra de
+            abajo es estrecha y la nota ya va arriba. */}
+        <Box sx={{ display: { xs: 'none', sm: 'block' }, flexGrow: 1, minWidth: 0, mr: 1 }}>
+          {sucio ? (
+            <Typography variant="body2" color="warning.main" sx={{ fontWeight: 600 }} noWrap>
+              ● {t('form.unsaved')}
+            </Typography>
+          ) : (
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+              {t('detail.editInfoNote')}
+            </Typography>
+          )}
+        </Box>
         <Button
           type="submit"
           variant="contained"
