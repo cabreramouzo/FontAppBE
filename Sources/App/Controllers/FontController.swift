@@ -614,7 +614,7 @@ struct FontController: RouteCollection {
                                "Afina la búsqueda en vez de pasar páginas.")
             }
         }
-        let query = Font.visible(on: req.db).sort(\.$name)
+        let query = Font.visible(on: req.db)
         // El patrón se acota y se escapa: ver `SearchTerm` (un ILIKE con una cadena
         // enorme cuesta segundos de CPU por petición).
         // `unaccent` en las dos partes: los acentos no cuentan («moia» encuentra «Moià»).
@@ -629,6 +629,18 @@ struct FontController: RouteCollection {
                 )))
             }
         }
+        // Rank before pagination so an exact name cannot fall outside the six suggestions.
+        if let phrase = req.query[String.self, at: "search"].flatMap(SearchTerm.rankingPhrase) {
+            query.sort(.sql(embed: """
+                CASE
+                    WHEN unaccent(trim(regexp_replace(fonts.name, '[[:space:]]+', ' ', 'g'))) ILIKE unaccent(\(bind: phrase)) THEN 0
+                    WHEN unaccent(fonts.name) ILIKE unaccent(\(bind: phrase + "%")) THEN 1
+                    WHEN unaccent(fonts.name) ILIKE unaccent(\(bind: "%" + phrase + "%")) THEN 2
+                    ELSE 3
+                END
+                """))
+        }
+        query.sort(\.$name).sort(\.$id)
         return try await query.paginate(SafePage.from(req))
     }
 

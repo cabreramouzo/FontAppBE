@@ -371,7 +371,7 @@ function AnonReviewPrompt({ fontID }: { fontID: string }) {
   )
 }
 
-function LocationActions({ font }: { font: Font }) {
+function LocationActions({ font, showDirections = true }: { font: Font; showDirections?: boolean }) {
   const { t, lang } = useI18n()
   const toast = useToast()
   const navigate = useNavigate()
@@ -401,7 +401,7 @@ function LocationActions({ font }: { font: Font }) {
       <Button variant="contained" disableElevation startIcon={<PlaceIcon />} onClick={() => navigate(`/?lat=${font.latitude}&lng=${font.longitude}&sel=${font.id}`)}>
         {t('detail.viewOnMap')}
       </Button>
-      <Button variant="outlined" startIcon={<DirectionsIcon />} href={mapsUrl} target="_blank" rel="noreferrer" onClick={() => trackInteraction('font_directions')}>{t('detail.directions')}</Button>
+      {showDirections && <Button variant="outlined" startIcon={<DirectionsIcon />} href={mapsUrl} target="_blank" rel="noreferrer" onClick={() => trackInteraction('font_directions')}>{t('detail.directions')}</Button>}
       <Button variant="outlined" startIcon={<ContentCopyIcon />} onClick={copy}>{copied ? t('detail.copied') : coords}</Button>
       <Button variant="outlined" startIcon={<ShareIcon />} onClick={() => { trackInteraction('font_share'); void share() }}>{t('detail.share')}</Button>
       {/* «Otras fotos» va en esta fila y no debajo de la portada. Allí se perdía: en una
@@ -849,6 +849,7 @@ export function FontDetailPage() {
   // temprana (`if (!font) return …`) y colgarlo después cambia el número de hooks entre
   // el render de carga y el de la ficha — «Rendered more hooks than during the previous
   // render», la pantalla entera al error boundary.
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
   const dosColumnas = useMediaQuery((tema: Theme) => tema.breakpoints.up('md'))
 
   /**
@@ -950,7 +951,7 @@ export function FontDetailPage() {
   // #4: si el último parte dice que está seca/rota/ya no está, se busca la fuente con agua
   // confirmada más cercana. Solo entonces —una fuente que mana no necesita alternativa— y
   // por el estado, no por cada recarga de comentarios.
-  const ultimoEstado = comments[0]?.waterStatus ?? null
+  const ultimoEstado = evidenceFromReports(comments).lastWaterStatus
   useEffect(() => {
     const seca = ultimoEstado === 'dry' || ultimoEstado === 'broken' || ultimoEstado === 'gone'
     if (!id || !seca) { setAguaCerca(null); return }
@@ -1277,6 +1278,27 @@ export function FontDetailPage() {
       }}
     />
   )
+  const nearbyWaterNotice = aguaCerca && (
+    <Paper
+      variant="outlined"
+      sx={{ p: 1.5, my: 1.5, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', borderColor: 'primary.main' }}
+    >
+      <Box component="span" sx={{ fontSize: 24, lineHeight: 1 }}>💧</Box>
+      <Box sx={{ flexGrow: 1, minWidth: 160 }}>
+        <Typography sx={{ fontWeight: 700 }}>
+          {t('detail.nearWaterTitle', {
+            dist: aguaCerca.distanceKm < 1
+              ? `${Math.round(aguaCerca.distanceKm * 1000)} m`
+              : `${aguaCerca.distanceKm.toLocaleString(lang, { maximumFractionDigits: 1 })} km`,
+          })}
+        </Typography>
+      </Box>
+      <Button component={RouterLink} to={`/fonts/${aguaCerca.id}`} variant="contained" disableElevation>
+        {t('detail.nearWaterGo')}
+      </Button>
+    </Paper>
+  )
+
   const insignias = (
     <FontBadges
       creatorName={creatorName}
@@ -1351,6 +1373,39 @@ export function FontDetailPage() {
         </Box>
       </Stack>
 
+      {!editing && isMobile && (
+        <Paper variant="outlined" sx={{ p: 1.5, my: 1.5 }}>
+          {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : <>
+            <Typography variant="overline">{t('detail.currentStatus')}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              {confidenceEvidence.recentStatusConflict
+                ? t('confidence.disputed')
+                : confidenceEvidence.lastWaterStatus
+                  ? `${WATER_STATUS[confidenceEvidence.lastWaterStatus]?.emoji ?? ''} ${t(`status.${confidenceEvidence.lastWaterStatus}`)}`
+                  : t('confidence.unverified')}
+            </Typography>
+            {confidenceEvidence.lastUpdate && <Typography variant="body2" color="text.secondary">
+              {timeAgo(confidenceEvidence.lastUpdate, t)}
+            </Typography>}
+            <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+              {confidenceEvidence.recentStatusConflict || !confidenceEvidence.lastWaterStatus
+                ? <Typography variant="body2" color="text.secondary">
+                    {t(confidenceEvidence.recentStatusConflict ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
+                  </Typography>
+                : <ConfidenceChip evidence={confidenceEvidence} />}
+              <ConfidenceHelpButton />
+            </Box>
+          </>}
+          <Button fullWidth variant="contained" disableElevation startIcon={<DirectionsIcon />}
+            sx={{ mt: 1 }} target="_blank" rel="noreferrer"
+            href={`https://www.google.com/maps/dir/?api=1&destination=${font.latitude},${font.longitude}`}
+            onClick={() => trackInteraction('font_directions')}>
+            {t('detail.directions')}
+          </Button>
+          {nearbyWaterNotice}
+        </Paper>
+      )}
+
       {/* Frescor, justo bajo el nombre. Siempre dice algo: en las miles de fuentes
           importadas la respuesta es «ningú l'ha comprovada mai», que es precisamente la
           que hacía falta y la que antes se quedaba en blanco. Va aquí y no junto al
@@ -1358,7 +1413,7 @@ export function FontDetailPage() {
           primero que quieres saber antes de fiarte del resto de la ficha. */}
       {/* Todo lo que sigue hasta el formulario es de solo lectura: editando se oculta, para
           que solo quede lo que se puede cambiar. */}
-      {!editing && (
+      {!editing && !isMobile && (
       <Stack direction="row" sx={{ mb: 1.5, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
         <FreshnessChip lastCheck={latest?.lastConfirmedAt ?? latest?.createdAt ?? null} />
         {/* El `?` va pegado a su chip y en la MISMA caja, para que al envolver en móvil no
@@ -1636,7 +1691,7 @@ export function FontDetailPage() {
                 </Stack>
               </Alert>
             )}
-            <LocationActions font={font} />
+            <LocationActions font={font} showDirections={!isMobile} />
             {avg != null && (
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><StarRating value={avg} size={20} /> <Typography>{avg.toFixed(1)} ({rated.length})</Typography></Stack>
             )}
@@ -1707,26 +1762,7 @@ export function FontDetailPage() {
               {/* #4: esta fuente está seca → dónde llenar el bidón. Solo con una candidata
                   con agua CONFIRMADA cerca; si no la hay, no se pinta nada (mejor que
                   mandar a otra que quizá también esté seca). */}
-              {aguaCerca && (
-                <Paper
-                  variant="outlined"
-                  sx={{ p: 1.5, my: 1.5, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', borderColor: 'primary.main' }}
-                >
-                  <Box component="span" sx={{ fontSize: 24, lineHeight: 1 }}>💧</Box>
-                  <Box sx={{ flexGrow: 1, minWidth: 160 }}>
-                    <Typography sx={{ fontWeight: 700 }}>
-                      {t('detail.nearWaterTitle', {
-                        dist: aguaCerca.distanceKm < 1
-                          ? `${Math.round(aguaCerca.distanceKm * 1000)} m`
-                          : `${aguaCerca.distanceKm.toLocaleString(lang, { maximumFractionDigits: 1 })} km`,
-                      })}
-                    </Typography>
-                  </Box>
-                  <Button component={RouterLink} to={`/fonts/${aguaCerca.id}`} variant="contained" disableElevation>
-                    {t('detail.nearWaterGo')}
-                  </Button>
-                </Paper>
-              )}
+              {!isMobile && nearbyWaterNotice}
 
               {/* Acciones: sigue igual (1 clic) o ha cambiado (abre el formulario). */}
               {user ? (

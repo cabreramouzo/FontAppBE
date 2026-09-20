@@ -4,6 +4,13 @@ import XCTest
 /// El buscador es el punto público más barato de atacar: un ILIKE con una cadena
 /// enorme cuesta segundos de CPU de base de datos por petición.
 final class SearchHardeningTests: XCTestCase {
+    func testRankingPhraseUsesLiteralBoundedWords() {
+        XCTAssertNil(SearchTerm.rankingPhrase(" "))
+        XCTAssertEqual(SearchTerm.rankingPhrase("  Font  50% _x  "), "Font 50\\% \\_x")
+        XCTAssertEqual(SearchTerm.rankingPhrase(String(repeating: "a", count: 500))?.count, 80)
+        XCTAssertEqual(SearchTerm.rankingPhrase("a b c d e f g"), "a b c d e f")
+    }
+
     func testTermIsCapped() {
         let largo = String(repeating: "a", count: 50_000)
         let patron = SearchTerm.likePattern(largo)

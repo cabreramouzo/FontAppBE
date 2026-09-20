@@ -4206,3 +4206,15 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
 - No poner el proyecto en iCloud Drive (rompe builds y satura la sincronización).
 - No añadir dependencias sin justificarlo en el PR. (`leaflet-rotate`: sin mantenimiento
   desde 2023, pero es la única forma de girar Leaflet sin cambiar de motor de mapas.)
+
+
+### Fountain detail and search relevance (September 2026)
+
+- On phones, a compact summary below the fountain name shows the latest water evidence,
+  its age and confidence, directions, and a nearby confirmed-water alternative when available.
+  Conflicting reports remain explicit; offline details identify the cached context.
+  Full reports stay below the photo. Desktop retains the two-column layout.
+- Fountain search ranks exact names, name prefixes, contiguous phrases, then unordered
+  word matches **before pagination**. Ranking is accent/case insensitive and uses bounded,
+  escaped, bound parameters; name and ID break ties. Keep the per-word search filters.
+- Search section labels distinguish FontApp fountains from map places.

@@ -52,6 +52,15 @@ enum SearchTerm {
         return palabras.isEmpty ? nil : Array(palabras)
     }
 
+    /// Literal phrase for relevance ranking, with the same bounds as word matching.
+    static func rankingPhrase(_ raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let words = String(trimmed.prefix(maxLength))
+            .split(whereSeparator: { $0.isWhitespace }).prefix(maxWords)
+        guard !words.isEmpty else { return nil }
+        return escapa(words.joined(separator: " "))
+    }
+
     /// Escapa los comodines de `LIKE`. La barra invertida primero, o se escaparían las que
     /// añadimos después. Sin esto, buscar `%` devolvía la tabla entera.
     private static func escapa(_ s: String) -> String {

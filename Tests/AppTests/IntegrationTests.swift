@@ -1387,6 +1387,30 @@ final class IntegrationTests: XCTestCase {
 
     /// Los acentos NO cuentan al buscar: «moia» encuentra «Moià». Necesita la extensión
     /// `unaccent` (migración EnableUnaccent), disponible en CI porque el rol es superusuario.
+    func testSearchRanksExactNamesBeforePagination() async throws {
+        try await withApp { app in
+            let exact = "Font de la Vàll"
+            let prefix = "Font de la Vall nord"
+            let phrase = "Antiga Font de la Vall"
+            let distractions = (1...8).map { "Ajuntament Vallclara \($0) Font de la plaça" }
+            for name in distractions + [phrase, prefix, exact] {
+                try await Font(name: name, latitude: 41.81, longitude: 2.09,
+                               source: .fountain).create(on: app.db)
+            }
+            for term in ["font de la vall", "  FONT  de la VÀLL  "] {
+                let encoded = term.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+                try await app.test(.GET, "fonts?search=\(encoded)&per=6") { res in
+                    XCTAssertEqual(res.status, .ok)
+                    let json = try JSONSerialization.jsonObject(with: Data(buffer: res.body)) as? [String: Any]
+                    let items = json?["items"] as? [[String: Any]] ?? []
+                    XCTAssertEqual(items.count, 6)
+                    XCTAssertEqual(Array(items.prefix(3).compactMap { $0["name"] as? String }),
+                                   [exact, prefix, phrase])
+                }
+            }
+        }
+    }
+
     func testSearchIgnoresAccents() async throws {
         try await withApp { app in
             try await Font(name: "Moià centre", latitude: 41.81, longitude: 2.09,
