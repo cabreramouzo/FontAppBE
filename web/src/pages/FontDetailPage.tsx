@@ -1714,9 +1714,12 @@ export function FontDetailPage() {
                 >
                   <Box component="span" sx={{ fontSize: 24, lineHeight: 1 }}>💧</Box>
                   <Box sx={{ flexGrow: 1, minWidth: 160 }}>
-                    <Typography sx={{ fontWeight: 700 }}>{t('detail.nearWaterTitle')}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('detail.nearWaterBody', { km: aguaCerca.distanceKm.toLocaleString(lang) })}
+                    <Typography sx={{ fontWeight: 700 }}>
+                      {t('detail.nearWaterTitle', {
+                        dist: aguaCerca.distanceKm < 1
+                          ? `${Math.round(aguaCerca.distanceKm * 1000)} m`
+                          : `${aguaCerca.distanceKm.toLocaleString(lang, { maximumFractionDigits: 1 })} km`,
+                      })}
                     </Typography>
                   </Box>
                   <Button component={RouterLink} to={`/fonts/${aguaCerca.id}`} variant="contained" disableElevation>
