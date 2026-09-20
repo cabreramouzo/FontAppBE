@@ -89,7 +89,7 @@ import { StarRating } from '../components/StarRating'
 import { ImagePicker } from '../components/ImagePicker'
 import { Skeleton } from '../components/Skeleton'
 import { WaterTypeHelpButton, DrinkableHelpButton } from '../components/WaterHelp'
-import { useTheme } from '@mui/material/styles'
+import { useTheme, alpha } from '@mui/material/styles'
 import { BadgeIcon } from '../components/BadgeIcon'
 import { TIER_COLOR } from '../lib/tierColors'
 import { BadgeArt } from '../components/BadgeArt'
@@ -104,7 +104,7 @@ import { nombreFuente } from '../lib/fontName'
 import { prepararFoto } from '../lib/image'
 import { comparteTexto, enlaceLocalizado } from '../lib/share'
 import { RelocateFont } from '../components/RelocateFont'
-import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
+import { WATER_STATUS, WATER_STATUS_OPTIONS, statusColor } from '../lib/waterStatus'
 import { DRINKABLE_EMOJI, DRINKABLE_OPTIONS, SOURCE_EMOJI, SOURCE_OPTIONS, drinkableInfo, sourceInfo } from '../lib/waterType'
 import { isStale, timeAgo } from '../lib/time'
 import { freshnessOf } from '../lib/freshness'
@@ -1303,38 +1303,81 @@ export function FontDetailPage() {
   // El mismo resumen abre la ficha en móvil y encabeza la columna útil en escritorio.
   // Mantener una sola definición evita que el estado más importante de la fuente termine
   // expresándose de dos maneras distintas según el tamaño de pantalla.
-  const resumenEstado = (incluyeAguaCerca: boolean) => (
-    <Paper variant="outlined" sx={{ p: 1.5, my: 1.5 }}>
-      {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : <>
-        <Typography variant="overline">{t('detail.currentStatus')}</Typography>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          {confidenceEvidence.recentStatusConflict
-            ? t('confidence.disputed')
-            : confidenceEvidence.lastWaterStatus
-              ? `${WATER_STATUS[confidenceEvidence.lastWaterStatus]?.emoji ?? ''} ${t(`status.${confidenceEvidence.lastWaterStatus}`)}`
-              : t('confidence.unverified')}
-        </Typography>
-        {confidenceEvidence.lastUpdate && <Typography variant="body2" color="text.secondary">
-          {timeAgo(confidenceEvidence.lastUpdate, t)}
-        </Typography>}
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-          {confidenceEvidence.recentStatusConflict || !confidenceEvidence.lastWaterStatus
-            ? <Typography variant="body2" color="text.secondary">
-                {t(confidenceEvidence.recentStatusConflict ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
-              </Typography>
-            : <ConfidenceChip evidence={confidenceEvidence} />}
-          <ConfidenceHelpButton />
-        </Box>
-      </>}
-      <Button fullWidth variant="contained" disableElevation startIcon={<DirectionsIcon />}
-        sx={{ mt: 1 }} target="_blank" rel="noreferrer"
-        href={`https://www.google.com/maps/dir/?api=1&destination=${font.latitude},${font.longitude}`}
-        onClick={() => trackInteraction('font_directions')}>
-        {t('detail.directions')}
-      </Button>
-      {incluyeAguaCerca && nearbyWaterNotice}
-    </Paper>
-  )
+  // `protagonista`: la versión de escritorio, con el estado como un medallón —emoji grande
+  // y centrado, con el color del propio estado— para que la columna derecha lo lleas de un
+  // vistazo. En móvil el resumen ya va arriba del todo bajo el nombre, así que se queda
+  // compacto y alineado a la izquierda. El emoji y el color salen de `WATER_STATUS`; un
+  // conflicto usa el ámbar de aviso y «sin comprobar» el azul de las fuentes sin estado.
+  const resumenEstado = (incluyeAguaCerca: boolean, protagonista = false) => {
+    const conflicto = confidenceEvidence.recentStatusConflict
+    const est = conflicto ? null : confidenceEvidence.lastWaterStatus
+    const heroEmoji = conflicto ? '⚠️' : (est ? (WATER_STATUS[est]?.emoji ?? '❔') : '❔')
+    const heroColor = conflicto ? '#f59e0b' : statusColor(est ?? null)
+    const heroTexto = conflicto
+      ? t('confidence.disputed')
+      : est ? t(`status.${est}`) : t('confidence.unverified')
+    return (
+      <Paper variant="outlined" sx={{ p: protagonista ? 2 : 1.5, my: 1.5, ...(protagonista && { textAlign: 'center' }) }}>
+        {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : protagonista ? (
+          <>
+            <Typography variant="overline" color="text.secondary" sx={{ display: 'block' }}>{t('detail.currentStatus')}</Typography>
+            <Box
+              aria-hidden
+              sx={{
+                width: 96, height: 96, mx: 'auto', my: 1.5, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '3rem', lineHeight: 1,
+                bgcolor: alpha(heroColor, 0.15), border: '3px solid', borderColor: heroColor,
+              }}
+            >
+              {heroEmoji}
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>{heroTexto}</Typography>
+            {confidenceEvidence.lastUpdate && <Typography variant="body2" color="text.secondary">
+              {timeAgo(confidenceEvidence.lastUpdate, t)}
+            </Typography>}
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mt: 0.75 }}>
+              {conflicto || !est
+                ? <Typography variant="body2" color="text.secondary">
+                    {t(conflicto ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
+                  </Typography>
+                : <ConfidenceChip evidence={confidenceEvidence} />}
+              <ConfidenceHelpButton />
+            </Box>
+          </>
+        ) : (
+          <>
+            <Typography variant="overline">{t('detail.currentStatus')}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              {conflicto
+                ? t('confidence.disputed')
+                : est
+                  ? `${WATER_STATUS[est]?.emoji ?? ''} ${t(`status.${est}`)}`
+                  : t('confidence.unverified')}
+            </Typography>
+            {confidenceEvidence.lastUpdate && <Typography variant="body2" color="text.secondary">
+              {timeAgo(confidenceEvidence.lastUpdate, t)}
+            </Typography>}
+            <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+              {conflicto || !est
+                ? <Typography variant="body2" color="text.secondary">
+                    {t(conflicto ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
+                  </Typography>
+                : <ConfidenceChip evidence={confidenceEvidence} />}
+              <ConfidenceHelpButton />
+            </Box>
+          </>
+        )}
+        <Button fullWidth variant="contained" disableElevation startIcon={<DirectionsIcon />}
+          sx={{ mt: protagonista ? 2 : 1 }} target="_blank" rel="noreferrer"
+          href={`https://www.google.com/maps/dir/?api=1&destination=${font.latitude},${font.longitude}`}
+          onClick={() => trackInteraction('font_directions')}>
+          {t('detail.directions')}
+        </Button>
+        {incluyeAguaCerca && nearbyWaterNotice}
+      </Paper>
+    )
+  }
 
   const insignias = (
     <FontBadges
@@ -1684,7 +1727,7 @@ export function FontDetailPage() {
 
       {!editing && dosColumnas && (
         <Box sx={{ gridColumn: '2', minWidth: 0 }}>
-          {resumenEstado(false)}
+          {resumenEstado(false, true)}
           {/* La columna derecha reúne lo que sirve para decidir y actuar. Es una tarjeta
               compacta, no un panel desplazable: toda la ficha conserva un único scroll. */}
           <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
