@@ -4224,3 +4224,6 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   add controls.
 - Freshness is a neutral timestamp ("Last report: …"), not a positive state. Keep green
   for water availability; old evidence may still use warning styling.
+- On mobile News, the global level-progress strip starts collapsed with its counts visible;
+  desktop keeps the full strip. The nearby/global scope controls share one aligned row,
+  while country, radius, and region selectors use full-width rows on phones.

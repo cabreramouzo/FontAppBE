@@ -453,29 +453,33 @@ export function ActivityGrid({ limit = 24, showFilter = false, maxPages = 1 }: {
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', alignItems: 'center', rowGap: 1 }}>
-        <Chip
-          clickable
-          icon={<MyLocationIcon />}
-          label={t('activity.nearMe')}
-          color={cerca ? 'primary' : 'default'}
-          variant={cerca ? 'filled' : 'outlined'}
-          onClick={activarCerca}
-        />
-        <Chip
-          clickable
-          label={t('activity.everywhere')}
-          color={!cerca ? 'primary' : 'default'}
-          variant={!cerca ? 'filled' : 'outlined'}
-          onClick={() => { setCerca(false); guardaCerca(false) }}
-        />
+      <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1, width: { xs: '100%', sm: 'auto' } }}>
+          <Chip
+            clickable
+            icon={<MyLocationIcon />}
+            label={t('activity.nearMe')}
+            color={cerca ? 'primary' : 'default'}
+            variant={cerca ? 'filled' : 'outlined'}
+            onClick={activarCerca}
+            sx={{ height: 40, width: { xs: '100%', sm: 'auto' } }}
+          />
+          <Chip
+            clickable
+            label={t('activity.everywhere')}
+            color={!cerca ? 'primary' : 'default'}
+            variant={!cerca ? 'filled' : 'outlined'}
+            onClick={() => { setCerca(false); guardaCerca(false) }}
+            sx={{ height: 40, width: { xs: '100%', sm: 'auto' } }}
+          />
+        </Box>
         {/* Radio elegible: solo con «cerca de mí» y posición, que es cuando el círculo
             existe. Sin posición «cerca de mí» cae a global y el radio no pinta nada. */}
         {cerca && pos && (
           <TextField
             select size="small" label={t('activity.radius')} value={km}
             onChange={(e) => { const v = Number(e.target.value); setKm(v); guardaRadio(v) }}
-            sx={{ minWidth: 110 }}
+            sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: 110 }}
           >
             {RADIOS_KM.map((r) => <MenuItem key={r} value={r}>{`${r} km`}</MenuItem>)}
           </TextField>
@@ -485,7 +489,7 @@ export function ActivityGrid({ limit = 24, showFilter = false, maxPages = 1 }: {
         {!cerca && (
           <TextField
             select size="small" label={t('activity.country')} value={pais}
-            onChange={(e) => eligePais(e.target.value)} sx={{ minWidth: 150 }}
+            onChange={(e) => eligePais(e.target.value)} sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: 150 }}
           >
             <MenuItem value={TODOS}>{t('zones.allCountries')}</MenuItem>
             {paises.map((p) => <MenuItem key={p} value={p}>{nombrePais(p, t)}</MenuItem>)}
@@ -494,13 +498,13 @@ export function ActivityGrid({ limit = 24, showFilter = false, maxPages = 1 }: {
         {showFilter && !cerca && regions.length > 1 && (
           <TextField
             select size="small" label={t('activity.region')} value={region}
-            onChange={(e) => setRegion(e.target.value)} sx={{ minWidth: 180 }}
+            onChange={(e) => setRegion(e.target.value)} sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: 180 }}
           >
             <MenuItem value="">{t('activity.allRegions')}</MenuItem>
             {regions.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
           </TextField>
         )}
-      </Stack>
+      </Box>
 
       <Box
         sx={{

@@ -7,6 +7,10 @@ import Link from '@mui/material/Link'
 import LinearProgress from '@mui/material/LinearProgress'
 import Tooltip from '@mui/material/Tooltip'
 import Button from '@mui/material/Button'
+import ButtonBase from '@mui/material/ButtonBase'
+import Collapse from '@mui/material/Collapse'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
@@ -38,7 +42,10 @@ import { LevelBadge } from './LevelBadge'
 export function PulseStrip() {
   const { t } = useI18n()
   const { user } = useAuth()
+  const theme = useTheme()
+  const mobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [data, setData] = useState<PulseSnapshot | null>(null)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
     let vivo = true
@@ -54,31 +61,48 @@ export function PulseStrip() {
     <Box
       component="section"
       sx={{
-        mb: 2.5, p: { xs: 1.5, sm: 2 }, borderRadius: 2,
+        mb: 2.5, p: { xs: 0, sm: 2 }, borderRadius: 2, overflow: 'hidden',
         border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover',
       }}
     >
-      <Stack direction="row" spacing={0.75} sx={{ mb: 1.5, alignItems: 'center' }}>
-        <TrendingUpIcon fontSize="small" color="primary" />
-        {/* La aclaración va en el título porque es donde nace la duda: el resto de la
-            página está filtrado por zona y esto no, así que aquí sale gente de fuera. */}
-        <Tooltip title={t('pulse.hint')}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, cursor: 'help' }}>{t('pulse.title')}</Typography>
-        </Tooltip>
-      </Stack>
+      {mobile ? (
+        <ButtonBase
+          onClick={() => setMobileOpen((open) => !open)}
+          aria-expanded={mobileOpen}
+          sx={{ width: '100%', minHeight: 52, px: 1.5, py: 1, justifyContent: 'flex-start', textAlign: 'left', gap: 0.75 }}
+        >
+          <TrendingUpIcon fontSize="small" color="primary" />
+          <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{t('pulse.title')}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {t('pulse.summary', { promoted: String(data.promotions.length), climbers: String(data.climbers.length) })}
+            </Typography>
+          </Box>
+          {mobileOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </ButtonBase>
+      ) : (
+        <Stack direction="row" spacing={0.75} sx={{ mb: 1.5, alignItems: 'center' }}>
+          <TrendingUpIcon fontSize="small" color="primary" />
+          {/* The hint explains why this global ranking does not follow the feed filter. */}
+          <Tooltip title={t('pulse.hint')}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, cursor: 'help' }}>{t('pulse.title')}</Typography>
+          </Tooltip>
+        </Stack>
+      )}
 
       {/* Dos columnas solo si hay dos listas. Lo normal al principio es que haya una
           sola, y con `1fr 1fr` fijo la caja se queda medio vacía a la derecha — parece
           que falta algo por cargar. */}
-      <Box
-        sx={{
-          display: 'grid', gap: { xs: 2, sm: 3 },
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: data.promotions.length > 0 && data.climbers.length > 0 ? '1fr 1fr' : '1fr',
-          },
-        }}
-      >
+      <Collapse in={!mobile || mobileOpen} unmountOnExit={mobile}>
+        <Box
+          sx={{
+            display: 'grid', gap: { xs: 2, sm: 3 }, px: { xs: 1.5, sm: 0 }, pb: { xs: 1.5, sm: 0 },
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: data.promotions.length > 0 && data.climbers.length > 0 ? '1fr 1fr' : '1fr',
+            },
+          }}
+        >
         {data.promotions.length > 0 && (
           <Columna titulo={t('pulse.promoted')}>
             {data.promotions.map((p) => (
@@ -119,7 +143,8 @@ export function PulseStrip() {
             ))}
           </Columna>
         )}
-      </Box>
+        </Box>
+      </Collapse>
     </Box>
   )
 }
