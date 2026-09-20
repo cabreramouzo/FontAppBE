@@ -471,11 +471,15 @@ select:not([class*="Mui"]) {
 }
 
 /* Desktop filters occupy a separate bounded panel instead of extending the tools column
-   towards the compass, location and add controls in the lower-right corner. */
+   towards the compass, location and add controls in the lower-right corner. It sits right
+   next to the button that opens it: the tools column is at right:16px and each Fab is 48px
+   wide, so the panel's right edge goes just left of the column (16 + 48 + 10 gap = 74px),
+   and its top lines up with the tools button. A fixed right:190px left it floating detached,
+   well to the left of and below the button. */
 .map-filter-panel {
   position: absolute;
-  top: calc(72px + var(--alto-avisos));
-  right: 190px;
+  top: calc(12px + var(--alto-avisos));
+  right: 74px;
   z-index: 1000;
 }
 /* Chips de control estilo Material: pastilla, cristal esmerilado y elevación sutil. */
