@@ -2037,6 +2037,16 @@ export function MapPage() {
   function ciclaUbicacion() {
     trackInteraction('map_locate')
     if (modo === 'off') { locate(false); return }  // locate centra y deja 'follow'
+    // Ya ubicado: **recentra siempre en ti**, además de ciclar el modo. Antes solo
+    // recentraba el paso `off → follow` (dentro de `locate`); los pasos `follow → heading`
+    // y `heading → follow` cambiaban la orientación pero no movían el mapa. Si el mapa no
+    // había vuelto a `off` al moverlo —en escritorio, un zoom con rueda/trackpad puede
+    // quedar marcado como movimiento nuestro por una carrera con el seguimiento del GPS, y
+    // entonces no se cuenta como gesto—, el segundo toque ciclaba a «rumbo» sin recentrar y
+    // parecía que el botón no ubicaba (reportado en escritorio; en móvil el arrastre
+    // siempre resetea a `off`). Recentrar en cada toque es además lo que se espera del
+    // botón, como en Apple Maps.
+    if (me) setCentrame([...me])
     const siguiente = modoTrasToque(modo)
     setModo(siguiente)
     // Entrar en rumbo enciende el sensor (iOS lo exige desde este toque); salir de rumbo
