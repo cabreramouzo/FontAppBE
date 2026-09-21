@@ -1931,9 +1931,9 @@ export function FontDetailPage() {
                     // Corregir en el sitio, sin sacar a nadie de la ficha: lo que se
                     // arregla aquí es una errata, no se reescribe un texto largo.
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, my: 0.5 }}>
-                      <TextField
+                      <MentionInput
                         value={borradorEdicion}
-                        onChange={(e) => setBorradorEdicion(e.target.value)}
+                        onChange={setBorradorEdicion}
                         multiline minRows={2} maxRows={6} size="small" fullWidth autoFocus
                       />
                       <Box sx={{ display: 'flex', gap: 1 }}>
@@ -2035,10 +2035,10 @@ export function FontDetailPage() {
                   )}
                   {respondiendoA === r.id && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, my: 1 }}>
-                      {/* Con autocompletado de `@`: responder crea un comentario nuevo y el
-                          servidor avisa de las menciones (`MentionNotifier`), así que la caja
-                          debe sugerir nombres igual que la de comentar. La de editar no lo
-                          lleva: editar no vuelve a avisar. */}
+                      {/* Con autocompletado de `@`, igual que comentar y editar: responder
+                          crea un comentario nuevo y el servidor avisa de las menciones
+                          (`MentionNotifier`). Ojo: al editar el enlace de la mención sí se
+                          pinta, pero editar NO vuelve a avisar (ver `updateReport`). */}
                       <MentionInput
                         value={borradorRespuesta}
                         onChange={setBorradorRespuesta}
