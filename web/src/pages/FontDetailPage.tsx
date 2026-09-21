@@ -2035,9 +2035,13 @@ export function FontDetailPage() {
                   )}
                   {respondiendoA === r.id && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, my: 1 }}>
-                      <TextField
+                      {/* Con autocompletado de `@`: responder crea un comentario nuevo y el
+                          servidor avisa de las menciones (`MentionNotifier`), así que la caja
+                          debe sugerir nombres igual que la de comentar. La de editar no lo
+                          lleva: editar no vuelve a avisar. */}
+                      <MentionInput
                         value={borradorRespuesta}
-                        onChange={(e) => setBorradorRespuesta(e.target.value)}
+                        onChange={setBorradorRespuesta}
                         placeholder={t('report.replyPlaceholder')}
                         multiline minRows={2} maxRows={6} size="small" fullWidth autoFocus
                       />
