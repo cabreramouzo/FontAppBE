@@ -47,6 +47,12 @@ export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, ch
   const index = Math.max(0, photos.findIndex(photo => photo.key === selected))
   const current = photos[index]
   const latestPhoto = latestReviewPhoto(reviews)
+  // Todas las fotos, para que el visor a pantalla completa se deslice entre ellas igual
+  // que el carrusel. Mismo texto alternativo que la imagen del carrusel.
+  const galeria = photos.map(photo => ({
+    src: assetUrl(photo.image),
+    alt: `${nombreFuente(font, t)} — ${t(photo.review ? 'carousel.review' : 'carousel.cover')}`,
+  }))
 
   // Precarga las vecinas para que la que entra al deslizar ya esté en caché y no aparezca
   // en blanco a mitad de la transición.
@@ -152,7 +158,7 @@ export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, ch
           style={{ transform: pista(index) }}
           sx={{ display: 'flex', height: '100%', transition: TRANS, willChange: 'transform' }}
         >
-          {photos.map(photo => (
+          {photos.map((photo, i) => (
             <Box key={photo.key} sx={{ flex: '0 0 100%', height: '100%', minWidth: 0, position: 'relative', overflow: 'hidden' }}>
               {/* Las fotos suelen ser verticales y en una caja 4/3 dejarían franjas vacías a
                   los lados. En vez de recortar (perdería el caño), se rellenan las franjas
@@ -169,6 +175,8 @@ export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, ch
                   className="carousel-image"
                   src={assetUrl(photo.image)}
                   alt={`${nombreFuente(font, t)} — ${t(photo.review ? 'carousel.review' : 'carousel.cover')}`}
+                  gallery={galeria}
+                  galleryIndex={i}
                 />
               </Box>
             </Box>

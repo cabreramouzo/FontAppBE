@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
 import BrokenImageIcon from '@mui/icons-material/BrokenImageOutlined'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { useI18n } from '../i18n/I18nContext'
 
 // Imagen con carga diferida (lazy) que, al tocarla, se amplía en un visor a
@@ -18,7 +21,132 @@ import { useI18n } from '../i18n/I18nContext'
 // contexto y las reseñas de la columna de al lado se pintaban sobre la foto ampliada. El
 // arreglo no es subir el número —dentro de ese contexto no hay número que valga— sino
 // sacar el visor del árbol. Así queda inmune a cualquier contenedor futuro.
-export function ZoomableImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+//
+// Cuando se le pasa una `gallery` (todas las fotos de la fuente), el visor a pantalla
+// completa es un CARRUSEL: se pasa de foto con el dedo, con las flechas o con el teclado,
+// sin salir del visor. Sin `gallery` enseña solo esta foto, como antes.
+
+type Slide = { src: string; alt: string }
+
+const TRANS = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+const pista = (i: number, dx = 0) => `translateX(calc(${-i * 100}% + ${dx}px))`
+
+// Visor a pantalla completa con deslizamiento. Misma técnica que el carrusel de la ficha:
+// la pista lleva todas las fotos en fila y se arrastra de forma IMPERATIVA (`trackRef`),
+// no por estado, para no repintar N fotos en cada `touchmove`. React solo se entera del
+// cambio de foto al soltar (`setI`).
+function Lightbox({ photos, start, onClose }: { photos: Slide[]; start: number; onClose: () => void }) {
+  const { t } = useI18n()
+  const [i, setI] = useState(start)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const drag = useRef<{ x: number; y: number; w: number; axis: 'h' | 'v' | null } | null>(null)
+  // Tras un arrastre horizontal, el `click` que viene detrás no debe cerrar el visor.
+  const suppressClickUntil = useRef(0)
+  const many = photos.length > 1
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft') setI(v => Math.max(0, v - 1))
+      else if (e.key === 'ArrowRight') setI(v => Math.min(photos.length - 1, v + 1))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [photos.length, onClose])
+
+  const move = (delta: number) => setI(v => Math.min(photos.length - 1, Math.max(0, v + delta)))
+
+  return createPortal(
+    <div
+      className="lightbox"
+      onClick={onClose}
+      onClickCapture={event => {
+        if (Date.now() < suppressClickUntil.current) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+      }}
+    >
+      <div
+        className="lightbox-viewport"
+        ref={viewportRef}
+        onTouchStart={event => {
+          if (!many || event.touches.length !== 1) { drag.current = null; return }
+          const point = event.touches[0]
+          drag.current = { x: point.clientX, y: point.clientY, w: viewportRef.current?.clientWidth ?? 1, axis: null }
+          if (trackRef.current) trackRef.current.style.transition = 'none'
+        }}
+        onTouchMove={event => {
+          const d = drag.current
+          if (!d) return
+          const point = event.touches[0]
+          const dx = point.clientX - d.x
+          const dy = point.clientY - d.y
+          if (!d.axis && Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+          if (!d.axis) d.axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+          if (d.axis !== 'h' || !trackRef.current) return
+          // Resistencia en los extremos: pasarse de la primera/última cede poco, para que
+          // se note el tope en vez de dejar un hueco negro que luego rebota.
+          let despl = dx
+          if ((i === 0 && dx > 0) || (i === photos.length - 1 && dx < 0)) despl = dx * 0.35
+          trackRef.current.style.transform = pista(i, despl)
+        }}
+        onTouchEnd={event => {
+          const d = drag.current
+          drag.current = null
+          if (trackRef.current) trackRef.current.style.transition = TRANS
+          if (!d || d.axis !== 'h') { if (trackRef.current) trackRef.current.style.transform = pista(i); return }
+          const dx = event.changedTouches[0].clientX - d.x
+          if (Math.abs(dx) > 10) suppressClickUntil.current = Date.now() + 500
+          const umbral = Math.min(80, d.w * 0.2)
+          const salto = Math.abs(dx) > umbral ? (dx < 0 ? 1 : -1) : 0
+          const destino = photos[i + salto] ? i + salto : i
+          if (trackRef.current) trackRef.current.style.transform = pista(destino)
+          if (destino !== i) setI(destino)
+        }}
+      >
+        <div className="lightbox-track" ref={trackRef} style={{ transform: pista(i) }}>
+          {photos.map((photo, n) => (
+            <div className="lightbox-slide" key={n}>
+              <img src={photo.src} alt={photo.alt} draggable={false} />
+            </div>
+          ))}
+        </div>
+      </div>
+      {many && <>
+        <IconButton
+          aria-label={t('carousel.previous')} disabled={i === 0}
+          onClick={event => { event.stopPropagation(); move(-1) }}
+          sx={{ position: 'fixed', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'common.white', bgcolor: 'rgba(0,0,0,0.4)', width: 48, height: 48, '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' }, '&.Mui-disabled': { visibility: 'hidden' } }}>
+          <ChevronLeftIcon />
+        </IconButton>
+        <IconButton
+          aria-label={t('carousel.next')} disabled={i === photos.length - 1}
+          onClick={event => { event.stopPropagation(); move(1) }}
+          sx={{ position: 'fixed', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'common.white', bgcolor: 'rgba(0,0,0,0.4)', width: 48, height: 48, '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' }, '&.Mui-disabled': { visibility: 'hidden' } }}>
+          <ChevronRightIcon />
+        </IconButton>
+        <Typography
+          variant="caption"
+          sx={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', color: 'common.white', bgcolor: 'rgba(0,0,0,0.4)', px: 1, py: 0.25, borderRadius: 1, pointerEvents: 'none' }}>
+          {i + 1} / {photos.length}
+        </Typography>
+      </>}
+    </div>,
+    document.body,
+  )
+}
+
+export function ZoomableImage({ src, alt, className, gallery, galleryIndex }: {
+  src: string
+  alt: string
+  className?: string
+  // Todas las fotos del grupo (portada + reseñas, o la galería): con esto el visor a
+  // pantalla completa se desliza entre ellas. Sin esto, enseña solo `src`.
+  gallery?: Slide[]
+  galleryIndex?: number
+}) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   /**
@@ -43,13 +171,6 @@ export function ZoomableImage({ src, alt, className }: { src: string; alt: strin
     return () => window.removeEventListener('online', vuelve)
   }, [roto])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open])
-
   if (roto) {
     // A propósito **no** se parece al hueco de «esta fuente no tiene foto»: ese invita a
     // poner una, y aquí la fuente sí tiene — solo que no está en este móvil. Confundirlos
@@ -73,6 +194,12 @@ export function ZoomableImage({ src, alt, className }: { src: string; alt: strin
     )
   }
 
+  // El visor recibe siempre una lista: la galería si viene, o solo esta foto.
+  const photos = gallery && gallery.length ? gallery : [{ src, alt }]
+  const start = gallery && gallery.length
+    ? (galleryIndex ?? Math.max(0, gallery.findIndex(p => p.src === src)))
+    : 0
+
   return (
     <>
       <img
@@ -94,12 +221,7 @@ export function ZoomableImage({ src, alt, className }: { src: string; alt: strin
         onClick={() => setOpen(true)}
         onError={() => setRoto(true)}
       />
-      {open && createPortal(
-        <div className="lightbox" onClick={() => setOpen(false)}>
-          <img src={src} alt={alt} />
-        </div>,
-        document.body,
-      )}
+      {open && <Lightbox photos={photos} start={start} onClose={() => setOpen(false)} />}
     </>
   )
 }
