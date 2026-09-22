@@ -30,11 +30,16 @@ const src = readFileSync(
   'utf8',
 )
 
-test('el botón se pinta dentro de un contenedor con alto reservado', () => {
-  // El componente devuelve un `<Box ref=...>` con `minHeight`: reserva el hueco para que no
-  // haya salto de layout mientras GSI carga, y es el contenedor donde vive el botón.
-  assert.match(src, /<Box\s+ref=\{box\}[^>]*minHeight:\s*44/,
-    'el botón de Google debe renderizarse en un <Box ref={box}> con minHeight (su contenedor)')
+test('Google loading content cannot change the reserved height or document overflow', () => {
+  const css = readFileSync(fileURLToPath(new URL('../src/index.css', import.meta.url)), 'utf8')
+  const slot = css.match(/\.google-sign-in-slot\s*\{([^}]+)\}/)?.[1] ?? ''
+  const host = css.match(/\.google-sign-in-host\s*\{([^}]+)\}/)?.[1] ?? ''
+  assert.match(src, /className="google-sign-in-slot"[\s\S]*ref=\{box\} className="google-sign-in-host"/)
+  // A delayed, unstyled iframe grew the former min-height slot by 106px in browser QA.
+  assert.match(slot, /(?:^|;)\s*height:\s*44px/)
+  assert.match(slot, /overflow:\s*clip/)
+  assert.match(slot, /position:\s*relative/)
+  assert.match(host, /position:\s*absolute/)
 })
 
 test('GSI pinta dentro de ese contenedor, no en document.body', () => {

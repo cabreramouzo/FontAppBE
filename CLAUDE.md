@@ -4257,3 +4257,14 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   never-checked fountains first. A non-zero value that rounds to zero is labelled as
   less than 1%, and zones without an `admin1` are grouped as “other regions” rather than
   the misleading “unknown region”.
+
+### Google sign-in loading layout (September 2026)
+
+Login and registration reserve a fixed 44px slot for the Google SDK, with an absolutely
+positioned host and clipped overflow. `min-height` alone lets an unstyled/loading iframe
+grow the form and footer before shrinking again. A controlled delayed-iframe check
+reproduced a 106px content jump with the old layout and zero with the fixed slot.
+The real SDK button was also checked locally; the reported physical-iPhone startup
+flicker still needs device confirmation. Do not change global viewport or safe-area
+rules to compensate for third-party loading sizes. Button width accounts for the SDK's
+20px iframe margins at mount; auth renders must never rebuild the button.

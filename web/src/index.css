@@ -1117,3 +1117,24 @@ select:not([class*="Mui"]) {
 @media (prefers-reduced-motion: reduce) {
   .lang-pulse { animation: none; }
 }
+
+/* GSI inserts and restyles an iframe asynchronously. A minimum height still allows
+   its initial intrinsic size to push the form/footer and disturb Safari's viewport.
+   Reserve the final slot and keep every SDK loading phase out of document flow.
+   The extra horizontal 20px passed to GSI accommodates its iframe focus margins. */
+.google-sign-in-slot {
+  position: relative;
+  width: 100%;
+  height: 44px;
+  flex-shrink: 0;
+  overflow: clip;
+  contain: layout size;
+}
+.google-sign-in-host {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
