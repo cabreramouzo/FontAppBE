@@ -91,10 +91,11 @@ function Lightbox({ photos, start, onClose }: { photos: Slide[]; start: number; 
           if (!d.axis && Math.abs(dx) < 6 && Math.abs(dy) < 6) return
           if (!d.axis) d.axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
           if (d.axis === 'v') {
-            // Arrastre vertical: la foto sigue al dedo y el fondo se aclara con la distancia,
-            // para que se vea que soltando se cierra.
-            if (viewportRef.current) viewportRef.current.style.transform = `translateY(${dy}px)`
-            if (rootRef.current) rootRef.current.style.opacity = String(Math.max(0.3, 1 - Math.abs(dy) / 500))
+            // Modo cierre: la foto sigue al dedo en los DOS ejes (así el gesto vale en
+            // diagonal, no solo recto) y el fondo se aclara con la distancia, para que se
+            // vea que soltando se cierra.
+            if (viewportRef.current) viewportRef.current.style.transform = `translate(${dx}px, ${dy}px)`
+            if (rootRef.current) rootRef.current.style.opacity = String(Math.max(0.3, 1 - Math.hypot(dx, dy) / 500))
             return
           }
           // Horizontal solo tiene sentido con más de una foto.
@@ -113,8 +114,9 @@ function Lightbox({ photos, start, onClose }: { photos: Slide[]; start: number; 
           if (!d) return
           if (d.axis === 'v') {
             const dy = event.changedTouches[0].clientY - d.y
-            if (Math.abs(dy) > 10) suppressClickUntil.current = Date.now() + 500
-            if (Math.abs(dy) > CIERRE_V) { onClose(); return }
+            const dx = event.changedTouches[0].clientX - d.x
+            if (Math.hypot(dx, dy) > 10) suppressClickUntil.current = Date.now() + 500
+            if (Math.hypot(dx, dy) > CIERRE_V) { onClose(); return }
             // No llega: vuelve a su sitio.
             if (viewportRef.current) viewportRef.current.style.transform = ''
             if (rootRef.current) rootRef.current.style.opacity = ''
