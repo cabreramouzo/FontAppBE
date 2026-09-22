@@ -4,15 +4,17 @@ Genera un cartell per poble a partir de `cartell-a5.html`, cadascun amb el seu c
 (`fontapp.net/?p=castellcir`). Així saps quin cartell ha portat cada usuari: al panell
 d'administració, secció "D'on venen (cartells)".
 
-Per defecte genera el cartell original, que gasta poca tinta. `--marketing` genera una
+Per defecte genera el cartell A5 original, que gasta poca tinta. `--marketing` genera una
 variant independent del mateix disseny amb la il·lustració de FontApp a la capçalera.
-No sobreescriu mai
-els cartells originals.
+`--mini` genera un full A4 amb SIS targetes idèntiques (2×3) per retallar: text mínim, QR
+gran i poca tinta, pensat per repartir a mà i posar als parabrises en trobades de la FEEC.
+Cap opció sobreescriu els cartells de les altres (cada una té la seva carpeta).
 
 Ús:
     pip3 install segno
     python3 flyer/genera-cartells.py castellcir moia lestany calders
     python3 flyer/genera-cartells.py --marketing castellcir moia
+    python3 flyer/genera-cartells.py --mini feec        # 6 targetes A4 amb ?p=feec
 
 Deixa els originals a `flyer/pobles/cartell-<codi>.html` i els de màrqueting a
 `flyer/pobles-marketing/cartell-<codi>.html`. Per convertir-los a PDF, sense
@@ -47,9 +49,11 @@ BASE = "https://fontapp.net"
 ARREL = pathlib.Path(__file__).parent
 PLANTILLA = ARREL / "cartell-a5.html"
 PLANTILLA_MARKETING = ARREL / "cartell-a5-marketing.html"
+PLANTILLA_MINI = ARREL / "cartell-mini.html"
 IMATGE_MARKETING = ARREL.parent / "web" / "public" / "welcome.jpg"
 SORTIDA = ARREL / "pobles"
 SORTIDA_MARKETING = ARREL / "pobles-marketing"
+SORTIDA_MINI = ARREL / "pobles-mini"
 
 
 def qr_svg(url: str) -> str:
@@ -82,17 +86,20 @@ def imatge_data_uri(ruta: pathlib.Path) -> str:
     return "data:image/jpeg;base64," + base64.b64encode(ruta.read_bytes()).decode("ascii")
 
 
-def genera(codi: str, marketing: bool = False) -> pathlib.Path:
+def genera(codi: str, marketing: bool = False, mini: bool = False) -> pathlib.Path:
     url = f"{BASE}/?p={codi}"
-    plantilla = (PLANTILLA_MARKETING if marketing else PLANTILLA).read_text(encoding="utf-8")
+    plantilla_fitxer = PLANTILLA_MINI if mini else (PLANTILLA_MARKETING if marketing else PLANTILLA)
+    plantilla = plantilla_fitxer.read_text(encoding="utf-8")
 
-    # 1) Substitueix el QR (l'únic <svg> amb aquest viewBox dins del bloc del codi).
+    # 1) Substitueix el QR. El cartell A5 en té un; el full mini en té SIS (una targeta per
+    #    retallar), i totes duen el mateix codi, així que aquí es reemplacen tots
+    #    (`count=0`) i no només el primer.
     nou_qr = qr_svg(url)
     plantilla = re.sub(
         r'<svg xmlns="http://www\.w3\.org/2000/svg" viewBox="0 0 290 290">.*?</svg>',
         lambda _: nou_qr,
         plantilla,
-        count=1,
+        count=0 if mini else 1,
         flags=re.S,
     )
     if marketing:
@@ -102,7 +109,7 @@ def genera(codi: str, marketing: bool = False) -> pathlib.Path:
     # el copia malament acaba a una pàgina que no existeix. Es perd l'atribució de qui
     # escriu l'adreça a mà — assumit: són molt pocs comparats amb els que escanegen.
 
-    sortida = SORTIDA_MARKETING if marketing else SORTIDA
+    sortida = SORTIDA_MINI if mini else (SORTIDA_MARKETING if marketing else SORTIDA)
     sortida.mkdir(exist_ok=True)
     desti = sortida / f"cartell-{codi}.html"
     desti.write_text(plantilla, encoding="utf-8")
@@ -112,15 +119,19 @@ def genera(codi: str, marketing: bool = False) -> pathlib.Path:
 if __name__ == "__main__":
     arguments = sys.argv[1:]
     marketing = "--marketing" in arguments
-    desconegudes = [a for a in arguments if a.startswith("--") and a != "--marketing"]
+    mini = "--mini" in arguments
+    desconegudes = [a for a in arguments if a.startswith("--") and a not in ("--marketing", "--mini")]
     if desconegudes:
         sys.exit(f"Opció desconeguda: {desconegudes[0]}")
+    if marketing and mini:
+        sys.exit("--marketing i --mini són dissenys diferents: fes-los en dues passades.")
     codis = [c.strip().lower() for c in arguments if not c.startswith("--") and c.strip()]
     if not codis:
         sys.exit(
             "Digues els codis dels pobles. Exemple:\n"
             "  python3 flyer/genera-cartells.py castellcir moia\n"
-            "  python3 flyer/genera-cartells.py --marketing castellcir moia"
+            "  python3 flyer/genera-cartells.py --marketing castellcir moia\n"
+            "  python3 flyer/genera-cartells.py --mini feec        # 6 targetes per A4"
         )
     for codi in codis:
         # Mateixa neteja que fa el servidor: només lletres, números i guions.
@@ -128,4 +139,4 @@ if __name__ == "__main__":
         if not net:
             print(f"  ✗ «{codi}» no té cap caràcter vàlid, el salto")
             continue
-        print(f"  ✓ {genera(net, marketing).relative_to(ARREL.parent)}  →  {BASE}/?p={net}")
+        print(f"  ✓ {genera(net, marketing, mini).relative_to(ARREL.parent)}  →  {BASE}/?p={net}")

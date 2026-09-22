@@ -42,6 +42,7 @@ import tempfile
 ARREL = pathlib.Path(__file__).parent
 POBLES = ARREL / "pobles"
 POBLES_MARKETING = ARREL / "pobles-marketing"
+POBLES_MINI = ARREL / "pobles-mini"
 DECODIFICADOR = ARREL / "llegeix-qr.swift"
 
 NAVEGADORS = [
@@ -95,17 +96,24 @@ def compila_decodificador() -> pathlib.Path | None:
 def qr_de(pdf: pathlib.Path, eina: pathlib.Path) -> str | None:
     r = subprocess.run([str(eina), str(pdf)], capture_output=True, text=True)
     m = re.search(r"→ (\S+)", r.stdout)
-    return m.group(1) if m else None
+    # El full mini porta SIS QR idèntics i el decodificador els llista separats per comes
+    # (`url, url, …`); n'hi ha prou amb el primer, i sense la coma final.
+    return m.group(1).split(",")[0] if m else None
 
 
 def main() -> int:
     arguments = sys.argv[1:]
     marketing = "--marketing" in arguments
-    desconegudes = [a for a in arguments if a.startswith("--") and a != "--marketing"]
+    mini = "--mini" in arguments
+    desconegudes = [a for a in arguments if a.startswith("--") and a not in ("--marketing", "--mini")]
     if desconegudes:
         sys.exit(f"Opció desconeguda: {desconegudes[0]}")
+    if marketing and mini:
+        sys.exit("--marketing i --mini són dissenys diferents: fes-los en dues passades.")
+    # El full mini és A4 (6 targetes); els altres, A5. La comprovació de mida ho fa servir.
+    esperada = (210, 297) if mini else (148, 210)
     codis = [c.strip().lower() for c in arguments if not c.startswith("--") and c.strip()]
-    carpeta = POBLES_MARKETING if marketing else POBLES
+    carpeta = POBLES_MINI if mini else (POBLES_MARKETING if marketing else POBLES)
     if codis:
         htmls = [carpeta / f"cartell-{c}.html" for c in codis]
         if falten := [h for h in htmls if not h.is_file()]:
@@ -113,9 +121,8 @@ def main() -> int:
             sys.exit(f"No hi ha cartell per: {noms}\nGenera'l amb:  python3 flyer/genera-cartells.py {noms}")
     else:
         htmls = sorted(carpeta.glob("cartell-*.html"))
-        if (base := ARREL / "cartell-a5.html").is_file():
-            if not marketing:
-                htmls.insert(0, base)
+        if not marketing and not mini and (base := ARREL / "cartell-a5.html").is_file():
+            htmls.insert(0, base)
 
     chrome = navegador()
     eina = compila_decodificador()
@@ -129,8 +136,9 @@ def main() -> int:
         problemes = []
         if pagines != 1:
             problemes.append(f"{pagines} pàgines (el contingut no hi cap: Chrome retalla, no pagina)")
-        if not (147 <= ample <= 149 and 209 <= alt <= 211):
-            problemes.append(f"{ample:.0f}×{alt:.0f} mm, hauria de ser 148×210")
+        ew, eh = esperada
+        if not (ew - 1 <= ample <= ew + 1 and eh - 1 <= alt <= eh + 1):
+            problemes.append(f"{ample:.0f}×{alt:.0f} mm, hauria de ser {ew}×{eh}")
 
         codi = html.stem.replace("cartell-", "")
         destinacio = ""
@@ -140,8 +148,9 @@ def main() -> int:
                 problemes.append("el QR no es llegeix")
             else:
                 destinacio = f" → {url}"
-                # La plantilla base porta el QR sense codi, i està bé.
-                if html.parent == POBLES and not url.endswith(f"?p={codi}"):
+                # La plantilla base porta el QR sense codi, i està bé. Els pobles i els
+                # fulls mini sí que han de dur el seu ?p=codi.
+                if html.parent in (POBLES, POBLES_MINI) and not url.endswith(f"?p={codi}"):
                     problemes.append(f"el QR no porta ?p={codi}")
 
         if problemes:
@@ -150,7 +159,7 @@ def main() -> int:
             for p in problemes:
                 print(f"    {p}")
         else:
-            print(f"✓ {pdf.relative_to(ARREL.parent)}  ·  1 pàg · A5{destinacio}")
+            print(f"✓ {pdf.relative_to(ARREL.parent)}  ·  1 pàg · {'A4' if mini else 'A5'}{destinacio}")
 
     return 1 if errors else 0
 

@@ -2434,6 +2434,15 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   sin opción sigue siendo siempre el de bajo consumo de tinta y nunca se sobrescribe.
   La imagen se incrusta como data URI para que el HTML siga siendo un único archivo.
   `flyer/a-pdf.py --marketing <codis>` la convierte y valida igual que la original.
+- `flyer/genera-cartells.py --mini <codis>` genera un **A4 con SEIS tarjetas idénticas
+  (2×3) para recortar** (`cartell-mini.html` → `flyer/pobles-mini/`): texto mínimo, QR
+  grande y poca tinta, para repartir en mano y en parabrisas (p. ej. trobades de la FEEC).
+  Sale más barato que un A5 por pieza. Las seis llevan el mismo `?p=codi`, así que el
+  generador reemplaza los **seis** `<svg>` del QR (no solo el primero) y `a-pdf.py --mini`
+  valida que sea **una página A4 exacta** (Chrome recorta, no pagina) y que el QR lleve el
+  código. Ojo: con seis QR iguales el decodificador los lista separados por comas y
+  `qr_de` se queda con el primero. `--marketing` y `--mini` son diseños distintos y no se
+  combinan.
 - El código va **solo dentro del QR**: la dirección impresa es `fontapp.net` a secas,
   porque `fontapp.net/?p=castelltercol` no lo teclea nadie bien. Como no hay red de
   seguridad, `flyer/llegeix-qr.swift` decodifica los PDF con **Vision** (framework del
