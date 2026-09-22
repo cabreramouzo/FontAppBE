@@ -114,7 +114,7 @@ def main() -> int:
     esperada = (210, 297) if mini else (148, 210)
     codis = [c.strip().lower() for c in arguments if not c.startswith("--") and c.strip()]
     carpeta = POBLES_MINI if mini else (POBLES_MARKETING if marketing else POBLES)
-    if codis:
+    if codis and not mini:
         htmls = [carpeta / f"cartell-{c}.html" for c in codis]
         if falten := [h for h in htmls if not h.is_file()]:
             noms = ", ".join(h.stem.replace("cartell-", "") for h in falten)
@@ -148,10 +148,11 @@ def main() -> int:
                 problemes.append("el QR no es llegeix")
             else:
                 destinacio = f" → {url}"
-                # La plantilla base porta el QR sense codi, i està bé. Els pobles i els
-                # fulls mini sí que han de dur el seu ?p=codi.
-                if html.parent in (POBLES, POBLES_MINI) and not url.endswith(f"?p={codi}"):
-                    problemes.append(f"el QR no porta ?p={codi}")
+                # La plantilla base porta el QR sense codi, i està bé. El full mini apunta a
+                # la ruta curta `/cartell-mini`; els pobles, al seu `?p=codi`.
+                esperat = "/cartell-mini" if mini else (f"?p={codi}" if html.parent == POBLES else None)
+                if esperat and not url.endswith(esperat):
+                    problemes.append(f"el QR no porta {esperat}")
 
         if problemes:
             errors += 1

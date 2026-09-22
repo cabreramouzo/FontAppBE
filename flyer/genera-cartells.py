@@ -87,7 +87,10 @@ def imatge_data_uri(ruta: pathlib.Path) -> str:
 
 
 def genera(codi: str, marketing: bool = False, mini: bool = False) -> pathlib.Path:
-    url = f"{BASE}/?p={codi}"
+    # El full mini fa servir una ruta curta (`fontapp.net/cartell-mini` → `?p=cartell-mini`,
+    # a web/public/_redirects) en comptes del paràmetre llarg: el QR queda net i, si de cas,
+    # l'adreça es pot teclejar. La resta de cartells segueixen amb `?p=<codi>`.
+    url = f"{BASE}/cartell-mini" if mini else f"{BASE}/?p={codi}"
     plantilla_fitxer = PLANTILLA_MINI if mini else (PLANTILLA_MARKETING if marketing else PLANTILLA)
     plantilla = plantilla_fitxer.read_text(encoding="utf-8")
 
@@ -111,7 +114,7 @@ def genera(codi: str, marketing: bool = False, mini: bool = False) -> pathlib.Pa
 
     sortida = SORTIDA_MINI if mini else (SORTIDA_MARKETING if marketing else SORTIDA)
     sortida.mkdir(exist_ok=True)
-    desti = sortida / f"cartell-{codi}.html"
+    desti = sortida / ("cartell-mini.html" if mini else f"cartell-{codi}.html")
     desti.write_text(plantilla, encoding="utf-8")
     return desti
 
@@ -125,13 +128,18 @@ if __name__ == "__main__":
         sys.exit(f"Opció desconeguda: {desconegudes[0]}")
     if marketing and mini:
         sys.exit("--marketing i --mini són dissenys diferents: fes-los en dues passades.")
+    # El full mini és una peça única de campanya `cartell-mini` (no per poble): no cal codi.
+    if mini:
+        desti = genera("cartell-mini", mini=True)
+        print(f"  ✓ {desti.relative_to(ARREL.parent)}  →  {BASE}/cartell-mini")
+        sys.exit(0)
     codis = [c.strip().lower() for c in arguments if not c.startswith("--") and c.strip()]
     if not codis:
         sys.exit(
             "Digues els codis dels pobles. Exemple:\n"
             "  python3 flyer/genera-cartells.py castellcir moia\n"
             "  python3 flyer/genera-cartells.py --marketing castellcir moia\n"
-            "  python3 flyer/genera-cartells.py --mini feec        # 6 targetes per A4"
+            "  python3 flyer/genera-cartells.py --mini        # 6 targetes A4 (cartell-mini)"
         )
     for codi in codis:
         # Mateixa neteja que fa el servidor: només lletres, números i guions.

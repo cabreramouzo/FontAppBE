@@ -4,15 +4,18 @@
 <meta charset="utf-8">
 <title>FontApp — 6 targetes A4 (parabrisa / mà)</title>
 <style>
-  /* Full A4 amb 6 targetes idèntiques (2 columnes × 3 files) per retallar. Pensat per
-     repartir a mà i posar als parabrises en trobades de la FEEC: mínim text, QR gran i
-     poca tinta (blanc, negre i un blau). Cada targeta fa exactament 105×99 mm, així que
-     les sis omplen l'A4 sense sobrar res.
+  /* Full A4 amb 6 targetes idèntiques ALLARGADES (3 columnes × 2 files) per retallar.
+     Pensat per repartir a mà i posar als parabrises en trobades de la FEEC: mínim text,
+     QR gran i poca tinta (blanc, negre i un blau). Cada targeta fa exactament 70×148,5 mm
+     (vertical, tipus punt de llibre), així que les sis omplen l'A4 sense sobrar res.
+
+     El QR apunta a `fontapp.net/cartell-mini`, una ruta curta que redirigeix a
+     `?p=cartell-mini` (web/public/_redirects), en comptes del paràmetre llarg.
 
      COMPTE (com la resta de cartells): Chrome NO pagina, RETALLA. Si el contingut d'una
-     targeta passa dels 99 mm o la graella dels 297, la segona pàgina no apareix: es talla
-     i prou. `a-pdf.py` ho comprova (una pàgina, A4 exacte). El QR el posa
-     `genera-cartells.py`, que substitueix els SIS <svg> amb aquest viewBox pel codi. */
+     targeta passa dels 148,5 mm o la graella dels 297, la segona pàgina no apareix: es
+     talla i prou. `a-pdf.py --mini` ho comprova (una pàgina, A4 exacte). El QR el posa
+     `genera-cartells.py --mini`, que substitueix els SIS <svg> amb aquest viewBox. */
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -25,13 +28,13 @@
     width: 210mm;
     height: 297mm;
     display: grid;
-    grid-template-columns: repeat(2, 105mm);
-    grid-template-rows: repeat(3, 99mm);
+    grid-template-columns: repeat(3, 70mm);
+    grid-template-rows: repeat(2, 148.5mm);
   }
   .card {
-    width: 105mm;
-    height: 99mm;
-    padding: 7mm 6mm;
+    width: 70mm;
+    height: 148.5mm;
+    padding: 10mm 6mm;
     /* Guia de tall fina: no gasta tinta i diu per on tallar. */
     border: 0.2mm dashed #cbd5e1;
     overflow: hidden;
@@ -47,34 +50,33 @@
     line-height: 1;
   }
   .tit {
-    margin: 3mm 0 0;
-    font-size: 20pt;
+    margin: 5mm 0 0;
+    font-size: 19pt;
     font-weight: 900;
-    line-height: 1.02;
+    line-height: 1.03;
     letter-spacing: -0.4px;
   }
   .sub {
-    margin: 1.6mm 0 0;
-    font-size: 9pt;
-    line-height: 1.28;
+    margin: 2.5mm 0 0;
+    font-size: 8.5pt;
+    line-height: 1.3;
     color: #334155;
-    max-width: 82mm;
   }
   .qr {
     margin: auto 0;             /* centra el QR en l'espai que queda */
-    padding: 1.5mm;
+    padding: 2mm;
     border: 0.3mm solid #e2e8f0;
-    border-radius: 2mm;
+    border-radius: 2.5mm;
   }
-  .qr svg { width: 33mm; height: 33mm; display: block; }
-  .web { font-size: 15pt; font-weight: 900; line-height: 1; }
-  .cta { margin-top: 0.5mm; font-size: 8.5pt; color: #334155; }
-  .peu { margin-top: 1.6mm; font-size: 6.6pt; color: #64748b; line-height: 1.2; }
+  .qr svg { width: 42mm; height: 42mm; display: block; }
+  .web { font-size: 16pt; font-weight: 900; line-height: 1; }
+  .cta { margin-top: 1mm; font-size: 8.5pt; color: #334155; }
+  .peu { margin-top: 3mm; font-size: 6.8pt; color: #64748b; line-height: 1.25; }
 </style>
 </head>
 <body>
   <main class="full">
-    <!-- Sis targetes idèntiques. genera-cartells.py posa el mateix QR a totes sis. -->
+    <!-- Sis targetes idèntiques. genera-cartells.py --mini posa el mateix QR a totes sis. -->
     <div class="card">
       <div class="marca">💧 FontApp</div>
       <h1 class="tit">Aquesta font, raja?</h1>
