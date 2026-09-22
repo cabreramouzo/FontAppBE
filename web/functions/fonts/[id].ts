@@ -57,9 +57,12 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   let font: FontDTO
   try {
     const res = await fetch(`${api}/fonts/${id}`, {
-      // Cacheado en el borde: una ficha no cambia de un minuto a otro y así compartir un
-      // enlace muy visitado no se traduce en una petición al backend por visita.
-      cf: { cacheTtl: 300, cacheEverything: true },
+      // Cacheado en el borde 1 h (como pueblos y municipios): una ficha no cambia de un
+      // minuto a otro, y con miles de fichas crawlables cada re-crawl de una era un
+      // cache-miss = una consulta a Neon. Con 3600 s el re-crawl de las populares deja de
+      // despertar la base. El precio es que la tarjeta de compartir puede ir hasta 1 h
+      // desfasada, que para unas meta-etiquetas es irrelevante.
+      cf: { cacheTtl: 3600, cacheEverything: true },
     })
     if (!res.ok) return pagina
     font = await res.json()
