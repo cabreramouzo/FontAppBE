@@ -1331,27 +1331,52 @@ export function FontDetailPage() {
       ? t('confidence.disputed')
       : est ? t(`status.${est}`) : t('confidence.unverified')
     return (
-      <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 }, my: 1.5, textAlign: 'center' }}>
+      <Paper variant="outlined" sx={{ p: { xs: 1.25, md: 2 }, my: 1.5, textAlign: { xs: 'left', md: 'center' } }}>
         {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : (
-          <>
-            <Typography variant="overline" color="text.secondary" sx={{ display: 'block' }}>{t('detail.currentStatus')}</Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '56px minmax(0, 1fr)', md: 'minmax(0, 1fr)' },
+              columnGap: { xs: 1.5, md: 0 },
+              alignItems: 'center',
+            }}
+          >
+            <Typography
+              variant="overline" color="text.secondary"
+              sx={{ display: 'block', gridColumn: { xs: '2', md: '1' }, gridRow: '1', lineHeight: 1.4 }}
+            >
+              {t('detail.currentStatus')}
+            </Typography>
             <Box
               aria-hidden
               sx={{
-                width: { xs: 72, md: 96 }, height: { xs: 72, md: 96 },
-                mx: 'auto', my: { xs: 1, md: 1.5 }, borderRadius: '50%',
+                gridColumn: '1', gridRow: { xs: '1 / span 4', md: '2' },
+                width: { xs: 56, md: 96 }, height: { xs: 56, md: 96 },
+                mx: { md: 'auto' }, my: { md: 1.5 }, borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: { xs: '2.25rem', md: '3rem' }, lineHeight: 1,
+                fontSize: { xs: '1.75rem', md: '3rem' }, lineHeight: 1,
                 bgcolor: alpha(heroColor, 0.15), border: '3px solid', borderColor: heroColor,
               }}
             >
               {heroEmoji}
             </Box>
-            <Typography variant="h5" sx={{ fontWeight: 800 }}>{heroTexto}</Typography>
-            {confidenceEvidence.lastUpdate && <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="h5"
+              sx={{ gridColumn: { xs: '2', md: '1' }, gridRow: { xs: '2', md: '3' }, fontWeight: 800, fontSize: { xs: '1.125rem', md: '1.5rem' } }}
+            >
+              {heroTexto}
+            </Typography>
+            {confidenceEvidence.lastUpdate && <Typography
+              variant="body2" color="text.secondary"
+              sx={{ gridColumn: { xs: '2', md: '1' }, gridRow: { xs: '3', md: '4' } }}
+            >
               {timeAgo(confidenceEvidence.lastUpdate, t)}
             </Typography>}
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mt: 0.75 }}>
+            <Box sx={{
+              gridColumn: { xs: '2', md: '1' }, gridRow: { xs: '4', md: '5' },
+              display: 'inline-flex', alignItems: 'center', justifySelf: { md: 'center' },
+              gap: 0.5, mt: { xs: 0.25, md: 0.75 },
+            }}>
               {conflicto || !est
                 ? <Typography variant="body2" color="text.secondary">
                     {t(conflicto ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
@@ -1359,7 +1384,7 @@ export function FontDetailPage() {
                 : <ConfidenceChip evidence={confidenceEvidence} />}
               <ConfidenceHelpButton />
             </Box>
-          </>
+          </Box>
         )}
         {incluyeAguaCerca && nearbyWaterNotice}
       </Paper>
