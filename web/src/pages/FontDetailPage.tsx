@@ -1319,12 +1319,10 @@ export function FontDetailPage() {
   // El mismo resumen abre la ficha en móvil y encabeza la columna útil en escritorio.
   // Mantener una sola definición evita que el estado más importante de la fuente termine
   // expresándose de dos maneras distintas según el tamaño de pantalla.
-  // `protagonista`: la versión de escritorio, con el estado como un medallón —emoji grande
-  // y centrado, con el color del propio estado— para que la columna derecha lo lleas de un
-  // vistazo. En móvil el resumen ya va arriba del todo bajo el nombre, así que se queda
-  // compacto y alineado a la izquierda. El emoji y el color salen de `WATER_STATUS`; un
-  // conflicto usa el ámbar de aviso y «sin comprobar» el azul de las fuentes sin estado.
-  const resumenEstado = (incluyeAguaCerca: boolean, protagonista = false) => {
+  // El estado se presenta como el mismo medallón en escritorio y móvil: la gota y su color
+  // se reconocen antes que el texto. En móvil se reduce para no apropiarse de la pantalla.
+  // Un conflicto usa el ámbar de aviso y «sin comprobar» el azul de las fuentes sin estado.
+  const resumenEstado = (incluyeAguaCerca: boolean) => {
     const conflicto = confidenceEvidence.recentStatusConflict
     const est = conflicto ? null : confidenceEvidence.lastWaterStatus
     const heroEmoji = conflicto ? '⚠️' : (est ? (WATER_STATUS[est]?.emoji ?? '❔') : '❔')
@@ -1333,16 +1331,17 @@ export function FontDetailPage() {
       ? t('confidence.disputed')
       : est ? t(`status.${est}`) : t('confidence.unverified')
     return (
-      <Paper variant="outlined" sx={{ p: protagonista ? 2 : 1.5, my: 1.5, ...(protagonista && { textAlign: 'center' }) }}>
-        {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : protagonista ? (
+      <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 }, my: 1.5, textAlign: 'center' }}>
+        {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : (
           <>
             <Typography variant="overline" color="text.secondary" sx={{ display: 'block' }}>{t('detail.currentStatus')}</Typography>
             <Box
               aria-hidden
               sx={{
-                width: 96, height: 96, mx: 'auto', my: 1.5, borderRadius: '50%',
+                width: { xs: 72, md: 96 }, height: { xs: 72, md: 96 },
+                mx: 'auto', my: { xs: 1, md: 1.5 }, borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '3rem', lineHeight: 1,
+                fontSize: { xs: '2.25rem', md: '3rem' }, lineHeight: 1,
                 bgcolor: alpha(heroColor, 0.15), border: '3px solid', borderColor: heroColor,
               }}
             >
@@ -1361,35 +1360,7 @@ export function FontDetailPage() {
               <ConfidenceHelpButton />
             </Box>
           </>
-        ) : (
-          <>
-            <Typography variant="overline">{t('detail.currentStatus')}</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {conflicto
-                ? t('confidence.disputed')
-                : est
-                  ? `${WATER_STATUS[est]?.emoji ?? ''} ${t(`status.${est}`)}`
-                  : t('confidence.unverified')}
-            </Typography>
-            {confidenceEvidence.lastUpdate && <Typography variant="body2" color="text.secondary">
-              {timeAgo(confidenceEvidence.lastUpdate, t)}
-            </Typography>}
-            <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-              {conflicto || !est
-                ? <Typography variant="body2" color="text.secondary">
-                    {t(conflicto ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
-                  </Typography>
-                : <ConfidenceChip evidence={confidenceEvidence} />}
-              <ConfidenceHelpButton />
-            </Box>
-          </>
         )}
-        <Button fullWidth variant="contained" disableElevation startIcon={<DirectionsIcon />}
-          sx={{ mt: protagonista ? 2 : 1 }} target="_blank" rel="noreferrer"
-          href={`https://www.google.com/maps/dir/?api=1&destination=${font.latitude},${font.longitude}`}
-          onClick={() => trackInteraction('font_directions')}>
-          {t('detail.directions')}
-        </Button>
         {incluyeAguaCerca && nearbyWaterNotice}
       </Paper>
     )
@@ -1731,7 +1702,7 @@ export function FontDetailPage() {
             {/* En una sola columna las acciones siguen a la foto. En escritorio viven en
                 el panel derecho: dejarlas aquí obligaba a bajar toda la fotografía para
                 hacer algo con la fuente y dejaba ese panel prácticamente vacío. */}
-            {!dosColumnas && <LocationActions font={font} showDirections={!isMobile} />}
+            {!dosColumnas && <LocationActions font={font} />}
             {!dosColumnas && avg != null && (
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><StarRating value={avg} size={20} /> <Typography>{avg.toFixed(1)} ({rated.length})</Typography></Stack>
             )}
@@ -1743,7 +1714,7 @@ export function FontDetailPage() {
 
       {!editing && dosColumnas && (
         <Box sx={{ gridColumn: '2', minWidth: 0 }}>
-          {resumenEstado(false, true)}
+          {resumenEstado(false)}
           {/* La columna derecha reúne lo que sirve para decidir y actuar. Es una tarjeta
               compacta, no un panel desplazable: toda la ficha conserva un único scroll. */}
           <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
@@ -1753,7 +1724,7 @@ export function FontDetailPage() {
                 <Typography>{avg.toFixed(1)} ({rated.length})</Typography>
               </Stack>
             )}
-            <LocationActions font={font} showDirections={false} />
+            <LocationActions font={font} />
           </Paper>
           {insignias}
           {fichaTecnica}
