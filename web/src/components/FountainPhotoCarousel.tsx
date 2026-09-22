@@ -181,10 +181,15 @@ export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, ch
           </Typography>}
           {photos.length > 1 && <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>{index + 1} / {photos.length}</Typography>}
         </Stack>
-        {review && <Stack direction="row" sx={{ mt: 0.5, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-          {review.username && <Link component={RouterLink} to={`/users/${encodeURIComponent(review.username)}`} variant="body2">@{review.username}</Link>}
-          {status && <Typography variant="caption" color="text.secondary">{t('carousel.reportedStatus')}: {status.emoji} {t(`status.${status.key}`)}</Typography>}
-        </Stack>}
+        {/* Se reserva siempre el hueco de la línea de la reseña (usuario + estado) aunque
+            la foto sea la portada y no la tenga: si no, al deslizar de la portada a una
+            reseña esa línea aparece y empuja los botones de abajo con un salto. */}
+        <Box sx={{ mt: 0.5, minHeight: 24 }}>
+          {review && <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+            {review.username && <Link component={RouterLink} to={`/users/${encodeURIComponent(review.username)}`} variant="body2">@{review.username}</Link>}
+            {status && <Typography variant="caption" color="text.secondary">{t('carousel.reportedStatus')}: {status.emoji} {t(`status.${status.key}`)}</Typography>}
+          </Stack>}
+        </Box>
       </Box>
       {latestPhoto && latestPhoto !== current.key && <Button size="small" onClick={() => setSelected(latestPhoto)} sx={{ mt: 0.5 }}>{t('carousel.latest')}</Button>}
       <PhotoExifNote image={current.image} lat={font.latitude} long={font.longitude} />
