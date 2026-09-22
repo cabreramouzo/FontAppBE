@@ -153,12 +153,24 @@ export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, ch
           sx={{ display: 'flex', height: '100%', transition: TRANS, willChange: 'transform' }}
         >
           {photos.map(photo => (
-            <Box key={photo.key} sx={{ flex: '0 0 100%', height: '100%', minWidth: 0 }}>
-              <ZoomableImage
-                className="carousel-image"
-                src={assetUrl(photo.image)}
-                alt={`${nombreFuente(font, t)} — ${t(photo.review ? 'carousel.review' : 'carousel.cover')}`}
-              />
+            <Box key={photo.key} sx={{ flex: '0 0 100%', height: '100%', minWidth: 0, position: 'relative', overflow: 'hidden' }}>
+              {/* Las fotos suelen ser verticales y en una caja 4/3 dejarían franjas vacías a
+                  los lados. En vez de recortar (perdería el caño), se rellenan las franjas
+                  con la MISMA foto borrosa por detrás —la del navegador ya está en caché—,
+                  como Instagram. La nítida va `contain` encima. */}
+              <Box aria-hidden sx={{
+                position: 'absolute', inset: 0, zIndex: 0,
+                backgroundImage: `url("${assetUrl(photo.image)}")`,
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                filter: 'blur(22px)', transform: 'scale(1.2)',
+              }} />
+              <Box sx={{ position: 'relative', zIndex: 1, height: '100%' }}>
+                <ZoomableImage
+                  className="carousel-image"
+                  src={assetUrl(photo.image)}
+                  alt={`${nombreFuente(font, t)} — ${t(photo.review ? 'carousel.review' : 'carousel.cover')}`}
+                />
+              </Box>
             </Box>
           ))}
         </Box>
