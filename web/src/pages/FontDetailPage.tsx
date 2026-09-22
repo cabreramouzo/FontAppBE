@@ -99,6 +99,7 @@ import { fuenteDe } from '../lib/zonaOffline'
 import { fuenteVista } from '../lib/fuentesVistas'
 import { zonaGuardada } from '../lib/zonaAlmacen'
 import { PhotoExifNote } from '../components/PhotoExifNote'
+import { FountainPhotoCarousel } from '../components/FountainPhotoCarousel'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { nombreFuente } from '../lib/fontName'
 import { prepararFoto } from '../lib/image'
@@ -1609,15 +1610,16 @@ export function FontDetailPage() {
                 </Stack>
               )
             })()}
+            {!font.image && comments.some(comment => comment.image) && (
+              <FountainPhotoCarousel key={font.id} font={font} reviews={comments} canPromote={puedeAscenderFoto} onChanged={load} />
+            )}
             {font.image ? (
-              <Box>
+              <FountainPhotoCarousel key={font.id} font={font} reviews={comments} canPromote={puedeAscenderFoto} onChanged={load}>
                 {photoRemoval?.canUndo && (
                   <Alert severity="success" action={<Button color="inherit" size="small" onClick={undoOwnPhoto}>{t('form.undo')}</Button>} sx={{ mb: 1 }}>
                     {t('image.photoAddedUndo')}
                   </Alert>
                 )}
-                <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={nombreFuente(font, t)} />
-                <PhotoExifNote image={font.image} lat={font.latitude} long={font.longitude} />
                 {user && (user.isAdmin || font.creator?.id === user.id) && (
                   <Box>
                     <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={removeFontPhoto}>{t('image.remove')}</Button>
@@ -1635,7 +1637,7 @@ export function FontDetailPage() {
                     )}
                   </Box>
                 )}
-              </Box>
+              </FountainPhotoCarousel>
             ) : (
               // Antes, una fuente sin foto no enseñaba NADA aquí: ni un hueco. Nadie podía
               // deducir que faltaba algo ni que se podía arreglar, y por eso las fotos
@@ -1678,7 +1680,7 @@ export function FontDetailPage() {
               >
                 {subiendoFoto ? <CircularProgress size={22} /> : <PhotoCameraIcon color="disabled" />}
                 <Typography variant="body2" color="text.secondary">
-                  {subiendoFoto ? t('image.uploading') : t('detail.noPhotoYet')}
+                  {subiendoFoto ? t('image.uploading') : t(comments.some(comment => comment.image) ? 'carousel.noCover' : 'detail.noPhotoYet')}
                 </Typography>
                 {user && !subiendoFoto && (
                   <>

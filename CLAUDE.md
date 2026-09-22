@@ -1888,6 +1888,15 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   lo habría vuelto fácil de encontrar.
 
 ## Fotos de una fuente
+- The detail photo carousel keeps the existing cover first and follows it with review
+  photos ordered by review creation date. It uses the comments already loaded by the
+  detail page, not the secondary-photo endpoint. Only the active slide is mounted and
+  the next image is prefetched; there is no autoplay. Labels distinguish the cover from
+  a review and show the review date, author and reported water status.
+- A shortcut opens the latest review’s photo only when that latest review has an image
+  and was created within 30 days. A newer photo-less review hides the shortcut, and
+  confirmations never refresh a photo’s age. Cover replacement remains manual with
+  existing permissions; cover-removal controls appear only on the cover slide.
 - La **portada** sigue en `fonts.image`, una columna. Las demás viven en `font_photos`
   (`CreateFontPhoto`) y se piden **solo al abrir «Otras fotos»** (`GET /fonts/:id/photos`
   → `FontGallery.tsx`). Ni siquiera hay contador en la ficha: saber cuántas hay costaría

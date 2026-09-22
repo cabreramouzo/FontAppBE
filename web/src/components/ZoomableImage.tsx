@@ -81,6 +81,15 @@ export function ZoomableImage({ src, alt, className }: { src: string; alt: strin
         src={src}
         alt={alt}
         loading="lazy"
+        role="button"
+        aria-label={`${t('image.enlarge')}${alt ? `: ${alt}` : ''}`}
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setOpen(true)
+          }
+        }}
         style={{ cursor: 'zoom-in' }}
         onClick={() => setOpen(true)}
         onError={() => setRoto(true)}
