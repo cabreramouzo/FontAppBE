@@ -38,9 +38,12 @@ const pista = (i: number, dx = 0) => `translateX(calc(${-i * 100}% + ${dx}px))`
 function Lightbox({ photos, start, onClose }: { photos: Slide[]; start: number; onClose: () => void }) {
   const { t } = useI18n()
   const [i, setI] = useState(start)
+  const rootRef = useRef<HTMLDivElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
   const drag = useRef<{ x: number; y: number; w: number; axis: 'h' | 'v' | null } | null>(null)
+  // Arrastrar arriba o abajo más de esto cierra el visor, como en otras apps de fotos.
+  const CIERRE_V = 90
   // Tras un arrastre horizontal, el `click` que viene detrás no debe cerrar el visor.
   const suppressClickUntil = useRef(0)
   const many = photos.length > 1
@@ -60,6 +63,7 @@ function Lightbox({ photos, start, onClose }: { photos: Slide[]; start: number; 
   return createPortal(
     <div
       className="lightbox"
+      ref={rootRef}
       onClick={onClose}
       onClickCapture={event => {
         if (Date.now() < suppressClickUntil.current) {
@@ -72,10 +76,11 @@ function Lightbox({ photos, start, onClose }: { photos: Slide[]; start: number; 
         className="lightbox-viewport"
         ref={viewportRef}
         onTouchStart={event => {
-          if (!many || event.touches.length !== 1) { drag.current = null; return }
+          if (event.touches.length !== 1) { drag.current = null; return }
           const point = event.touches[0]
           drag.current = { x: point.clientX, y: point.clientY, w: viewportRef.current?.clientWidth ?? 1, axis: null }
           if (trackRef.current) trackRef.current.style.transition = 'none'
+          if (viewportRef.current) viewportRef.current.style.transition = 'none'
         }}
         onTouchMove={event => {
           const d = drag.current
@@ -85,7 +90,15 @@ function Lightbox({ photos, start, onClose }: { photos: Slide[]; start: number; 
           const dy = point.clientY - d.y
           if (!d.axis && Math.abs(dx) < 6 && Math.abs(dy) < 6) return
           if (!d.axis) d.axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
-          if (d.axis !== 'h' || !trackRef.current) return
+          if (d.axis === 'v') {
+            // Arrastre vertical: la foto sigue al dedo y el fondo se aclara con la distancia,
+            // para que se vea que soltando se cierra.
+            if (viewportRef.current) viewportRef.current.style.transform = `translateY(${dy}px)`
+            if (rootRef.current) rootRef.current.style.opacity = String(Math.max(0.3, 1 - Math.abs(dy) / 500))
+            return
+          }
+          // Horizontal solo tiene sentido con más de una foto.
+          if (!many || !trackRef.current) return
           // Resistencia en los extremos: pasarse de la primera/última cede poco, para que
           // se note el tope en vez de dejar un hueco negro que luego rebota.
           let despl = dx
@@ -96,7 +109,18 @@ function Lightbox({ photos, start, onClose }: { photos: Slide[]; start: number; 
           const d = drag.current
           drag.current = null
           if (trackRef.current) trackRef.current.style.transition = TRANS
-          if (!d || d.axis !== 'h') { if (trackRef.current) trackRef.current.style.transform = pista(i); return }
+          if (viewportRef.current) viewportRef.current.style.transition = TRANS
+          if (!d) return
+          if (d.axis === 'v') {
+            const dy = event.changedTouches[0].clientY - d.y
+            if (Math.abs(dy) > 10) suppressClickUntil.current = Date.now() + 500
+            if (Math.abs(dy) > CIERRE_V) { onClose(); return }
+            // No llega: vuelve a su sitio.
+            if (viewportRef.current) viewportRef.current.style.transform = ''
+            if (rootRef.current) rootRef.current.style.opacity = ''
+            return
+          }
+          if (d.axis !== 'h') return
           const dx = event.changedTouches[0].clientX - d.x
           if (Math.abs(dx) > 10) suppressClickUntil.current = Date.now() + 500
           const umbral = Math.min(80, d.w * 0.2)
