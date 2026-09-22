@@ -1888,6 +1888,10 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   lo habría vuelto fácil de encontrar.
 
 ## Fotos de una fuente
+- Previous reviews start collapsed behind a button counting only the older reviews.
+  Opening mounts five cards, with further batches of five. Closing unmounts the cards
+  and their images; the latest review and update actions remain visible. Review JSON
+  still loads with the detail because the carousel and status summary need it.
 - The detail photo carousel keeps the existing cover first and follows it with review
   photos ordered by review creation date. It uses the comments already loaded by the
   detail page, not the secondary-photo endpoint. Only the active slide is mounted and

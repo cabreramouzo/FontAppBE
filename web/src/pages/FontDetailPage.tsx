@@ -43,6 +43,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined'
 import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import HideImageIcon from '@mui/icons-material/HideImageOutlined'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import type { CommentResponse, Drinkable, FavoriteStatus, Font, IncidentKind, ReportResponse, WaterSource } from '../api/types'
@@ -850,8 +852,9 @@ export function FontDetailPage() {
   const tierColor = TIER_COLOR[useTheme().palette.mode === 'dark' ? 'dark' : 'light']
   const [favorite, setFavState] = useState<FavoriteStatus | null>(null)
   const [savingFavorite, setSavingFavorite] = useState(false)
-  // Cuántas reseñas "Anteriores" se muestran (se amplía con "mostrar más").
-  const [shownRest, setShownRest] = useState(REVIEWS_PAGE)
+  // Keep history unmounted until requested, and closed when navigating to another fountain.
+  const [reviewHistory, setReviewHistory] = useState({ fontID: id, count: 0 })
+  const shownRest = reviewHistory.fontID === id ? reviewHistory.count : 0
   // Qué insignia se está mirando en grande, o `null`. Un solo visor para toda la ficha:
   // lo abren tanto los escudos de las líneas de creador y pionero como la sección de
   // abajo, y nunca hay dos abiertos a la vez.
@@ -1881,15 +1884,27 @@ export function FontDetailPage() {
           {rest.length > 0 && (
             <>
               <Divider sx={{ mt: 2 }} />
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
-              {rest.slice(0, shownRest).map((c) => (
-                <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
-              ))}
-              {rest.length > shownRest && (
-                <Button onClick={() => setShownRest((n) => n + REVIEWS_PAGE)} sx={{ mt: 1 }}>
-                  {t('detail.showMoreReviews', { n: rest.length - shownRest })}
-                </Button>
-              )}
+              <Button
+                aria-expanded={shownRest > 0}
+                aria-controls="previous-reviews"
+                endIcon={shownRest > 0 ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                onClick={() => setReviewHistory({ fontID: id, count: shownRest > 0 ? 0 : REVIEWS_PAGE })}
+                sx={{ mt: 1 }}
+              >
+                {t(shownRest > 0 ? 'detail.hidePreviousReviews' : 'detail.viewPreviousReviews', { n: rest.length })}
+              </Button>
+              <Box id="previous-reviews" hidden={shownRest === 0}>
+                {shownRest > 0 && <>
+                  {rest.slice(0, shownRest).map((c) => (
+                    <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
+                  ))}
+                  {rest.length > shownRest && (
+                    <Button onClick={() => setReviewHistory({ fontID: id, count: shownRest + REVIEWS_PAGE })} sx={{ mt: 1 }}>
+                      {t('detail.showMoreReviews', { n: Math.min(REVIEWS_PAGE, rest.length - shownRest) })}
+                    </Button>
+                  )}
+                </>}
+              </Box>
             </>
           )}
         </Box>

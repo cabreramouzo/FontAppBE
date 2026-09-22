@@ -17,6 +17,8 @@ export const LANGS: { code: Lang; label: string }[] = [
 type Dict = Record<string, string>
 
 const ca: Dict = {
+  'detail.viewPreviousReviews': "Mostra les ressenyes anteriors ({n})",
+  'detail.hidePreviousReviews': "Amaga les ressenyes anteriors ({n})",
   'image.enlarge': "Amplia la foto",
   'carousel.noCover': "Aquesta font encara no té foto de portada.",
   'carousel.label': "Fotos de la font",
@@ -1558,6 +1560,8 @@ const ca: Dict = {
 }
 
 const es: Dict = {
+  'detail.viewPreviousReviews': "Ver reseñas anteriores ({n})",
+  'detail.hidePreviousReviews': "Ocultar reseñas anteriores ({n})",
   'image.enlarge': "Ampliar foto",
   'carousel.noCover': "Esta fuente todavía no tiene foto de portada.",
   'carousel.label': "Fotos de la fuente",
@@ -3085,6 +3089,8 @@ const es: Dict = {
 }
 
 const it: Dict = {
+  'detail.viewPreviousReviews': "Vedi le recensioni precedenti ({n})",
+  'detail.hidePreviousReviews': "Nascondi le recensioni precedenti ({n})",
   'image.enlarge': "Ingrandisci la foto",
   'carousel.noCover': "Questa fontana non ha ancora una foto di copertina.",
   'carousel.label': "Foto della fontana",
@@ -4612,6 +4618,8 @@ const it: Dict = {
 }
 
 const gl: Dict = {
+  'detail.viewPreviousReviews': "Ver recensións anteriores ({n})",
+  'detail.hidePreviousReviews': "Ocultar recensións anteriores ({n})",
   'image.enlarge': "Ampliar foto",
   'carousel.noCover': "Esta fonte aínda non ten foto de portada.",
   'carousel.label': "Fotos da fonte",
@@ -6139,6 +6147,8 @@ const gl: Dict = {
 }
 
 const eu: Dict = {
+  'detail.viewPreviousReviews': "Ikusi aurreko iritziak ({n})",
+  'detail.hidePreviousReviews': "Ezkutatu aurreko iritziak ({n})",
   'image.enlarge': "Handitu argazkia",
   'carousel.noCover': "Iturri honek ez du azaleko argazkirik oraindik.",
   'carousel.label': "Iturriaren argazkiak",
@@ -7666,6 +7676,8 @@ const eu: Dict = {
 }
 
 const en: Dict = {
+  'detail.viewPreviousReviews': "View previous reviews ({n})",
+  'detail.hidePreviousReviews': "Hide previous reviews ({n})",
   'image.enlarge': "Enlarge photo",
   'carousel.noCover': "This fountain has no cover photo yet.",
   'carousel.label': "Fountain photos",
@@ -9193,6 +9205,8 @@ const en: Dict = {
 }
 
 const fr: Dict = {
+  'detail.viewPreviousReviews': "Voir les avis précédents ({n})",
+  'detail.hidePreviousReviews': "Masquer les avis précédents ({n})",
   'image.enlarge': "Agrandir la photo",
   'carousel.noCover': "Cette fontaine n’a pas encore de photo de couverture.",
   'carousel.label': "Photos de la fontaine",
@@ -10694,6 +10708,8 @@ const fr: Dict = {
 }
 
 const pt: Dict = {
+  'detail.viewPreviousReviews': "Ver avaliações anteriores ({n})",
+  'detail.hidePreviousReviews': "Ocultar avaliações anteriores ({n})",
   'image.enlarge': "Ampliar fotografia",
   'carousel.noCover': "Esta fonte ainda não tem fotografia de capa.",
   'carousel.label': "Fotografias da fonte",
