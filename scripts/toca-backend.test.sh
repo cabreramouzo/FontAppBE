@@ -25,7 +25,7 @@ comprueba() { # <esperado> <antes> <ahora> <qué es>
 # comprobación salieran del mismo sitio, el test no diría nada.
 esperado_de() {
   local sha="$1" hay
-  hay=$(git show --name-only --format= "$sha" | grep -Ev '^(web/|flyer/|docs/)|\.md$|^$' | head -1)
+  hay=$(git show --name-only --format= "$sha" | grep -Ev '^(web/|flyer/|docs/|import-data/)|\.md$|^$' | head -1)
   [ -n "$hay" ] && echo true || echo false
 }
 

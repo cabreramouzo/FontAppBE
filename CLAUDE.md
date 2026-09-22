@@ -2514,7 +2514,7 @@ el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayunta
   la rama, así que un commit de front desplegaba igual: 22 minutos medidos para no cambiar
   nada, un reinicio que se lleva el rate limit y las cachés en memoria, y —lo caro— volver
   a aplicar `fly.toml` y deshacer cualquier `fly scale` hecho a mano. El filtro va por
-  **exclusión** (`web/`, `flyer/`, `docs/`, `*.md`): con una lista de rutas de backend, una
+  **exclusión** (`web/`, `flyer/`, `docs/`, `import-data/`, `*.md`): con una lista de rutas de backend, una
   carpeta nueva sin apuntar dejaría de desplegarse en silencio. Ante la duda —rama nueva,
   force-push— se despliega.
 - `R2ImageStorage` (Soto) **está en producción y funcionando** (comprobado el 18/08/2026: las

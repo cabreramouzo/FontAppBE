@@ -29,5 +29,5 @@ fi
 ficheros=$(git diff --name-only "$antes" "$ahora")
 # `|| true` porque grep sale con 1 cuando no casa nada, y aquí eso es un resultado válido
 # (todo era de front), no un error.
-relevantes=$(printf '%s\n' "$ficheros" | grep -Ev '^(web/|flyer/|docs/)|\.md$' || true)
+relevantes=$(printf '%s\n' "$ficheros" | grep -Ev '^(web/|flyer/|docs/|import-data/)|\.md$' || true)
 [ -z "$relevantes" ] && echo "false" || echo "true"

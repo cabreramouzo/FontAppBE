@@ -369,6 +369,58 @@ las propiedades `admin` y `name`) trae las 16 regiones. Sin `--fallback-nearest 
 quedaban **12 sin clasificar**, las de costa — el mismo efecto de borde que ya se midió en
 Catalunya.
 
+#### Latinoamérica hispanohablante + Brasil (septiembre 2026)
+
+Una tanda de **18 países** de golpe (México y Chile ya estaban), siguiendo la receta de
+Chile. Los `*-osm-crudo.json` y `*-limpio.json` **no se versionan** (política del
+`.gitignore`: son grandes, caducan por su `timestamp_osm_base` y se regeneran con la
+consulta de aquí abajo); el global de Natural Earth (60 MB) y los `fronteras-*.geojson`
+combinados tampoco. Se descargan a `import-data/latam/` y se regeneran con
+`fronteras-subset.py`. Lo único versionado es esta receta y las cifras medidas.
+
+Cifras medidas (crudo → limpio), total **~4.250 fuentes nuevas**:
+
+| país | crudo→limpio | país | crudo→limpio |
+|---|---|---|---|
+| México | 636→593 | Venezuela | 78→58 |
+| Argentina | 886→710 | Nicaragua | 53→46 |
+| Perú | 577→540 | Panamá | 41→41 |
+| Ecuador | 443→412 | Guatemala | 35→31 |
+| Colombia | 371→336 | Rep. Dominicana | 34→30 |
+| Bolivia | 317→118 | Honduras | 20→20 |
+| Costa Rica | 77→72 | El Salvador | 8→7 |
+| Paraguay | 62→57 | Cuba | 151→139 |
+| Uruguay | 61→61 | Puerto Rico | 11→11 |
+| **Brasil** | 1655→1553 | | |
+
+Tres tropiezos que no se ven leyendo el código y cuestan una tarde:
+
+- **Overpass exige `User-Agent`.** Sin cabecera, `overpass-api.de` responde **406 Not
+  Acceptable** y `curl` deja un HTML de error donde esperabas JSON — bajas **0 nodos sin
+  ningún error claro**. Con `-A "FontApp import (correo)"` va. Los países grandes
+  (Colombia, Ecuador, Venezuela, Brasil) dan **504** (timeout del servidor público)
+  intermitente: reintentar con backoff. **Puerto Rico por `area["ISO3166-1"="PR"]` devuelve
+  0** —el área no resuelve, es territorio de EE. UU.—; se saca por bbox
+  `(17.85,-67.35,18.55,-65.15)`.
+- **`filtra --es` va SIEMPRE, Brasil incluido.** Las reglas base (tag `hot_spring`,
+  `drinking_water=no`, `spring pelado`, `access`) son independientes del idioma; las
+  palabras de `--es` son español pero las compartidas con portugués (TERMAS, BALNEÁRIO,
+  PISCINA, COOPERATIVA) sí pegan, y Brasil tiene termas (Caldas Novas) que hay que filtrar.
+  Lo que `--es` **no** ve en Brasil son términos de infraestructura en portugués (Estação
+  de Tratamento, Barragem, Saneamento/SANEAGO/SANEPAR, Captação, Reservatório): se colaron
+  **9** y se podaron a mano por `psql` tras importar (por `id`, con `created_by IS NULL`).
+  Es un 0,6 % — no compensaba un ruleset portugués. Ojo: «Fonte pública de Água Potável»,
+  «Bica (Água potável)», «Bebedouro …» y «Estação de Hidratação» son fuentes **de verdad**;
+  en portugués «água potável» describe una buena fuente, no una red. No las podes.
+- **Import sin `--dedupe`** (las cajas ISO son disjuntas, no tocan lo ya cargado ni entre
+  sí) y **`populate-regions --fallback-nearest 10`** para los puntos de costa. Con el subset
+  combinado de varios países, un punto en la frontera y fuera de los dos polígonos se lleva
+  al vecino más cercano aunque sea de otro país (medido: 1 de Argentina cayó en Paraguay);
+  es cosmético y afecta solo al agrupado de `/zones`.
+
+Pendiente: estos países **no están en la tabla `Admin1`**, así que en `/zones` se agrupan
+como «otras regiones». `region` funciona; es solo el agrupado. Se añaden cuando toque.
+
 #### Poblar país/región de las fuentes (`populate-regions`)
 
 `fonts.country` y `fonts.region` se rellenan **offline** por *point-in-polygon* contra un
