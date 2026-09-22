@@ -19,6 +19,12 @@ import { PhotoExifNote } from './PhotoExifNote'
 import { ZoomableImage } from './ZoomableImage'
 import { useToast } from './ToastContext'
 
+// Deslizamiento estilo Material: la pista lleva todas las fotos en fila y se mueve con
+// `translateX`. Antes se pintaba una sola foto y al pasar de foto se reemplazaba de golpe,
+// sin transición. Ahora el dedo arrastra la pista y al soltar hace «snap» a la vecina.
+const TRANS = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+const pista = (i: number, dx = 0) => `translateX(calc(${-i * 100}% + ${dx}px))`
+
 export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, children }: {
   font: Font
   reviews: CommentResponse[]
@@ -31,18 +37,24 @@ export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, ch
   const photos = fountainPhotos(font.image, reviews)
   const [selected, setSelected] = useState('cover')
   const [saving, setSaving] = useState(false)
-  const touch = useRef<{ x: number; y: number } | null>(null)
+  // El arrastre se aplica de forma IMPERATIVA sobre la pista (`trackRef`), no por estado:
+  // un `setState` por cada `touchmove` repintaría las N fotos 60 veces por segundo. React
+  // solo se entera del cambio de foto al soltar (`setSelected`).
+  const trackRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const drag = useRef<{ x: number; y: number; w: number; axis: 'h' | 'v' | null } | null>(null)
   const suppressClickUntil = useRef(0)
   const index = Math.max(0, photos.findIndex(photo => photo.key === selected))
   const current = photos[index]
-  const nextImage = photos[index + 1]?.image
   const latestPhoto = latestReviewPhoto(reviews)
 
+  // Precarga las vecinas para que la que entra al deslizar ya esté en caché y no aparezca
+  // en blanco a mitad de la transición.
   useEffect(() => {
-    if (!nextImage) return
-    const image = new Image()
-    image.src = assetUrl(nextImage)
-  }, [nextImage])
+    for (const vecina of [photos[index - 1]?.image, photos[index + 1]?.image]) {
+      if (vecina) { const img = new Image(); img.src = assetUrl(vecina) }
+    }
+  }, [index, photos])
 
   if (!current) return null
   const review = current.review
@@ -70,6 +82,7 @@ export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, ch
   return (
     <Box role="region" aria-label={t('carousel.label')} sx={{ my: 1, minWidth: 0 }}>
       <Box
+        ref={viewportRef}
         tabIndex={photos.length > 1 ? 0 : undefined}
         aria-label={t('carousel.label')}
         onKeyDown={event => {
@@ -82,20 +95,44 @@ export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, ch
         onTouchStart={event => {
           // Lightbox events bubble through the portal; do not swipe the underlying carousel.
           if (!event.currentTarget.contains(event.target as Node)) return
+          if (photos.length < 2 || event.touches.length !== 1) { drag.current = null; return }
           const point = event.touches[0]
-          touch.current = event.touches.length === 1 ? { x: point.clientX, y: point.clientY } : null
+          drag.current = { x: point.clientX, y: point.clientY, w: viewportRef.current?.clientWidth ?? 1, axis: null }
+          if (trackRef.current) trackRef.current.style.transition = 'none'
         }}
-        onTouchCancel={() => { touch.current = null }}
+        onTouchMove={event => {
+          const d = drag.current
+          if (!d) return
+          const point = event.touches[0]
+          const dx = point.clientX - d.x
+          const dy = point.clientY - d.y
+          if (!d.axis && Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+          // Se decide el eje una vez: horizontal → arrastramos la pista; vertical → es scroll
+          // de la página y no tocamos nada (`touchAction: pan-y` ya lo permite).
+          if (!d.axis) d.axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+          if (d.axis !== 'h' || !trackRef.current) return
+          // Resistencia en los extremos: arrastrar más allá de la primera/última cede poco,
+          // para que se note el tope en vez de dejar un hueco vacío que luego rebota.
+          let despl = dx
+          if ((index === 0 && dx > 0) || (index === photos.length - 1 && dx < 0)) despl = dx * 0.35
+          trackRef.current.style.transform = pista(index, despl)
+        }}
+        onTouchCancel={() => {
+          drag.current = null
+          if (trackRef.current) { trackRef.current.style.transition = TRANS; trackRef.current.style.transform = pista(index) }
+        }}
         onTouchEnd={event => {
-          if (!touch.current) return
-          const point = event.changedTouches[0]
-          const dx = point.clientX - touch.current.x
-          const dy = point.clientY - touch.current.y
-          touch.current = null
-          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-            suppressClickUntil.current = Date.now() + 500
-            move(dx < 0 ? 1 : -1)
-          }
+          const d = drag.current
+          drag.current = null
+          if (!d || d.axis !== 'h') return
+          const dx = event.changedTouches[0].clientX - d.x
+          if (Math.abs(dx) > 10) suppressClickUntil.current = Date.now() + 500
+          // Umbral: 20% del ancho, con un tope de 80 px para móviles anchos.
+          const umbral = Math.min(80, d.w * 0.2)
+          const salto = Math.abs(dx) > umbral ? (dx < 0 ? 1 : -1) : 0
+          const destino = photos[index + salto] ? index + salto : index
+          if (trackRef.current) { trackRef.current.style.transition = TRANS; trackRef.current.style.transform = pista(destino) }
+          if (destino !== index) setSelected(photos[destino].key)
         }}
         onClickCapture={event => {
           if (Date.now() < suppressClickUntil.current) {
@@ -110,7 +147,21 @@ export function FountainPhotoCarousel({ font, reviews, canPromote, onChanged, ch
           '& .carousel-image': { display: 'block', width: '100%', height: '100%', objectFit: 'contain', m: 0 },
         }}
       >
-        <ZoomableImage key={current.image} className="carousel-image" src={assetUrl(current.image)} alt={`${nombreFuente(font, t)} — ${label}`} />
+        <Box
+          ref={trackRef}
+          style={{ transform: pista(index) }}
+          sx={{ display: 'flex', height: '100%', transition: TRANS, willChange: 'transform' }}
+        >
+          {photos.map(photo => (
+            <Box key={photo.key} sx={{ flex: '0 0 100%', height: '100%', minWidth: 0 }}>
+              <ZoomableImage
+                className="carousel-image"
+                src={assetUrl(photo.image)}
+                alt={`${nombreFuente(font, t)} — ${t(photo.review ? 'carousel.review' : 'carousel.cover')}`}
+              />
+            </Box>
+          ))}
+        </Box>
         {photos.length > 1 && <>
           <IconButton aria-label={t('carousel.previous')} disabled={index === 0} onClick={() => move(-1)}
             sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', bgcolor: 'background.paper', width: 44, height: 44, '&:hover': { bgcolor: 'background.paper' }, '&.Mui-disabled': { visibility: 'hidden' } }}>
