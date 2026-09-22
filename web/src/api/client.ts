@@ -148,12 +148,17 @@ export interface UserActivityRankRow { id: string; username: string; createdAt: 
 export interface UserActivityRanking { mostRecent: UserActivityRankRow[]; leastRecent: UserActivityRankRow[]; untrackedCount: number }
 
 const ANALYTICS_SESSION = 'fontapp_analytics_session'
-function analyticsSession(): string {
+function analyticsSession(): string | null {
   try {
     let value = sessionStorage.getItem(ANALYTICS_SESSION)
-    if (!value) { value = crypto.randomUUID(); sessionStorage.setItem(ANALYTICS_SESSION, value) }
+    if (!value) {
+      // HTTP LAN previews do not expose randomUUID. Analytics must never block the app.
+      if (typeof globalThis.crypto?.randomUUID !== 'function') return null
+      value = crypto.randomUUID()
+      sessionStorage.setItem(ANALYTICS_SESSION, value)
+    }
     return value
-  } catch { return crypto.randomUUID() }
+  } catch { return null }
 }
 
 /**
@@ -162,8 +167,10 @@ function analyticsSession(): string {
  * ciegas. Comparte el UUID de pestaña con el resto de la analítica.
  */
 export function trackCampaignVisit(source: string) {
+  const session = analyticsSession()
+  if (!session) return Promise.resolve()
   return apiFetch<void>('/analytics/visit', {
-    method: 'POST', body: JSON.stringify({ source, session: analyticsSession() }),
+    method: 'POST', body: JSON.stringify({ source, session }),
   }).catch(() => {})
 }
 
@@ -173,8 +180,10 @@ export function trackInteraction(event: string) {
   // además al headless que declara `webdriver` con un UA de navegador normal. Los
   // crawlers falseaban el contador (medido: 96 % del recuento eran bots del sitemap).
   if (typeof navigator !== 'undefined' && navigator.webdriver) return Promise.resolve()
+  const session = analyticsSession()
+  if (!session) return Promise.resolve()
   return apiFetch<void>('/analytics', {
-    method: 'POST', body: JSON.stringify({ event, session: analyticsSession() }),
+    method: 'POST', body: JSON.stringify({ event, session }),
   }).catch(() => {})
 }
 

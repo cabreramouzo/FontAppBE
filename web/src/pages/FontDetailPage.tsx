@@ -43,6 +43,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined'
 import OutlinedFlagIcon from '@mui/icons-material/OutlinedFlag'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import HideImageIcon from '@mui/icons-material/HideImageOutlined'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import type { CommentResponse, Drinkable, FavoriteStatus, Font, IncidentKind, ReportResponse, WaterSource } from '../api/types'
@@ -99,6 +101,7 @@ import { fuenteDe } from '../lib/zonaOffline'
 import { fuenteVista } from '../lib/fuentesVistas'
 import { zonaGuardada } from '../lib/zonaAlmacen'
 import { PhotoExifNote } from '../components/PhotoExifNote'
+import { FountainPhotoCarousel } from '../components/FountainPhotoCarousel'
 import { ZoomableImage } from '../components/ZoomableImage'
 import { nombreFuente } from '../lib/fontName'
 import { prepararFoto } from '../lib/image'
@@ -849,8 +852,9 @@ export function FontDetailPage() {
   const tierColor = TIER_COLOR[useTheme().palette.mode === 'dark' ? 'dark' : 'light']
   const [favorite, setFavState] = useState<FavoriteStatus | null>(null)
   const [savingFavorite, setSavingFavorite] = useState(false)
-  // Cuántas reseñas "Anteriores" se muestran (se amplía con "mostrar más").
-  const [shownRest, setShownRest] = useState(REVIEWS_PAGE)
+  // Keep history unmounted until requested, and closed when navigating to another fountain.
+  const [reviewHistory, setReviewHistory] = useState({ fontID: id, count: 0 })
+  const shownRest = reviewHistory.fontID === id ? reviewHistory.count : 0
   // Qué insignia se está mirando en grande, o `null`. Un solo visor para toda la ficha:
   // lo abren tanto los escudos de las líneas de creador y pionero como la sección de
   // abajo, y nunca hay dos abiertos a la vez.
@@ -1609,15 +1613,16 @@ export function FontDetailPage() {
                 </Stack>
               )
             })()}
+            {!font.image && comments.some(comment => comment.image) && (
+              <FountainPhotoCarousel key={font.id} font={font} reviews={comments} canPromote={puedeAscenderFoto} onChanged={load} />
+            )}
             {font.image ? (
-              <Box>
+              <FountainPhotoCarousel key={font.id} font={font} reviews={comments} canPromote={puedeAscenderFoto} onChanged={load}>
                 {photoRemoval?.canUndo && (
                   <Alert severity="success" action={<Button color="inherit" size="small" onClick={undoOwnPhoto}>{t('form.undo')}</Button>} sx={{ mb: 1 }}>
                     {t('image.photoAddedUndo')}
                   </Alert>
                 )}
-                <ZoomableImage className="font-img" src={assetUrl(font.image)} alt={nombreFuente(font, t)} />
-                <PhotoExifNote image={font.image} lat={font.latitude} long={font.longitude} />
                 {user && (user.isAdmin || font.creator?.id === user.id) && (
                   <Box>
                     <Button size="small" color="error" startIcon={<HideImageIcon />} onClick={removeFontPhoto}>{t('image.remove')}</Button>
@@ -1635,7 +1640,7 @@ export function FontDetailPage() {
                     )}
                   </Box>
                 )}
-              </Box>
+              </FountainPhotoCarousel>
             ) : (
               // Antes, una fuente sin foto no enseñaba NADA aquí: ni un hueco. Nadie podía
               // deducir que faltaba algo ni que se podía arreglar, y por eso las fotos
@@ -1678,7 +1683,7 @@ export function FontDetailPage() {
               >
                 {subiendoFoto ? <CircularProgress size={22} /> : <PhotoCameraIcon color="disabled" />}
                 <Typography variant="body2" color="text.secondary">
-                  {subiendoFoto ? t('image.uploading') : t('detail.noPhotoYet')}
+                  {subiendoFoto ? t('image.uploading') : t(comments.some(comment => comment.image) ? 'carousel.noCover' : 'detail.noPhotoYet')}
                 </Typography>
                 {user && !subiendoFoto && (
                   <>
@@ -1879,15 +1884,27 @@ export function FontDetailPage() {
           {rest.length > 0 && (
             <>
               <Divider sx={{ mt: 2 }} />
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>{t('detail.previous')}</Typography>
-              {rest.slice(0, shownRest).map((c) => (
-                <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
-              ))}
-              {rest.length > shownRest && (
-                <Button onClick={() => setShownRest((n) => n + REVIEWS_PAGE)} sx={{ mt: 1 }}>
-                  {t('detail.showMoreReviews', { n: rest.length - shownRest })}
-                </Button>
-              )}
+              <Button
+                aria-expanded={shownRest > 0}
+                aria-controls="previous-reviews"
+                endIcon={shownRest > 0 ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                onClick={() => setReviewHistory({ fontID: id, count: shownRest > 0 ? 0 : REVIEWS_PAGE })}
+                sx={{ mt: 1 }}
+              >
+                {t(shownRest > 0 ? 'detail.hidePreviousReviews' : 'detail.viewPreviousReviews', { n: rest.length })}
+              </Button>
+              <Box id="previous-reviews" hidden={shownRest === 0}>
+                {shownRest > 0 && <>
+                  {rest.slice(0, shownRest).map((c) => (
+                    <ReviewCard key={c.id} c={c} canManage={user?.id === c.userID || !!user?.isAdmin} canFlag={!!user && user.id !== c.userID} canManageFont={puedeAscenderFoto} fontImage={font.image} fontPos={{ lat: font.latitude, long: font.longitude }} onChanged={load} />
+                  ))}
+                  {rest.length > shownRest && (
+                    <Button onClick={() => setReviewHistory({ fontID: id, count: shownRest + REVIEWS_PAGE })} sx={{ mt: 1 }}>
+                      {t('detail.showMoreReviews', { n: Math.min(REVIEWS_PAGE, rest.length - shownRest) })}
+                    </Button>
+                  )}
+                </>}
+              </Box>
             </>
           )}
         </Box>

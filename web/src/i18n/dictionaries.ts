@@ -17,6 +17,17 @@ export const LANGS: { code: Lang; label: string }[] = [
 type Dict = Record<string, string>
 
 const ca: Dict = {
+  'detail.viewPreviousReviews': "Mostra les ressenyes anteriors ({n})",
+  'detail.hidePreviousReviews': "Amaga les ressenyes anteriors ({n})",
+  'image.enlarge': "Amplia la foto",
+  'carousel.noCover': "Aquesta font encara no té foto de portada.",
+  'carousel.label': "Fotos de la font",
+  'carousel.cover': "Portada",
+  'carousel.review': "Ressenya",
+  'carousel.previous': "Foto anterior",
+  'carousel.next': "Foto següent",
+  'carousel.latest': "Veure la foto de l’última ressenya",
+  'carousel.reportedStatus': "Estat en aquesta ressenya",
   // Navegación / layout
   'nav.hello': 'Hola, {user}',
   'nav.logout': 'Surt',
@@ -1549,6 +1560,17 @@ const ca: Dict = {
 }
 
 const es: Dict = {
+  'detail.viewPreviousReviews': "Ver reseñas anteriores ({n})",
+  'detail.hidePreviousReviews': "Ocultar reseñas anteriores ({n})",
+  'image.enlarge': "Ampliar foto",
+  'carousel.noCover': "Esta fuente todavía no tiene foto de portada.",
+  'carousel.label': "Fotos de la fuente",
+  'carousel.cover': "Portada",
+  'carousel.review': "Reseña",
+  'carousel.previous': "Foto anterior",
+  'carousel.next': "Foto siguiente",
+  'carousel.latest': "Ver foto de la última reseña",
+  'carousel.reportedStatus': "Estado en esta reseña",
   'nav.hello': 'Hola, {user}',
   'nav.logout': 'Salir',
   'logout.confirmTitle': 'Cerrar sesión',
@@ -3067,6 +3089,17 @@ const es: Dict = {
 }
 
 const it: Dict = {
+  'detail.viewPreviousReviews': "Vedi le recensioni precedenti ({n})",
+  'detail.hidePreviousReviews': "Nascondi le recensioni precedenti ({n})",
+  'image.enlarge': "Ingrandisci la foto",
+  'carousel.noCover': "Questa fontana non ha ancora una foto di copertina.",
+  'carousel.label': "Foto della fontana",
+  'carousel.cover': "Copertina",
+  'carousel.review': "Recensione",
+  'carousel.previous': "Foto precedente",
+  'carousel.next': "Foto successiva",
+  'carousel.latest': "Vedi la foto dell’ultima recensione",
+  'carousel.reportedStatus': "Stato in questa recensione",
   'nav.hello': 'Ciao, {user}',
   'nav.logout': 'Esci',
   'logout.confirmTitle': 'Chiudere la sessione',
@@ -4585,6 +4618,17 @@ const it: Dict = {
 }
 
 const gl: Dict = {
+  'detail.viewPreviousReviews': "Ver recensións anteriores ({n})",
+  'detail.hidePreviousReviews': "Ocultar recensións anteriores ({n})",
+  'image.enlarge': "Ampliar foto",
+  'carousel.noCover': "Esta fonte aínda non ten foto de portada.",
+  'carousel.label': "Fotos da fonte",
+  'carousel.cover': "Portada",
+  'carousel.review': "Recensión",
+  'carousel.previous': "Foto anterior",
+  'carousel.next': "Foto seguinte",
+  'carousel.latest': "Ver a foto da última recensión",
+  'carousel.reportedStatus': "Estado nesta recensión",
   'nav.hello': 'Ola, {user}',
   'nav.logout': 'Saír',
   'logout.confirmTitle': 'Pechar sesión',
@@ -6103,6 +6147,17 @@ const gl: Dict = {
 }
 
 const eu: Dict = {
+  'detail.viewPreviousReviews': "Ikusi aurreko iritziak ({n})",
+  'detail.hidePreviousReviews': "Ezkutatu aurreko iritziak ({n})",
+  'image.enlarge': "Handitu argazkia",
+  'carousel.noCover': "Iturri honek ez du azaleko argazkirik oraindik.",
+  'carousel.label': "Iturriaren argazkiak",
+  'carousel.cover': "Azala",
+  'carousel.review': "Iritzia",
+  'carousel.previous': "Aurreko argazkia",
+  'carousel.next': "Hurrengo argazkia",
+  'carousel.latest': "Ikusi azken iritziaren argazkia",
+  'carousel.reportedStatus': "Iritzi honetako egoera",
   'nav.hello': 'Kaixo, {user}',
   'nav.logout': 'Irten',
   'logout.confirmTitle': 'Saioa itxi',
@@ -7621,6 +7676,17 @@ const eu: Dict = {
 }
 
 const en: Dict = {
+  'detail.viewPreviousReviews': "View previous reviews ({n})",
+  'detail.hidePreviousReviews': "Hide previous reviews ({n})",
+  'image.enlarge': "Enlarge photo",
+  'carousel.noCover': "This fountain has no cover photo yet.",
+  'carousel.label': "Fountain photos",
+  'carousel.cover': "Cover",
+  'carousel.review': "Review",
+  'carousel.previous': "Previous photo",
+  'carousel.next': "Next photo",
+  'carousel.latest': "View the latest review’s photo",
+  'carousel.reportedStatus': "Status in this review",
   'nav.hello': 'Hi, {user}',
   'nav.logout': 'Log out',
   'logout.confirmTitle': 'Log out',
@@ -9139,6 +9205,17 @@ const en: Dict = {
 }
 
 const fr: Dict = {
+  'detail.viewPreviousReviews': "Voir les avis précédents ({n})",
+  'detail.hidePreviousReviews': "Masquer les avis précédents ({n})",
+  'image.enlarge': "Agrandir la photo",
+  'carousel.noCover': "Cette fontaine n’a pas encore de photo de couverture.",
+  'carousel.label': "Photos de la fontaine",
+  'carousel.cover': "Couverture",
+  'carousel.review': "Avis",
+  'carousel.previous': "Photo précédente",
+  'carousel.next': "Photo suivante",
+  'carousel.latest': "Voir la photo du dernier avis",
+  'carousel.reportedStatus': "État dans cet avis",
   'nav.hello': "Bonjour, {user}",
   'nav.logout': "Se déconnecter",
   'logout.confirmTitle': "Se déconnecter",
@@ -10631,6 +10708,17 @@ const fr: Dict = {
 }
 
 const pt: Dict = {
+  'detail.viewPreviousReviews': "Ver avaliações anteriores ({n})",
+  'detail.hidePreviousReviews': "Ocultar avaliações anteriores ({n})",
+  'image.enlarge': "Ampliar fotografia",
+  'carousel.noCover': "Esta fonte ainda não tem fotografia de capa.",
+  'carousel.label': "Fotografias da fonte",
+  'carousel.cover': "Capa",
+  'carousel.review': "Avaliação",
+  'carousel.previous': "Fotografia anterior",
+  'carousel.next': "Fotografia seguinte",
+  'carousel.latest': "Ver a fotografia da última avaliação",
+  'carousel.reportedStatus': "Estado nesta avaliação",
   'nav.hello': 'Olá, {user}',
   'nav.logout': 'Sair',
   'logout.confirmTitle': 'Terminar sessão',
