@@ -10,6 +10,8 @@ import { useTurno, sesiones } from '../lib/asks'
 import { positionIfAllowed, askPosition } from '../lib/quietPosition'
 import { nearbyFonts, setFavorite, trackInteraction } from '../api/client'
 import type { FontSummary } from '../api/types'
+import { FreshnessChip } from './FreshnessChip'
+import { WATER_STATUS } from '../lib/waterStatus'
 import { constaAgua } from '../lib/confidence'
 import { firstFountainKind, type FirstFountainKind } from '../lib/firstFountain'
 import { haversineKm } from '../lib/geo'
@@ -73,7 +75,7 @@ export function FirstFountainWelcome() {
       const kind = firstFountainKind({
         waterKm: agua?.km ?? null, unknownKm: virgen?.km ?? null, anyKm: cerca?.km ?? null,
       })
-      const elegida = kind === 'gift' ? agua : kind === 'mission' ? virgen : kind === 'dry' ? cerca : null
+      const elegida = kind === 'gift' ? agua : kind === 'mission' ? virgen : kind === 'check' ? cerca : null
       setState({ phase: 'card', kind, nearest: elegida?.f ?? null, distanceKm: elegida?.km ?? 0 })
     } catch {
       // A network hiccup here is not worth a broken welcome: just don't show it.
@@ -86,7 +88,7 @@ export function FirstFountainWelcome() {
   const visible = useTurno('firstFountain', hayAlgo)
 
   useEffect(() => {
-    if (state?.phase === 'card') trackInteraction(`first_fountain_${state.kind}`)
+    if (state?.phase === 'card' && state.kind !== 'check') trackInteraction(`first_fountain_${state.kind}`)
   }, [state])
 
   function marcaVisto() {
@@ -161,22 +163,30 @@ export function FirstFountainWelcome() {
   const titulo =
     kind === 'gift' ? t('firstFountain.giftTitle', { dist: dist(distanceKm) })
     : kind === 'mission' ? t('firstFountain.missionTitle', { dist: dist(distanceKm) })
-    : kind === 'dry' ? t('firstFountain.dryTitle')
+    : kind === 'check' ? t('firstFountain.checkTitle')
     : t('firstFountain.exploreTitle')
   const cuerpo =
     kind === 'gift' ? t('firstFountain.giftBody')
     : kind === 'mission' ? t('firstFountain.missionBody')
-    : kind === 'dry' ? t('firstFountain.dryBody')
+    : kind === 'check' ? t('firstFountain.checkBody')
     : t('firstFountain.exploreBody')
 
   return (
     <Dialog open onClose={() => cierra()} maxWidth="xs" fullWidth>
       <DialogContent sx={{ textAlign: 'center', pt: 4 }}>
         <Typography sx={{ fontSize: 48, lineHeight: 1 }}>
-          {kind === 'gift' ? '💧' : kind === 'mission' ? '🔍' : kind === 'dry' ? '🚱' : '🗺️'}
+          {kind === 'gift' ? '💧' : kind === 'mission' ? '🔍' : kind === 'check' ? '🔎' : '🗺️'}
         </Typography>
         <Typography variant="h6" sx={{ fontWeight: 800, mt: 1 }}>{titulo}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cuerpo}</Typography>
+        {kind === 'check' && nearest && (
+          <Box sx={{ mt: 2 }}>
+            {nearest.lastWaterStatus && WATER_STATUS[nearest.lastWaterStatus] && (
+              <Typography variant="body2">{t(`status.${WATER_STATUS[nearest.lastWaterStatus].key}`)}</Typography>
+            )}
+            <FreshnessChip lastCheck={nearest.lastUpdate} />
+          </Box>
+        )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2, flexDirection: 'column', gap: 1 }}>
         {/* Give first: the primary action is what they came for. Ask second, quietly. */}

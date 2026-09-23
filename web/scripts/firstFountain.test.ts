@@ -13,9 +13,9 @@ test('no water nearby but an unchecked one is → mission', () => {
   assert.equal(firstFountainKind(near({ unknownKm: 0.6, anyKm: 0.6 })), 'mission')
 })
 
-test('the dry-fountain case: fountains nearby but all checked-and-dry → dry, not mission', () => {
+test('old water, unknown, dry, broken or conflicting reports must not imply a dry area', () => {
   // Nearest is dry (so neither waterKm nor unknownKm), but a fountain IS there.
-  assert.equal(firstFountainKind(near({ anyKm: 0.5 })), 'dry')
+  assert.equal(firstFountainKind(near({ anyKm: 0.5 })), 'check')
 })
 
 test('no fountains at all nearby → explore', () => {
@@ -29,5 +29,5 @@ test('everything beyond NEARBY_KM → explore', () => {
 test('exactly at the boundary counts as nearby', () => {
   assert.equal(firstFountainKind(near({ waterKm: NEARBY_KM, anyKm: NEARBY_KM })), 'gift')
   assert.equal(firstFountainKind(near({ unknownKm: NEARBY_KM, anyKm: NEARBY_KM })), 'mission')
-  assert.equal(firstFountainKind(near({ anyKm: NEARBY_KM })), 'dry')
+  assert.equal(firstFountainKind(near({ anyKm: NEARBY_KM })), 'check')
 })

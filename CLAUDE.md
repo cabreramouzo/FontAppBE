@@ -5,6 +5,12 @@ no tipografía), con usuarios, incidencias y reseñas de estado (estrellas / est
 El contrato real de la API está en [docs/api.md](docs/api.md); el brief original en [definitions.md](definitions.md).
 Las opciones y principios para financiar el proyecto están en [docs/monetizacion.md](docs/monetizacion.md);
 el plan de la vía territorial —la vista para ayuntamientos— en [docs/ayuntamientos.md](docs/ayuntamientos.md).
+La auditoría de producto y el plan de crecimiento de septiembre de 2026 están en
+[docs/producto-crecimiento-2026-09.md](docs/producto-crecimiento-2026-09.md).
+Su sección 13 contiene las tareas pendientes, el orden recomendado y los criterios de
+aceptación para retomarlas; son propuestas, no funcionalidades implementadas.
+La sección 14 compara PWA, Capacitor, React Native, Flutter y Swift/Kotlin con
+estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la inversión móvil.
 
 ## Stack
 - **Backend:** Swift 6.3 · Vapor 4 · Fluent + PostgreSQL · SwiftPM (sin proyecto Xcode).
