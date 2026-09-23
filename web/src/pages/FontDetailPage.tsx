@@ -123,7 +123,7 @@ import { SugerirDuplicado } from '../components/SugerirDuplicado'
 import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 import { ConfidenceChip } from '../components/ConfidenceChip'
-import { evidenceFromReports } from '../lib/confidence'
+import { confidenceOf, evidenceFromReports } from '../lib/confidence'
 import { rememberFountain } from '../lib/recentHistory'
 import { loginNext } from '../lib/nextParam'
 import { ConfidenceHelpButton } from '../components/ConfidenceHelp'
@@ -1340,6 +1340,13 @@ export function FontDetailPage() {
     const rotuloEstado = frescor.days !== null && frescor.days > 7
       ? t('detail.lastReportedStatus')
       : t('detail.currentStatus')
+    // Corroboración: cuántas voces recientes respaldan este parte, además de quien lo dio.
+    // Son las confirmaciones («sigue igual») más el resto de personas que lo reportaron.
+    // Solo se dice cuando el estado es `verified` (que es justo cuando hay respaldo) y hay
+    // al menos una: una etiqueta «lo confirma 1 persona» en todas no señalaría nada.
+    const respaldos = (confidenceEvidence.latestConfirmations ?? 0)
+      + Math.max(0, (confidenceEvidence.recentStatusReporters ?? 0) - 1)
+    const mostrarRespaldo = confidenceOf(confidenceEvidence) === 'verified' && respaldos > 0
     return (
       <Paper variant="outlined" sx={{ p: { xs: 1.25, md: 2 }, my: 1.5, textAlign: { xs: 'left', md: 'center' } }}>
         {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : (
@@ -1360,7 +1367,7 @@ export function FontDetailPage() {
             <Box
               aria-hidden
               sx={{
-                gridColumn: '1', gridRow: { xs: '1 / span 3', md: '2' },
+                gridColumn: '1', gridRow: { xs: `1 / span ${mostrarRespaldo ? 4 : 3}`, md: '2' },
                 width: { xs: 56, md: 96 }, height: { xs: 56, md: 96 },
                 mx: { md: 'auto' }, my: { md: 1.5 }, borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1397,6 +1404,12 @@ export function FontDetailPage() {
                 <ConfidenceHelpButton />
               </Box>
             </Box>
+            {mostrarRespaldo && <Typography
+              variant="body2" color="text.secondary"
+              sx={{ gridColumn: { xs: '2', md: '1' }, gridRow: { xs: '4', md: '5' }, mt: { md: 0.25 } }}
+            >
+              {t(respaldos === 1 ? 'detail.confirmedByOne' : 'detail.confirmedByMany', { n: respaldos })}
+            </Typography>}
           </Box>
         )}
         {incluyeAguaCerca && nearbyWaterNotice}
