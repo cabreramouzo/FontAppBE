@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { consumeFavorite, prepareFavorite } from '../lib/favoriteIntent'
 import { puedoConfirmarMiReseña } from '../lib/selfConfirm'
 import { reseñadaHacePoco } from '../lib/misResenas'
 import { capabilities, capabilityLevels } from '../lib/capabilities'
@@ -951,6 +952,28 @@ export function FontDetailPage() {
     load().catch((e) => setError(describeError(e, t)))
   }, [load, t])
 
+  const favoriteOwner = useRef(`${user?.id}:${id}`)
+  favoriteOwner.current = `${user?.id}:${id}`
+  useEffect(() => {
+    const token = searchParams.get('favorite')
+    if (!token || !user || !id || font?.id !== id || favorite === null) return
+    const clean = new URLSearchParams(searchParams)
+    clean.delete('favorite')
+    setSearchParams(clean, { replace: true })
+    let authorized = false
+    try { authorized = consumeFavorite(sessionStorage, id, token) } catch { /* no storage, no write */ }
+    if (!authorized) return
+    const owner = `${user.id}:${id}`
+    setSavingFavorite(true)
+    void setFavorite(id, true).then((saved) => {
+      if (favoriteOwner.current !== owner) return
+      setFavState(saved)
+      toast.show(t('favorite.saved'))
+    }).catch((error) => {
+      if (favoriteOwner.current === owner) setError(describeError(error, t))
+    }).finally(() => setSavingFavorite(false))
+  }, [searchParams, user, id, font?.id, favorite, setSearchParams, t, toast])
+
   // Retomar la reseña tras el login (`?review=<estado>`). Solo cuando ya hay sesión y la
   // ficha ha cargado: abre el formulario, siembra el estado y baja hasta él. Y limpia el
   // parámetro de la URL, para que un refresco o un enlace compartido no lo vuelvan a
@@ -1211,7 +1234,12 @@ export function FontDetailPage() {
   // Guarda / deja de guardar la fuente en favoritos (requiere sesión).
   async function toggleFavorite() {
     if (!id) return
-    if (!user) { window.location.assign(loginNext()); return }
+    if (!user) {
+      try {
+        window.location.assign(loginNext(prepareFavorite(sessionStorage, id, crypto.randomUUID())))
+      } catch (error) { setError(describeError(error, t)) }
+      return
+    }
     setSavingFavorite(true)
     try {
       const next = await setFavorite(id, !favorite?.favorited)

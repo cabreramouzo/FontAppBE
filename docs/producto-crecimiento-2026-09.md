@@ -250,7 +250,7 @@ Este documento no implementa cambios funcionales, no crea campañas, no contacta
 
 ## 13. Backlog para retomar la implementación
 
-Estado actualizado: **FA-01 implementada y validada localmente; resto pendiente**. El análisis está terminado; la implementación y las campañas no han comenzado. Antes de abordar una tarea, contrastar el código actual con el hallazgo, porque puede haber cambiado desde la auditoría. Las reglas técnicas y los comandos de validación siguen teniendo su única fuente de verdad en `CLAUDE.md`.
+Estado actualizado: **FA-01 y FA-02 implementadas y validadas localmente; resto pendiente**. El análisis está terminado; las campañas no han comenzado. Antes de abordar una tarea, contrastar el código actual con el hallazgo, porque puede haber cambiado desde la auditoría. Las reglas técnicas y los comandos de validación siguen teniendo su única fuente de verdad en `CLAUDE.md`.
 
 ### FA-01 · P0 · No confundir incertidumbre con sequedad
 
@@ -264,7 +264,9 @@ Implementada el 23/09/2026. Validación: build web, tests y paridad de traduccio
 
 ### FA-02 · P0 · Completar el favorito después de autenticar
 
-- [ ] Revisar `guarda()` en `FirstFountainWelcome.tsx` y el mecanismo existente de retorno tras login/registro.
+Implementada el 23/09/2026. Intención de favorito por pestaña, con nonce, caducidad de diez minutos y consumo único; limpieza al salir de la cuenta. Aplica a bienvenida y ficha. El retorno usa el login/registro existente; éxito visible y errores recuperables desde el botón de favorito. Validación: tests de consumo, caducidad, destino, URL compartida y logout; build web y traducciones. Pendientes prueba manual de proveedores de login en dispositivos y despliegue.
+
+- [x] Revisar `guarda()` en `FirstFountainWelcome.tsx` y el mecanismo existente de retorno tras login/registro.
 - **Resultado:** «guardar» conserva la fuente concreta y se completa al terminar la autenticación, mostrando el resultado real.
 - **Aceptación:** funciona con sesión iniciada, login y registro; recargar o repetir el retorno no duplica efectos; cancelar el acceso no anuncia un guardado; un error se comunica y permite reintentar. No queda una intención antigua que se aplique inadvertidamente a otra cuenta.
 - **Validación:** recorrido invitado → guardar → autenticar → favorito visible; repetir con fallo de red y cancelación. Preservar el retorno de reseñas y cualquier verificación requerida.

@@ -8,13 +8,16 @@ import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import { useTurno, sesiones } from '../lib/asks'
 import { positionIfAllowed, askPosition } from '../lib/quietPosition'
-import { nearbyFonts, setFavorite, trackInteraction } from '../api/client'
+import { nearbyFonts, setFavorite, trackInteraction, describeError } from '../api/client'
 import type { FontSummary } from '../api/types'
 import { FreshnessChip } from './FreshnessChip'
 import { WATER_STATUS } from '../lib/waterStatus'
 import { constaAgua } from '../lib/confidence'
 import { firstFountainKind, type FirstFountainKind } from '../lib/firstFountain'
 import { haversineKm } from '../lib/geo'
+import { prepareFavorite } from '../lib/favoriteIntent'
+import { useToast } from './ToastContext'
+import { useRef } from 'react'
 import { loginNext } from '../lib/nextParam'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
@@ -37,6 +40,9 @@ type State =
 export function FirstFountainWelcome() {
   const { t } = useI18n()
   const { user } = useAuth()
+  const toast = useToast()
+  const savingRef = useRef(false)
+  const [saving, setSaving] = useState(false)
   const navigate = useNavigate()
   const [state, setState] = useState<State | null>(null)
 
@@ -146,11 +152,27 @@ export function FirstFountainWelcome() {
   async function guarda() {
     if (!nearest) return
     trackInteraction('first_fountain_save')
-    // Signed out, saving still means something: send them to sign in with intent.
-    try { if (user) await setFavorite(nearest.id, true) } catch { /* best effort */ }
-    marcaVisto()
-    setState(null)
-    if (!user) navigate(loginNext())
+    if (savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
+    try {
+      if (!user) {
+        const destination = prepareFavorite(sessionStorage, nearest.id, crypto.randomUUID())
+        marcaVisto()
+        setState(null)
+        window.location.assign(loginNext(destination))
+        return
+      }
+      await setFavorite(nearest.id, true)
+      toast.show(t('favorite.saved'))
+      marcaVisto()
+      setState(null)
+    } catch (error) {
+      toast.show(describeError(error, t), 'error')
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+    }
   }
 
   function añadir() {
@@ -196,7 +218,7 @@ export function FirstFountainWelcome() {
           <>
             <Button fullWidth variant="contained" disableElevation onClick={irAllfuente}>{t('firstFountain.goThere')}</Button>
             <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
-              <Button fullWidth onClick={guarda} sx={{ color: 'text.secondary' }}>{t('firstFountain.save')}</Button>
+              <Button fullWidth onClick={guarda} disabled={saving} sx={{ color: 'text.secondary' }}>{t('firstFountain.save')}</Button>
               <Button fullWidth onClick={() => cierra()} sx={{ color: 'text.secondary' }}>{t('firstFountain.keepExploring')}</Button>
             </Box>
           </>
