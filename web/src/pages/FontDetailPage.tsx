@@ -1354,7 +1354,7 @@ export function FontDetailPage() {
             <Box
               aria-hidden
               sx={{
-                gridColumn: '1', gridRow: { xs: '1 / span 4', md: '2' },
+                gridColumn: '1', gridRow: { xs: '1 / span 3', md: '2' },
                 width: { xs: 56, md: 96 }, height: { xs: 56, md: 96 },
                 mx: { md: 'auto' }, my: { md: 1.5 }, borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1370,23 +1370,26 @@ export function FontDetailPage() {
             >
               {heroTexto}
             </Typography>
-            {confidenceEvidence.lastUpdate && <Typography
-              variant="body2" color="text.secondary"
-              sx={{ gridColumn: { xs: '2', md: '1' }, gridRow: { xs: '3', md: '4' } }}
-            >
-              {timeAgo(confidenceEvidence.lastUpdate, t)}
-            </Typography>}
+            {/* Fecha y confianza. En móvil van en la MISMA fila —fecha a la izquierda,
+                confianza a la derecha— para que la caja ocupe una fila menos de alto; en
+                escritorio siguen apiladas y centradas, como antes. */}
             <Box sx={{
-              gridColumn: { xs: '2', md: '1' }, gridRow: { xs: '4', md: '5' },
-              display: 'inline-flex', alignItems: 'center', justifySelf: { md: 'center' },
-              gap: 0.5, mt: { xs: 0.25, md: 0.75 },
+              gridColumn: { xs: '2', md: '1' }, gridRow: { xs: '3', md: '4' },
+              display: 'flex', flexDirection: { xs: 'row', md: 'column' },
+              alignItems: 'center', justifyContent: { xs: 'space-between', md: 'center' },
+              flexWrap: 'wrap', gap: { xs: 1, md: 0.75 }, mt: { md: 0.75 },
             }}>
-              {conflicto || !est
-                ? <Typography variant="body2" color="text.secondary">
-                    {t(conflicto ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
-                  </Typography>
-                : <ConfidenceChip evidence={confidenceEvidence} />}
-              <ConfidenceHelpButton />
+              {confidenceEvidence.lastUpdate && <Typography variant="body2" color="text.secondary">
+                {timeAgo(confidenceEvidence.lastUpdate, t)}
+              </Typography>}
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                {conflicto || !est
+                  ? <Typography variant="body2" color="text.secondary">
+                      {t(conflicto ? 'confidence.disputedDetail' : 'confidence.unverifiedDetail')}
+                    </Typography>
+                  : <ConfidenceChip evidence={confidenceEvidence} />}
+                <ConfidenceHelpButton />
+              </Box>
             </Box>
           </Box>
         )}
