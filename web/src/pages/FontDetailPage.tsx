@@ -1334,6 +1334,12 @@ export function FontDetailPage() {
     const heroTexto = conflicto
       ? t('confidence.disputed')
       : est ? t(`status.${est}`) : t('confidence.unverified')
+    // «Estado actual» solo mientras el parte es reciente. Pasado el corte de una semana
+    // —el mismo de la curva de frescura, `freshnessOf`— llamarlo «actual» promete algo que
+    // el dato no sostiene: es el último estado reportado, no necesariamente el de hoy.
+    const rotuloEstado = frescor.days !== null && frescor.days > 7
+      ? t('detail.lastReportedStatus')
+      : t('detail.currentStatus')
     return (
       <Paper variant="outlined" sx={{ p: { xs: 1.25, md: 2 }, my: 1.5, textAlign: { xs: 'left', md: 'center' } }}>
         {desdeZona ? <Alert severity="info">{t('offline.fromZone')}</Alert> : (
@@ -1349,7 +1355,7 @@ export function FontDetailPage() {
               variant="overline" color="text.secondary"
               sx={{ display: 'block', gridColumn: { xs: '2', md: '1' }, gridRow: '1', lineHeight: 1.4 }}
             >
-              {t('detail.currentStatus')}
+              {rotuloEstado}
             </Typography>
             <Box
               aria-hidden
