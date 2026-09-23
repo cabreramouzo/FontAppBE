@@ -6,9 +6,10 @@ import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import InstallMobileIcon from '@mui/icons-material/InstallMobile'
 import IosShareIcon from '@mui/icons-material/IosShare'
-import { sesiones, useTurno } from '../lib/asks'
+import { useTurno } from '../lib/asks'
 import { estaInstalada, instalaAhora, instalacionDeUnToque, plataforma } from '../lib/install'
 import { useI18n } from '../i18n/I18nContext'
+import { hasInstallMilestone, INSTALL_MILESTONE_EVENT } from '../lib/installMilestone'
 import { TarjetaDeAviso } from './Avisos'
 
 // Aviso "añade a pantalla de inicio".
@@ -42,34 +43,22 @@ export function InstallPrompt() {
   const [mode, setMode] = useState<'ios' | 'android'>('ios')
 
   useEffect(() => {
-    if (dismissedRecently() || estaInstalada()) return
-    // Nadie instala en su pantalla de inicio algo que ha visto una vez. A partir de la
-    // segunda visita ya hay una razón, y de paso deja limpia la pantalla del cartel.
-    if (sesiones() < 2) return
-
-    // Android/Chromium: capturamos el evento para lanzar la instalación nosotros.
-    const onBip = () => {
-      setMode('android')
-      setListo(true)
+    const update = () => {
+      if (dismissedRecently() || estaInstalada() || !hasInstallMilestone()) {
+        setListo(false)
+        return
+      }
+      if (instalacionDeUnToque()) { setMode('android'); setListo(true) }
+      else if (plataforma() === 'ios') { setMode('ios'); setListo(true) }
     }
-    window.addEventListener('beforeinstallprompt', onBip)
-
-    // Puede haberse disparado ANTES de montar (lo captura main.tsx en window).
-    if (instalacionDeUnToque()) {
-      setMode('android')
-      setListo(true)
-    }
-
-    // iOS Safari: aviso con la instrucción manual, tras un pequeño retardo.
-    let timer: number | undefined
-    if (plataforma() === 'ios') {
-      setMode('ios')
-      timer = window.setTimeout(() => setListo(true), 3000)
-    }
-
+    update()
+    window.addEventListener('beforeinstallprompt', update)
+    window.addEventListener(INSTALL_MILESTONE_EVENT, update)
+    window.addEventListener('appinstalled', update)
     return () => {
-      window.removeEventListener('beforeinstallprompt', onBip)
-      if (timer) clearTimeout(timer)
+      window.removeEventListener('beforeinstallprompt', update)
+      window.removeEventListener(INSTALL_MILESTONE_EVENT, update)
+      window.removeEventListener('appinstalled', update)
     }
   }, [])
 

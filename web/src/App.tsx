@@ -13,7 +13,6 @@ import { FirstFountainWelcome } from './components/FirstFountainWelcome'
 import { BadgeCelebration } from './components/BadgeCelebration'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useI18n } from './i18n/I18nContext'
-import { IntroDialog } from './components/IntroDialog'
 
 // Code-splitting por ruta: cada página es su propio chunk (Leaflet solo se carga
 // con el mapa). Las páginas son exports con nombre, de ahí el mapeo a `default`.
@@ -131,7 +130,6 @@ export default function App() {
             {/* Va tras la insignia en la cola de `lib/asks`, no aquí: el orden del JSX
                 no decide nada, lo decide `PRIORIDAD`. */}
             <WhatsNewDialog />
-            <IntroDialog />
           </AuthProvider>
         </ToastProvider>
         </I18nProvider>

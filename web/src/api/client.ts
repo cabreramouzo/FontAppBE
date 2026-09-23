@@ -1,3 +1,4 @@
+import { markInstallMilestone } from '../lib/installMilestone'
 import { apuntaResena } from '../lib/misResenas'
 import type { PhotoUploadMeta } from '../lib/image'
 import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
@@ -623,7 +624,9 @@ export async function getFavoriteStatus(fontID: string): Promise<FavoriteStatus>
 
 // Guarda (on=true) o deja de guardar (on=false) una fuente como favorita.
 export async function setFavorite(fontID: string, on: boolean): Promise<FavoriteStatus> {
-  return apiFetch<FavoriteStatus>(`/fonts/${fontID}/favorite`, { method: on ? 'POST' : 'DELETE' })
+  const result = await apiFetch<FavoriteStatus>(`/fonts/${fontID}/favorite`, { method: on ? 'POST' : 'DELETE' })
+  if (on && result.favorited) markInstallMilestone()
+  return result
 }
 
 export async function deleteAccount(userID: string): Promise<void> {

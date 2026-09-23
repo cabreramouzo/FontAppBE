@@ -113,7 +113,7 @@ export function FirstFountainWelcome() {
     // can tell the iPad cases apart — see `GeoFailReason`.
     const pos = await askPosition((reason) => trackInteraction(`first_fountain_geo_${reason}`))
     if (pos) { trackInteraction('first_fountain_located'); await resolveNearest(pos) }
-    else cierra(false) // couldn't locate or denied: don't insist, don't burn the moment
+    else setState({ phase: 'askLocation' }) // keep manual search available after denial
   }
 
   if (!visible || !state) return null
@@ -133,6 +133,7 @@ export function FirstFountainWelcome() {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, flexDirection: 'column', gap: 1 }}>
           <Button fullWidth variant="contained" disableElevation onClick={activaUbicacion}>{t('firstFountain.enableCta')}</Button>
+          <Button fullWidth variant="outlined" onClick={() => { cierra(false); navigate('/?search=1') }}>{t('firstFountain.searchPlace')}</Button>
           <Button fullWidth onClick={() => cierra()} sx={{ color: 'text.secondary' }}>{t('firstFountain.keepExploring')}</Button>
         </DialogActions>
       </Dialog>

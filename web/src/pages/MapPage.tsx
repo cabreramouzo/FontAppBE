@@ -903,8 +903,19 @@ function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f
   const searches = useMemo(() => recentSearches(historyScope), [historyVersion, historyScope])
   const fountains = useMemo(() => recentFountains(historyScope), [historyVersion, historyScope])
 
-  // Al girar el móvil o cambiar de tamaño, el buscador vuelve a su forma natural.
   useEffect(() => setAbierto(!compacto), [compacto])
+
+  const [searchIntent, setSearchIntent] = useSearchParams()
+  useEffect(() => {
+    if (searchIntent.get('search') !== '1') return
+    setAbierto(true)
+    setDesplegado(true)
+    const clean = new URLSearchParams(searchIntent)
+    clean.delete('search')
+    setSearchIntent(clean, { replace: true })
+    if (!compacto) inputRef.current?.focus()
+  }, [searchIntent, setSearchIntent, compacto])
+
 
   // Cerrar el desplegable al tocar fuera o con Escape. Va en `mousedown` y no en `blur`:
   // el `blur` llega **antes** que el `click` de la lista, así que cerrar ahí impediría

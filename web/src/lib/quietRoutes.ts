@@ -9,8 +9,10 @@
  * `/support` y `/legal`: son páginas informativas que se abren a propósito, no el mapa
  * donde el onboarding tiene sentido. Lista y no un booleano para que añadir otra sea una línea.
  */
-export const RUTAS_SIN_INTERRUPCIONES = ['/install', '/support', '/legal', '/guia', '/guide']
+export const RUTAS_SIN_INTERRUPCIONES = ['/install', '/support', '/legal', '/guia', '/guide', '/login', '/register', '/gpx', '/reset-password', '/forgot-password']
 
 export function permiteInterrupciones(pathname: string): boolean {
-  return !RUTAS_SIN_INTERRUPCIONES.includes(pathname)
+  const path = pathname.replace(/\/+$/, '') || '/'
+  return !RUTAS_SIN_INTERRUPCIONES.includes(path) &&
+    !/^\/(fonts|places)\//.test(path)
 }
