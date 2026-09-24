@@ -1138,3 +1138,43 @@ select:not([class*="Mui"]) {
   justify-content: center;
   min-width: 0;
 }
+
+/* Map help overlay (`MapHelpOverlay`): dark backdrop with a hole around each control
+   and its label beside it. Above everything in the map (Leaflet ~700, controls 1000) and
+   below the photo lightbox (2500). */
+.map-help {
+  position: fixed;
+  inset: 0;
+  z-index: 2400;
+  cursor: pointer;
+  animation: map-help-in 180ms ease-out;
+}
+.map-help__backdrop { position: absolute; inset: 0; display: block; }
+.map-help__ring { fill: none; stroke: #fff; stroke-width: 2; stroke-opacity: 0.9; }
+.map-help__label {
+  position: absolute;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+.map-help__footer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(280px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  color: #fff;
+  font-size: 14px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+.map-help__footer strong { font-size: 17px; }
+@keyframes map-help-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .map-help { animation: none; } }

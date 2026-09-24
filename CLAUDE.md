@@ -3826,6 +3826,39 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
 - La bienvenida aparece al crear una cuenta con contraseña y también cuando Google crea
   una (`LoginResponse.isNewUser`), pero nunca en posteriores inicios de sesión.
 
+## Qué hace cada botón del mapa (`MapHelpOverlay`)
+
+- Un (?) sobre el mapa abre una capa oscura que **resalta cada control fijo** y pone su
+  etiqueta al lado. Una sola pantalla, sin pasos: cualquier toque o Esc la cierra. El (?)
+  sale en el mapa solo las **10 primeras visitas** (`HELP_BUTTON_SESSIONS`, contadas con
+  `sesiones()`); después vive en el menú (⋮), que la abre con `/?help=1` desde cualquier
+  página. No interrumpe a nadie: la abre quien quiere, y por eso no pasa por `lib/asks`.
+- **Por qué esta vez sí y en agosto no** (`ContextualOnboarding`, quitado a los 15 min):
+  aquello señalaba un **pin**, que no siempre está en pantalla. Esto señala los controles
+  fijos, que existen siempre que el mapa existe. Lo que no se pinta o no tiene tamaño (el
+  zoom en móvil) **se salta**: nunca sale una etiqueta apuntando a nada.
+- Los controles se marcan con `data-map-help="<clave>"` y el texto es `mapHelp.<clave>`
+  en los 8 idiomas. **Un botón nuevo en el mapa tiene que llevar la marca y su texto**, o
+  simplemente no sale en la ayuda (no rompe nada, que es por lo que conviene acordarse).
+- Las posiciones **se miden al abrir, al redimensionar y otra vez a los 300 ms**, nunca se
+  guardan: los controles bajan con `--alto-avisos`, cambian entre móvil y escritorio, y
+  abierta desde el menú el zoom de react-leaflet aún no existe en el primer render.
+- **Colocar las etiquetas pide medirlas primero** (una pasada oculta y luego `placeLabels`).
+  Con la regla fija «al lado del botón», a 375 px la del buscador y la de filtros se
+  juntaban en el centro de la misma fila, y abajo la de la leyenda y la de añadir se
+  pisaban. Ahora prueba al lado, debajo, encima y el otro lado, con pequeños desplazamientos
+  verticales, sin pisar otra etiqueta ni otro control; empiezan **los de la derecha**, que
+  solo tienen su izquierda. Si nada cabe, el sitio que menos pisa, **siempre dentro de la
+  pantalla**: una etiqueta cortada por el borde es peor que una que roza a su vecina.
+  Comprobado a 375 px en inglés y en **euskera** (el idioma más largo) y en escritorio.
+- Va en un **portal a `document.body`**, por lo mismo que el visor de fotos: un ancestro
+  con `sticky`, `transform` u `opacity` crea contexto de apilamiento y ningún `z-index`
+  basta. Queda en 2400, por debajo del visor (2500).
+- Analítica: `map_help`, en la lista cerrada y con su rótulo en los ocho idiomas, cuente
+  desde el (?) o desde el menú. Es lo que dirá si hace falta además el tutorial paso a
+  paso (opción descartada por ahora: con la presentación y la bienvenida serían tres
+  interrupciones seguidas en la primera visita).
+
 ## Instalar la app (`lib/install.ts` + `/install`)
 
 - **Los avisos de arriba no pueden ir en flujo.** `InstallPrompt` se pintaba entre la

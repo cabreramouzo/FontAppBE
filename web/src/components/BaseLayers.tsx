@@ -79,6 +79,7 @@ export function LayerPicker({
       <Fab
         size={size}
         onClick={(e) => setAnchor(e.currentTarget)}
+        data-map-help="layers"
         aria-label={t('map.layers')}
         title={t('map.layers')}
         sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}

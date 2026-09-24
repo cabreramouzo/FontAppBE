@@ -16,6 +16,7 @@ struct InteractionAnalyticsController: RouteCollection {
         "map_filters", "map_missions", "map_locate", "map_add_font", "map_add_font_button", "map_add_font_long_press",
         "map_add_font_signed_out", "map_long_press_signed_out", "map_export_gpx", "map_gpx",
         "map_offline",
+        "map_help",
         // El «aha» de la primera visita: la tarjeta que enseña tu fuente cercana según
         // lo que haya (gift/mission/explore). Contar cuál sale y qué se pulsa es lo único
         // que dirá si convierte a un anónimo en alguien que vuelve.

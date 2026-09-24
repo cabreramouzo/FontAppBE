@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography'
 import CheckIcon from '@mui/icons-material/Check'
 import LogoutIcon from '@mui/icons-material/Logout'
 import InstallMobileIcon from '@mui/icons-material/InstallMobile'
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from './ToastContext'
@@ -98,6 +99,12 @@ export function MoreMenu({ onLogout }: { onLogout?: () => void }) {
             <ListItemText>{t('install.button')}</ListItemText>
           </MenuItem>
         )}
+        {/* The map help overlay, always reachable: the (?) on the map is only shown for
+            the first visits. `?help=1` makes the map open it (also from other pages). */}
+        <MenuItem component={RouterLink} to="/?help=1" onClick={cerrar}>
+          <ListItemIcon><HelpOutlineIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>{t('mapHelp.title')}</ListItemText>
+        </MenuItem>
 
         <Divider />
         <ListSubheader sx={{ lineHeight: '28px', bgcolor: 'transparent' }}>{t('theme.label')}</ListSubheader>

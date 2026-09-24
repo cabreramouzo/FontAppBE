@@ -32,6 +32,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import MyLocationIcon from '@mui/icons-material/MyLocation'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import NearMeIcon from '@mui/icons-material/NearMe'
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import NearMeOutlinedIcon from '@mui/icons-material/NearMeOutlined'
 import NavigationIcon from '@mui/icons-material/Navigation'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
@@ -105,6 +106,8 @@ import { RelocateFont } from '../components/RelocateFont'
 import { MapEasterEggs } from '../components/MapEasterEggs'
 import { parseSavedMapView, vistaAlAbrir, type SavedMapView } from '../lib/mapView'
 import { loginNext } from '../lib/nextParam'
+import { MapHelpOverlay } from '../components/MapHelpOverlay'
+import { sesiones } from '../lib/asks'
 
 // Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
 // península aproximadamente centrada y el zoom 5 permite verla entera también en móvil.
@@ -872,7 +875,7 @@ function ZoomControls() {
   const { t } = useI18n()
   const map = useMap()
   return (
-    <Paper className="zoom-ctrl" elevation={3} sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', borderRadius: 3, overflow: 'hidden' }}>
+    <Paper className="zoom-ctrl" data-map-help="zoom" elevation={3} sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', borderRadius: 3, overflow: 'hidden' }}>
       <IconButton size="small" onClick={() => map.zoomIn()} aria-label={t('map.zoomIn')}><AddIcon fontSize="small" /></IconButton>
       <Divider />
       <IconButton size="small" onClick={() => map.zoomOut()} aria-label={t('map.zoomOut')}><RemoveIcon fontSize="small" /></IconButton>
@@ -1140,7 +1143,7 @@ function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f
 
   if (!abierto) {
     return (
-      <Box className="search search--collapsed">
+      <Box className="search search--collapsed" data-map-help="search">
         <Paper
           component="button"
           onClick={abrir}
@@ -1164,7 +1167,7 @@ function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f
   }
 
   return (
-    <Box className="search" ref={caja}>
+    <Box className="search" ref={caja} data-map-help="search">
       <Paper elevation={3} sx={{ display: 'flex', alignItems: 'center', px: 1.5, borderRadius: '24px' }}>
         <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
         <InputBase
@@ -1707,6 +1710,7 @@ function MapLegend({ density }: { density: boolean }) {
         size="small"
         onClick={alternar}
         aria-expanded={abierta}
+        data-map-help="legend"
         aria-label={t(abierta ? 'legend.hide' : 'legend.show')}
         title={t(abierta ? 'legend.hide' : 'legend.show')}
         sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
@@ -1716,6 +1720,9 @@ function MapLegend({ density }: { density: boolean }) {
     </Box>
   )
 }
+
+/** Visits during which the help (?) button is shown on the map itself. */
+const HELP_BUTTON_SESSIONS = 10
 
 export function MapPage() {
   const { user, promptLocation, dismissLocationPrompt } = useAuth()
@@ -1796,12 +1803,25 @@ export function MapPage() {
   const [showNearby, setShowNearby] = useState(false)
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [missionsOpen, setMissionsOpen] = useState(false)
+  // Help overlay ("what does each button do"). The (?) button sits on the map only for
+  // the first HELP_BUTTON_SESSIONS visits; after that it lives in the ⋮ menu, which opens
+  // it through `?help=1`. Read once per mount: sesiones() is stable within a session.
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [helpButton] = useState(() => sesiones() <= HELP_BUTTON_SESSIONS)
   const [wish, setWish] = useState(0)
   const wishTimer = useRef<number | null>(null)
   const wishConsumed = useRef(false)
   useEffect(() => () => { if (wishTimer.current !== null) window.clearTimeout(wishTimer.current) }, [])
   const [place, setPlace] = useState<Place | null>(null)
   const [params, setParams] = useSearchParams()
+  useEffect(() => {
+    if (params.get('help') !== '1') return
+    setHelpOpen(true)
+    trackInteraction('map_help')
+    const clean = new URLSearchParams(params)
+    clean.delete('help')
+    setParams(clean, { replace: true })
+  }, [params, setParams])
   const navigate = useNavigate()
   const empiezaDeseo = () => {
     wishConsumed.current = false
@@ -2277,6 +2297,7 @@ export function MapPage() {
               setZonaOpen(false)
               setControlsOpen((v) => !v)
             }}
+            data-map-help="tools"
             aria-label={t(controlsOpen ? 'map.hideTools' : 'map.showTools')}
             title={t(controlsOpen ? 'map.hideTools' : 'map.showTools')}
             sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
@@ -2292,6 +2313,7 @@ export function MapPage() {
         <Fab
           size="medium"
           onClick={() => { trackInteraction('map_missions'); setMissionsOpen(true) }}
+          data-map-help="missions"
           aria-label={t('mission.title')}
           title={t('mission.title')}
           sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
@@ -2314,6 +2336,7 @@ export function MapPage() {
               setZonaOpen(false)
               setGpxOpen((v) => !v)
             }}
+            data-map-help="gpx"
             aria-label={`${t('gpxIn.title')} · GPX`}
             title={`${t('gpxIn.title')} · GPX`}
             sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 800, fontSize: 13,
@@ -2336,6 +2359,7 @@ export function MapPage() {
             setGpxOpen(false)
             setZonaOpen((v) => !v)
           }}
+          data-map-help="offline"
           aria-label={t('zonaOff.title')}
           title={t('zonaOff.title')}
           sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
@@ -2427,6 +2451,17 @@ export function MapPage() {
 
       {!placing && (
         <div className="map-fabs">
+          {helpButton && (
+            <Fab
+              size="small"
+              onClick={() => { trackInteraction('map_help'); setHelpOpen(true) }}
+              aria-label={t('mapHelp.title')}
+              title={t('mapHelp.title')}
+              sx={{ bgcolor: 'background.paper', color: 'primary.main', '&:hover': { bgcolor: 'background.paper' } }}
+            >
+              <HelpOutlineIcon fontSize="small" />
+            </Fab>
+          )}
           <Compass
             bearing={bearing}
             // Siempre visible en escritorio: allí no hay gesto de dos dedos, así que es la
@@ -2449,7 +2484,7 @@ export function MapPage() {
             // relleno (te sigue) sin nada a lo que seguir. Ver `modoVisible`.
             const visible = modoVisible(modo, me !== null)
             return (
-          <Fab size="medium" onClick={ciclaUbicacion} title={t('map.recenter')} aria-label={t('map.recenter')}
+          <Fab size="medium" onClick={ciclaUbicacion} data-map-help="locate" title={t('map.recenter')} aria-label={t('map.recenter')}
                sx={{ bgcolor: botonRelleno(visible) ? 'primary.main' : 'background.paper', color: botonRelleno(visible) ? 'primary.contrastText' : 'primary.main', '&:hover': { bgcolor: botonRelleno(visible) ? 'primary.main' : 'background.paper' } }}>
             {/* Hueca (libre) · rellena (te sigue) · navegación (rumbo arriba), como iOS. */}
             {{ hollow: <NearMeOutlinedIcon />, filled: <NearMeIcon />, navigation: <NavigationIcon /> }[iconoDeModo(visible)]}
@@ -2470,7 +2505,7 @@ export function MapPage() {
               Sin sesión lleva a entrar, exactamente como hace «Yo». La **pulsación larga
               se queda detrás de `user`**: un gesto oculto que te saca a una pantalla de
               acceso es peor que no tenerlo, y encima puede dispararse sin querer. */}
-          <Fab variant="extended" color="primary"
+          <Fab variant="extended" color="primary" data-map-help="add"
                // Safari/iOS convierte una pulsación larga en selección o menú contextual
                // y puede cancelar pointerup. Touch lleva su carril propio; pointer queda
                // para ratón/lápiz y no se arma dos veces con el mismo dedo.
@@ -2493,6 +2528,7 @@ export function MapPage() {
           </Fab>
         </div>
       )}
+      <MapHelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
       {invita && (
         <div className="hint">
           {t('map.signUpToAdd')} · <button className="link" onClick={() => navigate('/register')}>{t('login.register')}</button>
