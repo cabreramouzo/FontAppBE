@@ -15,4 +15,20 @@ Disallow: /forgot-password
 Disallow: /reset
 Disallow: /unsubscribe
 
+# Rastreadores de herramientas SEO y de extracción masiva: no traen visitas, y cada
+# página que piden es una ejecución de Pages Functions (tope de 100.000/día en el plan
+# gratuito) y una consulta que despierta a Neon. Los buscadores de verdad (Google, Bing,
+# Apple, DuckDuckGo…) no están aquí y siguen pudiendo rastrear todo lo de arriba.
+User-agent: AhrefsBot
+User-agent: SemrushBot
+User-agent: MJ12bot
+User-agent: DotBot
+User-agent: BLEXBot
+User-agent: PetalBot
+User-agent: DataForSeoBot
+User-agent: Barkrowler
+User-agent: serpstatbot
+User-agent: Bytespider
+Disallow: /
+
 Sitemap: https://fontapp.net/sitemap.xml
