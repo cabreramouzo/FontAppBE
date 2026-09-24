@@ -3388,6 +3388,36 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   ido a producción sin ninguna comprobación; el typecheck pescó seis errores a la primera.
   Usan `VITE_API_URL` —Pages expone las variables del panel también en ejecución—, así que
   no hay que configurar nada nuevo.
+- **Cada página HTML que se sirve ejecuta una Function** (`_routes.json` incluye `/*` y
+  el `_middleware` de la raíz corre en todas), y el plan gratuito da **100.000 al día**.
+  Además, en las fichas, pueblos y municipios, cada URL **distinta** es un fallo de la
+  caché de 1 h que llega a la API y **despierta a Neon**. O sea: quien rastree muchas
+  URLs distintas gasta las dos facturas a la vez.
+- **El 24/09/2026 casi se agotó el cupo, y no era indexación: era Ahrefs.** Medido con
+  `wrangler pages deployment tail <deployment-id> --project-name fontapp-web --format json`
+  (dos minutos de tráfico real, agrupado por user agent y por `cf.asOrganization`):
+  ~99.000 ejecuciones/día proyectadas, el **93 % de Ahrefs**. Por dos vías: `AhrefsBot`
+  pidiendo `/fonts/<id>` una tras otra (hay 173.000, así que no iba a terminar nunca) y
+  su renderizador `HeadlessChrome` desde **AS140577** («Ahrefs Crawler A/B»), que no se
+  identifica como `AhrefsBot`. Y a la vez Neon llevaba 24 h sin suspenderse.
+- **La defensa de verdad es una regla WAF en Cloudflare, no `robots.txt`** (Security →
+  WAF → Custom rules, «Block SEO crawlers», acción Block):
+  `(cf.verified_bot_category eq "Search Engine Optimization") or (ip.src.asnum eq 140577)`.
+  Lo bloqueado ahí **no llega a ejecutar ninguna Function**. Medido en la misma ventana:
+  de 126 ejecuciones a **8** (~6.300/día), con cero de Ahrefs.
+  `robots.txt` también los veta, pero es solo un refuerzo: cada bot lo relee cuando le
+  parece, cumplirlo es voluntario y el renderizador no lleva el nombre del bot.
+- **Ojo: no bloquear el ASN de `AhrefsBot`**, que es el **AS16276 de OVH** (lo que
+  figura como «Ahrefs Pte Ltd» es una subred alquilada ahí). Bloquearlo dejaría fuera a
+  cualquiera alojado en OVH. Por eso la regla lo coge por la **categoría de bot
+  verificado** de Cloudflare, no por red.
+- **Applebot, Googlebot y compañía no se tocan**: son los que traen gente. Si el cupo
+  vuelve a apretar, lo primero es medir quién es con el `tail` de arriba **antes** de
+  bloquear nada.
+- Al medir: **no descargar el sitemap URL a URL** para contarlo. Se hizo, el bucle se quedó
+  corriendo en segundo plano, pidió ~2.900 páginas (un 3 % del cupo del día) y además era
+  el 81 % de la muestra (user agent `Mozilla/5.0` a secas contra `/places`), lo que la
+  contaminó. Para contar basta con bajar `sitemap.xml` una vez y contar sus `<loc>`.
 
 ## EXIF de las fotos (`PhotoExif`, solo moderación)
 
@@ -4287,3 +4317,16 @@ Weekly digests include favorites alongside created/reviewed fountains, deduplica
 filtered through `Font.visible`; nearby suggestions use that visibility filter too.
 The existing GPX map control now says “Water on my route”, with preparation before export;
 keep one control and preserve guest access. Anonymous route transfer (FA-03) is still pending.
+
+### Saved outings and recovery notifications (September 2026)
+
+P2 adds one explicit saved area per account/device (`savedZone`), linked from Zones and
+GPX tools alongside the existing last route. It does not subscribe to area emails/push.
+RouteWaterPage waits for auth restoration and keys its content by account; anonymous
+route transfer remains a separate pending task. Keep “GPX” visible in the map control.
+New status reports use `WaterRecovery.save`: lock the fountain row, read the preceding
+reported status and save in one transaction. Only dry/broken/gone → flowing/trickle
+emits `recovered:<status>` through the existing favorite notifications; repeated water
+reports do not trigger recovery pushes. Preserve notification preferences, actor exclusion
+and the wording that this is a report, not a guarantee. Contribution feedback must not
+claim upload success for offline items or invent measured community impact.
