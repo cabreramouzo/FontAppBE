@@ -2307,7 +2307,6 @@ export function MapPage() {
         <NuevoBadge clave="gpx">
           <Fab
             ref={gpxBtn}
-            variant="extended"
             size="medium"
             onClick={() => {
               trackInteraction('map_gpx')
@@ -2318,7 +2317,7 @@ export function MapPage() {
             aria-label={`${t('gpxIn.title')} · GPX`}
             title={`${t('gpxIn.title')} · GPX`}
             sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 800, fontSize: 13,
-                  maxWidth: 'min(180px, 48vw)', height: 48, px: 1.5, lineHeight: 1.2, textTransform: 'none', '&:hover': { bgcolor: 'background.paper' } }}
+                  letterSpacing: 0.5, '&:hover': { bgcolor: 'background.paper' } }}
           >
             GPX
           </Fab>
