@@ -250,7 +250,7 @@ Este documento no implementa cambios funcionales, no crea campañas, no contacta
 
 ## 13. Backlog para retomar la implementación
 
-Estado actualizado: **FA-01 y FA-02 implementadas y validadas localmente; resto pendiente**. El análisis está terminado; las campañas no han comenzado. Antes de abordar una tarea, contrastar el código actual con el hallazgo, porque puede haber cambiado desde la auditoría. Las reglas técnicas y los comandos de validación siguen teniendo su única fuente de verdad en `CLAUDE.md`.
+Estado actualizado: **FA-01, FA-02, FA-04, FA-05 y FA-06 implementadas y validadas localmente; FA-03 y el resto pendientes**. El análisis está terminado; las campañas no han comenzado. Antes de abordar una tarea, contrastar el código actual con el hallazgo, porque puede haber cambiado desde la auditoría. Las reglas técnicas y los comandos de validación siguen teniendo su única fuente de verdad en `CLAUDE.md`.
 
 ### FA-01 · P0 · No confundir incertidumbre con sequedad
 
@@ -284,7 +284,7 @@ Implementada el 23/09/2026. Intención de favorito por pestaña, con nonce, cadu
 
 Implementada el 23/09/2026: login/registro, fichas, localidades y GPX sin interrupciones; retirada la introducción automática; búsqueda manual accesible desde la primera bienvenida incluso tras denegar ubicación. Instalación tras un favorito guardado con éxito, con el descarte mensual existente. Validación: build web y tests de rutas e instalación. Pendientes cinco sesiones observadas y prueba física; despliegue por confirmar.
 
-- [ ] Revisar `quietRoutes.ts`, `IntroDialog`, `FirstFountainWelcome`, `WelcomeDialog` e `InstallPrompt`.
+- [x] Revisar `quietRoutes.ts`, `IntroDialog`, `FirstFountainWelcome`, `WelcomeDialog` e `InstallPrompt`.
 - **Resultado:** un enlace compartido abre su contenido sin una cadena de presentaciones; login y registro permiten terminar su tarea. Buscar localidad es una alternativa visible a geolocalizarse.
 - **Aceptación:** entrada nueva a una fuente, retorno de login y enlace con intención de reseña mantienen su destino; denegar GPS permite continuar por búsqueda manual. Se conserva la coordinación de diálogos. La instalación se ofrece tras una acción útil definida, respetando cierre y preferencias, sin repetirse en cada navegación.
 - **Decisión al comenzar:** elegir la acción concreta que habilita la invitación de instalación, por ejemplo guardar una fuente o preparar una ruta; no introducir varios disparadores sin comprobar su interacción.
@@ -295,7 +295,7 @@ Implementada el 23/09/2026: login/registro, fichas, localidades y GPX sin interr
 
 Implementada el 24/09/2026: favoritas sumadas a creadas/reseñadas sin duplicados; selección de fuentes y novedades cercanas limitada a visibles; texto del correo actualizado en los idiomas existentes. Validación: 281 tests backend, incluidos favorito sin aportaciones, semana sin novedades, eliminación, solapamiento, ocultación y retirada. Se conserva el envío y la baja existentes. Pendientes entrega real y despliegue; no se enviaron correos de prueba a usuarios.
 
-- [ ] Ampliar la selección relevante en `Sources/App/Mail/WeeklyDigest.swift`, reutilizando el envío existente.
+- [x] Ampliar la selección relevante en `Sources/App/Mail/WeeklyDigest.swift`, reutilizando el envío existente.
 - **Resultado:** quien solo tiene favoritos puede recibir cambios útiles de esas fuentes.
 - **Aceptación:** favoritos, fuentes creadas y comentadas se deduplican; retirar un favorito deja de incluirlo por ese motivo; se respetan visibilidad, preferencias y baja. No enviar un correo sin novedades relevantes ni repetir avisos equivalentes. No añadir un segundo sistema de envíos.
 - **Validación:** usuario con solo favoritos, solapamiento con fuentes propias, sin novedades, favorito eliminado y fuente no visible; vista previa/dry-run y pruebas backend apropiadas. Confirmar programación y entregabilidad como una comprobación separada: la preferencia activada no demuestra entrega.
@@ -303,7 +303,9 @@ Implementada el 24/09/2026: favoritas sumadas a creadas/reseñadas sin duplicado
 
 ### FA-06 · P1 · Descubrir «Agua en mi ruta»
 
-- [ ] Revisar el acceso existente a GPX desde el mapa y `RouteWaterPage`.
+Implementada el 24/09/2026: el control GPX existente muestra «Agua en mi ruta» en móvil y escritorio; la hoja explica el beneficio, da prioridad a preparar la ruta y conserva exportación. Textos en ocho idiomas. Validación: 427 tests web, build y revisión del recorrido sin cuenta en escritorio y viewport móvil 390×844. Pendientes las pruebas con cinco personas; FA-03 sigue pendiente, por lo que no se promueve el registro como parte de preparar la ruta. Despliegue por confirmar.
+
+- [x] Revisar el acceso existente a GPX desde el mapa y `RouteWaterPage`.
 - **Resultado:** el usuario entiende qué obtiene antes de necesitar conocer el término GPX.
 - **Aceptación:** acceso identificable en móvil, explicación breve del resultado y continuidad con importación, estado y uso offline existentes. Mantener consulta como invitado; no añadir otro botón flotante ni un motor de navegación.
 - **Validación:** preparar una salida con un GPX real y observar dónde se atascan cinco personas; comprobar que no empeoran los controles actuales del mapa.

@@ -2302,12 +2302,11 @@ export function MapPage() {
             titula **«Filtros»**, y meter ahí «descargar las fuentes» y «agua en mi ruta»
             es guardarlas en un cajón cuyo rótulo dice que son otra cosa. Nadie las
             encontraría, y quien las encontrara no sabría por qué estaban ahí.
-            El botón dice **GPX** con letras y no con un icono a propósito: quien lleva un
-            GPS en el manillar reconoce esas tres letras al instante, y quien no, con
-            cualquier icono tendría que adivinar igual. */}
+            El acceso explica el beneficio; el formato GPX se explica dentro de la hoja. */}
         <NuevoBadge clave="gpx">
           <Fab
             ref={gpxBtn}
+            variant="extended"
             size="medium"
             onClick={() => {
               trackInteraction('map_gpx')
@@ -2315,12 +2314,12 @@ export function MapPage() {
               setZonaOpen(false)
               setGpxOpen((v) => !v)
             }}
-            aria-label={t('gpx.group')}
-            title={t('gpx.group')}
+            aria-label={t('gpxIn.title')}
+            title={t('gpxIn.title')}
             sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 800, fontSize: 13,
-                  letterSpacing: 0.5, '&:hover': { bgcolor: 'background.paper' } }}
+                  maxWidth: 'min(180px, 48vw)', height: 48, px: 1.5, lineHeight: 1.2, textTransform: 'none', '&:hover': { bgcolor: 'background.paper' } }}
           >
-            GPX
+            {t('gpxIn.title')}
           </Fab>
         </NuevoBadge>
         {/* Guardar la zona para andar sin cobertura.
@@ -2367,14 +2366,15 @@ export function MapPage() {
           onClose={() => setGpxOpen(false)}
           anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          slotProps={{ paper: { sx: { ml: '-10px', width: 220, p: 1.25, borderRadius: 2, display: 'flex', flexDirection: 'column', gap: '10px' } } }}
+          slotProps={{ paper: { sx: { ml: '-10px', width: 280, p: 1.25, borderRadius: 2, display: 'flex', flexDirection: 'column', gap: '10px' } } }}
         >
-          <ExportGpxButton map={map} />
-          <Button component={Link} to="/gpx" variant="outlined" startIcon={<UploadIcon />}
+          <Typography variant="body2" color="text.secondary">{t('gpxIn.intro')}</Typography>
+          <Button component={Link} to="/gpx" variant="contained" startIcon={<UploadIcon />}
                   onClick={() => setGpxOpen(false)}
                   sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48 }} fullWidth>
-            {t('gpxIn.title')}
+            {t('gpxIn.pick')}
           </Button>
+          <ExportGpxButton map={map} />
         </Popover>
       )}
       {/* Desktop filters have their own bounded surface. Growing the controls column
@@ -2398,14 +2398,15 @@ export function MapPage() {
         </BottomSheet>
       )}
       {movil && (
-        <BottomSheet open={gpxOpen} onClose={() => setGpxOpen(false)} titulo={t('gpx.group')}>
+        <BottomSheet open={gpxOpen} onClose={() => setGpxOpen(false)} titulo={t('gpxIn.title')}>
           <Stack spacing={1.25}>
-            <ExportGpxButton map={map} />
-            <Button component={Link} to="/gpx" variant="outlined" startIcon={<UploadIcon />}
+            <Typography variant="body2" color="text.secondary">{t('gpxIn.intro')}</Typography>
+            <Button component={Link} to="/gpx" variant="contained" startIcon={<UploadIcon />}
                     onClick={() => setGpxOpen(false)}
                     sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48 }} fullWidth>
-              {t('gpxIn.title')}
+              {t('gpxIn.pick')}
             </Button>
+            <ExportGpxButton map={map} />
             {/* Dice para qué sirve: «GPX» a secas no lo entiende quien no lleva GPS, y
                 quien sí lo lleva es exactamente a quien hay que hablarle. */}
             <Typography variant="caption" color="text.secondary" sx={{ px: 0.5 }}>

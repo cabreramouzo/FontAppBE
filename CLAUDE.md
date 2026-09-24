@@ -4274,3 +4274,16 @@ The real SDK button was also checked locally; the reported physical-iPhone start
 flicker still needs device confirmation. Do not change global viewport or safe-area
 rules to compensate for third-party loading sizes. Button width accounts for the SDK's
 20px iframe margins at mount; auth renders must never rebuild the button.
+
+### Product activation and weekly digest (September 2026)
+
+FA-04/05/06 are implemented; see the product plan for validation and remaining research.
+The automatic IntroDialog is no longer mounted. Shared fountain/place pages, auth and
+GPX preparation are quiet routes. The first-fountain welcome offers manual place search
+through `/?search=1`, including after location denial; the map consumes the parameter.
+Installation hints require a successful favorite save (`installMilestone`) and retain
+existing dismissal cooldowns. Opening more tabs alone must not trigger installation.
+Weekly digests include favorites alongside created/reviewed fountains, deduplicated and
+filtered through `Font.visible`; nearby suggestions use that visibility filter too.
+The existing GPX map control now says “Water on my route”, with preparation before export;
+keep one control and preserve guest access. Anonymous route transfer (FA-03) is still pending.
