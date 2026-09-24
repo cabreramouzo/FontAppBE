@@ -282,7 +282,7 @@ Implementada el 23/09/2026. Intención de favorito por pestaña, con nonce, cadu
 
 ### FA-04 · P1 · Primera visita centrada en la tarea
 
-Implementada el 23/09/2026: login/registro, fichas, localidades y GPX sin interrupciones; retirada la introducción automática; búsqueda manual accesible desde la primera bienvenida incluso tras denegar ubicación. Instalación tras un favorito guardado con éxito, con el descarte mensual existente. Validación: build web y tests de rutas e instalación. Pendientes cinco sesiones observadas y prueba física; despliegue por confirmar.
+Implementada el 23/09/2026: login/registro, fichas, localidades y GPX sin interrupciones; búsqueda manual accesible desde la primera bienvenida incluso tras denegar ubicación. La presentación automática se conserva con la historia original del Pirineo para explicar qué es FontApp a quien llega por primera vez sin sesión; aparece una vez y respeta las rutas sin interrupciones. Corrección del 24/09/2026 a petición del autor: reducir interrupciones no debe eliminar la historia que explica el origen del proyecto. Instalación tras un favorito guardado con éxito, con el descarte mensual existente. Validación: build web y tests de rutas e instalación. Pendientes cinco sesiones observadas y prueba física; despliegue por confirmar.
 
 - [x] Revisar `quietRoutes.ts`, `IntroDialog`, `FirstFountainWelcome`, `WelcomeDialog` e `InstallPrompt`.
 - **Resultado:** un enlace compartido abre su contenido sin una cadena de presentaciones; login y registro permiten terminar su tarea. Buscar localidad es una alternativa visible a geolocalizarse.

@@ -1,3 +1,4 @@
+import { IntroDialog } from './components/IntroDialog'
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
@@ -123,6 +124,7 @@ export default function App() {
               </BarreraDePantalla>
             </Layout>
             <WelcomeDialog />
+            <IntroDialog />
             <FirstFountainWelcome />
             {/* Fuera de la barrera de errores y del layout: es un aviso de la sesión, no
                 de una pantalla, y tiene que poder salir estés donde estés. */}

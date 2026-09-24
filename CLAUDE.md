@@ -4308,8 +4308,10 @@ rules to compensate for third-party loading sizes. Button width accounts for the
 ### Product activation and weekly digest (September 2026)
 
 FA-04/05/06 are implemented; see the product plan for validation and remaining research.
-The automatic IntroDialog is no longer mounted. Shared fountain/place pages, auth and
-GPX preparation are quiet routes. The first-fountain welcome offers manual place search
+IntroDialog presents FontApp and its original Pyrenees story once to signed-out visitors,
+before the first-fountain welcome. Keep the story: it explains why the project exists.
+Shared fountain/place pages, auth and GPX preparation remain quiet routes.
+The first-fountain welcome offers manual place search
 through `/?search=1`, including after location denial; the map consumes the parameter.
 Installation hints require a successful favorite save (`installMilestone`) and retain
 existing dismissal cooldowns. Opening more tabs alone must not trigger installation.
