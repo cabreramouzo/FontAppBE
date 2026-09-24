@@ -1906,6 +1906,43 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    func testWeeklyDigestIncludesVisibleFavoritesWithoutDuplicateActivity() async throws {
+        try await withApp { app in
+            let readerID = try await register(app, username: "digest-reader")
+            try await register(app, username: "digest-author")
+            let authorToken = try await login(app, username: "digest-author")
+            let readerToken = try await login(app, username: "digest-reader")
+            let fontID = try await createFont(app, token: authorToken, name: "Saved fountain", lat: 10, long: 10)
+            let user = try await User.find(readerID, on: app.db)!
+            let since = Date().addingTimeInterval(-7 * 86_400)
+            try await FontFavorite.follow(fontID: fontID, userID: readerID, on: app.db)
+            let quiet = try await WeeklyDigest.build(for: user, since: since, on: app.db)
+            XCTAssertFalse(quiet.isWorthSending)
+            _ = try await addComment(app, token: authorToken, fontID: fontID, body: "Water today")
+            let favoriteOnly = try await WeeklyDigest.build(for: user, since: since, on: app.db)
+            XCTAssertEqual(favoriteOnly.activity.count, 1)
+            XCTAssertEqual(favoriteOnly.activity.first?.fontID, fontID)
+            XCTAssertEqual(favoriteOnly.fontsAdded, 0)
+            try await FontFavorite.query(on: app.db).filter(\.$user.$id == readerID).delete()
+            let removed = try await WeeklyDigest.build(for: user, since: since, on: app.db)
+            XCTAssertFalse(removed.isWorthSending)
+            try await FontFavorite.follow(fontID: fontID, userID: readerID, on: app.db)
+            _ = try await addComment(app, token: readerToken, fontID: fontID, body: "My review")
+            let overlapping = try await WeeklyDigest.build(for: user, since: since, on: app.db)
+            XCTAssertEqual(overlapping.activity.count, 1)
+            let font = try await Font.find(fontID, on: app.db)!
+            font.moderationState = "hidden_spam"
+            try await font.save(on: app.db)
+            let hidden = try await WeeklyDigest.build(for: user, since: since, on: app.db)
+            XCTAssertFalse(hidden.isWorthSending)
+            font.moderationState = "visible"
+            font.retiredAt = Date()
+            try await font.save(on: app.db)
+            let retired = try await WeeklyDigest.build(for: user, since: since, on: app.db)
+            XCTAssertFalse(retired.isWorthSending)
+        }
+    }
+
     /// La baja desde el correo funciona sin sesión, pero solo con el token firmado
     /// correcto: uno inventado (o el de otro usuario) no da de baja a nadie.
     func testUnsubscribeNeedsValidToken() async throws {

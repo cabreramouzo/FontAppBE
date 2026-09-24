@@ -10,7 +10,7 @@ struct WeeklyDigest {
     var fontsAdded: Int = 0
     var statusesConfirmed: Int = 0
 
-    /// Novedad de otra persona en una fuente "tuya" (creada por ti o reseñada por ti).
+    /// Novedad de otra persona en una fuente "tuya" (creada, reseñada o guardada por ti).
     struct Activity {
         enum Kind { case comment, report, edit }
         let kind: Kind
@@ -66,7 +66,7 @@ struct WeeklyDigest {
         let userID = try user.requireID()
         var digest = WeeklyDigest()
 
-        // --- Fuentes "tuyas": las que creaste + aquellas en las que has dejado reseña.
+        // --- Fuentes relevantes: creadas, reseñadas y favoritas, siempre visibles.
         let createdFontIDs = try await Font.query(on: db)
             .filter(\.$creator.$id == userID)
             .all(\.$id)
@@ -74,7 +74,14 @@ struct WeeklyDigest {
             .filter(\.$user.$id == userID)
             .all()
             .map { $0.$font.id }
-        let myFontIDs = Array(Set(createdFontIDs + commentedFontIDs))
+        let favoriteFontIDs = try await FontFavorite.query(on: db)
+            .filter(\.$user.$id == userID)
+            .all()
+            .map { $0.$font.id }
+        let selectedIDs = Array(Set(createdFontIDs + commentedFontIDs + favoriteFontIDs))
+        let myFonts = selectedIDs.isEmpty ? [] : try await Font.visible(on: db)
+            .filter(\.$id ~~ selectedIDs).all()
+        let myFontIDs = myFonts.compactMap(\.id)
 
         // --- Números de la cabecera (lo que aportaste TÚ esta semana).
         digest.fontsAdded = try await Font.query(on: db)
@@ -90,7 +97,6 @@ struct WeeklyDigest {
         guard !myFontIDs.isEmpty else { return digest }
 
         // Nombres de las fuentes implicadas, en una query (nada de N+1).
-        let myFonts = try await Font.query(on: db).filter(\.$id ~~ myFontIDs).all()
         // Las que no tienen nombre propio se quedan fuera y por tanto se leen como `nil`.
         // El `guard` de abajo ya NO puede usar este diccionario para filtrar: las fuentes
         // en juego vienen todas de `myFontIDs`, así que el filtro ya está hecho — y si se
@@ -154,7 +160,7 @@ struct WeeklyDigest {
         if let minLat = lats.min(), let maxLat = lats.max(), let minLon = lons.min(), let maxLon = lons.max() {
             let dLat = nearbyRadiusKm / 111.0
             let dLon = nearbyRadiusKm / (111.0 * max(cos(((minLat + maxLat) / 2) * .pi / 180), 0.01))
-            let candidates = try await Font.query(on: db)
+            let candidates = try await Font.visible(on: db)
                 .filter(\.$createdAt >= since)
                 .filter(\.$latitude >= minLat - dLat).filter(\.$latitude <= maxLat + dLat)
                 .filter(\.$longitude >= minLon - dLon).filter(\.$longitude <= maxLon + dLon)

@@ -293,6 +293,8 @@ Implementada el 23/09/2026: login/registro, fichas, localidades y GPX sin interr
 
 ### FA-05 · P1 · Favoritos en el resumen semanal
 
+Implementada el 24/09/2026: favoritas sumadas a creadas/reseñadas sin duplicados; selección de fuentes y novedades cercanas limitada a visibles; texto del correo actualizado en los idiomas existentes. Validación: 281 tests backend, incluidos favorito sin aportaciones, semana sin novedades, eliminación, solapamiento, ocultación y retirada. Se conserva el envío y la baja existentes. Pendientes entrega real y despliegue; no se enviaron correos de prueba a usuarios.
+
 - [ ] Ampliar la selección relevante en `Sources/App/Mail/WeeklyDigest.swift`, reutilizando el envío existente.
 - **Resultado:** quien solo tiene favoritos puede recibir cambios útiles de esas fuentes.
 - **Aceptación:** favoritos, fuentes creadas y comentadas se deduplican; retirar un favorito deja de incluirlo por ese motivo; se respetan visibilidad, preferencias y baja. No enviar un correo sin novedades relevantes ni repetir avisos equivalentes. No añadir un segundo sistema de envíos.
