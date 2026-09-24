@@ -2320,7 +2320,7 @@ export function MapPage() {
             sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 800, fontSize: 13,
                   maxWidth: 'min(180px, 48vw)', height: 48, px: 1.5, lineHeight: 1.2, textTransform: 'none', '&:hover': { bgcolor: 'background.paper' } }}
           >
-            {t('gpxIn.title')} · GPX
+            GPX
           </Fab>
         </NuevoBadge>
         {/* Guardar la zona para andar sin cobertura.
