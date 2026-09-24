@@ -1,3 +1,4 @@
+import { SavedOuting } from '../components/SavedOuting'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -2314,12 +2315,12 @@ export function MapPage() {
               setZonaOpen(false)
               setGpxOpen((v) => !v)
             }}
-            aria-label={t('gpxIn.title')}
-            title={t('gpxIn.title')}
+            aria-label={`${t('gpxIn.title')} · GPX`}
+            title={`${t('gpxIn.title')} · GPX`}
             sx={{ bgcolor: 'background.paper', color: 'primary.main', fontWeight: 800, fontSize: 13,
                   maxWidth: 'min(180px, 48vw)', height: 48, px: 1.5, lineHeight: 1.2, textTransform: 'none', '&:hover': { bgcolor: 'background.paper' } }}
           >
-            {t('gpxIn.title')}
+            {t('gpxIn.title')} · GPX
           </Fab>
         </NuevoBadge>
         {/* Guardar la zona para andar sin cobertura.
@@ -2368,6 +2369,7 @@ export function MapPage() {
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           slotProps={{ paper: { sx: { ml: '-10px', width: 280, p: 1.25, borderRadius: 2, display: 'flex', flexDirection: 'column', gap: '10px' } } }}
         >
+          <SavedOuting />
           <Typography variant="body2" color="text.secondary">{t('gpxIn.intro')}</Typography>
           <Button component={Link} to="/gpx" variant="contained" startIcon={<UploadIcon />}
                   onClick={() => setGpxOpen(false)}
@@ -2398,9 +2400,10 @@ export function MapPage() {
         </BottomSheet>
       )}
       {movil && (
-        <BottomSheet open={gpxOpen} onClose={() => setGpxOpen(false)} titulo={t('gpxIn.title')}>
+        <BottomSheet open={gpxOpen} onClose={() => setGpxOpen(false)} titulo={`${t('gpxIn.title')} · GPX`}>
           <Stack spacing={1.25}>
-            <Typography variant="body2" color="text.secondary">{t('gpxIn.intro')}</Typography>
+            <SavedOuting />
+          <Typography variant="body2" color="text.secondary">{t('gpxIn.intro')}</Typography>
             <Button component={Link} to="/gpx" variant="contained" startIcon={<UploadIcon />}
                     onClick={() => setGpxOpen(false)}
                     sx={{ textTransform: 'none', justifyContent: 'flex-start', minHeight: 48 }} fullWidth>

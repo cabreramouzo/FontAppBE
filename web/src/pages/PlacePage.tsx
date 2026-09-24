@@ -1,3 +1,4 @@
+import { SaveZoneButton } from '../components/SavedOuting'
 import { useEffect, useState } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
@@ -77,6 +78,7 @@ export function PlacePage() {
         {t('place.openMap')}
       </Button>
 
+      <Box sx={{ mb: 2 }}><SaveZoneButton zone={{ kind: 'place', name: place.name, slug }} /></Box>
       <Typography variant="h6" component="h2" gutterBottom>{t('place.list')}</Typography>
       <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
         {fonts.map((f) => {

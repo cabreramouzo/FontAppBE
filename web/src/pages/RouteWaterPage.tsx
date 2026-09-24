@@ -77,6 +77,12 @@ const CORREDORES = [100, 250, 500, 1000]
  * una promesa que el día que estés sediento no se sostiene.
  */
 export function RouteWaterPage() {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  return <RouteWaterContent key={user?.id ?? 'anonymous'} />
+}
+
+function RouteWaterContent() {
   const { t } = useI18n()
   const { user } = useAuth()
   const toast = useToast()

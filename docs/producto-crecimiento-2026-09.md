@@ -451,3 +451,18 @@ No iniciar Capacitor como paso obligatorio hacia React Native: son apuestas alte
 - [ ] Decidir continuar solo con beneficio observado, presupuesto de desarrollo, capacidad mensual de mantenimiento y responsable disponibles. Como criterio inicial de aprendizaje: cinco participantes que prueben una segunda salida y expliquen una mejora concreta frente a la PWA; no es una prueba estadística ni promesa de conversión.
 
 Dependencias: FA-01/02/03 y señales del piloto FA-08. Estado: **documentado, no iniciado**. Entregable: decisión escrita entre PWA, Capacitor o nuevo cliente, con mediciones y costes actualizados. No convertir la encuesta existente ni una demo generada con IA en autorización para asumir meses de desarrollo.
+
+
+## 15. Implementación P2 (24/09/2026)
+
+### P2-A · Zona guardada y última ruta
+
+Implementado: guardar una localidad o región explícitamente desde su página/tarjeta;
+un único destino por cuenta en este dispositivo, sustituible y eliminable. «Retoma tu
+salida» permite volver desde Zonas o las herramientas GPX a esa zona y a la última ruta.
+No requiere GPS, no sincroniza coordenadas personales y no activa avisos de zona ni correo.
+El acceso visible conserva «Agua en mi ruta · GPX». La pantalla de ruta espera la sesión
+antes de leer el almacenamiento y se reinicia al cambiar de cuenta; no transfiere rutas
+anónimas (FA-03 permanece pendiente). Tests de aislamiento por cuenta, sustitución,
+eliminación, entrada inválida y enlaces internos. Build web y revisión visual pendientes
+al cerrar esta entrega. No se han realizado entrevistas del piloto.

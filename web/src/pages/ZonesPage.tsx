@@ -1,5 +1,6 @@
+import { SaveZoneButton, SavedOuting } from '../components/SavedOuting'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -44,6 +45,7 @@ type SearchOption =
 export function ZonesPage() {
   const { t, lang } = useI18n()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
   const [zonas, setZonas] = useState<ZoneCoverage[] | null>(null)
   const [estado, setEstado] = useState<'loading' | 'ok' | 'error'>('loading')
 
@@ -55,6 +57,10 @@ export function ZonesPage() {
   // página se lo deshaga en cada visita.
   const [pais, setPais] = useState<string | null>(paisRecordado)
   const [busqueda, setBusqueda] = useState('')
+  useEffect(() => {
+    const region = params.get('region')
+    if (region) { setBusqueda(region); setPais(params.get('country') ?? TODOS) }
+  }, [params])
   const [lugares, setLugares] = useState<PlaceDTO[]>([])
   const [buscando, setBuscando] = useState(false)
 
@@ -137,6 +143,7 @@ export function ZonesPage() {
 
       {/* Primero lo que se puede terminar y después lo que no. Al revés, la página
           abría con una barra al 0,3 % que no se mueve en meses. */}
+      <SavedOuting />
       <LocalGoalCard onCountry={desdeTuUbicacion} />
 
       {estado === 'loading' && <Skeleton lines={6} />}
@@ -267,6 +274,7 @@ function ZonaCard({ zona, lang }: { zona: ZoneCoverage; lang: string }) {
           pct={zona.freshPct}
           lang={lang}
         />
+        <SaveZoneButton zone={{ kind: 'region', name: zona.region, country: zona.country ?? null }} />
         {zona.fonts > zona.checkedRecently && (
           <Pendientes zona={zona} lang={lang} />
         )}
