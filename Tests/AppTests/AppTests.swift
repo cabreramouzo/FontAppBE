@@ -41,7 +41,9 @@ final class AppTests: XCTestCase {
     }
 
     func testAdmin1TableCoversProductionTerritoriesAndSwitzerland() {
-        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 1671)
+        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 1735)
+        XCTAssertEqual(Admin1.code(country: "United States of America", region: "Alabama"), "US-AL")
+        XCTAssertEqual(Admin1.code(country: "Canada", region: "Alberta"), "CA-AB")
         XCTAssertEqual(Admin1.code(country: "Kosovo", region: "Priština"), "XK")
         XCTAssertEqual(Admin1.code(country: "Cyprus", region: "Famagusta"), "CY-04")
         XCTAssertEqual(Admin1.code(country: "Malta", region: "Cospicua"), "MT-06")

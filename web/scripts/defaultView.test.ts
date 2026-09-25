@@ -21,6 +21,6 @@ test('a viewer in Latin America opens on their own country', () => {
 })
 
 test('a similar-looking zone outside our countries is not guessed', () => {
-  assert.deepEqual(defaultViewFor('America/New_York'), DEFAULT_VIEW)
+  assert.deepEqual(defaultViewFor('Africa/Nairobi'), DEFAULT_VIEW)
   assert.deepEqual(defaultViewFor('America/Sao_Paulo_X'), DEFAULT_VIEW)
 })
