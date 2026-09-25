@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  diasDesde, MAX_PUNTOS, olvidaRuta, recuerdaRuta, rutaRecordada,
+  clearRouteTransfer, diasDesde, MAX_PUNTOS, olvidaRuta, pendingRouteTransfer,
+  prepareRouteTransfer, recuerdaRuta, resolveRouteTransfer, rutaRecordada,
 } from '../src/lib/routeMemory.ts'
 
 function conAlmacen() {
@@ -12,6 +13,18 @@ function conAlmacen() {
     removeItem: (k: string) => { datos.delete(k) },
   }
   return datos
+}
+
+function almacen() {
+  const datos = new Map<string, string>()
+  return {
+    datos,
+    store: {
+      getItem: (k: string) => datos.get(k) ?? null,
+      setItem: (k: string, v: string) => { datos.set(k, v) },
+      removeItem: (k: string) => { datos.delete(k) },
+    },
+  }
 }
 
 const RUTA = {
@@ -79,4 +92,55 @@ test('los dias se cuentan hacia atras y nunca salen negativos', () => {
   assert.equal(diasDesde('2026-08-24T09:00:00Z', ahora), 2)
   assert.equal(diasDesde('2026-08-26T08:00:00Z', ahora), 0)
   assert.equal(diasDesde('2026-09-01T00:00:00Z', ahora), 0, 'un reloj mal puesto no da -6 dias')
+})
+
+test('el regreso exacto del login ofrece la ruta anonima sin adoptarla todavía', () => {
+  conAlmacen()
+  const session = almacen()
+  assert.equal(
+    prepareRouteTransfer(session.store, RUTA, 'nonce', 100),
+    '/gpx?routeTransfer=nonce',
+  )
+  assert.deepEqual(pendingRouteTransfer(session.store, 'nonce', 101), RUTA)
+  assert.equal(rutaRecordada('ana'), null, 'abrir el diálogo todavía no escribe en la cuenta')
+})
+
+test('una URL compartida, otro token y una intención caducada no exponen la ruta', () => {
+  conAlmacen()
+  assert.equal(pendingRouteTransfer(almacen().store, 'nonce', 101), null)
+  const session = almacen()
+  prepareRouteTransfer(session.store, RUTA, 'nonce', 100)
+  assert.equal(pendingRouteTransfer(session.store, 'otro', 101), null)
+  assert.equal(pendingRouteTransfer(session.store, 'nonce', 600_100), null)
+})
+
+test('rechazar consume la decisión y conserva intacta la ruta de la cuenta', () => {
+  conAlmacen()
+  const anterior = { ...RUTA, nombre: 'Ruta de Ana' }
+  recuerdaRuta(anterior, 'ana')
+  const session = almacen()
+  prepareRouteTransfer(session.store, RUTA, 'nonce', 100)
+  assert.equal(resolveRouteTransfer(session.store, 'nonce', 'ana', false, 101), null)
+  assert.deepEqual(rutaRecordada('ana'), anterior)
+  assert.equal(pendingRouteTransfer(session.store, 'nonce', 102), null)
+})
+
+test('aceptar sustituye de forma explícita y la recarga conserva el resultado', () => {
+  conAlmacen()
+  recuerdaRuta({ ...RUTA, nombre: 'Ruta anterior' }, 'ana')
+  const session = almacen()
+  prepareRouteTransfer(session.store, RUTA, 'nonce', 100)
+  assert.deepEqual(resolveRouteTransfer(session.store, 'nonce', 'ana', true, 101), RUTA)
+  assert.deepEqual(rutaRecordada('ana'), RUTA)
+  assert.equal(resolveRouteTransfer(session.store, 'nonce', 'bruno', true, 102), null,
+    'la misma decisión no se puede aplicar a otra cuenta')
+  assert.equal(rutaRecordada('bruno'), null)
+})
+
+test('cerrar sesión descarta cualquier transferencia pendiente', () => {
+  conAlmacen()
+  const session = almacen()
+  prepareRouteTransfer(session.store, RUTA, 'nonce', 100)
+  clearRouteTransfer(session.store)
+  assert.equal(pendingRouteTransfer(session.store, 'nonce', 101), null)
 })

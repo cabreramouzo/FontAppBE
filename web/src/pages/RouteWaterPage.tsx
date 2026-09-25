@@ -8,6 +8,11 @@ import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import CircularProgress from '@mui/material/CircularProgress'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import Link from '@mui/material/Link'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
@@ -25,7 +30,10 @@ import { useToast } from '../components/ToastContext'
 import { fijaParaOffline } from '../lib/fijarOffline'
 import { enqueue, isOffline } from '../lib/outbox'
 import { WATER_STATUS, WATER_STATUS_OPTIONS } from '../lib/waterStatus'
-import { diasDesde, olvidaRuta, recuerdaRuta, rutaRecordada } from '../lib/routeMemory'
+import {
+  diasDesde, olvidaRuta, pendingRouteTransfer, prepareRouteTransfer,
+  recuerdaRuta, resolveRouteTransfer, rutaRecordada,
+} from '../lib/routeMemory'
 import { useI18n } from '../i18n/I18nContext'
 import { nombreFuente } from '../lib/fontName'
 import { confidenceOf, constaAgua, CONFIDENCE_EMOJI, confidenceLabelKey, type ConfidenceLevel } from '../lib/confidence'
@@ -89,6 +97,12 @@ function RouteWaterContent() {
   const input = useRef<HTMLInputElement>(null)
   const scope = user?.id ?? 'anonymous'
   const [recordada, setRecordada] = useState(() => rutaRecordada(user?.id ?? 'anonymous'))
+  const transferToken = useRef(globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`)
+  const transferParam = user ? new URLSearchParams(window.location.search).get('routeTransfer') : null
+  const [transferCandidate, setTransferCandidate] = useState(() => {
+    if (!user || !transferParam) return null
+    try { return pendingRouteTransfer(sessionStorage, transferParam) } catch { return null }
+  })
   // Las que ya has contado en esta visita. Se guardan aquí y no en `localStorage`: es
   // información de un rato, y la de verdad ya está publicada en la fuente.
   const [contadas, setContadas] = useState<Record<string, string>>({})
@@ -108,6 +122,70 @@ function RouteWaterContent() {
   const [excluidas, setExcluidas] = useState<ReadonlySet<string>>(new Set())
   // El mismo corte que usa toda la app: la forma cambia de verdad, no solo el tamaño.
   const movil = useMediaQuery((tema: Theme) => tema.breakpoints.down('sm'))
+
+  function prepareTransferReturn(): string {
+    return prepareRouteTransfer(sessionStorage, recordada!, transferToken.current)
+  }
+
+  function removeTransferParam() {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('routeTransfer')
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+  }
+
+  function decideTransfer(accept: boolean) {
+    if (!user || !transferParam) return
+    let imported = null
+    try {
+      imported = resolveRouteTransfer(sessionStorage, transferParam, user.id, accept)
+    } catch {
+      // Storage can be unavailable in private mode. The account route remains untouched.
+    }
+    removeTransferParam()
+    setTransferCandidate(null)
+    if (!accept) return
+    if (!imported) {
+      toast.show(t('return.saveFailed'), 'error')
+      return
+    }
+    // It is a move after an explicit choice: leaving it under `anonymous` would expose
+    // the same route again after logout and offer it to another account on this device.
+    olvidaRuta('anonymous')
+    setRecordada(imported)
+    setRuta(imported.puntos)
+    setNombreRuta(imported.nombre)
+    setFuentes(null)
+    setContadas({})
+    setExcluidas(new Set())
+    void pideFuentes(imported.puntos)
+    toast.show(t('gpxIn.transferDone'))
+  }
+
+  useEffect(() => {
+    if (user && transferParam && !transferCandidate) removeTransferParam()
+    // The token is consumed or discarded once on this keyed page instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // The header login is outside this page and already has its own return URL. Capture
+  // that ordinary link while an anonymous route is open so every login door preserves
+  // the same explicit transfer decision, not only the invitation rendered below.
+  useEffect(() => {
+    if (user || !recordada) return
+    const preserveRoute = (event: MouseEvent) => {
+      const anchor = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[href]')
+      if (!anchor) return
+      const authURL = new URL(anchor.href, window.location.href)
+      if (authURL.origin !== window.location.origin
+          || (authURL.pathname !== '/login' && authURL.pathname !== '/register')) return
+      authURL.searchParams.set('next', prepareTransferReturn())
+      anchor.href = authURL.pathname + authURL.search + authURL.hash
+    }
+    document.addEventListener('click', preserveRoute, true)
+    return () => document.removeEventListener('click', preserveRoute, true)
+    // The route name and points only change when `recordada` does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, recordada])
 
   async function abrir(file: File) {
     setError(''); setCargando(true); setFuentes(null); setRuta([])
@@ -323,6 +401,25 @@ function RouteWaterContent() {
         {t('gpxIn.privacy')}
       </Typography>
 
+      {!user && recordada && (
+        <Alert
+          severity="info" sx={{ mt: 2 }}
+          action={
+            <Button
+              component={RouterLink}
+              to={loginNext(`/gpx?routeTransfer=${encodeURIComponent(transferToken.current)}`)}
+              onClick={() => { prepareTransferReturn() }}
+              color="inherit" size="small"
+            >
+              {t('gpxIn.transferLogin')}
+            </Button>
+          }
+        >
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>{t('gpxIn.transferTitle')}</Typography>
+          <Typography variant="body2">{t('gpxIn.transferBody')}</Typography>
+        </Alert>
+      )}
+
       {/* La invitación a cerrar el círculo. Va **condicional** —«si la has hecho»— y no
           «has pasado cerca de 8 fuentes»: la app no sabe si de verdad saliste, solo que
           importaste el recorrido. Afirmarlo sería inventarse un hecho sobre el usuario, y
@@ -520,7 +617,13 @@ function RouteWaterContent() {
                 </>
               ) : (
                 <Typography variant="body2">
-                  <Link component={RouterLink} to={loginNext()}>{t('gpxIn.reportLogin')}</Link>
+                  <Link
+                    component={RouterLink}
+                    to={recordada ? loginNext(`/gpx?routeTransfer=${encodeURIComponent(transferToken.current)}`) : loginNext()}
+                    onClick={() => { if (recordada) prepareTransferReturn() }}
+                  >
+                    {t('gpxIn.reportLogin')}
+                  </Link>
                 </Typography>
               )}
             </Alert>
@@ -551,6 +654,24 @@ function RouteWaterContent() {
           )}
         </>
       )}
+
+      <Dialog open={!!transferCandidate} onClose={() => decideTransfer(false)} fullWidth maxWidth="xs">
+        <DialogTitle>{t('gpxIn.transferDialogTitle')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {recordada
+              ? t('gpxIn.transferReplace', { incoming: transferCandidate?.nombre ?? '', existing: recordada.nombre })
+              : t('gpxIn.transferQuestion', { name: transferCandidate?.nombre ?? '' })}
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 1 }}>{t('gpxIn.transferLocal')}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => decideTransfer(false)}>{t('gpxIn.transferKeep')}</Button>
+          <Button variant="contained" disableElevation onClick={() => decideTransfer(true)}>
+            {t(recordada ? 'gpxIn.transferReplaceAction' : 'gpxIn.transferSave')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

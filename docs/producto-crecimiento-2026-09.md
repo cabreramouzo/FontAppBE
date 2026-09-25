@@ -250,7 +250,7 @@ Este documento no implementa cambios funcionales, no crea campañas, no contacta
 
 ## 13. Backlog para retomar la implementación
 
-Estado actualizado: **FA-01, FA-02, FA-04, FA-05 y FA-06 implementadas y validadas localmente; FA-03 y el resto pendientes**. El análisis está terminado; las campañas no han comenzado. Antes de abordar una tarea, contrastar el código actual con el hallazgo, porque puede haber cambiado desde la auditoría. Las reglas técnicas y los comandos de validación siguen teniendo su única fuente de verdad en `CLAUDE.md`.
+Estado actualizado: **FA-01 a FA-06 implementadas y validadas localmente; el resto pendiente**. El análisis está terminado; las campañas no han comenzado. Antes de abordar una tarea, contrastar el código actual con el hallazgo, porque puede haber cambiado desde la auditoría. Las reglas técnicas y los comandos de validación siguen teniendo su única fuente de verdad en `CLAUDE.md`.
 
 ### FA-01 · P0 · No confundir incertidumbre con sequedad
 
@@ -274,10 +274,12 @@ Implementada el 23/09/2026. Intención de favorito por pestaña, con nonce, cadu
 
 ### FA-03 · P0 · Conservar una ruta de invitado al acceder
 
-- [ ] Revisar `web/src/lib/routeMemory.ts` y `web/src/pages/RouteWaterPage.tsx`.
+- Implementada el 25/09/2026. La ruta anónima se conserva en una intención de pestaña con token y caducidad de diez minutos. Al volver del login se pide una decisión explícita; si la cuenta ya tiene ruta se nombran las dos antes de sustituirla. Rechazar mantiene la ruta de la cuenta, aceptar mueve la anónima al ámbito de esa cuenta y la recarga conserva el resultado. La intención se consume una vez y se borra al cerrar sesión. El GPX sigue siendo local y no se añade ningún endpoint.
+- [x] Revisar `web/src/lib/routeMemory.ts` y `web/src/pages/RouteWaterPage.tsx`.
 - **Resultado:** la ruta preparada antes de acceder puede conservarse explícitamente para la cuenta actual.
 - **Aceptación:** pedir la decisión cuando corresponda; no sobrescribir silenciosamente una ruta existente; rechazar la transferencia conserva la separación entre cuentas. Cerrar sesión y entrar en otra cuenta no expone ni transfiere rutas de la anterior. La recarga mantiene el resultado elegido.
 - **Validación:** invitado con GPX → login, cuenta con ruta previa, cancelación, recarga y cambio de cuenta. Mantener el tratamiento local del GPX; esta tarea no añade sincronización en servidor.
+- **Validación realizada:** build web, paridad de ocho idiomas y 449 tests web. Los tests cubren retorno exacto, URL compartida, token incorrecto o caducado, rechazo, sustitución explícita, recarga, consumo único, cierre de sesión y cambio de cuenta. Pendiente la comprobación física del login con proveedor en móvil y el despliegue.
 - **Dependencias:** ninguna; coordinar con FA-02 si se comparte infraestructura de continuidad.
 
 ### FA-04 · P1 · Primera visita centrada en la tarea
@@ -303,7 +305,7 @@ Implementada el 24/09/2026: favoritas sumadas a creadas/reseñadas sin duplicado
 
 ### FA-06 · P1 · Descubrir «Agua en mi ruta»
 
-Implementada el 24/09/2026: el control GPX existente muestra «Agua en mi ruta» en móvil y escritorio; la hoja explica el beneficio, da prioridad a preparar la ruta y conserva exportación. Textos en ocho idiomas. Validación: 427 tests web, build y revisión del recorrido sin cuenta en escritorio y viewport móvil 390×844. Pendientes las pruebas con cinco personas; FA-03 sigue pendiente, por lo que no se promueve el registro como parte de preparar la ruta. Despliegue por confirmar.
+Implementada el 24/09/2026: el control GPX existente muestra «Agua en mi ruta» en móvil y escritorio; la hoja explica el beneficio, da prioridad a preparar la ruta y conserva exportación. Textos en ocho idiomas. Validación: 427 tests web, build y revisión del recorrido sin cuenta en escritorio y viewport móvil 390×844. Pendientes las pruebas con cinco personas y el despliegue. FA-03 ya permite conservar explícitamente la ruta si la persona decide acceder durante la preparación.
 
 - [x] Revisar el acceso existente a GPX desde el mapa y `RouteWaterPage`.
 - **Resultado:** el usuario entiende qué obtiene antes de necesitar conocer el término GPX.
@@ -464,10 +466,10 @@ un único destino por cuenta en este dispositivo, sustituible y eliminable. «Re
 salida» permite volver desde Zonas o las herramientas GPX a esa zona y a la última ruta.
 No requiere GPS, no sincroniza coordenadas personales y no activa avisos de zona ni correo.
 El acceso visible conserva «Agua en mi ruta · GPX». La pantalla de ruta espera la sesión
-antes de leer el almacenamiento y se reinicia al cambiar de cuenta; no transfiere rutas
-anónimas (FA-03 permanece pendiente). Tests de aislamiento por cuenta, sustitución,
-eliminación, entrada inválida y enlaces internos. Build web y revisión visual pendientes
-al cerrar esta entrega. No se han realizado entrevistas del piloto.
+antes de leer el almacenamiento y se reinicia al cambiar de cuenta. La transferencia
+explícita de rutas anónimas se implementó después en FA-03. Tests de aislamiento por cuenta, sustitución,
+eliminación, entrada inválida y enlaces internos. Build web validado; guardado, recarga y eliminación de región comprobados en navegador,
+así como importación de un GPX sintético y retorno desde Zonas. No se han realizado entrevistas del piloto.
 
 
 ### P2-B · Reconocimiento y recuperación de agua

@@ -4411,14 +4411,17 @@ existing dismissal cooldowns. Opening more tabs alone must not trigger installat
 Weekly digests include favorites alongside created/reviewed fountains, deduplicated and
 filtered through `Font.visible`; nearby suggestions use that visibility filter too.
 The existing GPX map control now says “Water on my route”, with preparation before export;
-keep one control and preserve guest access. Anonymous route transfer (FA-03) is still pending.
+keep one control and preserve guest access. Anonymous route transfer uses a tab-local,
+ten-minute token carried through the auth return URL. Ask before saving it to the account,
+and name both routes before replacing an existing one. Shared or stale URLs must not expose
+the route; consume the decision once and clear it on logout. The GPX remains local.
 
 ### Saved outings and recovery notifications (September 2026)
 
 P2 adds one explicit saved area per account/device (`savedZone`), linked from Zones and
 GPX tools alongside the existing last route. It does not subscribe to area emails/push.
-RouteWaterPage waits for auth restoration and keys its content by account; anonymous
-route transfer remains a separate pending task. Keep “GPX” visible in the map control.
+RouteWaterPage waits for auth restoration and keys its content by account. Keep “GPX”
+visible in the map control.
 New status reports use `WaterRecovery.save`: lock the fountain row, read the preceding
 reported status and save in one transaction. Only dry/broken/gone → flowing/trickle
 emits `recovered:<status>` through the existing favorite notifications; repeated water

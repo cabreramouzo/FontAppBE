@@ -1,4 +1,5 @@
 import { clearFavoriteIntent } from '../lib/favoriteIntent'
+import { clearRouteTransfer } from '../lib/routeMemory'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { UserResponse } from '../api/types'
 import { ApiError, apiFetch, getToken, googleLoginRequest, loginRequest, loginWithPasskeyRequest, setToken } from '../api/client'
@@ -185,6 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function logout() {
     try { clearFavoriteIntent(sessionStorage) } catch { /* storage unavailable */ }
+    try { clearRouteTransfer(sessionStorage) } catch { /* storage unavailable */ }
     try {
       await apiFetch('/auth/logout', { method: 'POST' })
     } catch {

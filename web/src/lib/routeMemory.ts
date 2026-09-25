@@ -21,6 +21,14 @@ import type { PuntoRuta } from './gpxImport.ts'
  */
 
 const CLAVE = (scope: string) => `route:last:v1:${scope}`
+const TRANSFER_KEY = 'route:transfer:v1'
+const TRANSFER_TTL = 10 * 60 * 1000
+
+interface Store {
+  getItem(key: string): string | null
+  setItem(key: string, value: string): void
+  removeItem(key: string): void
+}
 
 /**
  * Tope de puntos que se guardan.
@@ -80,6 +88,71 @@ export function rutaRecordada(scope: string): RutaRecordada | null {
 
 export function olvidaRuta(scope: string): void {
   try { localStorage.removeItem(CLAVE(scope)) } catch { /* modo privado */ }
+}
+
+interface RouteTransferIntent {
+  token: string
+  createdAt: number
+  route: RutaRecordada
+}
+
+/**
+ * Preserve the anonymous route across the real document navigation used by auth.
+ *
+ * The intent lives in `sessionStorage`: it belongs to this tab and this login attempt.
+ * The token also travels in the internal return URL, so merely opening `/gpx` while
+ * signed in can never expose or adopt an anonymous route left on the device.
+ */
+export function prepareRouteTransfer(
+  store: Store, route: RutaRecordada, token: string, now = Date.now(),
+): string {
+  try {
+    store.setItem(TRANSFER_KEY, JSON.stringify({ token, createdAt: now, route }))
+  } catch {
+    // Private mode or a full store must not break the route or the login link.
+  }
+  return `/gpx?routeTransfer=${encodeURIComponent(token)}`
+}
+
+/** Read a valid pending transfer without consuming the user's decision. */
+export function pendingRouteTransfer(
+  store: Store, token: string, now = Date.now(),
+): RutaRecordada | null {
+  const raw = store.getItem(TRANSFER_KEY)
+  if (!raw) return null
+  try {
+    const intent = JSON.parse(raw) as Partial<RouteTransferIntent>
+    if (intent.token !== token || typeof intent.createdAt !== 'number'
+        || now < intent.createdAt || now - intent.createdAt >= TRANSFER_TTL) return null
+    const route = intent.route as Partial<RutaRecordada> | undefined
+    if (!route || typeof route.nombre !== 'string' || typeof route.cuando !== 'string'
+        || !Array.isArray(route.puntos) || route.puntos.length < 2) return null
+    const points = route.puntos.filter((point) => (
+      point && Number.isFinite(point.lat) && Number.isFinite(point.lon)
+      && Math.abs(point.lat) <= 90 && Math.abs(point.lon) <= 180
+    ))
+    if (points.length < 2 || Number.isNaN(Date.parse(route.cuando))) return null
+    return { nombre: route.nombre, cuando: route.cuando, puntos: points }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Consume the decision once. Rejecting only discards the transfer intent; accepting
+ * writes to the selected account after the UI has warned about any existing route.
+ */
+export function resolveRouteTransfer(
+  store: Store, token: string, targetScope: string, accept: boolean, now = Date.now(),
+): RutaRecordada | null {
+  const route = pendingRouteTransfer(store, token, now)
+  store.removeItem(TRANSFER_KEY)
+  if (!accept || !route || targetScope === 'anonymous') return null
+  return recuerdaRuta(route, targetScope) ? route : null
+}
+
+export function clearRouteTransfer(store: Store): void {
+  store.removeItem(TRANSFER_KEY)
 }
 
 /** Días transcurridos desde que se importó. */
