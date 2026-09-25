@@ -11,7 +11,7 @@
  * esto, un país que no esté en la lista sale con su nombre tal cual, que es feo pero
  * cierto y no rompe nada.
  *
- * Al importar un país nuevo: añadirlo aquí y añadir sus siete traducciones. Si se olvida,
+ * Al importar un país nuevo: añadirlo aquí y añadir sus ocho traducciones. Si se olvida,
  * se nota poco y no se rompe nada — de ahí el aviso.
  */
 /**
@@ -32,7 +32,10 @@
  * con 15.246 fuentes le corresponde el segundo puesto. La cifra sale de `GET /zones`.
  */
 export const PAISES = [
-  'Italy', 'Spain', 'Switzerland', 'France', 'Portugal', 'Sweden', 'Finland', 'Chile', 'Andorra',
+  'Italy', 'Spain', 'Switzerland', 'France', 'Portugal', 'Brazil', 'Sweden', 'Finland',
+  'Argentina', 'Mexico', 'Peru', 'Ecuador', 'Colombia', 'Chile', 'Cuba', 'Bolivia', 'Andorra',
+  'Costa Rica', 'Uruguay', 'Paraguay', 'Venezuela', 'Nicaragua', 'Panama', 'Guatemala',
+  'Dominican Republic', 'Honduras', 'Puerto Rico', 'El Salvador',
 ]
 
 const TRADUCIDOS = new Set(PAISES)
