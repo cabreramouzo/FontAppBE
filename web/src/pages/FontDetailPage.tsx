@@ -305,7 +305,7 @@ function UpdateForm({ fontID, where, hasPhoto, onPosted, onCancel, initialStatus
       // Si además se ha estrenado la portada, se dice. Un cambio silencioso en la ficha
       // de una fuente que no es tuya es justo lo que no queremos: la foto la ha puesto
       // esta persona y tiene que enterarse de que ahora ilustra la fuente entera.
-      toast.show(creada.coverAdopted ? t('toast.reviewPostedAndCover') : t('toast.reviewPosted'))
+      toast.show(creada.coverAdopted ? t('toast.reviewPostedAndCover') : t(creada.confirmedInstead ? 'maintenance.confirmed' : waterStatus ? 'maintenance.updated' : 'toast.reviewPosted'))
       onPosted()
     } catch (e) {
       // Sin cobertura: se guarda en el móvil y se envía en cuanto haya red.
@@ -841,8 +841,8 @@ export function FontDetailPage() {
     if (!lejos.proceed) return
     const data = { waterStatus: estado, remoteDistanceM: lejos.remoteDistanceM }
     try {
-      await createComment(font.id, data)
-      toast.show(t('toast.reviewPosted'))
+      const result = await createComment(font.id, data)
+      toast.show(t(result.confirmedInstead ? 'maintenance.confirmed' : 'maintenance.updated'))
       load()
     } catch (e) {
       if (isOffline(e)) {
@@ -1235,6 +1235,7 @@ export function FontDetailPage() {
     setConfirming(true)
     try {
       await confirmComment(id, current.id, !current.confirmedByMe)
+      if (!current.confirmedByMe) toast.show(t('maintenance.confirmed'))
       await load()
     } catch (e) {
       setError(describeError(e, t))

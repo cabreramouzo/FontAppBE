@@ -103,6 +103,19 @@ enum PushCopy {
     static func fontUpdate(code: String, fontName: String?, lang: String?) -> (String, String) {
         let l = String((lang ?? "ca").prefix(2))
         let n = nombre(fontName, lang: lang)
+        if code.hasPrefix("recovered:") {
+            let messages = [
+                "ca": "Un nou avís indica que torna a sortir aigua",
+                "es": "Un nuevo aviso indica que vuelve a salir agua",
+                "en": "A new report says water is flowing again",
+                "fr": "Un nouveau signalement indique que l’eau coule à nouveau",
+                "it": "Una nuova segnalazione indica che l’acqua scorre di nuovo",
+                "pt": "Um novo aviso indica que voltou a sair água",
+                "gl": "Un novo aviso indica que volve saír auga",
+                "eu": "Abisu berri baten arabera, ura berriz badabil",
+            ]
+            return (n, messages[l] ?? messages["ca"]!)
+        }
         let seco = code == "review:dry" || code == "review:broken" || code == "review:gone"
         let agua = code.hasPrefix("review:") && !seco
 

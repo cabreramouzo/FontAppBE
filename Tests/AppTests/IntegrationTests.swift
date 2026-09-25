@@ -1906,6 +1906,83 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    func testRecoveryEndpointNotifiesFollowersAndDoesNotRepeatRecovery() async throws {
+        try await withApp { app in
+            let authorID = try await register(app, username: "recoverywriter")
+            let followerID = try await register(app, username: "recoveryreader")
+            let token = try await login(app, username: "recoverywriter")
+            let fontID = try await createFont(app, token: token, name: "Recovery", lat: 10, long: 10)
+            for userID in [authorID, followerID] {
+                try await FontFavorite(fontID: fontID, userID: userID).save(on: app.db)
+            }
+            // Muting push must not suppress the in-app notification.
+            let storedFollower = try await User.find(followerID, on: app.db)
+            let follower = try XCTUnwrap(storedFollower)
+            follower.pushFontUpdates = false
+            try await follower.save(on: app.db)
+            let dry = FontComment(fontID: fontID, userID: authorID, body: "", waterStatus: "dry")
+            dry.createdAt = Date().addingTimeInterval(-60)
+            try await dry.save(on: app.db)
+
+            for (index, expectedCode) in ["recovered:trickle", "review:trickle"].enumerated() {
+                try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(token), beforeRequest: { req in
+                    try req.content.encode(["waterStatus": "trickle"])
+                }, afterResponse: { res in
+                    XCTAssertEqual(res.status, .created)
+                })
+                // Wait for this request's detached notification, not the previous one.
+                var notifications: [App.Notification] = []
+                for _ in 0..<100 {
+                    notifications = try await App.Notification.query(on: app.db)
+                        .filter(\.$font.$id == fontID).filter(\.$kind == .fontUpdate).all()
+                    if notifications.count >= index + 1 { break }
+                    try await Task.sleep(for: .milliseconds(20))
+                }
+                XCTAssertEqual(notifications.count, index + 1)
+                XCTAssertTrue(notifications.allSatisfy { $0.$user.id == followerID })
+                XCTAssertEqual(notifications.filter { $0.excerpt == expectedCode }.count, 1)
+            }
+        }
+    }
+
+    func testRecoveryUsesLatestExplicitStatusAndDoesNotInferUnknownWater() async throws {
+        try await withApp { app in
+            let authorID = try await register(app, username: "recoverystates")
+            let token = try await login(app, username: "recoverystates")
+            let fontID = try await createFont(app, token: token, name: "States", lat: 10, long: 10)
+            let states: [(String?, Bool)] = [
+                ("flowing", false), ("dry", false), (nil, false),
+                ("trickle", true), ("broken", false), ("unknown", false), ("flowing", false),
+            ]
+            for (status, expectedRecovery) in states {
+                let recovered = try await WaterRecovery.save(
+                    FontComment(fontID: fontID, userID: authorID, body: "Observation", waterStatus: status),
+                    on: app.db)
+                XCTAssertEqual(recovered, expectedRecovery, "Status: \(status ?? "none")")
+            }
+        }
+    }
+
+    func testRecoveryOnlyOnceForConcurrentWaterReports() async throws {
+        try await withApp { app in
+            let author = try await register(app, username: "recovery-author")
+            let token = try await login(app, username: "recovery-author")
+            let id = try await createFont(app, token: token, name: "Recovery", lat: 10, long: 10)
+            let dry = FontComment(fontID: id, userID: author, body: "", waterStatus: "dry")
+            let initial = try await WaterRecovery.save(dry, on: app.db)
+            XCTAssertFalse(initial)
+            let first = FontComment(fontID: id, userID: author, body: "", waterStatus: "flowing")
+            let second = FontComment(fontID: id, userID: author, body: "", waterStatus: "flowing")
+            async let a = WaterRecovery.save(first, on: app.db)
+            async let b = WaterRecovery.save(second, on: app.db)
+            let results = try await [a, b]
+            XCTAssertEqual(results.filter { $0 }.count, 1)
+            let repeated = try await WaterRecovery.save(
+                FontComment(fontID: id, userID: author, body: "", waterStatus: "flowing"), on: app.db)
+            XCTAssertFalse(repeated)
+        }
+    }
+
     func testWeeklyDigestIncludesVisibleFavoritesWithoutDuplicateActivity() async throws {
         try await withApp { app in
             let readerID = try await register(app, username: "digest-reader")

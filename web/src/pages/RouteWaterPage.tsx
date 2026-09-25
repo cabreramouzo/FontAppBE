@@ -192,8 +192,8 @@ function RouteWaterContent() {
   async function cuenta(fontID: string, estado: string, fontName?: string) {
     setContadas((c) => ({ ...c, [fontID]: estado }))
     try {
-      await createComment(fontID, { waterStatus: estado })
-      toast.show(t('toast.reviewPosted'))
+      const result = await createComment(fontID, { waterStatus: estado })
+      toast.show(t(result.confirmedInstead ? 'maintenance.confirmed' : 'maintenance.updated'))
     } catch (e) {
       if (isOffline(e)) {
         // En el monte y sin cobertura es justo donde se sabe cómo estaba la fuente. La

@@ -313,8 +313,10 @@ Implementada el 24/09/2026: el control GPX existente muestra «Agua en mi ruta»
 
 ### FA-07 · P2 · Retorno personal y reconocimiento
 
+Implementación autorizada y concretada el 24/09/2026 en P2-A y P2-B (sección 15). La investigación con participantes sigue pendiente; no se atribuye todavía un aumento de retención.
+
 - [ ] Validar en el piloto si falta acceso a la última salida, seguimiento de zona, aviso de recuperación de agua o reconocimiento de mantenimiento.
-- **Estado:** hipótesis por separar en tareas pequeñas después de las entrevistas; no implementar todas por defecto.
+- **Estado:** P2-A y P2-B implementados por autorización explícita; validación con participantes pendiente. No ampliar el alcance por defecto.
 - **Aceptación para pasar a desarrollo:** problema observado, público concreto, superficie existente donde resolverlo, frecuencia de comunicación y criterio medible definidos. Reutilizar favoritos, misiones y gamificación; no inventar impacto ni premiar duplicados.
 - **Dependencias:** resultados del piloto y FA-05 para evitar sistemas de avisos redundantes.
 
@@ -466,3 +468,23 @@ antes de leer el almacenamiento y se reinicia al cambiar de cuenta; no transfier
 anónimas (FA-03 permanece pendiente). Tests de aislamiento por cuenta, sustitución,
 eliminación, entrada inválida y enlaces internos. Build web y revisión visual pendientes
 al cerrar esta entrega. No se han realizado entrevistas del piloto.
+
+
+### P2-B · Reconocimiento y recuperación de agua
+
+Implementado: al publicar un estado o confirmar el existente, la ficha y la actualización
+rápida desde la ruta agradecen la comprobación concreta. No inventa personas ayudadas,
+no añade puntos y mantiene separados los mensajes de aportaciones aún pendientes offline.
+Los favoritos reciben un aviso `recovered:<estado>` cuando un nuevo parte cambia de
+`dry`/`broken`/`gone` a `flowing`/`trickle`. La campana y el push existentes conservan
+su exclusión del autor y las preferencias del destinatario; ningún permiso se activa.
+El texto describe un nuevo aviso, no agua garantizada ni potabilidad.
+
+`WaterRecovery.save` serializa la lectura del estado anterior y el guardado del parte
+mediante una transacción y bloqueo de la fuente. Dos partes concurrentes de agua no
+anuncian dos recuperaciones. Estado desconocido, ausencia de datos o agua que sigue
+saliendo no cuentan como recuperación. Tests de estas transiciones y concurrencia;
+la prueba del endpoint verifica el aviso al favorito, la exclusión del autor y que
+apagar push mantiene la campana, sin repetir la recuperación en el siguiente parte;
+los cambios en ocho idiomas están incluidos en el build web. No se enviaron push a
+usuarios reales. Prueba física de entrega y evaluación de retención siguen pendientes.

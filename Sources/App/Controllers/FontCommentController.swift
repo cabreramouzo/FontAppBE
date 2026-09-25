@@ -160,7 +160,7 @@ struct FontCommentController: RouteCollection {
             queuedOffline: req.headers.first(name: "X-FontApp-Queued-Offline") == "1"
         )
         comment.remoteDistanceM = dto.remoteDistanceM
-        try await comment.save(on: req.db)
+        let recoveredWater = try await WaterRecovery.save(comment, on: req.db)
 
         // Si la fuente no tenía foto, ésta pasa a ser la suya. Es el arreglo de lo que
         // más se repetía: la gente fotografía la fuente, la adjunta a la reseña porque es
@@ -196,12 +196,17 @@ struct FontCommentController: RouteCollection {
         // A quien sigue la fuente. Después de guardar y sin esperar, como las menciones:
         // perder la reseña por no poder avisar sería absurdo.
         let userID = try user.requireID()
-        let estado = dto.waterStatus
+        let waterStatus = dto.waterStatus
+        let change: FontWatchNotifier.Change = if recoveredWater, let waterStatus {
+            .recovered(status: waterStatus)
+        } else {
+            .review(status: waterStatus)
+        }
         let commentID = try comment.requireID()
         let db = req.db
         let push = PushEnvio(req.application)
         Task.detached {
-            await FontWatchNotifier.notify(fontID: fontID, change: .review(status: estado),
+            await FontWatchNotifier.notify(fontID: fontID, change: change,
                                            actorID: userID, on: db, push: push)
             // Que una incidencia se cierre sola es la mejor noticia que puede dar una
             // fuente, y no se deduce de «alguien dijo que raja»: va aparte.

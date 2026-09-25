@@ -53,6 +53,7 @@ function queHaPasado(excerpt: string, quien: string, t: (k: string, v?: Record<s
       ? t('notif.fontUpdate.reviewWithStatus', { user: quien, status: estado })
       : t('notif.fontUpdate.review', { user: quien })
   }
+  if (tipo === 'recovered') return t('maintenance.recovered', { user: quien })
   if (tipo === 'report') return t('notif.fontUpdate.report', { user: quien })
   if (tipo === 'resolved') return t('notif.fontUpdate.resolved')
   if (tipo === 'hidden') {

@@ -41,6 +41,7 @@ enum FontWatchNotifier {
     enum Change: Sendable {
         /// Alguien ha comprobado la fuente. Lleva el estado del agua si lo dijo.
         case review(status: String?)
+        case recovered(status: String)
         /// Alguien ha abierto una incidencia.
         case report
         /// La incidencia se ha cerrado.
@@ -64,6 +65,7 @@ enum FontWatchNotifier {
             case .review(let s):
                 // Sin estado no se sabe nada; con agua, no hay nada que decidir.
                 return s == "dry" || s == "broken" || s == "gone"
+            case .recovered: return true
             case .report: return true
             case .resolved: return false   // salvo para quien la abrió: ver `tambienPushA`
             case .hidden: return true      // la fuente desaparece del mapa
@@ -73,6 +75,7 @@ enum FontWatchNotifier {
         var code: String {
             switch self {
             case .review(let s): return s.map { "review:\($0)" } ?? "review"
+            case .recovered(let status): return "recovered:\(status)"
             case .report: return "report"
             case .resolved: return "resolved"
             case .hidden(let r): return "hidden:\(r)"
