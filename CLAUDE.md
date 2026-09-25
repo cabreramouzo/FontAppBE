@@ -2485,6 +2485,13 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   la come. Son **302 a propósito**: un enlace ya publicado en un vídeo o un post no se puede
   cambiar, así que hay que poder reapuntarlo. El código que se guarda es el largo
   (`youtube`, no `yt`) para que la tabla del panel se lea sola.
+- **Los enlaces con idioma NO están en `_redirects`: son Pages Functions**, un fichero por
+  ruta en `web/functions/` (`igca.ts`…`igit.ts`, `waca.ts`…, `twca.ts`…), todos delegando
+  en `socialRedirect` de `_share.ts` → `/?lang=<idioma>&p=instagram|whatsapp|twitter`.
+  Hay para Instagram (`ig`), WhatsApp (`wa`) y Twitter (`tw`) en los ocho idiomas. Al
+  preguntar «¿existe el enlace X?» hay que mirar **los dos sitios** —`_redirects` y
+  `web/functions/`— y confirmarlo con `curl -sI https://fontapp.net/X`, que es la verdad:
+  mirando solo `_redirects` se llegó a afirmar que `/waca` no existía estando en uso.
 
 ## Pendiente / deuda
 - **TODO — verificar el correo de registro antes de permitir aportaciones.** Añadir
