@@ -41,7 +41,22 @@ final class AppTests: XCTestCase {
     }
 
     func testAdmin1TableCoversProductionTerritoriesAndSwitzerland() {
-        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 862)
+        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 1258)
+        XCTAssertEqual(Admin1.code(country: "Netherlands", region: "Drenthe"), "NL-DR")
+        XCTAssertEqual(Admin1.code(country: "Albania", region: "Berat"), "AL-01")
+        XCTAssertEqual(Admin1.code(country: "Poland", region: "Greater Poland"), "PL-WP")
+        XCTAssertEqual(Admin1.code(country: "Hungary", region: "Baranya"), "HU-BA")
+        XCTAssertEqual(Admin1.code(country: "Greece", region: "Anatoliki Makedonia kai Thraki"), "GR-A")
+        XCTAssertEqual(Admin1.code(country: "Montenegro", region: "Andrijevica"), "ME-01")
+        XCTAssertEqual(Admin1.code(country: "Bosnia and Herzegovina", region: "Banja Luka"), "BA-SRP")
+        XCTAssertEqual(Admin1.code(country: "Croatia", region: "Bjelovarsko-bilogorska"), "HR-07")
+        XCTAssertEqual(Admin1.code(country: "Slovenia", region: "Ajdovščina"), "SI-001")
+        XCTAssertEqual(Admin1.code(country: "Austria", region: "Burgenland"), "AT-1")
+        XCTAssertEqual(Admin1.code(country: "Czech Republic", region: "Jihomoravský"), "CZ-JM")
+        XCTAssertEqual(Admin1.code(country: "Belgium", region: "Antwerp"), "BE-VLG")
+        XCTAssertEqual(Admin1.code(country: "Germany", region: "Baden-Württemberg"), "DE-BW")
+        XCTAssertEqual(Admin1.code(country: "Ireland", region: "Fingal"), "IE-L")
+        XCTAssertEqual(Admin1.code(country: "Ireland", region: "Donegal"), "IE-U")
         // All of metropolitan France now, grouped into its 13 régions.
         XCTAssertEqual(Admin1.code(country: "France", region: "Finistère"), "FR-BRE")
         XCTAssertEqual(Admin1.code(country: "France", region: "Haute-Corse"), "FR-20R")

@@ -466,6 +466,41 @@ también los 49 llamados «Captage»/«Forage» (captaciones, no fuentes) y 536 
 genéricos vaciados («Fontaine», «Source», «Eau potable»…). Entraron **24.594**; rescate
 de costa 416 / 103 / 28 / 8 a 1 / 2 / 5 / 10 km, y **35.665** francesas en las 13 régions.
 
+#### Irlanda, centro de Europa y Balcanes (25/09/2026)
+
+Catorce países de una tanda con la misma receta, en serie y **nunca en paralelo**: el
+rescate de costa rellena toda fuente sin región, así que dos países a la vez podrían
+llevarse las fronterizas del otro. Pasos por país: consulta de Noruega con el área ISO y
+una caja (para quedarse en Europa), `filtra`, nombres genéricos vaciados, fuera todo nodo
+a menos de 25 m de una fuente ya en producción, `import-fonts` y `populate-regions` desde
+el Mac, con el rescate medido a 1/2/5/10 km.
+
+| país | nuevas | país | nuevas |
+|---|---|---|---|
+| Alemania | 17.879 | Montenegro | 3.318 |
+| Hungría | 17.641 | Países Bajos | 3.065 |
+| Austria | 9.665 | Polonia | 3.046 |
+| Grecia | 5.062 | Irlanda | 1.848 |
+| Chequia | 4.199 | Eslovenia | 1.837 |
+| Croacia | 1.748 | Bosnia | 1.605 |
+| Bélgica | 1.534 | Albania | 640 |
+
+Montenegro parece mucho para su tamaño y se miró: son `amenity=drinking_water` normales,
+sin ninguna fuente de datos masiva detrás. Hungría trae unas 4.700 de turistautak.hu, el
+mapa de senderos. Países Bajos devolvió errores de Overpass seis veces seguidas y entró
+al reintentarlo al final.
+
+`Admin1`: donde Natural Earth ya da la primera división ISO (Alemania, Austria, Chequia,
+Croacia, Grecia, Hungría, Montenegro, Países Bajos, Polonia, Albania, y los municipios de
+Eslovenia) el código sale de su propio `iso_3166_2`. Se agrupan Irlanda (condados →
+provincias), Bélgica (provincias → Flandes, Valonia, Bruselas) y Bosnia (por entidad,
+corrigiendo Brčko y Posavina, que el fichero etiqueta mal). En Hungría «Veszprém» es a la
+vez ciudad y condado y la base no los distingue: va al condado.
+
+Doce fuentes de la importación de Italia que se habían quedado sin región, pegadas a la
+frontera, cayeron dentro del polígono esloveno o austriaco y pasaron a esos países. Es la
+misma regla de punto en polígono que el resto, y se dejaron así.
+
 #### Poblar país/región de las fuentes (`populate-regions`)
 
 `fonts.country` y `fonts.region` se rellenan **offline** por *point-in-polygon* contra un

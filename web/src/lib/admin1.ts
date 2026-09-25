@@ -17,6 +17,9 @@ const NAMES: Record<string, string> = {
   'IT-57': 'Marche', 'IT-62': 'Lazio', 'IT-65': 'Abruzzo', 'IT-67': 'Molise',
   'IT-72': 'Campania', 'IT-75': 'Puglia', 'IT-77': 'Basilicata', 'IT-78': 'Calabria',
   'IT-82': 'Sicilia', 'IT-88': 'Sardegna',
+  'BE-BRU': 'Bruxelles / Brussel', 'BE-VLG': 'Vlaanderen', 'BE-WAL': 'Wallonie',
+  'BA-BIH': 'Federacija BiH', 'BA-SRP': 'Republika Srpska', 'BA-BRC': 'Brčko distrikt',
+  'IE-C': 'Connacht', 'IE-L': 'Leinster', 'IE-M': 'Munster', 'IE-U': 'Ulster',
   'GB-ENG': 'England', 'GB-SCT': 'Scotland', 'GB-WLS': 'Wales', 'GB-NIR': 'Northern Ireland',
   'NO-34': 'Innlandet', 'NO-42': 'Agder', 'NO-46': 'Vestland', 'NO-50': 'Trøndelag',
 }

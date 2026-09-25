@@ -15,6 +15,13 @@ import Foundation
 /// Reino Unido: Natural Earth da condados y autoridades unitarias; se agrupan en las
 /// cuatro naciones (GB-ENG, GB-SCT, GB-WLS, GB-NIR) según su propio campo `geonunit`.
 ///
+/// Irlanda: Natural Earth da condados (y los tres de Dublín por separado); se agrupan
+/// en las cuatro provincias (IE-C Connacht, IE-L Leinster, IE-M Munster, IE-U Ulster).
+///
+/// Bosnia: se agrupa por entidad con el campo `region` de Natural Earth, salvo dos
+/// que el fichero etiqueta mal como República Srpska: el distrito de Brčko es BA-BRC y
+/// el cantón de Posavina pertenece a la Federación (BA-BIH).
+///
 /// No se infiere por geometría: una provincia pertenece a una comunidad por definición.
 /// Si entra un valor nuevo, queda sin clasificar hasta añadirlo explícitamente; inventar
 /// aquí sería peor que devolver `nil`.
@@ -25,6 +32,11 @@ enum Admin1 {
     }
 
     static let byCountry: [String: [String: String]] = [
+        "Albania": [
+            "Berat": "AL-01", "Dibër": "AL-09", "Durrës": "AL-02", "Elbasan": "AL-03",
+            "Fier": "AL-04", "Gjirokastër": "AL-05", "Korçë": "AL-06", "Kukës": "AL-07",
+            "Lezhë": "AL-08", "Shkodër": "AL-10", "Tiranë": "AL-11", "Vlorë": "AL-12",
+        ],
         "Andorra": [
             "Andorra la Vella": "AD-07", "Canillo": "AD-02", "Encamp": "AD-03",
             "Escaldes-Engordany": "AD-08", "La Massana": "AD-04", "Ordino": "AD-05",
@@ -39,9 +51,28 @@ enum Admin1 {
             "Santa Cruz": "AR-Z", "Santa Fe": "AR-S", "Santiago del Estero": "AR-G",
             "Tierra del Fuego": "AR-V", "Tucumán": "AR-T",
         ],
+        "Austria": [
+            "Burgenland": "AT-1", "Kärnten": "AT-2", "Niederösterreich": "AT-3",
+            "Oberösterreich": "AT-4", "Salzburg": "AT-5", "Steiermark": "AT-6",
+            "Tirol": "AT-7", "Vorarlberg": "AT-8", "Wien": "AT-9",
+        ],
+        "Belgium": [
+            "Antwerp": "BE-VLG", "Brussels": "BE-BRU", "East Flanders": "BE-VLG",
+            "Flemish Brabant": "BE-VLG", "Hainaut": "BE-WAL", "Liege": "BE-WAL",
+            "Limburg": "BE-VLG", "Luxembourg": "BE-WAL", "Namur": "BE-WAL",
+            "Walloon Brabant": "BE-WAL", "West Flanders": "BE-VLG",
+        ],
         "Bolivia": [
             "Chuquisaca": "BO-H", "Cochabamba": "BO-C", "El Beni": "BO-B", "La Paz": "BO-L",
             "Oruro": "BO-O", "Potosí": "BO-P", "Santa Cruz": "BO-S",
+        ],
+        "Bosnia and Herzegovina": [
+            "Banja Luka": "BA-SRP", "Bijeljina": "BA-SRP", "Bosnian Podrinje": "BA-BIH",
+            "Brčko Distrikt": "BA-BRC", "Central Bosnia": "BA-BIH", "Doboj": "BA-SRP",
+            "Foča": "BA-SRP", "Herzegovina-Neretva": "BA-BIH", "Posavina": "BA-BIH",
+            "Sarajevo": "BA-BIH", "Sarajevo-romanija": "BA-SRP", "Trebinje": "BA-SRP",
+            "Tuzla": "BA-BIH", "Una-Sana": "BA-BIH", "Vlasenica": "BA-SRP",
+            "West Bosnia": "BA-BIH", "West Herzegovina": "BA-BIH", "Zenica-Doboj": "BA-BIH",
         ],
         "Brazil": [
             "Acre": "BR-AC", "Alagoas": "BR-AL", "Amazonas": "BR-AM", "Bahia": "BR-BA",
@@ -78,12 +109,30 @@ enum Admin1 {
             "Alajuela": "CR-A", "Cartago": "CR-C", "Guanacaste": "CR-G", "Heredia": "CR-H",
             "Limón": "CR-L", "Puntarenas": "CR-P", "San José": "CR-SJ",
         ],
+        "Croatia": [
+            "Bjelovarsko-bilogorska": "HR-07", "Brodsko-Posavska": "HR-12",
+            "Dubrovacko-Neretvanska": "HR-19", "Grad Zagreb": "HR-21", "Istarska": "HR-18",
+            "Karlovacka": "HR-04", "Koprivničko-Križevačka": "HR-06",
+            "Krapinsko-Zagorska": "HR-02", "Licko-Senjska": "HR-09", "Medimurska": "HR-20",
+            "Osjecko-Baranjska": "HR-14", "Primorsko-Goranska": "HR-08",
+            "Sisacko-Moslavacka": "HR-03", "Splitsko-Dalmatinska": "HR-17",
+            "Varaždinska": "HR-05", "Viroviticko-Podravska": "HR-10",
+            "Vukovarsko-Srijemska": "HR-16", "Zadarska": "HR-13", "Zagrebacka": "HR-01",
+            "Šibensko-Kninska": "HR-15",
+        ],
         "Cuba": [
             "Artemisa": "CU-15", "Camagüey": "CU-09", "Ciego de Ávila": "CU-08",
             "Cienfuegos": "CU-06", "Ciudad de la Habana": "CU-03", "Granma": "CU-12",
             "Holguín": "CU-11", "Isla de la Juventud": "CU-99", "Las Tunas": "CU-10",
             "Matanzas": "CU-04", "Mayabeque": "CU-16", "Pinar del Río": "CU-01",
             "Sancti Spíritus": "CU-07", "Santiago de Cuba": "CU-13", "Villa Clara": "CU-05",
+        ],
+        "Czech Republic": [
+            "Jihomoravský": "CZ-JM", "Jihočeský": "CZ-JC", "Karlovarský": "CZ-KA",
+            "Královéhradecký": "CZ-KR", "Liberecký": "CZ-LI", "Moravskoslezský": "CZ-MO",
+            "Olomoucký": "CZ-OL", "Pardubický": "CZ-PA", "Plzeňský": "CZ-PL",
+            "Prague": "CZ-PR", "Středočeský": "CZ-ST", "Vysočina": "CZ-VY",
+            "Zlínský": "CZ-ZL", "Ústecký": "CZ-US",
         ],
         "Dominican Republic": [
             "Azua": "DO-02", "Distrito Nacional": "DO-01", "Duarte": "DO-06",
@@ -149,6 +198,21 @@ enum Admin1 {
             "Vendée": "FR-PDL", "Vienne": "FR-NAQ", "Vosges": "FR-GES", "Yonne": "FR-BFC",
             "Yvelines": "FR-IDF",
         ],
+        "Germany": [
+            "Baden-Württemberg": "DE-BW", "Bayern": "DE-BY", "Berlin": "DE-BE",
+            "Brandenburg": "DE-BB", "Bremen": "DE-HB", "Hamburg": "DE-HH",
+            "Hessen": "DE-HE", "Mecklenburg-Vorpommern": "DE-MV", "Niedersachsen": "DE-NI",
+            "Nordrhein-Westfalen": "DE-NW", "Rheinland-Pfalz": "DE-RP", "Saarland": "DE-SL",
+            "Sachsen": "DE-SN", "Sachsen-Anhalt": "DE-ST", "Schleswig-Holstein": "DE-SH",
+            "Thüringen": "DE-TH",
+        ],
+        "Greece": [
+            "Anatoliki Makedonia kai Thraki": "GR-A", "Attiki": "GR-A1",
+            "Ayion Oros": "GR-69", "Dytiki Ellada": "GR-G", "Dytiki Makedonia": "GR-C",
+            "Ionioi Nisoi": "GR-F", "Ipeiros": "GR-D", "Kentriki Makedonia": "GR-B",
+            "Kriti": "GR-M", "Notio Aigaio": "GR-L", "Peloponnisos": "GR-J",
+            "Stereá Elláda": "GR-H", "Thessalia": "GR-E", "Voreio Aigaio": "GR-K",
+        ],
         "Guatemala": [
             "Baja Verapaz": "GT-15", "Chimaltenango": "GT-04", "Guatemala": "GT-01",
             "Izabal": "GT-18", "Petén": "GT-17", "Sacatepéquez": "GT-03",
@@ -159,6 +223,33 @@ enum Admin1 {
             "Atlántida": "HN-AT", "Cortés": "HN-CR", "Francisco Morazán": "HN-FM",
             "Gracias a Dios": "HN-GD", "Islas de la Bahía": "HN-IB", "La Paz": "HN-LP",
             "Lempira": "HN-LE", "Olancho": "HN-OL", "Yoro": "HN-YO",
+        ],
+        "Hungary": [
+            "Baranya": "HU-BA", "Borsod-Abaúj-Zemplén": "HU-BZ", "Budapest": "HU-BU",
+            "Bács-Kiskun": "HU-BK", "Békés": "HU-BE", "Békéscsaba": "HU-BC",
+            "Csongrád": "HU-CS", "Debrecen": "HU-DE", "Dunaújváros": "HU-DU",
+            "Eger": "HU-EG", "Fejér": "HU-FE", "Gyor-Moson-Sopron": "HU-GS",
+            "Gyôr": "HU-GY", "Hajdú-Bihar": "HU-HB", "Heves": "HU-HE",
+            "Hódmezôvásárhely": "HU-HV", "Jász-Nagykun-Szolnok": "HU-JN",
+            "Kaposvár": "HU-KV", "Kecskemét": "HU-KM", "Komárom-Esztergom": "HU-KE",
+            "Miskolc": "HU-MI", "Nagykanizsa": "HU-NK", "Nyíregyháza": "HU-NY",
+            "Nógrád": "HU-NO", "Pest": "HU-PE", "Pécs": "HU-PS", "Salgótarján": "HU-ST",
+            "Somogy": "HU-SO", "Sopron": "HU-SN", "Szabolcs-Szatmár-Bereg": "HU-SZ",
+            "Szeged": "HU-SD", "Szekszárd": "HU-SS", "Szolnok": "HU-SK",
+            "Szombathely": "HU-SH", "Székesfehérvár": "HU-SF", "Tatabánya": "HU-TB",
+            "Tolna": "HU-TO", "Vas": "HU-VA", "Veszprém": "HU-VE", "Zala": "HU-ZA",
+            "Zalaegerszeg": "HU-ZE", "Érd": "HU-ED",
+        ],
+        "Ireland": [
+            "Carlow": "IE-L", "Cavan": "IE-U", "Clare": "IE-M", "Cork": "IE-M",
+            "Donegal": "IE-U", "Dublin": "IE-L", "Dún Laoghaire–Rathdown": "IE-L",
+            "Fingal": "IE-L", "Galway": "IE-C", "Kerry": "IE-M", "Kildare": "IE-L",
+            "Kilkenny": "IE-L", "Laoighis": "IE-L", "Leitrim": "IE-C", "Limerick": "IE-M",
+            "Longford": "IE-L", "Louth": "IE-L", "Mayo": "IE-C", "Meath": "IE-L",
+            "Monaghan": "IE-U", "North Tipperary": "IE-M", "Offaly": "IE-L",
+            "Roscommon": "IE-C", "Sligo": "IE-C", "South Dublin": "IE-L",
+            "South Tipperary": "IE-M", "Waterford": "IE-M", "Westmeath": "IE-L",
+            "Wexford": "IE-L", "Wicklow": "IE-L",
         ],
         "Italy": [
             "Agrigento": "IT-82", "Alessandria": "IT-21", "Ancona": "IT-57",
@@ -206,6 +297,21 @@ enum Admin1 {
             "Tabasco": "MX-TAB", "Tamaulipas": "MX-TAM", "Tlaxcala": "MX-TLA",
             "Veracruz": "MX-VER", "Yucatán": "MX-YUC", "Zacatecas": "MX-ZAC",
         ],
+        "Montenegro": [
+            "Andrijevica": "ME-01", "Bar": "ME-02", "Berane": "ME-03",
+            "Bijelo Polje": "ME-04", "Budva": "ME-05", "Cetinje": "ME-06",
+            "Danilovgrad": "ME-07", "Herceg Novi": "ME-08", "Kolašin": "ME-09",
+            "Kotor": "ME-10", "Mojkovac": "ME-11", "Nikšic": "ME-12", "Plav": "ME-13",
+            "Pljevlja": "ME-14", "Plužine": "ME-15", "Podgorica": "ME-16",
+            "Rožaje": "ME-17", "Tivat": "ME-19", "Ulcinj": "ME-20", "Šavnik": "ME-18",
+            "Žabljak": "ME-21",
+        ],
+        "Netherlands": [
+            "Drenthe": "NL-DR", "Flevoland": "NL-FL", "Friesland": "NL-FR",
+            "Gelderland": "NL-GE", "Groningen": "NL-GR", "Limburg": "NL-LI",
+            "Noord-Brabant": "NL-NB", "Noord-Holland": "NL-NH", "Overijssel": "NL-OV",
+            "Utrecht": "NL-UT", "Zeeland": "NL-ZE", "Zuid-Holland": "NL-ZH",
+        ],
         "Nicaragua": [
             "Atlántico Norte": "NI-AN", "Atlántico Sur": "NI-AS", "Boaco": "NI-BO",
             "Carazo": "NI-CA", "Chinandega": "NI-CI", "León": "NI-LE", "Madriz": "NI-MD",
@@ -239,6 +345,14 @@ enum Admin1 {
             "Lima Province": "PE-LMA", "Loreto": "PE-LOR", "Madre de Dios": "PE-MDD",
             "Puno": "PE-PUN", "San Martín": "PE-SAM", "Tacna": "PE-TAC",
         ],
+        "Poland": [
+            "Greater Poland": "PL-WP", "Kuyavian-Pomeranian": "PL-KP",
+            "Lesser Poland": "PL-MA", "Lower Silesian": "PL-DS", "Lublin": "PL-LU",
+            "Lubusz": "PL-LB", "Masovian": "PL-MZ", "Opole": "PL-OP", "Podlachian": "PL-PD",
+            "Pomeranian": "PL-PM", "Silesian": "PL-SL", "Subcarpathian": "PL-PK",
+            "Warmian-Masurian": "PL-WN", "West Pomeranian": "PL-ZP", "Łódź": "PL-LD",
+            "Świętokrzyskie": "PL-SK",
+        ],
         "Portugal": [
             "Aveiro": "PT-01", "Azores": "PT-20", "Beja": "PT-02", "Braga": "PT-03",
             "Bragança": "PT-04", "Castelo Branco": "PT-05", "Coimbra": "PT-06",
@@ -249,6 +363,61 @@ enum Admin1 {
         ],
         "Puerto Rico": [
             "Puerto Rico": "US-PR",
+        ],
+        "Slovenia": [
+            "Ajdovščina": "SI-001", "Bistrica ob Sotli": "SI-149", "Bled": "SI-003",
+            "Bloke": "SI-150", "Bohinj": "SI-004", "Borovnica": "SI-005", "Bovec": "SI-006",
+            "Braslovce": "SI-151", "Brda": "SI-007", "Brezovica": "SI-008",
+            "Brežice": "SI-009", "Cankova": "SI-152", "Celje": "SI-011",
+            "Cerklje na Gorenjskem": "SI-012", "Cerknica": "SI-013", "Cerkno": "SI-014",
+            "Crnomelj": "SI-017", "Divaca": "SI-019", "Dobrepolje": "SI-020",
+            "Dobrna": "SI-155", "Dobrova-Polhov Gradec": "SI-021", "Dobrovnik": "SI-156",
+            "Dol pri Ljubljani": "SI-022", "Dolenjske Toplice": "SI-157",
+            "Domžale": "SI-023", "Dravograd": "SI-025", "Duplek": "SI-026",
+            "Gorenja vas-Poljane": "SI-027", "Gorišnica": "SI-028",
+            "Gornja Radgona": "SI-029", "Gornji Grad": "SI-030",
+            "Gornji Petrovci": "SI-031", "Grosuplje": "SI-032", "Hajdina": "SI-159",
+            "Hoce-Slivnica": "SI-160", "Hodoš": "SI-161", "Horjul": "SI-162",
+            "Hrastnik": "SI-034", "Hrpelje-Kozina": "SI-035", "Idrija": "SI-036",
+            "Ig": "SI-037", "Ilirska Bistrica": "SI-038", "Ivancna Gorica": "SI-039",
+            "Izola": "SI-040", "Jesenice": "SI-041", "Jezersko": "SI-163",
+            "Kamnik": "SI-043", "Kanal": "SI-044", "Kidricevo": "SI-045",
+            "Kobarid": "SI-046", "Kocevje": "SI-048", "Komen": "SI-049",
+            "Komenda": "SI-164", "Koper": "SI-050", "Kostel": "SI-165", "Kozje": "SI-051",
+            "Kranj": "SI-052", "Kranjska Gora": "SI-053", "Krško": "SI-054",
+            "Laško": "SI-057", "Lenart": "SI-058", "Lendava": "SI-059", "Litija": "SI-060",
+            "Ljubljana": "SI-061", "Ljubno": "SI-062", "Ljutomer": "SI-063",
+            "Logatec": "SI-064", "Lovrenc na Pohorju": "SI-167", "Loška dolina": "SI-065",
+            "Loški Potok": "SI-066", "Luce": "SI-067", "Lukovica": "SI-068",
+            "Majšperk": "SI-069", "Maribor": "SI-070", "Markovci": "SI-168",
+            "Medvode": "SI-071", "Mengeš": "SI-072", "Metlika": "SI-073",
+            "Miren-Kostanjevica": "SI-075", "Mirna Pec": "SI-170", "Mislinja": "SI-076",
+            "Moravce": "SI-077", "Moravske Toplice": "SI-078", "Mozirje": "SI-079",
+            "Murska Sobota": "SI-080", "Muta": "SI-081", "Naklo": "SI-082",
+            "Nazarje": "SI-083", "Nova Goriška": "SI-084", "Novo Mesto": "SI-085",
+            "Ormož": "SI-087", "Pesnica": "SI-089", "Piran": "SI-090", "Pivka": "SI-091",
+            "Podcetrtek": "SI-092", "Podlehnik": "SI-172", "Podvelka": "SI-093",
+            "Postojna": "SI-094", "Preddvor": "SI-095", "Ptuj": "SI-096",
+            "Puconci": "SI-097", "Race-Fram": "SI-098", "Radece": "SI-099",
+            "Radenci": "SI-100", "Radlje ob Dravi": "SI-101", "Radovljica": "SI-102",
+            "Ravne na Koroškem": "SI-103", "Razkrižje": "SI-176", "Ribnica": "SI-104",
+            "Ribnica na Pohorju": "SI-177", "Rogatec": "SI-107",
+            "Rogaška Slatina": "SI-106", "Rogašovci": "SI-105", "Ruše": "SI-108",
+            "Selnica ob Dravi": "SI-178", "Semic": "SI-109", "Sevnica": "SI-110",
+            "Sežana": "SI-111", "Slovenj Gradec": "SI-112", "Slovenska Bistrica": "SI-113",
+            "Slovenske Konjice": "SI-114", "Sodražica": "SI-179", "Solcava": "SI-180",
+            "Sveta Ana": "SI-181", "Tabor": "SI-184", "Tolmin": "SI-128",
+            "Trbovlje": "SI-129", "Trebnje": "SI-130", "Trzin": "SI-186", "Tržič": "SI-131",
+            "Velenje": "SI-133", "Velika Polana": "SI-187", "Velike Lašče": "SI-134",
+            "Vipava": "SI-136", "Vitanje": "SI-137", "Vodice": "SI-138", "Vojnik": "SI-139",
+            "Vransko": "SI-189", "Vrhnika": "SI-140", "Vuzenica": "SI-141",
+            "Zasavska": "SI-05", "Zrece": "SI-144", "Črna na Koroškem": "SI-016",
+            "Šempeter-Vrtojba": "SI-183", "Šentilj": "SI-118", "Šentjernej": "SI-119",
+            "Šentjur pri Celju": "SI-120", "Šenčur": "SI-117", "Škocjan": "SI-121",
+            "Škofja Loka": "SI-122", "Škofljica": "SI-123", "Šmarje pri Jelšah": "SI-124",
+            "Šmartno in Litiji": "SI-194", "Šmartno ob Paki": "SI-125", "Šoštanj": "SI-126",
+            "Žalec": "SI-190", "Železniki": "SI-146", "Žetale": "SI-191", "Žiri": "SI-147",
+            "Žirovnica": "SI-192", "Žužemberk": "SI-193",
         ],
         "Spain": [
             "Albacete": "ES-CM", "Alicante": "ES-VC", "Almería": "ES-AN",
