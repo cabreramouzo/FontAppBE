@@ -1232,6 +1232,9 @@ export function FontDetailPage() {
   async function toggleConfirm() {
     const current = comments[0]
     if (!id || !current) return
+    // Same question as a review: "still the same" can be said from the sofa just as well.
+    // Undoing never asks — taking back your own word needs no proof of anything.
+    if (!current.confirmedByMe && !(await remote.check()).proceed) return
     setConfirming(true)
     try {
       await confirmComment(id, current.id, !current.confirmedByMe)
