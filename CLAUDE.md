@@ -1284,6 +1284,14 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
 - Al abrir la app se ubica sola **si el permiso ya estaba concedido** (nunca lanza el
   diálogo del navegador a bocajarro) y **si no venías de una vista guardada** ni de un
   enlace a una fuente concreta.
+- **Sin vista guardada ni permiso, el mapa abre en TU país** (`defaultViewFor` en
+  `lib/mapView.ts`, con tests), adivinado por la **zona horaria del aparato**. Antes era
+  Madrid a zoom 5 para todo el mundo, y quien llegaba desde Ciudad de México por un vídeo
+  aterrizaba en otro continente. La zona horaria no pide permiso, no llama a nadie y no
+  sale del móvil, y dice el país mucho mejor que el idioma (el castellano se habla en
+  veinte). Es solo el punto de partida: la ubicación automática y la vista guardada
+  siguen mandando. Una zona que no conocemos cae en Madrid. Al importar un país nuevo,
+  añadir aquí su zona horaria.
 - **La última vista se guarda en los DOS almacenes, y significan cosas distintas**
   (`vistaAlAbrir` en `lib/mapView.ts`, con tests). `sessionStorage` es **estado de
   navegación**: existe porque venías del detalle o de una búsqueda, y por eso desactiva la

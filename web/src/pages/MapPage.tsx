@@ -104,15 +104,16 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownloadOutlined'
 import { NuevoBadge } from '../components/NuevoBadge'
 import { RelocateFont } from '../components/RelocateFont'
 import { MapEasterEggs } from '../components/MapEasterEggs'
-import { parseSavedMapView, vistaAlAbrir, type SavedMapView } from '../lib/mapView'
+import { defaultViewFor, deviceTimeZone, parseSavedMapView, vistaAlAbrir, type SavedMapView } from '../lib/mapView'
 import { loginNext } from '../lib/nextParam'
 import { MapHelpOverlay } from '../components/MapHelpOverlay'
 import { sesiones } from '../lib/asks'
 
-// Vista por defecto para quien aún no ha compartido su ubicación. Madrid deja la
-// península aproximadamente centrada y el zoom 5 permite verla entera también en móvil.
-const DEFAULT_CENTER: [number, number] = [40.4168, -3.7038]
-const DEFAULT_ZOOM = 5
+// Default view for someone who has not shared a location yet: their country, guessed
+// from the device time zone (see `defaultViewFor`); Madrid at zoom 5 when unknown.
+const DEFAULT = defaultViewFor(deviceTimeZone())
+const DEFAULT_CENTER: [number, number] = [DEFAULT.lat, DEFAULT.lng]
+const DEFAULT_ZOOM = DEFAULT.zoom
 
 // Última vista del mapa (centro + zoom). Se guarda en DOS sitios, y la diferencia
 // importa:

@@ -46,3 +46,59 @@ export function vistaAlAbrir(sesion: string | null, ultima: string | null): {
     veniaDeOtroSitio: deSesion !== null,
   }
 }
+
+/**
+ * Where the map opens for someone we know nothing about yet: no saved view, no location
+ * permission. It used to be Madrid at zoom 5 for everybody, so a viewer in Mexico City
+ * arriving from a video landed on another continent and saw no fountain of theirs.
+ *
+ * Guessed from the device **time zone**, which the browser gives without a permission
+ * prompt, a network call or any server-side geo-IP — nothing leaves the device. It says
+ * the country far more reliably than the language (Spanish is spoken in twenty of them)
+ * and is only a starting point: the automatic location and any saved view still win.
+ * Unknown zones fall back to the old Madrid view.
+ */
+type View = { lat: number; lng: number; zoom: number }
+const v = (lat: number, lng: number, zoom: number): View => ({ lat, lng, zoom })
+
+export const DEFAULT_VIEW: View = v(40.4168, -3.7038, 5)
+
+const BY_ZONE: Record<string, View> = {
+  'America/Mexico_City': v(23.6, -102.5, 5), 'America/Santiago': v(-35, -71, 5),
+  'America/Lima': v(-9.2, -75, 5), 'America/Guayaquil': v(-1.8, -78.2, 6),
+  'America/Bogota': v(4.6, -74.3, 5), 'America/La_Paz': v(-16.3, -63.6, 5),
+  'America/Montevideo': v(-32.5, -55.8, 6), 'America/Asuncion': v(-23.4, -58.4, 6),
+  'America/Caracas': v(6.4, -66.6, 5), 'America/Havana': v(21.5, -79.5, 6),
+  'America/Costa_Rica': v(9.7, -84, 7), 'America/Panama': v(8.5, -80.8, 7),
+  'America/Managua': v(12.9, -85.2, 7), 'America/Guatemala': v(15.8, -90.2, 7),
+  'America/Tegucigalpa': v(15.2, -86.2, 7), 'America/El_Salvador': v(13.8, -88.9, 8),
+  'America/Santo_Domingo': v(18.7, -70.2, 7), 'America/Puerto_Rico': v(18.2, -66.5, 8),
+  'Europe/Rome': v(42.5, 12.5, 5), 'Europe/Paris': v(46.6, 2.2, 5),
+  'Europe/Lisbon': v(39.6, -8, 6), 'Europe/Zurich': v(46.8, 8.2, 7),
+  'Europe/Stockholm': v(62, 15, 4), 'Europe/Helsinki': v(64, 26, 4),
+  'Europe/Andorra': v(42.5, 1.55, 10),
+}
+const MEXICO = BY_ZONE['America/Mexico_City']
+const BRAZIL = v(-14.2, -51.9, 4)
+const ARGENTINA = v(-38.4, -63.6, 4)
+const MEXICAN = ['Cancun', 'Merida', 'Monterrey', 'Matamoros', 'Chihuahua', 'Ciudad_Juarez',
+  'Ojinaga', 'Mazatlan', 'Bahia_Banderas', 'Hermosillo', 'Tijuana']
+const BRAZILIAN = ['Sao_Paulo', 'Bahia', 'Fortaleza', 'Recife', 'Belem', 'Manaus', 'Cuiaba',
+  'Campo_Grande', 'Porto_Velho', 'Boa_Vista', 'Rio_Branco', 'Araguaina', 'Maceio',
+  'Santarem', 'Noronha', 'Eirunepe']
+
+export function defaultViewFor(timeZone: string | undefined): View {
+  if (!timeZone) return DEFAULT_VIEW
+  if (BY_ZONE[timeZone]) return BY_ZONE[timeZone]
+  if (timeZone === 'America/Punta_Arenas') return BY_ZONE['America/Santiago']
+  if (timeZone.startsWith('America/Argentina/') || timeZone === 'America/Buenos_Aires') return ARGENTINA
+  const city = timeZone.startsWith('America/') ? timeZone.slice(8) : ''
+  if (MEXICAN.includes(city)) return MEXICO
+  if (BRAZILIAN.includes(city)) return BRAZIL
+  return DEFAULT_VIEW
+}
+
+/** The device's time zone, or `undefined` if the browser will not say. */
+export function deviceTimeZone(): string | undefined {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return undefined }
+}
