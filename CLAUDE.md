@@ -3446,6 +3446,13 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   consultaba la base, así que nunca llegaba a sus 5 min de reposo. Ahora un rastreador de
   buscador o de IA (por user agent o por `cf.verifiedBotCategory`) que pide una ficha
   **fuera del sitemap** recibe la página genérica con `noindex` **sin llamar a la API**.
+  **Y sin scripts**: la primera versión solo añadía `noindex` y seguía sirviendo la app
+  entera, y Applebot **ejecuta JavaScript** (renderiza como Safari), así que React arrancaba
+  y pedía la ficha, sus reseñas y sus incidencias directamente a `fontapp.fly.dev` — el
+  filtro se ahorraba la llamada de la Function pero no la de Neon. Medido el 26/09/2026 con
+  `pg_stat_statements`: ~90 consultas de ficha cada 10 minutos de madrugada, todas de
+  Applebot. Ojo al medir con `wrangler pages deployment tail`: en modo no interactivo exige
+  el id del despliegue, y macOS no trae `timeout`.
   La lista del sitemap se pide una vez por hora. Las personas y los que montan la vista
   previa al compartir (WhatsApp, iMessage, Telegram…) no cambian: siguen con la tarjeta
   completa. Si la lista no se puede leer, se comporta como antes. Se descartó bloquear los

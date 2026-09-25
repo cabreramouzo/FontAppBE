@@ -61,8 +61,14 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   if (isIndexingCrawler(ctx.request.headers.get('user-agent'), cf?.verifiedBotCategory)) {
     const offered = await sitemapFontIDs(api)
     if (offered && !offered.has(id.toLowerCase())) {
+      // Without scripts too. Applebot renders JavaScript like Safari: with the app still in
+      // the page, React booted and asked the API for the fountain, its reviews and its
+      // reports straight on fly.dev — so the gate saved the Function's call and not Neon's.
+      // Measured 26/09/2026: ~90 fountain queries every 10 min at night, all from Applebot.
       return new HTMLRewriter()
         .on('head', { element: (e) => { e.append('<meta name="robots" content="noindex">', { html: true }) } })
+        .on('script', { element: (e) => { e.remove() } })
+        .on('link[rel="modulepreload"]', { element: (e) => { e.remove() } })
         .transform(pagina)
     }
   }
