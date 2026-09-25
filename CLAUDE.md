@@ -3215,7 +3215,11 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   Earth admin-1 o GADM nivel 1; sin terceros). Distinto del `GeoLocator`, que es país por IP del
   registro, no por coordenadas del punto. `backfill-admin1` audita por defecto y **se
   niega a escribir si aparece una sola demarcación desconocida**; `--apply` escribe todo
-  en una transacción. Pendiente: el modelo de permisos de moderadores por región.
+  en una transacción. **Trabaja sobre los pares (país, región) agrupados en SQL, nunca
+  cargando las fuentes**: cargarlas como modelos (~170.000) mató por memoria la máquina de
+  512 MB el 25/09/2026 y dejó el servidor de al lado cuatro minutos sin pasar el health
+  check. Cualquier comando que se lance en producción con `fly ssh` corre **en la misma
+  máquina que sirve el HTTP**. Pendiente: el modelo de permisos de moderadores por región.
 
 ## Texto escrito por la gente (`lib/richText.ts` + `TextoRico`)
 
