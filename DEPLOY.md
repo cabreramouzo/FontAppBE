@@ -455,6 +455,17 @@ de costa: 240 / 10 / 15 / 0 a 1 / 2 / 5 / 10 km. **4.303 clasificadas**, una sin
 Natural Earth da 199 condados, que `Admin1` agrupa en las cuatro naciones por su campo
 `geonunit` (GB-ENG, GB-SCT, GB-WLS, GB-NIR).
 
+#### Francia entera (25/09/2026)
+
+Hasta aquí solo estaba la caja del Pirineo francés (25 départements). Se descargó la
+Francia metropolitana con Córcega (`area FR` recortada a `41.3,-5.3,51.2,9.7`, sin
+ultramar): **35.479 → 34.354** tras `filtra`. Como `import-fonts` no deduplica, se quitó
+en local todo nodo a **menos de 25 m** de una fuente ya en producción (mismo radio que el
+aviso de duplicado al crear): **9.711**, prácticamente las 11.051 que ya había. Fuera
+también los 49 llamados «Captage»/«Forage» (captaciones, no fuentes) y 536 nombres
+genéricos vaciados («Fontaine», «Source», «Eau potable»…). Entraron **24.594**; rescate
+de costa 416 / 103 / 28 / 8 a 1 / 2 / 5 / 10 km, y **35.665** francesas en las 13 régions.
+
 #### Poblar país/región de las fuentes (`populate-regions`)
 
 `fonts.country` y `fonts.region` se rellenan **offline** por *point-in-polygon* contra un

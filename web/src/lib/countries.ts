@@ -32,7 +32,7 @@
  * con 15.246 fuentes le corresponde el segundo puesto. La cifra sale de `GET /zones`.
  */
 export const PAISES = [
-  'Italy', 'Spain', 'Switzerland', 'France', 'Portugal', 'United Kingdom', 'Brazil', 'Sweden', 'Norway', 'Finland',
+  'Italy', 'Spain', 'France', 'Switzerland', 'Portugal', 'United Kingdom', 'Brazil', 'Sweden', 'Norway', 'Finland',
   'Argentina', 'Mexico', 'Peru', 'Ecuador', 'Colombia', 'Chile', 'Cuba', 'Bolivia', 'Andorra',
   'Costa Rica', 'Uruguay', 'Paraguay', 'Venezuela', 'Nicaragua', 'Panama', 'Guatemala',
   'Dominican Republic', 'Honduras', 'Puerto Rico', 'El Salvador',

@@ -41,7 +41,10 @@ final class AppTests: XCTestCase {
     }
 
     func testAdmin1TableCoversProductionTerritoriesAndSwitzerland() {
-        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 791)
+        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 862)
+        // All of metropolitan France now, grouped into its 13 régions.
+        XCTAssertEqual(Admin1.code(country: "France", region: "Finistère"), "FR-BRE")
+        XCTAssertEqual(Admin1.code(country: "France", region: "Haute-Corse"), "FR-20R")
         // United Kingdom: counties grouped into the four nations.
         XCTAssertEqual(Admin1.code(country: "United Kingdom", region: "Aberdeen"), "GB-SCT")
         XCTAssertEqual(Admin1.code(country: "United Kingdom", region: "Anglesey"), "GB-WLS")
