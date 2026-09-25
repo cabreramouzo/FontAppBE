@@ -125,6 +125,7 @@ import { FontGallery } from '../components/FontGallery'
 import { Abrible, BadgeShowcase } from '../components/BadgeShowcase'
 import { ConfidenceChip } from '../components/ConfidenceChip'
 import { confidenceOf, evidenceFromReports } from '../lib/confidence'
+import { useRemoteReviewCheck } from '../components/RemoteReviewCheck'
 import { rememberFountain } from '../lib/recentHistory'
 import { loginNext } from '../lib/nextParam'
 import { ConfidenceHelpButton } from '../components/ConfidenceHelp'
@@ -265,8 +266,9 @@ function ReviewCard({ c, highlight, canManage, canFlag, canManageFont, fontImage
   )
 }
 
-function UpdateForm({ fontID, hasPhoto, onPosted, onCancel, initialStatus }: { fontID: string; hasPhoto: boolean; onPosted: () => void; onCancel?: () => void; initialStatus?: string }) {
+function UpdateForm({ fontID, where, hasPhoto, onPosted, onCancel, initialStatus }: { fontID: string; where: { latitude: number; longitude: number }; hasPhoto: boolean; onPosted: () => void; onCancel?: () => void; initialStatus?: string }) {
   const { t } = useI18n()
+  const remote = useRemoteReviewCheck({ id: fontID, latitude: where.latitude, longitude: where.longitude })
   const toast = useToast()
   const [body, setBody] = useState('')
   const [rating, setRating] = useState(0)
@@ -286,11 +288,14 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel, initialStatus }: { f
     trackInteraction('review_start')
     if (file) trackInteraction('review_photo')
     setError('')
+    // Asked BEFORE anything is uploaded: cancelling must not leave an orphan photo in R2.
+    const lejos = await remote.check()
+    if (!lejos.proceed) return
     setSaving(true)
     // Comprimimos antes: la foto queda lista para subirla o para guardarla en la cola.
     const preparada = file ? await prepararFoto(file) : undefined
     const photo = preparada?.photo
-    const data = { body: body.trim() || undefined, rating: rating || undefined, waterStatus: waterStatus || undefined }
+    const data = { body: body.trim() || undefined, rating: rating || undefined, waterStatus: waterStatus || undefined, remoteDistanceM: lejos.remoteDistanceM }
     const clear = () => { setBody(''); setRating(0); setWaterStatus(''); setFile(null) }
     try {
       const image = photo ? await uploadImage(photo, preparada?.meta) : undefined
@@ -321,6 +326,7 @@ function UpdateForm({ fontID, hasPhoto, onPosted, onCancel, initialStatus }: { f
 
   return (
     <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+      {remote.dialog}
       <Stack direction="row" sx={{ alignItems: "center", flexWrap: "wrap", gap: 2 }}>
         <StatusSelect value={waterStatus} onChange={setWaterStatus} label={t('update.status')} />
         <Box><Typography variant="caption" color="text.secondary">{t('update.rating')}</Typography><StarRating value={rating} onChange={setRating} size={22} /></Box>
@@ -831,13 +837,16 @@ export function FontDetailPage() {
   async function publicaEstado(estado: string) {
     if (!font) return
     setPreguntaEstado(false)
+    const lejos = await remote.check()
+    if (!lejos.proceed) return
+    const data = { waterStatus: estado, remoteDistanceM: lejos.remoteDistanceM }
     try {
-      await createComment(font.id, { waterStatus: estado })
+      await createComment(font.id, data)
       toast.show(t('toast.reviewPosted'))
       load()
     } catch (e) {
       if (isOffline(e)) {
-        await enqueue({ kind: 'comment', fontID: font.id, fontName: nombreFuente(font, t), data: { waterStatus: estado } })
+        await enqueue({ kind: 'comment', fontID: font.id, fontName: nombreFuente(font, t), data })
         toast.show(t('offline.savedUpdate'))
       } else {
         setError(describeError(e, t))
@@ -875,6 +884,9 @@ export function FontDetailPage() {
   // render», la pantalla entera al error boundary.
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
   const dosColumnas = useMediaQuery((tema: Theme) => tema.breakpoints.up('md'))
+  // "Did you see it recently?" for the quick status after a photo. Same rule as above: up
+  // here, before the early return.
+  const remote = useRemoteReviewCheck(font)
 
   /**
    * Texto con el que llega la caja de comentarios cuando se pide desde otro sitio de la
@@ -1752,6 +1764,7 @@ export function FontDetailPage() {
                 )}
               </Paper>
             )}
+            {remote.dialog}
             {preguntaEstado && (
               // Aparece donde el usuario acaba de mirar y con la respuesta a un toque. La
               // reseña se publica **solo con el estado**, sin texto ni valoración: el
@@ -1905,7 +1918,7 @@ export function FontDetailPage() {
                   <Collapse in={updating} unmountOnExit>
                     <Box sx={{ my: 1.5 }}>
                       <Typography variant="subtitle2">{t('detail.newUpdate')}</Typography>
-                      <UpdateForm fontID={font.id} hasPhoto={!!font.image} initialStatus={initialStatus} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+                      <UpdateForm fontID={font.id} where={font} hasPhoto={!!font.image} initialStatus={initialStatus} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
                     </Box>
                   </Collapse>
                 </>
@@ -1923,7 +1936,7 @@ export function FontDetailPage() {
                     {t('detail.reportStatus')}
                   </Button>
                 ) : (
-                  <UpdateForm fontID={font.id} hasPhoto={!!font.image} initialStatus={initialStatus} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
+                  <UpdateForm fontID={font.id} where={font} hasPhoto={!!font.image} initialStatus={initialStatus} onPosted={() => { setUpdating(false); load() }} onCancel={() => setUpdating(false)} />
                 )
               ) : (
                 <AnonReviewPrompt fontID={font.id} />

@@ -442,6 +442,12 @@ export async function updateProfile(id: string, data: { name: string; username: 
 }
 
 export interface NewComment {
+  /**
+   * Approximate distance (m) to the fountain when the review was WRITTEN, only when clearly
+   * more than a kilometre (`lib/remoteReview.ts`). Measured at compose time so an outbox
+   * item sent from home later is not mistaken for a remote review. Moderators only.
+   */
+  remoteDistanceM?: number
   body?: string
   rating?: number
   waterStatus?: string
@@ -543,6 +549,19 @@ export async function suggestDuplicate(fontID: string, of: string, message: stri
 /** Sugerencias de duplicado pendientes de atender. Moderador o superior. */
 export const getDuplicateSuggestions = () =>
   apiFetch<DuplicateSuggestion[]>('/fonts/moderation/duplicates')
+
+/** A review written clearly far from its fountain (moderators only). See lib/remoteReview.ts. */
+export interface RemoteReview {
+  commentID: string; fontID: string; fontName?: string | null; username?: string | null
+  waterStatus?: string | null; body: string; image?: string | null
+  distanceM: number; queuedOffline: boolean; createdAt: string
+  /** Remote reviews by the same person in the last 30 days, this one included. */
+  authorRemoteCount: number
+}
+export const getRemoteReviews = () => apiFetch<RemoteReview[]>('/moderation/remote-reviews')
+/** Takes a remote review out of the lane. The review itself is not touched. */
+export const markRemoteReviewChecked = (commentID: string) =>
+  apiFetch<void>(`/moderation/remote-reviews/${commentID}/checked`, { method: 'POST' })
 
 /** Marca o desmarca un comentario como incidencia. Autor o moderador+. */
 export async function setReportIncident(

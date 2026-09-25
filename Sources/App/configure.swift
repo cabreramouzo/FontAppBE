@@ -182,6 +182,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddParentToFontReport())       // responder a un comentario
     app.migrations.add(AddDuplicateSuggestionToFontReport()) // «es la misma que aquella», de cualquiera
     app.migrations.add(EnableUnaccent())               // buscar sin que los acentos cuenten
+    app.migrations.add(AddRemoteDistanceToFontComment()) // reviews written far from the fountain
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

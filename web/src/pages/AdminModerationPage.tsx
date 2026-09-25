@@ -13,7 +13,7 @@ import type { Flag, ModerationSource } from '../api/types'
 import type { DuplicateSuggestion } from '../api/client'
 import {
   approvePhotoRemoval, approveSourceLimitExemption, assetUrl, deleteComment, deleteSecondaryPhoto, describeError, dismissFlag,
-  getDuplicateSuggestions, getFlags, getModerationSources, hideFontAbuse, markDuplicate, resolveReport, restoreFontAbuse,
+  getDuplicateSuggestions, getFlags, getRemoteReviews, markRemoteReviewChecked, type RemoteReview, getModerationSources, hideFontAbuse, markDuplicate, resolveReport, restoreFontAbuse,
   restrictUserPosting, reviewModerationSource,
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -22,7 +22,7 @@ import { Skeleton } from '../components/Skeleton'
 import { canModerate, isOwner } from '../lib/roles'
 import { timeAgo } from '../lib/time'
 
-type Filter = 'all' | 'reports' | 'new' | 'dups'
+type Filter = 'all' | 'reports' | 'new' | 'dups' | 'remote'
 type Reason = 'fake' | 'spam' | 'abuse'
 
 type FlagGroup = {
@@ -38,6 +38,7 @@ export function AdminModerationPage() {
   const [flags, setFlags] = useState<Flag[] | null>(null)
   const [sources, setSources] = useState<ModerationSource[] | null>(null)
   const [dups, setDups] = useState<DuplicateSuggestion[] | null>(null)
+  const [remote, setRemote] = useState<RemoteReview[] | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -46,6 +47,7 @@ export function AdminModerationPage() {
     getFlags().then(setFlags).catch((e) => setError(describeError(e, t)))
     getModerationSources().then(setSources).catch((e) => setError(describeError(e, t)))
     getDuplicateSuggestions().then(setDups).catch(() => setDups([]))
+    getRemoteReviews().then(setRemote).catch(() => setRemote([]))
   }
 
   useEffect(() => {
@@ -160,6 +162,7 @@ export function AdminModerationPage() {
         <Chip clickable color={filter === 'reports' ? 'primary' : 'default'} label={`${t('moderation.reported')} · ${groups.length}`} onClick={() => setFilter('reports')} />
         <Chip clickable color={filter === 'new' ? 'primary' : 'default'} label={`${t('moderation.newAccounts')} · ${sources?.length ?? 0}`} onClick={() => setFilter('new')} />
         <Chip clickable color={filter === 'dups' ? 'primary' : 'default'} label={`${t('moderation.duplicates')} · ${dups?.length ?? 0}`} onClick={() => setFilter('dups')} />
+        <Chip clickable color={filter === 'remote' ? 'primary' : 'default'} label={`${t('moderation.remote')} · ${remote?.length ?? 0}`} onClick={() => setFilter('remote')} />
       </Stack>
 
       {(flags === null || sources === null) && <Skeleton lines={5} />}
@@ -171,6 +174,46 @@ export function AdminModerationPage() {
             eso lo decide el recuento de reseñas, que por eso va delante: la que tiene
             historia detrás es casi siempre la buena, y marcarla al revés esconde el
             trabajo de gente que sí pasó por allí. */}
+        {/* Reviews written far from the fountain. Vigilance, not accusation — reviewing from
+            elsewhere is often honest (after a ride, a late outbox, a bad GPS) — so nothing
+            here acts on the review: "checked" only takes it out of the list, and a real
+            problem goes through the tools that already exist (delete, restrict). The
+            author's count is what matters: one remote review says little, many is a pattern. */}
+        {filter === 'remote' && remote !== null && remote.length === 0 && <Alert severity="success">{t('moderation.empty')}</Alert>}
+        {filter === 'remote' && (remote ?? []).map((r) => (
+          <Box key={r.commentID} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              {r.username ? `@${r.username}` : t('font.unnamed')} · {new Date(r.createdAt).toLocaleString()}
+              {r.queuedOffline ? ` · ${t('moderation.remoteQueued')}` : ''}
+            </Typography>
+            <Typography sx={{ mt: 0.5 }}>
+              <Link component={RouterLink} to={`/fonts/${r.fontID}`}>{r.fontName || t('font.unnamed')}</Link>
+              {' · '}{t('moderation.remoteDistance', { km: (r.distanceM / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 }) })}
+              {r.waterStatus ? ` · ${t(`status.${r.waterStatus}`)}` : ''}
+            </Typography>
+            {r.body && <Typography variant="body2" sx={{ mt: 0.5 }}>{r.body}</Typography>}
+            <Typography variant="caption" color={r.authorRemoteCount > 3 ? 'warning.main' : 'text.secondary'} sx={{ display: 'block', mt: 0.5 }}>
+              {t('moderation.remoteAuthorCount', { n: String(r.authorRemoteCount) })}
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 1 }}>
+              <Button size="small" variant="outlined" disabled={busy === r.commentID}
+                      onClick={() => run(r.commentID, async () => {
+                        await markRemoteReviewChecked(r.commentID)
+                        setRemote((xs) => (xs ?? []).filter((x) => x.commentID !== r.commentID))
+                      })}>
+                {t('moderation.remoteChecked')}
+              </Button>
+              <Button size="small" color="error" disabled={busy === r.commentID}
+                      onClick={() => run(r.commentID, async () => {
+                        await deleteComment(r.fontID, r.commentID)
+                        setRemote((xs) => (xs ?? []).filter((x) => x.commentID !== r.commentID))
+                      })}>
+                {t('moderation.remoteDelete')}
+              </Button>
+            </Stack>
+          </Box>
+        ))}
+
         {filter === 'dups' && (dups ?? []).map((d) => (
           <Box key={d.id} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
             <Typography variant="body2" color="text.secondary">
@@ -195,7 +238,7 @@ export function AdminModerationPage() {
           </Box>
         ))}
 
-        {filter !== 'new' && filter !== 'dups' && groups.map((group) => (
+        {filter !== 'new' && filter !== 'dups' && filter !== 'remote' && groups.map((group) => (
           <ModerationCard
             key={group.key}
             title={group.first.targetText || group.first.fontName || t('font.unnamed')}
@@ -229,7 +272,7 @@ export function AdminModerationPage() {
           />
         ))}
 
-        {filter !== 'reports' && filter !== 'dups' && (sources ?? []).map((source) => (
+        {filter !== 'reports' && filter !== 'dups' && filter !== 'remote' && (sources ?? []).map((source) => (
           <ModerationCard
             key={`new:${source.id}`}
             title={source.name || t('font.unnamed')}

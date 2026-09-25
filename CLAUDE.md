@@ -4254,6 +4254,56 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   llamadas** en los tests y el compilador las cazó todas. Por eso ese DTO no lleva un
   init con valores por defecto.
 
+## Reseñar lejos de la fuente (`lib/remoteReview.ts` + `RemoteReviewController`)
+
+- **El problema:** cualquiera puede reseñar una fuente que no ha visto nunca. **La
+  trampa del arreglo obvio:** reseñar lejos es muchas veces honesto — al volver de la
+  ruta («Agua en mi ruta» lo pide literalmente), desde la bandeja de salida que se vació
+  horas después, o con un GPS que bajo copa declara cientos de metros de error. Bloquear o
+  acusar perdería justo a la gente que más aporta.
+- **Por eso se pregunta y se anota, nunca se bloquea.** Si la posición dice que estás
+  claramente lejos, antes de publicar sale «¿La has visto hace poco?», con la distancia y
+  diciendo la verdad: las reseñas a distancia se marcan para que el equipo las revise. Un
+  toque («Sí, la vi hace poco») publica. **Una vez por fuente y pestaña**, no en cada chip.
+- **Claramente lejos = más de 1 km después de restar la precisión del fix**
+  (`REMOTE_M`, `remoteDistanceM`). Un fix de ±600 m a 1,4 km **no** cuenta; uno por wifi
+  de ±1 km o más se ignora entero (`MAX_ACCURACY_M`), igual que uno de hace más de 3 min.
+  El beneficio de la duda va dentro de la cuenta, no en la buena voluntad de quien modera.
+- **Solo con el permiso de ubicación YA concedido** (`reviewPosition.ts`, misma regla que
+  `quietPosition`). Pedirlo aquí convertiría reseñar en un diálogo de permisos que, denegado,
+  lo es para siempre. **Precio asumido:** quien quiera mentir puede denegar el permiso y no
+  se le pregunta nada. La alternativa castiga a la mayoría honesta.
+- **Se mide al ESCRIBIR y viaja dentro de la reseña** (`remoteDistanceM` en `NewComment`),
+  así que lo que sale de la bandeja de salida al día siguiente desde casa no se marca por
+  error. La posición se calienta al abrir la ficha o el globo (`warmReviewPosition`) y al
+  publicar se espera como mucho 1,2 s: **publicar nunca espera al GPS**; sin fix a tiempo,
+  no se pregunta nada.
+- **Se guarda una distancia aproximada, nunca coordenadas** (`font_comments.
+  remote_distance_m`: pasos de 100 m, km enteros pasados 10 km). Misma decisión que la nota
+  del EXIF. **No sale en ninguna respuesta pública**: `CommentResponse` no la lleva y hay un
+  test que lo fija, porque junto al autor diría dónde estaba alguien.
+- **Nada automático cuelga de ella** — es un dato que afirma el cliente, como
+  `queued_offline` y el EXIF. No esconde la reseña ni anula gotas. Alimenta un carril de
+  **vigilancia, no de acusación** en `/admin/moderation` («A distancia»,
+  `GET /moderation/remote-reviews`, moderador+): las de los últimos 30 días sin revisar,
+  con **cuántas lleva esa persona en la ventana** — una sola no dice nada, treinta en una
+  semana es el patrón. «Revisada» (`POST …/:id/checked`) solo la saca de la lista; lo que de
+  verdad esté mal se arregla con lo que ya existe (borrar, restringir).
+- Dónde pregunta: el formulario de reseña de la ficha, el «¿cómo mana?» tras la foto y
+  los chips del globo del mapa (con `confirm()` nativo, porque el globo es HTML imperativo —
+  mismo precedente que el aviso de duplicado). **No** en «Agua en mi ruta»: reseñar desde
+  casa es ahí el uso previsto, y el recorrido GPX ya es el indicio de que pasaste. Tampoco
+  en «sigue igual» (confirmaciones), que es otra tabla: extensión posible si hace falta.
+- El campo del DTO es el **único con valor por defecto** (`= nil`), a propósito: `nil` es
+  exactamente «cerca o desconocido», lo que ya manda todo cliente viejo, así que el defecto
+  no puede cambiar el significado de nada. El resto del DTO sigue sin defaults.
+- Analítica: `review_remote_prompt` y `review_remote_cancel`. **Es lo que dirá si el corte
+  de 1 km molesta**: muchas preguntas con muchas cancelaciones apuntan a falsos positivos.
+- Tests: `scripts/remoteReview.test.ts` (umbral, precisión, fix viejo, redondeo, una vez
+  por fuente) y `RemoteReviewTests.swift` (se publica y se guarda, no sale en público,
+  distancias absurdas 400, la cola lista y cuenta por autor, 403 a usuarios, «revisada» no
+  borra).
+
 ## Confianza del estado de una fuente
 
 - Es una categoría explicable, no una puntuación opaca: **confirmada**, **informe

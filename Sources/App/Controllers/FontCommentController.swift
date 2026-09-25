@@ -159,6 +159,7 @@ struct FontCommentController: RouteCollection {
             image: dto.image,
             queuedOffline: req.headers.first(name: "X-FontApp-Queued-Offline") == "1"
         )
+        comment.remoteDistanceM = dto.remoteDistanceM
         try await comment.save(on: req.db)
 
         // Si la fuente no tenía foto, ésta pasa a ser la suya. Es el arreglo de lo que
@@ -398,6 +399,15 @@ struct CreateCommentDTO: Content {
     /// Guardando la decisión ya tomada, una cola que se vacía tres días después colgaría
     /// tu «sigue igual» de un parte que para entonces puede estar superado o borrado.
     let confirmIfUnchanged: Bool?
+    /// Approximate distance (m) from the reviewer to the fountain when the review was
+    /// written, sent only when clearly more than a kilometre (`web/src/lib/remoteReview.ts`).
+    /// Client-asserted; feeds the moderation lane of `RemoteReviewController` and nothing else.
+    ///
+    /// The one field here WITH a default, on purpose: this DTO has none so that adding a field
+    /// forces every call site to decide it, but for this one `nil` is exactly "near or
+    /// unknown" — what every existing client already sends — so the default cannot change
+    /// what anything means.
+    var remoteDistanceM: Int? = nil
 }
 
 extension CreateCommentDTO: Validatable {
@@ -405,6 +415,8 @@ extension CreateCommentDTO: Validatable {
         // Opcional: se puede publicar solo un estado. Si viene, máx 2000 chars.
         validations.add("body", as: String.self, is: .count(1...2000), required: false)
         validations.add("rating", as: Int.self, is: .range(1...5), required: false)
+        // Only "clearly far" is ever sent (> 1 km); the upper bound is half the planet.
+        validations.add("remoteDistanceM", as: Int.self, is: .range(1_000...20_000_000), required: false)
         // Desde la constante y no repitiendo la lista: eran dos listas que podían
         // separarse en silencio, y de hecho el estado nuevo habría pasado la validación
         // en un sitio y no en el otro.

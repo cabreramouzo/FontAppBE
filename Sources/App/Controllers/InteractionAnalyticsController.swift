@@ -17,6 +17,8 @@ struct InteractionAnalyticsController: RouteCollection {
         "map_add_font_signed_out", "map_long_press_signed_out", "map_export_gpx", "map_gpx",
         "map_offline",
         "map_help",
+        "review_remote_prompt",
+        "review_remote_cancel",
         // El «aha» de la primera visita: la tarjeta que enseña tu fuente cercana según
         // lo que haya (gift/mission/explore). Contar cuál sale y qué se pulsa es lo único
         // que dirá si convierte a un anónimo en alguien que vuelve.

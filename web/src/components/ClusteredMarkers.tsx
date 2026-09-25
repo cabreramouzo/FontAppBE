@@ -18,6 +18,8 @@ import { confirmComment, createComment, deleteComment, describeError, getGamific
 import { prepararFoto } from '../lib/image'
 import { useAuth } from '../auth/AuthContext'
 import { enqueue, isOffline } from '../lib/outbox'
+import { kmLabel, rememberRemoteConfirmed, remoteAlreadyConfirmed, remoteDistanceM } from '../lib/remoteReview'
+import { reviewFix, warmReviewPosition } from '../lib/reviewPosition'
 import { showsDensity, showsHeatmap } from '../lib/mapDensity'
 
 /**
@@ -78,7 +80,7 @@ export function ClusteredMarkers({
 }) {
   const map = useMap()
   const navigate = useNavigate()
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const { user } = useAuth()
   // Fuente cuyo popup ha cerrado el usuario a mano. Los marcadores se reconstruyen con
   // cada movimiento del mapa, y sin esto el popup volvía a salir una y otra vez.
@@ -165,8 +167,24 @@ export function ClusteredMarkers({
 
       const estado = objetivo.getAttribute('data-estado')
       if (!estado) return
+      const chips = caja.innerHTML
       caja.innerHTML = `<span class="muted small">${escapeHtml(t('popup.sending'))}</span>`
       void (async () => {
+        // "Did you see it recently?" when clearly far from this fountain (lib/remoteReview).
+        // A native confirm() because this popup is imperative HTML, not React — same as the
+        // nearby-duplicate warning. Cancelling puts the chips back as they were.
+        const ll = porID.get(fontID)?.getLatLng()
+        const lejos = ll ? remoteDistanceM(await reviewFix(), { latitude: ll.lat, longitude: ll.lng }) : null
+        if (lejos !== null && !remoteAlreadyConfirmed(fontID)) {
+          trackInteraction('review_remote_prompt')
+          if (!window.confirm(`${t('remote.title')}\n\n${t('remote.body', { km: kmLabel(lejos, lang) })}`)) {
+            trackInteraction('review_remote_cancel')
+            caja.innerHTML = chips
+            return
+          }
+          rememberRemoteConfirmed(fontID)
+        }
+        const remoto = lejos ?? undefined
         try {
           // ## Tocar el chip que ya consta es CONFIRMAR, no repetir
           //
@@ -181,7 +199,7 @@ export function ClusteredMarkers({
           // siempre con los datos frescos. Si la decisión se tomara aquí habría que
           // repetirla en `sw.js` —que es un espejo de la cola y no puede importar de
           // `src/`— y una cola vieja colgaría el «sigue igual» de un parte ya superado.
-          const creada = await createComment(fontID, { waterStatus: estado, confirmIfUnchanged: true })
+          const creada = await createComment(fontID, { waterStatus: estado, confirmIfUnchanged: true, remoteDistanceM: remoto })
           if (creada.confirmedInstead) {
             // Se dice con otras palabras que al reseñar: «gracias, ya lo saben los demás»
             // sobre una confirmación parece que se ha publicado un parte nuevo, y lo que
@@ -242,7 +260,7 @@ export function ClusteredMarkers({
             // tal cual y el servidor decide al recibirla, con los datos de ese momento.
             // Por eso sin cobertura pasa exactamente lo mismo que con ella, y `sw.js` no
             // ha tenido que aprender nada — sigue publicando el `data` que encuentre.
-            await enqueue({ kind: 'comment', fontID, fontName: caja.dataset.nombre, data: { waterStatus: estado, confirmIfUnchanged: true } })
+            await enqueue({ kind: 'comment', fontID, fontName: caja.dataset.nombre, data: { waterStatus: estado, confirmIfUnchanged: true, remoteDistanceM: remoto } })
             caja.innerHTML = `<span class="muted small">${escapeHtml(t('offline.savedUpdate'))}</span>`
             // También sin cobertura, que es donde más se está delante de la fuente: la
             // foto se encola igual. Las gotas no se sabrán si el baremo no está cacheado,
@@ -368,6 +386,9 @@ export function ClusteredMarkers({
       marker.bindPopup(el, { autoPan: false })
       marker.on('popupopen', () => {
         popupAbierto.current = f.id
+        // Get a position now (only with permission already granted) so that tapping a
+        // status chip does not wait on the GPS to decide whether to ask "seen it recently?".
+        void warmReviewPosition()
         // Abrir el popup de otra fuente cuenta como descartar el de la enfocada: si no,
         // al reponer ganaría ella y le robaría el popup al pin que acabas de tocar.
         cerradoPorElUsuario.current = isSelected ? null : (selectedID ?? null)

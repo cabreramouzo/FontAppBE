@@ -19,6 +19,7 @@ func routes(_ app: Application) throws {
     try app.register(collection: FontPhotoController())
     try app.register(collection: FontReportController())
     try app.register(collection: FontCommentController())
+    try app.register(collection: RemoteReviewController())
     try app.register(collection: FontFavoriteController())
     try app.register(collection: FlagController())
     try app.register(collection: AdminMailController())

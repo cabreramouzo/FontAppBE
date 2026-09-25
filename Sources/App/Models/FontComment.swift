@@ -18,6 +18,13 @@ final class FontComment: Model, Content, @unchecked Sendable {
     /// cliente y no se puede verificar: por eso solo paga insignia, nunca gotas.
     @Field(key: "queued_offline") var queuedOffline: Bool
 
+    /// Approximate distance (m) from the reviewer to the fountain when the review was
+    /// written, only when clearly more than a kilometre. Client-asserted and for moderators
+    /// only: it is NOT in `CommentResponse`. See `AddRemoteDistanceToFontComment`.
+    @OptionalField(key: "remote_distance_m") var remoteDistanceM: Int?
+    /// When a moderator looked at this remote review and took it out of the lane.
+    @OptionalField(key: "remote_checked_at") var remoteCheckedAt: Date?
+
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}
