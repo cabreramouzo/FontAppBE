@@ -435,7 +435,12 @@ export function ClusteredMarkers({
     const heatCanvas = document.createElement('canvas')
     heatCanvas.className = 'server-map-heatmap'
     heatCanvas.setAttribute('aria-hidden', 'true')
-    map.getPanes().overlayPane.appendChild(heatCanvas)
+    // Drawn in container (screen) coordinates, which already include the map bearing, so
+    // it must live in leaflet-rotate's NON-rotating pane. In overlayPane the rotation was
+    // applied twice and the heat spots swung around the world map as it turned.
+    const panes = map.getPanes() as { norotatePane?: HTMLElement; overlayPane: HTMLElement }
+    const heatPane = panes.norotatePane ?? panes.overlayPane
+    heatPane.appendChild(heatCanvas)
     let drawFrame: number | null = null
     let legendFrame: number | null = null
 
@@ -477,7 +482,12 @@ export function ClusteredMarkers({
       heatCanvas.height = Math.round(size.y * ratio)
       heatCanvas.style.width = `${size.x}px`
       heatCanvas.style.height = `${size.y}px`
-      L.DomUtil.setPosition(heatCanvas, map.containerPointToLayerPoint([0, 0]))
+      // The non-rotating pane only follows the map pane's translation, so undoing that
+      // keeps the canvas on the container's top-left corner.
+      const panePos = (map as unknown as { _getMapPanePos: () => L.Point })._getMapPanePos()
+      L.DomUtil.setPosition(heatCanvas, heatPane === panes.overlayPane
+        ? map.containerPointToLayerPoint([0, 0])
+        : L.point(-panePos.x, -panePos.y))
       const ctx = heatCanvas.getContext('2d')
       if (!ctx) return
       ctx.scale(ratio, ratio)
@@ -525,7 +535,7 @@ export function ClusteredMarkers({
         map.setView([closest.cluster.latitude, closest.cluster.longitude], map.getZoom() + 2)
       }
     }
-    map.on('move zoom resize', scheduleHeatmap)
+    map.on('move zoom resize rotate', scheduleHeatmap)
     map.on('zoomend', syncDensityMode)
     // Panning also changes which groups are in sight. `moveend` can fire every frame while
     // following the user, which is fine: this only schedules one cheap check per frame.
@@ -558,7 +568,7 @@ export function ClusteredMarkers({
       contenedorMapa.removeEventListener('click', alTocarChip, true)
       contenedorMapa.removeEventListener('change', alElegirFoto, true)
       map.off('click', zoomIntoHeat)
-      map.off('move zoom resize', scheduleHeatmap)
+      map.off('move zoom resize rotate', scheduleHeatmap)
       map.off('zoomend', syncDensityMode)
       map.off('moveend', scheduleLegendMode)
       group.off('animationend', afterClusterAnimation)
