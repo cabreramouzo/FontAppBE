@@ -439,14 +439,29 @@ export function ClusteredMarkers({
     let drawFrame: number | null = null
     let legendFrame: number | null = null
 
+    // A timer and not requestAnimationFrame: frames are frozen in a hidden tab, and a
+    // check that never runs leaves the legend on whatever it said last.
     const scheduleLegendMode = () => {
-      if (legendFrame !== null) window.cancelAnimationFrame(legendFrame)
-      legendFrame = window.requestAnimationFrame(() => {
+      if (legendFrame !== null) window.clearTimeout(legendFrame)
+      legendFrame = window.setTimeout(() => {
         legendFrame = null
-        const clientClustersVisible = map.getContainer().querySelector('.marker-cluster') !== null
+        // Only groups actually on screen: Leaflet keeps icons in a padded margin around the
+        // view, so one just off the edge kept the legend on "concentration" with nothing
+        // but individual pins in sight.
+        const box = map.getContainer().getBoundingClientRect()
+        const clientClustersVisible = [...map.getContainer().querySelectorAll('.marker-cluster')].some((el) => {
+          const r = el.getBoundingClientRect()
+          return r.right > box.left && r.left < box.right && r.bottom > box.top && r.top < box.bottom
+        })
         onDensityModeChange?.(showsDensity(clusters.length, clientClustersVisible))
-      })
+      }, 120)
     }
+    // Re-check whenever marker icons come or go. Zoom and pan events alone missed cases:
+    // markercluster adds and removes group icons during its own animations and after a
+    // data reload, so the legend could stay on "concentration" over individual pins
+    // until the page was reloaded.
+    const iconsChanged = new MutationObserver(scheduleLegendMode)
+    iconsChanged.observe(map.getPanes().markerPane, { childList: true })
 
     const heatIsVisible = () => showsHeatmap(clusters.length, map.getZoom())
     const drawHeatmap = () => {
@@ -512,6 +527,9 @@ export function ClusteredMarkers({
     }
     map.on('move zoom resize', scheduleHeatmap)
     map.on('zoomend', syncDensityMode)
+    // Panning also changes which groups are in sight. `moveend` can fire every frame while
+    // following the user, which is fine: this only schedules one cheap check per frame.
+    map.on('moveend', scheduleLegendMode)
     map.on('click', zoomIntoHeat)
     syncDensityMode()
 
@@ -542,11 +560,13 @@ export function ClusteredMarkers({
       map.off('click', zoomIntoHeat)
       map.off('move zoom resize', scheduleHeatmap)
       map.off('zoomend', syncDensityMode)
+      map.off('moveend', scheduleLegendMode)
       group.off('animationend', afterClusterAnimation)
       map.removeLayer(group)
       if (map.hasLayer(serverClusters)) map.removeLayer(serverClusters)
       if (drawFrame !== null) window.cancelAnimationFrame(drawFrame)
-      if (legendFrame !== null) window.cancelAnimationFrame(legendFrame)
+      if (legendFrame !== null) window.clearTimeout(legendFrame)
+      iconsChanged.disconnect()
       heatCanvas.remove()
       if (selectedMarker) map.removeLayer(selectedMarker)
     }
