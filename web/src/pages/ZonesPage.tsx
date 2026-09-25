@@ -95,7 +95,7 @@ export function ZonesPage() {
   const delPais = filtra ? (zonas ?? []).filter((z) => z.country === pais) : (zonas ?? [])
   const aguja = busqueda.trim().toLocaleLowerCase(lang)
   const visibles = aguja
-    ? delPais.filter((z) => `${z.region} ${z.admin1 ? admin1Name(z.admin1) : ''}`.toLocaleLowerCase(lang).includes(aguja))
+    ? delPais.filter((z) => `${z.region} ${z.admin1 ? admin1Name(z.admin1) ?? '' : ''}`.toLocaleLowerCase(lang).includes(aguja))
     : delPais
 
   useEffect(() => {
@@ -113,9 +113,9 @@ export function ZonesPage() {
 
   const opciones = useMemo<SearchOption[]>(() => {
     const regiones: SearchOption[] = delPais
-      .filter((z) => !aguja || `${z.region} ${z.admin1 ? admin1Name(z.admin1) : ''}`.toLocaleLowerCase(lang).includes(aguja))
+      .filter((z) => !aguja || `${z.region} ${z.admin1 ? admin1Name(z.admin1) ?? '' : ''}`.toLocaleLowerCase(lang).includes(aguja))
       .slice(0, 8)
-      .map((z) => ({ kind: 'region', label: z.region, region: z.region, detail: z.admin1 ? admin1Name(z.admin1) : (z.country ? nombrePais(z.country, t) : t('zones.otherRegions')) }))
+      .map((z) => ({ kind: 'region', label: z.region, region: z.region, detail: (z.admin1 && admin1Name(z.admin1)) || (z.country ? nombrePais(z.country, t) : t('zones.otherRegions')) }))
     const places: SearchOption[] = lugares.map((place) => ({
       kind: 'place', label: place.name, place,
       detail: [place.region, place.country ? nombrePais(place.country, t) : null].filter(Boolean).join(' · '),
@@ -229,7 +229,7 @@ export function ZonesPage() {
       {estado === 'ok' && agrupa && grupos.map((grupo) => (
         <Box key={grupo.code || 'unknown'} sx={{ mb: 3 }}>
           <Typography variant="h6" sx={{ mb: 1 }}>
-            {grupo.code ? admin1Name(grupo.code) : t('zones.otherRegions')}
+            {grupo.code ? admin1Name(grupo.code) ?? grupo.code : t('zones.otherRegions')}
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 1.5, alignItems: 'start' }}>
             {grupo.zones.map((z) => <ZonaCard key={`${z.country}/${z.region}`} zona={z} lang={lang} />)}

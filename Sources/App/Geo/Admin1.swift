@@ -3,6 +3,11 @@ import Foundation
 /// Traduce la demarcación fina que ya guarda FontApp a su división administrativa
 /// superior. Las claves son exactamente los valores medidos en producción.
 ///
+/// En Latinoamérica Natural Earth ya da la primera división (estados, provincias,
+/// departamentos), así que cada demarcación es su propio admin1 y no agrupa nada: se
+/// apunta igual para que `backfill-admin1` no se niegue y para que `/zones` no las
+/// meta en «otras regiones». Puerto Rico va como `US-PR`, que es su código ISO 3166-2.
+///
 /// No se infiere por geometría: una provincia pertenece a una comunidad por definición.
 /// Si entra un valor nuevo, queda sin clasificar hasta añadirlo explícitamente; inventar
 /// aquí sería peor que devolver `nil`.
@@ -18,6 +23,30 @@ enum Admin1 {
             "Escaldes-Engordany": "AD-08", "La Massana": "AD-04", "Ordino": "AD-05",
             "Sant Julià de Lòria": "AD-06",
         ],
+        "Argentina": [
+            "Buenos Aires": "AR-B", "Catamarca": "AR-K", "Chaco": "AR-H", "Chubut": "AR-U",
+            "Ciudad de Buenos Aires": "AR-C", "Corrientes": "AR-W", "Córdoba": "AR-X",
+            "Entre Ríos": "AR-E", "Formosa": "AR-P", "Jujuy": "AR-Y", "La Pampa": "AR-L",
+            "La Rioja": "AR-F", "Mendoza": "AR-M", "Misiones": "AR-N", "Neuquén": "AR-Q",
+            "Río Negro": "AR-R", "Salta": "AR-A", "San Juan": "AR-J", "San Luis": "AR-D",
+            "Santa Cruz": "AR-Z", "Santa Fe": "AR-S", "Santiago del Estero": "AR-G",
+            "Tierra del Fuego": "AR-V", "Tucumán": "AR-T",
+        ],
+        "Bolivia": [
+            "Chuquisaca": "BO-H", "Cochabamba": "BO-C", "El Beni": "BO-B", "La Paz": "BO-L",
+            "Oruro": "BO-O", "Potosí": "BO-P", "Santa Cruz": "BO-S",
+        ],
+        "Brazil": [
+            "Acre": "BR-AC", "Alagoas": "BR-AL", "Amazonas": "BR-AM", "Bahia": "BR-BA",
+            "Ceará": "BR-CE", "Distrito Federal": "BR-DF", "Espírito Santo": "BR-ES",
+            "Goiás": "BR-GO", "Maranhão": "BR-MA", "Mato Grosso": "BR-MT",
+            "Mato Grosso do Sul": "BR-MS", "Minas Gerais": "BR-MG", "Paraná": "BR-PR",
+            "Paraíba": "BR-PB", "Pará": "BR-PA", "Pernambuco": "BR-PE", "Piauí": "BR-PI",
+            "Rio Grande do Norte": "BR-RN", "Rio Grande do Sul": "BR-RS",
+            "Rio de Janeiro": "BR-RJ", "Rondônia": "BR-RO", "Roraima": "BR-RR",
+            "Santa Catarina": "BR-SC", "Sergipe": "BR-SE", "São Paulo": "BR-SP",
+            "Tocantins": "BR-TO",
+        ],
         "Chile": [
             "Aisén del General Carlos Ibáñez del Campo": "CL-AI", "Antofagasta": "CL-AN",
             "Arica y Parinacota": "CL-AP", "Atacama": "CL-AT", "Bío-Bío": "CL-BI",
@@ -26,6 +55,48 @@ enum Admin1 {
             "Los Ríos": "CL-LR", "Magallanes y Antártica Chilena": "CL-MA",
             "Maule": "CL-ML", "Región Metropolitana de Santiago": "CL-RM",
             "Valparaíso": "CL-VS", "Ñuble": "CL-NB",
+        ],
+        "Colombia": [
+            "Amazonas": "CO-AMA", "Antioquia": "CO-ANT", "Arauca": "CO-ARA",
+            "Atlántico": "CO-ATL", "Bogota": "CO-DC", "Bolívar": "CO-BOL",
+            "Boyacá": "CO-BOY", "Caldas": "CO-CAL", "Caquetá": "CO-CAQ",
+            "Casanare": "CO-CAS", "Cauca": "CO-CAU", "Cesar": "CO-CES", "Chocó": "CO-CHO",
+            "Cundinamarca": "CO-CUN", "Córdoba": "CO-COR", "Huila": "CO-HUI",
+            "La Guajira": "CO-LAG", "Magdalena": "CO-MAG", "Meta": "CO-MET",
+            "Nariño": "CO-NAR", "Norte de Santander": "CO-NSA", "Putumayo": "CO-PUT",
+            "Quindío": "CO-QUI", "Risaralda": "CO-RIS", "Santander": "CO-SAN",
+            "Tolima": "CO-TOL", "Valle del Cauca": "CO-VAC", "Vichada": "CO-VID",
+        ],
+        "Costa Rica": [
+            "Alajuela": "CR-A", "Cartago": "CR-C", "Guanacaste": "CR-G", "Heredia": "CR-H",
+            "Limón": "CR-L", "Puntarenas": "CR-P", "San José": "CR-SJ",
+        ],
+        "Cuba": [
+            "Artemisa": "CU-15", "Camagüey": "CU-09", "Ciego de Ávila": "CU-08",
+            "Cienfuegos": "CU-06", "Ciudad de la Habana": "CU-03", "Granma": "CU-12",
+            "Holguín": "CU-11", "Isla de la Juventud": "CU-99", "Las Tunas": "CU-10",
+            "Matanzas": "CU-04", "Mayabeque": "CU-16", "Pinar del Río": "CU-01",
+            "Sancti Spíritus": "CU-07", "Santiago de Cuba": "CU-13", "Villa Clara": "CU-05",
+        ],
+        "Dominican Republic": [
+            "Azua": "DO-02", "Distrito Nacional": "DO-01", "Duarte": "DO-06",
+            "Independencia": "DO-10", "La Altagracia": "DO-11", "La Vega": "DO-13",
+            "María Trinidad Sánchez": "DO-14", "Monte Cristi": "DO-15",
+            "Puerto Plata": "DO-18", "San Cristóbal": "DO-21", "San José de Ocoa": "DO-31",
+            "San Juan": "DO-22", "Santiago": "DO-25", "Santo Domingo": "DO-32",
+        ],
+        "Ecuador": [
+            "Azuay": "EC-A", "Bolivar": "EC-B", "Carchi": "EC-C", "Cañar": "EC-F",
+            "Chimborazo": "EC-H", "Cotopaxi": "EC-X", "El Oro": "EC-O",
+            "Esmeraldas": "EC-E", "Galápagos": "EC-W", "Guayas": "EC-G", "Imbabura": "EC-I",
+            "Loja": "EC-L", "Los Rios": "EC-R", "Manabi": "EC-M", "Morona Santiago": "EC-S",
+            "Napo": "EC-N", "Pastaza": "EC-Y", "Pichincha": "EC-P", "Santa Elena": "EC-SE",
+            "Santo Domingo de los Tsáchilas": "EC-SD", "Sucumbios": "EC-U",
+            "Tungurahua": "EC-T", "Zamora Chinchipe": "EC-Z",
+        ],
+        "El Salvador": [
+            "La Unión": "SV-UN", "San Salvador": "SV-SS", "Santa Ana": "SV-SA",
+            "Sonsonate": "SV-SO", "Usulután": "SV-US",
         ],
         "Finland": [
             "Central Finland": "FI-08", "Central Ostrobothnia": "FI-07",
@@ -47,6 +118,54 @@ enum Admin1 {
             "Pyrénées-Atlantiques": "FR-NAQ", "Pyrénées-Orientales": "FR-OCC",
             "Tarn": "FR-OCC", "Tarn-et-Garonne": "FR-OCC", "Vaucluse": "FR-PAC",
         ],
+        "Guatemala": [
+            "Baja Verapaz": "GT-15", "Chimaltenango": "GT-04", "Guatemala": "GT-01",
+            "Izabal": "GT-18", "Petén": "GT-17", "Sacatepéquez": "GT-03",
+            "San Marcos": "GT-12", "Sololá": "GT-07", "Suchitepéquez": "GT-10",
+            "Totonicapán": "GT-08",
+        ],
+        "Honduras": [
+            "Atlántida": "HN-AT", "Cortés": "HN-CR", "Francisco Morazán": "HN-FM",
+            "Gracias a Dios": "HN-GD", "Islas de la Bahía": "HN-IB", "La Paz": "HN-LP",
+            "Lempira": "HN-LE", "Olancho": "HN-OL", "Yoro": "HN-YO",
+        ],
+        "Mexico": [
+            "Aguascalientes": "MX-AGU", "Baja California": "MX-BCN",
+            "Baja California Sur": "MX-BCS", "Campeche": "MX-CAM", "Chiapas": "MX-CHP",
+            "Chihuahua": "MX-CHH", "Coahuila": "MX-COA", "Colima": "MX-COL",
+            "Distrito Federal": "MX-CMX", "Durango": "MX-DUR", "Guanajuato": "MX-GUA",
+            "Guerrero": "MX-GRO", "Hidalgo": "MX-HID", "Jalisco": "MX-JAL",
+            "Michoacán": "MX-MIC", "Morelos": "MX-MOR", "México": "MX-MEX",
+            "Nayarit": "MX-NAY", "Nuevo León": "MX-NLE", "Oaxaca": "MX-OAX",
+            "Puebla": "MX-PUE", "Querétaro": "MX-QUE", "Quintana Roo": "MX-ROO",
+            "San Luis Potosí": "MX-SLP", "Sinaloa": "MX-SIN", "Sonora": "MX-SON",
+            "Tabasco": "MX-TAB", "Tamaulipas": "MX-TAM", "Tlaxcala": "MX-TLA",
+            "Veracruz": "MX-VER", "Yucatán": "MX-YUC", "Zacatecas": "MX-ZAC",
+        ],
+        "Nicaragua": [
+            "Atlántico Norte": "NI-AN", "Atlántico Sur": "NI-AS", "Boaco": "NI-BO",
+            "Carazo": "NI-CA", "Chinandega": "NI-CI", "León": "NI-LE", "Madriz": "NI-MD",
+            "Managua": "NI-MN", "Rivas": "NI-RI",
+        ],
+        "Panama": [
+            "Bocas del Toro": "PA-1", "Chiriquí": "PA-4", "Coclé": "PA-2", "Colón": "PA-3",
+            "Panama": "PA-8", "Veraguas": "PA-9",
+        ],
+        "Paraguay": [
+            "Alto Paraná": "PY-10", "Amambay": "PY-13", "Asunción": "PY-ASU",
+            "Boquerón": "PY-19", "Canindeyú": "PY-14", "Central": "PY-11",
+            "Cordillera": "PY-3", "Guairá": "PY-4", "Itapúa": "PY-7", "Misiones": "PY-8",
+            "Paraguarí": "PY-9",
+        ],
+        "Peru": [
+            "Amazonas": "PE-AMA", "Ancash": "PE-ANC", "Apurímac": "PE-APU",
+            "Arequipa": "PE-ARE", "Ayacucho": "PE-AYA", "Cajamarca": "PE-CAJ",
+            "Callao": "PE-CAL", "Cusco": "PE-CUS", "Huancavelica": "PE-HUV",
+            "Huánuco": "PE-HUC", "Ica": "PE-ICA", "Junín": "PE-JUN",
+            "La Libertad": "PE-LAL", "Lambayeque": "PE-LAM", "Lima": "PE-LIM",
+            "Lima Province": "PE-LMA", "Loreto": "PE-LOR", "Madre de Dios": "PE-MDD",
+            "Puno": "PE-PUN", "San Martín": "PE-SAM", "Tacna": "PE-TAC",
+        ],
         "Portugal": [
             "Aveiro": "PT-01", "Azores": "PT-20", "Beja": "PT-02", "Braga": "PT-03",
             "Bragança": "PT-04", "Castelo Branco": "PT-05", "Coimbra": "PT-06",
@@ -54,6 +173,9 @@ enum Admin1 {
             "Madeira": "PT-30", "Portalegre": "PT-12", "Porto": "PT-13",
             "Santarém": "PT-14", "Setúbal": "PT-15", "Viana do Castelo": "PT-16",
             "Vila Real": "PT-17", "Viseu": "PT-18", "Évora": "PT-07",
+        ],
+        "Puerto Rico": [
+            "Puerto Rico": "US-PR",
         ],
         "Spain": [
             "Albacete": "ES-CM", "Alicante": "ES-VC", "Almería": "ES-AN",
@@ -94,6 +216,18 @@ enum Admin1 {
             "Schaffhausen": "CH-SH", "Schwyz": "CH-SZ", "Solothurn": "CH-SO",
             "Thurgau": "CH-TG", "Ticino": "CH-TI", "Uri": "CH-UR",
             "Valais": "CH-VS", "Vaud": "CH-VD", "Zug": "CH-ZG", "Zürich": "CH-ZH",
+        ],
+        "Uruguay": [
+            "Canelones": "UY-CA", "Colonia": "UY-CO", "Maldonado": "UY-MA",
+            "Montevideo": "UY-MO", "Paysandú": "UY-PA", "Rocha": "UY-RO", "Salto": "UY-SA",
+            "Soriano": "UY-SO", "Tacuarembó": "UY-TA", "Treinta y Tres": "UY-TT",
+        ],
+        "Venezuela": [
+            "Anzoátegui": "VE-B", "Aragua": "VE-D", "Barinas": "VE-E", "Bolívar": "VE-F",
+            "Carabobo": "VE-G", "Distrito Capital": "VE-A", "Lara": "VE-K",
+            "Miranda": "VE-M", "Mérida": "VE-L", "Nueva Esparta": "VE-O",
+            "Portuguesa": "VE-P", "Táchira": "VE-S", "Vargas": "VE-X", "Yaracuy": "VE-U",
+            "Zulia": "VE-V",
         ],
     ]
 }

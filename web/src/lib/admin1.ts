@@ -10,6 +10,11 @@ const NAMES: Record<string, string> = {
   'FR-OCC': 'Occitanie', 'FR-PAC': 'Provence-Alpes-Côte d’Azur',
 }
 
-export function admin1Name(code: string): string {
-  return NAMES[code] ?? code
+/**
+ * The territory's name, or `null` when we only have the code. Most admin1 codes (all of
+ * Latin America, Portugal, Chile…) map one-to-one to the region already shown, so there is
+ * no extra name to say — and printing «MX-JAL» next to «Jalisco» would be worse than nothing.
+ */
+export function admin1Name(code: string): string | null {
+  return NAMES[code] ?? null
 }
