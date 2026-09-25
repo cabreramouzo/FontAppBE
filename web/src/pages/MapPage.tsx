@@ -2452,7 +2452,9 @@ export function MapPage() {
 
       {!placing && (
         <div className="map-fabs">
-          {helpButton && (
+          {/* On desktop the ⋮ menu is not rendered, so there the button is the only way in
+              and always stays; there is room for it. */}
+          {(helpButton || !movil) && (
             <Fab
               size="small"
               onClick={() => { trackInteraction('map_help'); setHelpOpen(true) }}

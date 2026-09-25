@@ -3850,7 +3850,9 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   etiqueta al lado. Una sola pantalla, sin pasos: cualquier toque o Esc la cierra. El (?)
   sale en el mapa solo las **10 primeras visitas** (`HELP_BUTTON_SESSIONS`, contadas con
   `sesiones()`); después vive en el menú (⋮), que la abre con `/?help=1` desde cualquier
-  página. No interrumpe a nadie: la abre quien quiere, y por eso no pasa por `lib/asks`.
+  página. **En escritorio el botón se queda siempre**: allí el menú (⋮) no se
+  pinta, así que pasadas las diez visitas no quedaba ninguna forma de abrirla — y sitio
+  en la columna sobra. No interrumpe a nadie: la abre quien quiere, y por eso no pasa por `lib/asks`.
 - **Por qué esta vez sí y en agosto no** (`ContextualOnboarding`, quitado a los 15 min):
   aquello señalaba un **pin**, que no siempre está en pantalla. Esto señala los controles
   fijos, que existen siempre que el mapa existe. Lo que no se pinta o no tiene tamaño (el
