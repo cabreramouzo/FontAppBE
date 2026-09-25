@@ -80,3 +80,11 @@ test('un zoom imposible devuelve la caja tal cual en vez de una inservible', () 
   assert.equal(c.minLat, vista.minLat)
   assert.ok(Number.isFinite(c.maxLong))
 })
+
+test('zoomed all the way out, the box never leaves the world', () => {
+  // Leaflet reports the repeated worlds at zoom 1: the server rejects longitudes past ±180.
+  const c = cajaRedondeada({ minLat: -85, maxLat: 85, minLong: -540, maxLong: 540 }, { width: 1400, height: 800 }, 1)
+  assert.equal(c.minLong, -180)
+  assert.equal(c.maxLong, 180)
+  assert.ok(c.minLat >= -90 && c.maxLat <= 90)
+})

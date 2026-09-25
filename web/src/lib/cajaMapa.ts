@@ -74,11 +74,16 @@ export function cajaRedondeada(
   }
   const abajo = (n: number) => Math.floor(n / paso) * paso
   const arriba = (n: number) => Math.ceil(n / paso) * paso
+  // Clamped to the world. Zoomed all the way out, Leaflet reports longitudes past ±180
+  // because the world repeats sideways; the server rejects that box with a 400, and the
+  // map treated it like a network failure and fell back to the saved offline zone — so
+  // the whole world showed only that zone's fountains (reported: "todo en Barcelona").
+  const clamp = (n: number, limit: number) => Math.max(-limit, Math.min(limit, n))
   return {
-    minLat: abajo(b.minLat),
-    maxLat: arriba(b.maxLat),
-    minLong: abajo(b.minLong),
-    maxLong: arriba(b.maxLong),
+    minLat: clamp(abajo(b.minLat), 90),
+    maxLat: clamp(arriba(b.maxLat), 90),
+    minLong: clamp(abajo(b.minLong), 180),
+    maxLong: clamp(arriba(b.maxLong), 180),
     width: Math.max(CELDA_PX, Math.ceil(size.width / CELDA_PX) * CELDA_PX),
     height: Math.max(CELDA_PX, Math.ceil(size.height / CELDA_PX) * CELDA_PX),
   }
