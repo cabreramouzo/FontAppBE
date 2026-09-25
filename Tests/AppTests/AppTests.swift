@@ -41,7 +41,11 @@ final class AppTests: XCTestCase {
     }
 
     func testAdmin1TableCoversProductionTerritoriesAndSwitzerland() {
-        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 570)
+        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 590)
+        // Norway: pre-2020 counties grouped into today's.
+        XCTAssertEqual(Admin1.code(country: "Norway", region: "Oppland"), "NO-34")
+        XCTAssertEqual(Admin1.code(country: "Norway", region: "Hedmark"), "NO-34")
+        XCTAssertEqual(Admin1.code(country: "Norway", region: "Sogn og Fjordane"), "NO-46")
         // Italy: Natural Earth gives provinces, grouped into the 20 regions.
         XCTAssertEqual(Admin1.code(country: "Italy", region: "Turin"), "IT-21")
         XCTAssertEqual(Admin1.code(country: "Italy", region: "Bozen"), "IT-32")

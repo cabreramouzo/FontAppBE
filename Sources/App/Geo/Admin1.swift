@@ -8,6 +8,10 @@ import Foundation
 /// apunta igual para que `backfill-admin1` no se niegue y para que `/zones` no las
 /// meta en «otras regiones». Puerto Rico va como `US-PR`, que es su código ISO 3166-2.
 ///
+/// Noruega: Natural Earth trae los 19 fylker de antes de 2020 y aquí se agrupan en los
+/// condados actuales (ISO 3166-2 de 2024): Hedmark + Oppland → Innlandet, las dos Agder
+/// → Agder, Hordaland + Sogn og Fjordane → Vestland y las dos Trøndelag → Trøndelag.
+///
 /// No se infiere por geometría: una provincia pertenece a una comunidad por definición.
 /// Si entra un valor nuevo, queda sin clasificar hasta añadirlo explícitamente; inventar
 /// aquí sería peor que devolver `nil`.
@@ -179,6 +183,15 @@ enum Admin1 {
             "Atlántico Norte": "NI-AN", "Atlántico Sur": "NI-AS", "Boaco": "NI-BO",
             "Carazo": "NI-CA", "Chinandega": "NI-CI", "León": "NI-LE", "Madriz": "NI-MD",
             "Managua": "NI-MN", "Rivas": "NI-RI",
+        ],
+        "Norway": [
+            "Akershus": "NO-32", "Aust-Agder": "NO-42", "Buskerud": "NO-33",
+            "Finnmark": "NO-56", "Hedmark": "NO-34", "Hordaland": "NO-46",
+            "Møre og Romsdal": "NO-15", "Nord-Trøndelag": "NO-50", "Nordland": "NO-18",
+            "Oppland": "NO-34", "Oslo": "NO-03", "Rogaland": "NO-11",
+            "Sogn og Fjordane": "NO-46", "Svalbard": "NO-21", "Sør-Trøndelag": "NO-50",
+            "Telemark": "NO-40", "Troms": "NO-55", "Vest-Agder": "NO-42",
+            "Vestfold": "NO-39", "Østfold": "NO-31",
         ],
         "Panama": [
             "Bocas del Toro": "PA-1", "Chiriquí": "PA-4", "Coclé": "PA-2", "Colón": "PA-3",

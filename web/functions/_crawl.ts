@@ -40,7 +40,7 @@ export async function sitemapFontIDs(api: string, now = Date.now()): Promise<Set
   try {
     const res = await fetch(`${api}/sitemap/fonts`, { cf: { cacheTtl: 3600, cacheEverything: true } } as RequestInit)
     if (!res.ok) return cached?.ids ?? null
-    const rows: { id: string }[] = await res.json()
+    const rows = (await res.json()) as { id: string }[]
     cached = { ids: new Set(rows.map((r) => r.id.toLowerCase())), at: now }
     return cached.ids
   } catch {

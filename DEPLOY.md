@@ -421,6 +421,30 @@ Tres tropiezos que no se ven leyendo el código y cuestan una tarde:
 Pendiente: estos países **no están en la tabla `Admin1`**, así que en `/zones` se agrupan
 como «otras regiones». `region` funciona; es solo el agrupado. Se añaden cuando toque.
 
+#### Noruega (25/09/2026)
+
+Misma receta que los nórdicos. Consulta en `import-data/norway/query.overpassql` (la de
+Francia con `area["ISO3166-1"="NO"]`, con `User-Agent`): **1.178 → 1.167** tras `filtra`
+(11 con `drinking_water=no`). Se quitaron además **16 nombres genéricos** que OSM traía
+como `name` («Vannpost», «Well», «Drinking water»…): así salen como «fuente sin nombre».
+Sin `--dedupe`: el área ISO no toca Suecia ni Finlandia.
+
+`import-fonts` y `populate-regions` se lanzaron **desde el Mac** con el `DATABASE_URL` de
+producción, no con `fly ssh`: así no le quitan memoria a la máquina que sirve la web.
+
+`fronteras-subset.py … Norway`. Primera pasada: 1.008 dentro de polígono. Rescate de costa
+medido, con corte en 10 km porque la curva ya se aplana:
+
+| ≤ | rescata |
+|---|---|
+| 1 km | 97 |
+| 2 km | 29 |
+| 5 km | 16 |
+| **10 km** | **3** |
+
+Quedan **1.164 de 1.167** clasificadas y 3 sin región. Ojo: Natural Earth trae los **19
+fylker de antes de 2020**; `Admin1` los agrupa en los condados actuales (ISO de 2024).
+
 #### Poblar país/región de las fuentes (`populate-regions`)
 
 `fonts.country` y `fonts.region` se rellenan **offline** por *point-in-polygon* contra un

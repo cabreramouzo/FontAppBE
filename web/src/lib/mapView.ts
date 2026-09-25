@@ -76,6 +76,7 @@ const BY_ZONE: Record<string, View> = {
   'Europe/Rome': v(42.5, 12.5, 5), 'Europe/Paris': v(46.6, 2.2, 5),
   'Europe/Lisbon': v(39.6, -8, 6), 'Europe/Zurich': v(46.8, 8.2, 7),
   'Europe/Stockholm': v(62, 15, 4), 'Europe/Helsinki': v(64, 26, 4),
+  'Europe/Oslo': v(62, 10, 4), 'Arctic/Longyearbyen': v(62, 10, 4),
   'Europe/Andorra': v(42.5, 1.55, 10),
 }
 const MEXICO = BY_ZONE['America/Mexico_City']
