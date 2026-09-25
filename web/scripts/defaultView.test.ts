@@ -4,7 +4,7 @@ import { DEFAULT_VIEW, defaultViewFor } from '../src/lib/mapView.ts'
 
 test('unknown or missing time zone keeps the old Madrid view', () => {
   assert.deepEqual(defaultViewFor(undefined), DEFAULT_VIEW)
-  assert.deepEqual(defaultViewFor('Asia/Tokyo'), DEFAULT_VIEW)
+  assert.deepEqual(defaultViewFor('Asia/Kolkata'), DEFAULT_VIEW)
   assert.deepEqual(defaultViewFor('Europe/Madrid'), DEFAULT_VIEW)
 })
 

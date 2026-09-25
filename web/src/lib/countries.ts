@@ -32,12 +32,15 @@
  * con 15.246 fuentes le corresponde el segundo puesto. La cifra sale de `GET /zones`.
  */
 export const PAISES = [
-  'Italy', 'Spain', 'France', 'Germany', 'Hungary', 'Switzerland', 'Austria', 'Portugal',
-  'Greece', 'United Kingdom', 'Czech Republic', 'Montenegro', 'Netherlands', 'Poland',
-  'Slovenia', 'Ireland', 'Croatia', 'Bosnia and Herzegovina', 'Brazil', 'Sweden', 'Belgium',
-  'Norway', 'Finland', 'Argentina', 'Albania', 'Mexico', 'Peru', 'Ecuador', 'Colombia',
-  'Chile', 'Cuba', 'Bolivia', 'Andorra', 'Costa Rica', 'Uruguay', 'Venezuela', 'Paraguay',
-  'Nicaragua', 'Panama', 'Guatemala', 'Dominican Republic', 'Honduras', 'Puerto Rico',
+  'Italy', 'Spain', 'France', 'Germany', 'Hungary', 'Switzerland', 'Japan', 'Austria',
+  'Bulgaria', 'Portugal', 'Greece', 'Slovakia', 'United Kingdom', 'Czech Republic',
+  'Romania', 'Montenegro', 'Netherlands', 'Poland', 'Republic of Serbia', 'Denmark',
+  'Slovenia', 'Ireland', 'Croatia', 'Bosnia and Herzegovina', 'Brazil', 'Sweden',
+  'Belgium', 'Norway', 'Finland', 'Macedonia', 'Argentina', 'Albania', 'Mexico', 'Peru',
+  'Cyprus', 'Latvia', 'Lithuania', 'Ecuador', 'Colombia', 'Chile', 'Kosovo', 'Estonia',
+  'Luxembourg', 'Iceland', 'Cuba', 'Bolivia', 'Andorra', 'Costa Rica', 'Liechtenstein',
+  'Uruguay', 'Venezuela', 'Paraguay', 'Nicaragua', 'Panama', 'Guatemala',
+  'Dominican Republic', 'San Marino', 'Honduras', 'Monaco', 'Malta', 'Puerto Rico',
   'El Salvador',
 ]
 

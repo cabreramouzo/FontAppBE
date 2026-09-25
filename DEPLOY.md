@@ -501,6 +501,27 @@ Doce fuentes de la importación de Italia que se habían quedado sin región, pe
 frontera, cayeron dentro del polígono esloveno o austriaco y pasaron a esos países. Es la
 misma regla de punto en polígono que el resto, y se dejaron así.
 
+#### Japón y el resto de Europa (25/09/2026)
+
+Misma receta. **Japón 9.786** (9.771 clasificadas; se vacían también los genéricos en
+japonés: 水飲み場, 給水所…). Europa: Bulgaria 6.826, Eslovaquia 4.395, Rumanía 3.400,
+Serbia 1.999, Dinamarca 1.896, Macedonia del Norte 896, Chipre 587, Letonia 506, Lituania
+449, Kosovo 307, Estonia 291, Luxemburgo 247, Islandia 160, Liechtenstein 81, San Marino
+37, Mónaco 33 y Malta 18. Serbia y Eslovaquia fallaron en Overpass la primera vez y
+entraron al reintentar.
+
+- **Micro-estados sin rescate de costa** (`country.sh … 0`): el rescate rellena **toda**
+  fuente sin región, y con solo el polígono de Mónaco se habría llevado las francesas sin
+  clasificar de Niza; con San Marino, las italianas. Por eso de Mónaco quedan 19 de 33
+  clasificadas, que es honesto.
+- **Chipre**: el área ISO de OSM es la isla entera, pero Natural Earth trata el norte como
+  país aparte y aquí solo se cargó el polígono de Chipre: 518 de 587, y el norte queda sin
+  región.
+- Natural Earth llama a Serbia «Republic of Serbia» y a Macedonia del Norte «Macedonia»:
+  esa es la clave guardada en `fonts.country`, y el rótulo lo pone `country.*`.
+- Kosovo no está en ISO 3166 y Mónaco no tiene subdivisiones en el fichero: los dos llevan
+  como admin1 el código del país («XK», «MC»).
+
 #### Poblar país/región de las fuentes (`populate-regions`)
 
 `fonts.country` y `fonts.region` se rellenan **offline** por *point-in-polygon* contra un

@@ -22,6 +22,10 @@ import Foundation
 /// que el fichero etiqueta mal como República Srpska: el distrito de Brčko es BA-BRC y
 /// el cantón de Posavina pertenece a la Federación (BA-BIH).
 ///
+/// Kosovo no está en ISO 3166 y Mónaco no tiene subdivisiones en Natural Earth: los dos
+/// llevan como admin1 el código del país entero («XK», «MC»), para que no caigan en
+/// «otras regiones».
+///
 /// No se infiere por geometría: una provincia pertenece a una comunidad por definición.
 /// Si entra un valor nuevo, queda sin clasificar hasta añadirlo explícitamente; inventar
 /// aquí sería peor que devolver `nil`.
@@ -85,6 +89,17 @@ enum Admin1 {
             "Santa Catarina": "BR-SC", "Sergipe": "BR-SE", "São Paulo": "BR-SP",
             "Tocantins": "BR-TO",
         ],
+        "Bulgaria": [
+            "Blagoevgrad": "BG-01", "Burgas": "BG-02", "Dobrich": "BG-08",
+            "Gabrovo": "BG-07", "Grad Sofiya": "BG-22", "Haskovo": "BG-26",
+            "Kardzhali": "BG-09", "Kyustendil": "BG-10", "Lovech": "BG-11",
+            "Montana": "BG-12", "Pazardzhik": "BG-13", "Pernik": "BG-14", "Pleven": "BG-15",
+            "Plovdiv": "BG-16", "Razgrad": "BG-17", "Ruse": "BG-18", "Shumen": "BG-27",
+            "Silistra": "BG-19", "Sliven": "BG-20", "Smolyan": "BG-21", "Sofia": "BG-23",
+            "Stara Zagora": "BG-24", "Targovishte": "BG-25", "Varna": "BG-03",
+            "Veliko Tarnovo": "BG-04", "Vidin": "BG-05", "Vratsa": "BG-06",
+            "Yambol": "BG-28",
+        ],
         "Chile": [
             "Aisén del General Carlos Ibáñez del Campo": "CL-AI", "Antofagasta": "CL-AN",
             "Arica y Parinacota": "CL-AP", "Atacama": "CL-AT", "Bío-Bío": "CL-BI",
@@ -127,12 +142,20 @@ enum Admin1 {
             "Matanzas": "CU-04", "Mayabeque": "CU-16", "Pinar del Río": "CU-01",
             "Sancti Spíritus": "CU-07", "Santiago de Cuba": "CU-13", "Villa Clara": "CU-05",
         ],
+        "Cyprus": [
+            "Famagusta": "CY-04", "Larnaca": "CY-03", "Limassol": "CY-02",
+            "Nicosia": "CY-01", "Paphos": "CY-05",
+        ],
         "Czech Republic": [
             "Jihomoravský": "CZ-JM", "Jihočeský": "CZ-JC", "Karlovarský": "CZ-KA",
             "Královéhradecký": "CZ-KR", "Liberecký": "CZ-LI", "Moravskoslezský": "CZ-MO",
             "Olomoucký": "CZ-OL", "Pardubický": "CZ-PA", "Plzeňský": "CZ-PL",
             "Prague": "CZ-PR", "Středočeský": "CZ-ST", "Vysočina": "CZ-VY",
             "Zlínský": "CZ-ZL", "Ústecký": "CZ-US",
+        ],
+        "Denmark": [
+            "Hovedstaden": "DK-84", "Midtjylland": "DK-82", "Nordjylland": "DK-81",
+            "Sjaælland": "DK-85", "Syddanmark": "DK-83",
         ],
         "Dominican Republic": [
             "Azua": "DO-02", "Distrito Nacional": "DO-01", "Duarte": "DO-06",
@@ -153,6 +176,12 @@ enum Admin1 {
         "El Salvador": [
             "La Unión": "SV-UN", "San Salvador": "SV-SS", "Santa Ana": "SV-SA",
             "Sonsonate": "SV-SO", "Usulután": "SV-US",
+        ],
+        "Estonia": [
+            "Harju": "EE-37", "Hiiu": "EE-39", "Ida-Viru": "EE-44", "Järva": "EE-51",
+            "Jõgeva": "EE-49", "Lääne": "EE-57", "Lääne-Viru": "EE-59", "Pärnu": "EE-67",
+            "Põlva": "EE-65", "Rapla": "EE-70", "Saare": "EE-74", "Tartu": "EE-78",
+            "Valga": "EE-82", "Viljandi": "EE-84", "Võru": "EE-86",
         ],
         "Finland": [
             "Central Finland": "FI-08", "Central Ostrobothnia": "FI-07",
@@ -240,6 +269,11 @@ enum Admin1 {
             "Tolna": "HU-TO", "Vas": "HU-VA", "Veszprém": "HU-VE", "Zala": "HU-ZA",
             "Zalaegerszeg": "HU-ZE", "Érd": "HU-ED",
         ],
+        "Iceland": [
+            "Austurland": "IS-7", "Norðurland eystra": "IS-6", "Norðurland vestra": "IS-5",
+            "Reykjavík": "IS-0", "Suðurland": "IS-8", "Suðurnes": "IS-2",
+            "Vestfirðir": "IS-4", "Vesturland": "IS-3",
+        ],
         "Ireland": [
             "Carlow": "IE-L", "Cavan": "IE-U", "Clare": "IE-M", "Cork": "IE-M",
             "Donegal": "IE-U", "Dublin": "IE-L", "Dún Laoghaire–Rathdown": "IE-L",
@@ -284,6 +318,103 @@ enum Admin1 {
             "Verbano-Cusio-Ossola": "IT-21", "Vercelli": "IT-21", "Verona": "IT-34",
             "Vibo Valentia": "IT-78", "Vicenza": "IT-34", "Viterbo": "IT-62",
         ],
+        "Japan": [
+            "Aichi": "JP-23", "Akita": "JP-05", "Aomori": "JP-02", "Chiba": "JP-12",
+            "Ehime": "JP-38", "Fukui": "JP-18", "Fukuoka": "JP-40", "Fukushima": "JP-07",
+            "Gifu": "JP-21", "Gunma": "JP-10", "Hiroshima": "JP-34", "Hokkaidō": "JP-01",
+            "Hyōgo": "JP-28", "Ibaraki": "JP-08", "Ishikawa": "JP-17", "Iwate": "JP-03",
+            "Kagawa": "JP-37", "Kagoshima": "JP-46", "Kanagawa": "JP-14",
+            "Kumamoto": "JP-43", "Kyōto": "JP-26", "Kōchi": "JP-39", "Mie": "JP-24",
+            "Miyagi": "JP-04", "Miyazaki": "JP-45", "Nagano": "JP-20", "Nagasaki": "JP-42",
+            "Nara": "JP-29", "Niigata": "JP-15", "Okayama": "JP-33", "Okinawa": "JP-47",
+            "Saga": "JP-41", "Saitama": "JP-11", "Shiga": "JP-25", "Shimane": "JP-32",
+            "Shizuoka": "JP-22", "Tochigi": "JP-09", "Tokushima": "JP-36", "Tokyo": "JP-13",
+            "Tottori": "JP-31", "Toyama": "JP-16", "Wakayama": "JP-30", "Yamagata": "JP-06",
+            "Yamaguchi": "JP-35", "Yamanashi": "JP-19", "Ōita": "JP-44", "Ōsaka": "JP-27",
+        ],
+        "Kosovo": [
+            "Dečani": "XK", "Dragaš": "XK", "Glogovac": "XK", "Gnjilane": "XK",
+            "Istok": "XK", "Kačanik": "XK", "Kosovo Polje": "XK", "Kosovska Kamenica": "XK",
+            "Kosovska Mitrovica": "XK", "Leposavić": "XK", "Lipljan": "XK",
+            "Mališevo": "XK", "Novo Brdo": "XK", "Obilić": "XK", "Orahovac": "XK",
+            "Peć": "XK", "Podujevo": "XK", "Prizren": "XK", "Priština": "XK",
+            "Srbica": "XK", "Suva Reka": "XK", "Uroševac": "XK", "Vučitrn": "XK",
+            "Zubin Potok": "XK", "Đakovica": "XK", "Štimlje": "XK", "Štrpce": "XK",
+        ],
+        "Latvia": [
+            "Aglonas": "LV-001", "Aizputes": "LV-003", "Aknistes": "LV-004",
+            "Alojas": "LV-005", "Alsungas": "LV-006", "Aluksne": "LV-007",
+            "Amatas": "LV-008", "Apes": "LV-009", "Auces": "LV-010", "Babites": "LV-012",
+            "Baldones": "LV-013", "Bauska": "LV-016", "Beverinas": "LV-017",
+            "Brocenu": "LV-018", "Burtnieku": "LV-019", "Carnikavas": "LV-020",
+            "Cesu": "LV-022", "Ciblas": "LV-023", "Dagdas": "LV-024",
+            "Daugavpils": "LV-DGV", "Dobele": "LV-026", "Dundagas": "LV-027",
+            "Durbes": "LV-028", "Engures": "LV-029", "Erglu": "LV-030",
+            "Grobinas": "LV-032", "Gulbene": "LV-033", "Iecavas": "LV-034",
+            "Ikskiles": "LV-035", "Incukalna": "LV-037", "Jaunjelgavas": "LV-038",
+            "Jekabpils": "LV-JKB", "Jelgava": "LV-JEL", "Jurmala": "LV-JUR",
+            "Kandavas": "LV-043", "Karsavas": "LV-044", "Keguma": "LV-051",
+            "Kekavas": "LV-052", "Kocenu": "LV-045", "Kraslavas": "LV-047",
+            "Krimuldas": "LV-048", "Kuldigas": "LV-050", "Lielvardes": "LV-053",
+            "Liepāja": "LV-LPX", "Ligatnes": "LV-055", "Limbaži": "LV-054",
+            "Livanu": "LV-056", "Lubanas": "LV-057", "Ludzas": "LV-058", "Madona": "LV-059",
+            "Malpils": "LV-061", "Marupes": "LV-062", "Mazsalacas": "LV-060",
+            "Neretas": "LV-065", "Ogre": "LV-067", "Olaines": "LV-068",
+            "Pargaujas": "LV-070", "Preilu": "LV-073", "Priekules": "LV-074",
+            "Priekulu": "LV-075", "Raunas": "LV-076", "Rezekne": "LV-REZ",
+            "Rezeknes": "LV-REZ", "Riebinu": "LV-078", "Riga": "LV-RIX", "Rojas": "LV-079",
+            "Ropazu": "LV-080", "Rucavas": "LV-081", "Rundales": "LV-083",
+            "Salas": "LV-086", "Salaspils": "LV-087", "Saldus": "LV-088",
+            "Saulkrastu": "LV-089", "Siguldas": "LV-091", "Skriveru": "LV-092",
+            "Skrundas": "LV-093", "Smiltenes": "LV-094", "Strencu": "LV-096",
+            "Talsi": "LV-097", "Tukums": "LV-099", "Vainodes": "LV-100", "Valkas": "LV-101",
+            "Valmiera": "LV-VMR", "Vecpiebalgas": "LV-104", "Vecumnieku": "LV-105",
+            "Ventspils": "LV-VEN", "Vilakas": "LV-108", "Vilanu": "LV-109",
+            "Zilupes": "LV-110", "Ādaži": "LV-011",
+        ],
+        "Liechtenstein": [
+            "Balzers": "LI-01", "Eschen": "LI-02", "Mauren": "LI-04", "Planken": "LI-05",
+            "Ruggell": "LI-06", "Schaan": "LI-07", "Triesen": "LI-09",
+            "Triesenberg": "LI-10", "Vaduz": "LI-11",
+        ],
+        "Lithuania": [
+            "Alytaus": "LT-AL", "Kauno": "LT-KU", "Klaipedos": "LT-KL",
+            "Marijampoles": "LT-MR", "Panevezio": "LT-PN", "Taurages": "LT-TA",
+            "Telšiai": "LT-TE", "Utenos": "LT-UT", "Vilniaus": "LT-VL", "Šiauliai": "LT-SA",
+        ],
+        "Luxembourg": [
+            "Diekirch": "LU-D", "Grevenmacher": "LU-G", "Luxembourg": "LU-L",
+        ],
+        "Macedonia": [
+            "Aerodrom": "MK-01", "Berovo": "MK-03", "Bitola": "MK-04", "Bogdanci": "MK-05",
+            "Bogovinje": "MK-06", "Bosilovo": "MK-07", "Brod": "MK-52", "Brvenica": "MK-08",
+            "Butel": "MK-09", "Centar": "MK-77", "Centar župa": "MK-78", "Debar": "MK-21",
+            "Delčevo": "MK-23", "Demir Kapija": "MK-24", "Dojran": "MK-26",
+            "Dolneni": "MK-27", "Drugovo": "MK-28", "Gazi Baba": "MK-17",
+            "Gevgelija": "MK-18", "Gjorče Petrov": "MK-29", "Gostivar": "MK-19",
+            "Gradsko": "MK-20", "Ilinden": "MK-34", "Jegunovce": "MK-35",
+            "Karbinci": "MK-37", "Karpoš": "MK-38", "Kavadartsi": "MK-36",
+            "Kisela Voda": "MK-39", "Kičevo": "MK-40", "Konče": "MK-41", "Kočani": "MK-42",
+            "Kratovo": "MK-43", "Kriva Palanka": "MK-44", "Krivogaštani": "MK-45",
+            "Kruševo": "MK-46", "Kumanovo": "MK-47", "Makedonska Kamenica": "MK-51",
+            "Mavrovo and Rostusa": "MK-50", "Mogila": "MK-53", "Negotino": "MK-54",
+            "Novaci": "MK-55", "Novo Selo": "MK-56", "Ohrid": "MK-58", "Oslomej": "MK-57",
+            "Pehčevo": "MK-60", "Plasnica": "MK-61", "Prilep": "MK-62",
+            "Probištip": "MK-63", "Radoviš": "MK-64", "Rankovce": "MK-65", "Resen": "MK-66",
+            "Rosoman": "MK-67", "Saraj": "MK-68", "Skopje": "MK-85", "Sopište": "MK-70",
+            "Staro Nagoričane": "MK-71", "Struga": "MK-72", "Strumitsa": "MK-73",
+            "Studeničani": "MK-74", "Sveti Nikole": "MK-69", "Tearce": "MK-75",
+            "Tetovo": "MK-76", "Valandovo": "MK-10", "Vasilevo": "MK-11", "Veles": "MK-13",
+            "Vevčani": "MK-12", "Vinica": "MK-14", "Vrapcište": "MK-16", "Zajas": "MK-31",
+            "Zelenikovo": "MK-32", "Zrnovci": "MK-33", "Čair": "MK-79", "Čaška": "MK-80",
+            "Čučer Sandevo": "MK-82", "Štip": "MK-83", "Šuto Orizari": "MK-84",
+            "Želino": "MK-30",
+        ],
+        "Malta": [
+            "Cospicua": "MT-06", "Gudja": "MT-11", "Kerċem": "MT-22", "Luqa": "MT-25",
+            "San Giljan": "MT-48", "San Lawrenz": "MT-50", "San Ġwann": "MT-49",
+            "Sliema": "MT-56", "Valletta": "MT-60",
+        ],
         "Mexico": [
             "Aguascalientes": "MX-AGU", "Baja California": "MX-BCN",
             "Baja California Sur": "MX-BCS", "Campeche": "MX-CAM", "Chiapas": "MX-CHP",
@@ -296,6 +427,9 @@ enum Admin1 {
             "San Luis Potosí": "MX-SLP", "Sinaloa": "MX-SIN", "Sonora": "MX-SON",
             "Tabasco": "MX-TAB", "Tamaulipas": "MX-TAM", "Tlaxcala": "MX-TLA",
             "Veracruz": "MX-VER", "Yucatán": "MX-YUC", "Zacatecas": "MX-ZAC",
+        ],
+        "Monaco": [
+            "Monaco": "MC",
         ],
         "Montenegro": [
             "Andrijevica": "ME-01", "Bar": "ME-02", "Berane": "ME-03",
@@ -363,6 +497,39 @@ enum Admin1 {
         ],
         "Puerto Rico": [
             "Puerto Rico": "US-PR",
+        ],
+        "Republic of Serbia": [
+            "Borski": "RS-14", "Branicevski": "RS-11", "Grad Beograd": "RS-00",
+            "Jablanicki": "RS-23", "Južno-Backi": "RS-06", "Južno-Banatski": "RS-04",
+            "Kolubarski": "RS-09", "Macvanski": "RS-08", "Moravicki": "RS-17",
+            "Nišavski": "RS-20", "Pcinjski": "RS-24", "Pirotski": "RS-22",
+            "Podunavski": "RS-10", "Pomoravski": "RS-19", "Raški": "RS-18",
+            "Severno-Backi": "RS-01", "Severno-Banatski": "RS-03",
+            "Srednje-Banatski": "RS-02", "Sremski": "RS-07", "Toplicki": "RS-21",
+            "Zajecarski": "RS-15", "Zapadno-Backi": "RS-05", "Zlatiborski": "RS-16",
+            "Šumadijski": "RS-12",
+        ],
+        "Romania": [
+            "Alba": "RO-AB", "Arad": "RO-AR", "Arges": "RO-AG", "Bacau": "RO-BC",
+            "Bihor": "RO-BH", "Bistrita-Nasaud": "RO-BN", "Botosani": "RO-BT",
+            "Braila": "RO-BR", "Brasov": "RO-BV", "Bucharest": "RO-B", "Buzau": "RO-BZ",
+            "Calarasi": "RO-CL", "Caras-Severin": "RO-CS", "Cluj": "RO-CJ",
+            "Constanta": "RO-CT", "Covasna": "RO-CV", "Dolj": "RO-DJ", "Dâmbovita": "RO-DB",
+            "Galati": "RO-GL", "Giurgiu": "RO-GR", "Gorj": "RO-GJ", "Harghita": "RO-HR",
+            "Hunedoara": "RO-HD", "Ialomita": "RO-IL", "Iasi": "RO-IS", "Ilfov": "RO-IF",
+            "Maramures": "RO-MM", "Mehedinti": "RO-MH", "Mures": "RO-MS", "Neamt": "RO-NT",
+            "Olt": "RO-OT", "Prahova": "RO-PH", "Salaj": "RO-SJ", "Satu Mare": "RO-SM",
+            "Sibiu": "RO-SB", "Suceava": "RO-SV", "Teleorman": "RO-TR", "Timis": "RO-TM",
+            "Tulcea": "RO-TL", "Vaslui": "RO-VS", "Vrancea": "RO-VN", "Vâlcea": "RO-VL",
+        ],
+        "San Marino": [
+            "Acquaviva": "SM-01", "Borgo Maggiore": "SM-06", "Chiesanuova": "SM-02",
+            "Domagnano": "SM-03", "Serravalle": "SM-09",
+        ],
+        "Slovakia": [
+            "Banskobystrický": "SK-BC", "Bratislavský": "SK-BL", "Košický": "SK-KI",
+            "Nitriansky": "SK-NI", "Prešov": "SK-PV", "Trenciansky": "SK-TC",
+            "Trnavský": "SK-TA", "Žilinský": "SK-ZI",
         ],
         "Slovenia": [
             "Ajdovščina": "SI-001", "Bistrica ob Sotli": "SI-149", "Bled": "SI-003",
