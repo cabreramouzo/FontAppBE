@@ -1,3 +1,4 @@
+import { isIndexingCrawler, sitemapFontIDs } from '../_crawl'
 import { apiOrigin, esc, estadoTarjeta, recorta, SHARE_META, shareCard, shareLang, siteOrigin, type Env } from '../_meta'
 
 /**
@@ -53,6 +54,18 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   // Solo un UUID llega a preguntar al backend: cualquier otra cosa es un enlace roto y
   // no merece una petición de red por visita.
   if (!api || !/^[0-9a-f-]{36}$/i.test(id)) return pagina
+
+  // A search crawler on a fountain we do not offer for indexing: generic page, noindex,
+  // and no API call — otherwise crawlers keep Neon awake around the clock (see _crawl.ts).
+  const cf = ctx.request.cf as { verifiedBotCategory?: string } | undefined
+  if (isIndexingCrawler(ctx.request.headers.get('user-agent'), cf?.verifiedBotCategory)) {
+    const offered = await sitemapFontIDs(api)
+    if (offered && !offered.has(id.toLowerCase())) {
+      return new HTMLRewriter()
+        .on('head', { element: (e) => { e.append('<meta name="robots" content="noindex">', { html: true }) } })
+        .transform(pagina)
+    }
+  }
 
   let font: FontDTO
   try {

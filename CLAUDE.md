@@ -3433,6 +3433,17 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   figura como «Ahrefs Pte Ltd» es una subred alquilada ahí). Bloquearlo dejaría fuera a
   cualquiera alojado en OVH. Por eso la regla lo coge por la **categoría de bot
   verificado** de Cloudflare, no por red.
+- **Pero no despiertan a Neon por fichas que no ofrecemos** (`functions/_crawl.ts`). Tras
+  bloquear Ahrefs, Neon seguía encendida día y noche: medido el 25/09/2026, **Applebot**
+  pedía una `/fonts/<id>` cada ~24 s, cada ficha nueva fallaba la caché del borde y
+  consultaba la base, así que nunca llegaba a sus 5 min de reposo. Ahora un rastreador de
+  buscador o de IA (por user agent o por `cf.verifiedBotCategory`) que pide una ficha
+  **fuera del sitemap** recibe la página genérica con `noindex` **sin llamar a la API**.
+  La lista del sitemap se pide una vez por hora. Las personas y los que montan la vista
+  previa al compartir (WhatsApp, iMessage, Telegram…) no cambian: siguen con la tarjeta
+  completa. Si la lista no se puede leer, se comporta como antes. Se descartó bloquear los
+  bots de noche: concentraría el rastreo de día y un error repetido cada noche hace que
+  rastreen menos el sitio entero.
 - **Applebot, Googlebot y compañía no se tocan**: son los que traen gente. Si el cupo
   vuelve a apretar, lo primero es medir quién es con el `tail` de arriba **antes** de
   bloquear nada.
