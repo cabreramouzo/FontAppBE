@@ -4292,8 +4292,12 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
 - Dónde pregunta: el formulario de reseña de la ficha, el «¿cómo mana?» tras la foto y
   los chips del globo del mapa (con `confirm()` nativo, porque el globo es HTML imperativo —
   mismo precedente que el aviso de duplicado). **No** en «Agua en mi ruta»: reseñar desde
-  casa es ahí el uso previsto, y el recorrido GPX ya es el indicio de que pasaste. Tampoco
-  en «sigue igual» (confirmaciones), que es otra tabla: extensión posible si hace falta.
+  casa es ahí el uso previsto, y el recorrido GPX ya es el indicio de que pasaste.
+  **«Sigue igual» también pregunta**, con la misma cuenta y el mismo «una vez por
+  fuente», porque se da desde el sofá igual que una reseña. Deshacerlo no pregunta. Ahí
+  **solo se pregunta, no se anota**: las confirmaciones son otra tabla sin columna de
+  distancia, así que no entran en el carril «A distancia». Si los datos de
+  `review_remote_prompt` dicen que hace falta, se añade la columna.
 - El campo del DTO es el **único con valor por defecto** (`= nil`), a propósito: `nil` es
   exactamente «cerca o desconocido», lo que ya manda todo cliente viejo, así que el defecto
   no puede cambiar el significado de nada. El resto del DTO sigue sin defaults.
