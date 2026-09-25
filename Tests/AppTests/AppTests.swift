@@ -41,7 +41,10 @@ final class AppTests: XCTestCase {
     }
 
     func testAdmin1TableCoversProductionTerritoriesAndSwitzerland() {
-        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 590)
+        XCTAssertEqual(Admin1.byCountry.values.reduce(0) { $0 + $1.count }, 791)
+        // United Kingdom: counties grouped into the four nations.
+        XCTAssertEqual(Admin1.code(country: "United Kingdom", region: "Aberdeen"), "GB-SCT")
+        XCTAssertEqual(Admin1.code(country: "United Kingdom", region: "Anglesey"), "GB-WLS")
         // Norway: pre-2020 counties grouped into today's.
         XCTAssertEqual(Admin1.code(country: "Norway", region: "Oppland"), "NO-34")
         XCTAssertEqual(Admin1.code(country: "Norway", region: "Hedmark"), "NO-34")

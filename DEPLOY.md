@@ -445,6 +445,16 @@ medido, con corte en 10 km porque la curva ya se aplana:
 Quedan **1.164 de 1.167** clasificadas y 3 sin región. Ojo: Natural Earth trae los **19
 fylker de antes de 2020**; `Admin1` los agrupa en los condados actuales (ISO de 2024).
 
+#### Reino Unido (25/09/2026)
+
+La receta de Noruega con `area["ISO3166-1"="GB"]` (`import-data/uk/query.overpassql`):
+**4.565 → 4.304** (261 con `drinking_water=no`). Se vaciaron **174 nombres genéricos**,
+sobre todo «Top Up Tap» (122, la marca de las fuentes de rellenar botella) y «Well». Los
+«… Water Point» de los canales se quedan: son grifos de agua potable para barcos. Rescate
+de costa: 240 / 10 / 15 / 0 a 1 / 2 / 5 / 10 km. **4.303 clasificadas**, una sin región.
+Natural Earth da 199 condados, que `Admin1` agrupa en las cuatro naciones por su campo
+`geonunit` (GB-ENG, GB-SCT, GB-WLS, GB-NIR).
+
 #### Poblar país/región de las fuentes (`populate-regions`)
 
 `fonts.country` y `fonts.region` se rellenan **offline** por *point-in-polygon* contra un
