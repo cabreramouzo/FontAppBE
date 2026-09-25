@@ -1907,6 +1907,16 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   and was created within 30 days. A newer photo-less review hides the shortcut, and
   confirmations never refresh a photo’s age. Cover replacement remains manual with
   existing permissions; cover-removal controls appear only on the cover slide.
+- The fullscreen viewer (`ZoomableImage` lightbox) zooms by hand: pinch, double tap /
+  double click, mouse wheel and trackpad pinch (wheel + `ctrlKey`, a non-passive native
+  listener so Safari does not zoom the whole page). The browser's own pinch is off because
+  the viewer sets `touch-action: none` to own swipe-to-change and drag-to-dismiss — that
+  was why pinching did nothing. Geometry lives in `lib/pinchZoom.ts` with tests (the photo
+  point under the fingers stays put, pan stops at the photo's edge, near-1× snaps to none).
+  While zoomed, one finger pans instead of swiping or dismissing, a tap does not close,
+  and changing photo resets the zoom of the one left behind. A tap closes only after
+  `CLOSE_DELAY_MS`, which must stay longer than `DOUBLE_TAP_MS` or a second tap would find
+  the viewer already closed.
 - La **portada** sigue en `fonts.image`, una columna. Las demás viven en `font_photos`
   (`CreateFontPhoto`) y se piden **solo al abrir «Otras fotos»** (`GET /fonts/:id/photos`
   → `FontGallery.tsx`). Ni siquiera hay contador en la ficha: saber cuántas hay costaría
