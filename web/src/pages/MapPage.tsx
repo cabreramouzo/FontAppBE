@@ -108,6 +108,7 @@ import { defaultViewFor, deviceTimeZone, parseSavedMapView, vistaAlAbrir, type S
 import { loginNext } from '../lib/nextParam'
 import { MapHelpOverlay } from '../components/MapHelpOverlay'
 import { sesiones } from '../lib/asks'
+import { staffRole } from '../components/StaffBadge'
 import { clearDraft, draftKey, loadDraft, syncDraft } from '../lib/drafts'
 
 // Default view for someone who has not shared a location yet: their country, guessed
@@ -2231,7 +2232,10 @@ export function MapPage() {
   }
 
   return (
-    <div className="map-wrap">
+    // Staff accounts get the map's buttons in the staff purple: signed in as admin it is
+    // easy to review or add a fountain meaning to do it as yourself, and the purple strip
+    // at the top goes unnoticed. The buttons are what you are about to press.
+    <div className="map-wrap" data-staff={staffRole(user) ? '' : undefined}>
       {/* Priming de ubicación tras la bienvenida: explica por qué la pedimos
           antes de disparar el permiso nativo del navegador. */}
       <Dialog open={promptLocation} onClose={dismissLocationPrompt} maxWidth="xs" fullWidth>

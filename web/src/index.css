@@ -1178,3 +1178,12 @@ select:not([class*="Mui"]) {
 .map-help__footer strong { font-size: 17px; }
 @keyframes map-help-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .map-help { animation: none; } }
+
+/* Map buttons in the staff purple when signed in with a staff account (see MapPage).
+   Doubled class to beat the `&&` hover of `sobreElMapaSx` and MUI's own colours. */
+.map-wrap[data-staff] .MuiFab-root.MuiFab-root {
+  background-color: #7c3aed;
+  color: #fff;
+  border-color: #7c3aed;
+}
+.map-wrap[data-staff] .MuiFab-root.MuiFab-root:hover { background-color: #6d28d9; }
