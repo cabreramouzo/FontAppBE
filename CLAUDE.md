@@ -3458,6 +3458,26 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   completa. Si la lista no se puede leer, se comporta como antes. Se descartó bloquear los
   bots de noche: concentraría el rastreo de día y un error repetido cada noche hace que
   rastreen menos el sitio entero.
+- **Cómo averiguar quién mantiene Neon despierta** (lo que se hizo el 25–26/09/2026). No
+  hay CLI de Neon instalada: todo es SQL con `psql` contra `DATABASE_URL`, que se lee con
+  `fly ssh console -a fontapp -C 'printenv DATABASE_URL'` y **no se imprime**. Ojo: cada
+  consulta de medición **despierta la base**, así que se mide poco y se dice.
+  · `pg_stat_statements` está activada en producción (la activó Claude ese día; solo
+    cuenta consultas). `SELECT pg_stat_statements_reset()` pone el contador a cero,
+    `SELECT stats_reset FROM pg_stat_statements_info` dice desde cuándo, y
+    `SELECT calls, left(query,110) FROM pg_stat_statements ORDER BY calls DESC` qué ha
+    llegado. Hay que filtrar las consultas de monitorización del propio Neon
+    (`pg_catalog`, `neon.`, `pg_stat`, `health_check`…), que son la mayoría.
+  · Da **totales desde el reset, sin horas**: dice qué y cuánto, no si hubo huecos. Para
+    saber si llegó a apagarse, la consola de Neon (Monitoring → Last day, los tramos
+    rayados «endpoint inactive») o `neonctl`/la API de Neon, que necesitan una API key.
+  · El **quién** sale de cruzarlo con `wrangler pages deployment tail <id> --project-name
+    fontapp-web --format json` (visitas con user agent y `cf.verifiedBotCategory`) y
+    `fly logs -a fontapp`.
+  · Lo que se leyó una noche con Applebot suelto (01:13–10:28): `fonts` ~4.150,
+    `font_comments`/`font_confirmations` ~1.470, `font_reports` ~1.380, `font_comments`
+    +`users` ~1.380 — o sea, **las cuatro consultas de abrir una ficha**. Todo lo demás
+    (sesiones, analítica, `places`, insignias, avisos) fueron decenas, no miles.
 - **Applebot, Googlebot y compañía no se tocan**: son los que traen gente. Si el cupo
   vuelve a apretar, lo primero es medir quién es con el `tail` de arriba **antes** de
   bloquear nada.
