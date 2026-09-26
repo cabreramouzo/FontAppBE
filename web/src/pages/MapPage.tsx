@@ -108,6 +108,7 @@ import { defaultViewFor, deviceTimeZone, parseSavedMapView, vistaAlAbrir, type S
 import { loginNext } from '../lib/nextParam'
 import { MapHelpOverlay } from '../components/MapHelpOverlay'
 import { sesiones } from '../lib/asks'
+import { clearDraft, draftKey, loadDraft, syncDraft } from '../lib/drafts'
 
 // Default view for someone who has not shared a location yet: their country, guessed
 // from the device time zone (see `defaultViewFor`); Madrid at zoom 5 when unknown.
@@ -1210,18 +1211,30 @@ function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f
   )
 }
 
-function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [number, number] | null; onCancel: () => void; onCreated: () => void }) {
+/** What a half-filled new fountain keeps if the app is closed before "create". */
+export interface NewFontDraft {
+  lat: number; lng: number
+  name: string; description: string
+  source: WaterSource | ''; drinkable: Drinkable | ''; waterStatus: string
+  /** The photo itself is not kept (see lib/drafts); this is only to ask for it again. */
+  hadPhoto: boolean
+}
+
+function NewFontForm({ pos, me, onCancel, onCreated, draftKeyName, initial }: {
+  pos: LatLng; me: [number, number] | null; onCancel: () => void; onCreated: () => void
+  draftKeyName: string; initial: NewFontDraft | null
+}) {
   const { t } = useI18n()
   const toast = useToast()
   const movil = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [source, setSource] = useState<WaterSource | ''>('')
-  const [drinkable, setDrinkable] = useState<Drinkable | ''>('')
+  const [name, setName] = useState(initial?.name ?? '')
+  const [description, setDescription] = useState(initial?.description ?? '')
+  const [source, setSource] = useState<WaterSource | ''>(initial?.source ?? '')
+  const [drinkable, setDrinkable] = useState<Drinkable | ''>(initial?.drinkable ?? '')
   const [file, setFile] = useState<File | null>(null)
   // Estado del agua: se puede dejar ya al crear la fuente (quien la añade suele estar
   // delante de ella). Se publica como primera actualización, sin abrir el detalle.
-  const [waterStatus, setWaterStatus] = useState('')
+  const [waterStatus, setWaterStatus] = useState(initial?.waterStatus ?? '')
   const [error, setError] = useState('')
   const [limitReached, setLimitReached] = useState(false)
   const [requestingException, setRequestingException] = useState(false)
@@ -1236,6 +1249,22 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
   const meCoords = me ? { lat: me[0], lng: me[1] } : null
   const remote = isRemotePlacement(coords, meCoords)
   const remoteKm = meCoords ? distanceMetres(coords, meCoords) / 1000 : null
+
+  // Remembered as it is typed, so closing the app before "create" loses nothing (see
+  // lib/drafts). The pin alone is not worth a draft: without anything typed or chosen,
+  // reopening would offer to "continue" a form that is empty.
+  const hadPhoto = !!file || (!!initial?.hadPhoto && !file)
+  // Only once this form has held something: a fresh form opened with "+" starts empty,
+  // and syncing that would delete a draft left by an earlier one.
+  const touched = useRef(!!initial)
+  useEffect(() => {
+    const empty = !name.trim() && !description.trim() && !source && !drinkable && !waterStatus && !file
+    if (!empty) touched.current = true
+    if (!touched.current) return
+    syncDraft<NewFontDraft>(draftKeyName, {
+      lat: coords.lat, lng: coords.lng, name, description, source, drinkable, waterStatus, hadPhoto,
+    }, empty)
+  }, [draftKeyName, coords.lat, coords.lng, name, description, source, drinkable, waterStatus, file, hadPhoto])
 
   // Cuánto tapa el teclado, publicado como `--kb` mientras este formulario está abierto.
   // El panel flota sobre el mapa y crece hacia arriba; en iOS su parte baja quedaba detrás
@@ -1335,6 +1364,7 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
           /* la fuente se ha creado igualmente */
         }
       }
+      clearDraft(draftKeyName)
       toast.show(t('toast.fontCreated'))
       onCreated()
     } catch (e) {
@@ -1342,6 +1372,7 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
       if (isOffline(e)) {
         await enqueue({ kind: 'font', data, waterStatus: waterStatus || undefined, photo, photoName: photo?.name, photoMeta: preparada?.meta })
         trackInteraction('font_create_queued')
+        clearDraft(draftKeyName)
         toast.show(t('offline.savedFont'))
         onCreated()
       } else {
@@ -1413,6 +1444,9 @@ function NewFontForm({ pos, me, onCancel, onCreated }: { pos: LatLng; me: [numbe
           <DrinkableHelpButton />
         </Box>
         <ImagePicker file={file} onChange={pickFile} placeholder={movil} />
+        {initial?.hadPhoto && !file && (
+          <Typography variant="caption" color="text.secondary">{t('draft.photoAgain')}</Typography>
+        )}
         {gpsHint && (
           <Alert
             severity="info"
@@ -1744,6 +1778,14 @@ export function MapPage() {
     if (relojInvita.current !== null) window.clearTimeout(relojInvita.current)
   }, [])
   const [pos, setPos] = useState<LatLng | null>(null)
+  // A new fountain left half-filled: the app was closed, or the form was closed without
+  // "create". Offered back with a banner instead of reopening the form uninvited.
+  const newFontDraftKey = draftKey(user?.id, 'new-font')
+  const [pendingDraft, setPendingDraft] = useState<NewFontDraft | null>(null)
+  const [resumedDraft, setResumedDraft] = useState<NewFontDraft | null>(null)
+  useEffect(() => {
+    if (!placing) setPendingDraft(loadDraft<NewFontDraft>(newFontDraftKey))
+  }, [newFontDraftKey, placing])
   const [nonce, setNonce] = useState(0)
   const [me, setMe] = useState<[number, number] | null>(null)
   useEffect(() => {
@@ -1890,9 +1932,23 @@ export function MapPage() {
     if (placing && !pos && me) setPos(L.latLng(me[0], me[1]))
   }, [placing, pos, me])
 
+  // Closing the form keeps its draft on purpose: the bottom sheet also closes with a
+  // swipe or a tap outside, and that must not throw away what was typed. Throwing it away
+  // is the banner's explicit "discard".
   function cancel() {
     setPlacing(false)
     setPos(null)
+    setResumedDraft(null)
+  }
+  function resumeDraft(d: NewFontDraft) {
+    setResumedDraft(d)
+    setPlacing(true)
+    setPos(L.latLng(d.lat, d.lng))
+    setGoto([d.lat, d.lng])
+  }
+  function discardDraft() {
+    clearDraft(newFontDraftKey)
+    setPendingDraft(null)
   }
   function created() {
     cancel()
@@ -2544,7 +2600,17 @@ export function MapPage() {
           {t('map.tapToPlace')} · <button className="link" onClick={cancel}>{t('map.cancel')}</button>
         </div>
       )}
-      {placing && pos && <NewFontForm pos={pos} me={me} onCancel={cancel} onCreated={created} />}
+      {!placing && pendingDraft && user && (
+        <div className="hint">
+          {pendingDraft.name.trim() ? t('draft.newFontNamed', { name: pendingDraft.name.trim() }) : t('draft.newFont')}
+          {' · '}<button className="link" onClick={() => resumeDraft(pendingDraft)}>{t('draft.resume')}</button>
+          {' · '}<button className="link" onClick={discardDraft}>{t('draft.discard')}</button>
+        </div>
+      )}
+      {placing && pos && (
+        <NewFontForm pos={pos} me={me} onCancel={cancel} onCreated={created}
+          draftKeyName={newFontDraftKey} initial={resumedDraft} />
+      )}
 
       {/* El punto de partida es donde está el usuario si el mapa ya lo sabe; si no, el
           panel lo pide él (y solo en silencio si el permiso ya estaba dado). */}

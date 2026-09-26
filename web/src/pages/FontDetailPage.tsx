@@ -85,6 +85,8 @@ import {
 } from '../api/client'
 import type { NearestWater } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { clearDraft, draftKey } from '../lib/drafts'
+import { useRestoredDraft, useSaveDraft } from '../lib/useDraft'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/ToastContext'
 import { MentionInput } from '../components/MentionInput'
@@ -270,13 +272,18 @@ function UpdateForm({ fontID, where, hasPhoto, onPosted, onCancel, initialStatus
   const { t } = useI18n()
   const remote = useRemoteReviewCheck({ id: fontID, latitude: where.latitude, longitude: where.longitude })
   const toast = useToast()
-  const [body, setBody] = useState('')
-  const [rating, setRating] = useState(0)
+  const { user } = useAuth()
+  // A review half-written when the app was closed comes back as it was (lib/drafts).
+  const reviewKey = draftKey(user?.id, `review:${fontID}`)
+  const saved = useRestoredDraft<{ body: string; rating: number; waterStatus: string }>(reviewKey)
+  const [body, setBody] = useState(saved?.body ?? '')
+  const [rating, setRating] = useState(saved?.rating ?? 0)
   // `initialStatus` = el estado que el usuario iba a marcar antes de que le mandaran a
   // entrar. Llega desde `?review=<estado>` y hace que la reseña vuelva **medio empezada**,
   // no solo la fuente. Solo semilla del valor inicial: luego lo maneja el propio campo.
-  const [waterStatus, setWaterStatus] = useState(initialStatus ?? '')
+  const [waterStatus, setWaterStatus] = useState(initialStatus ?? saved?.waterStatus ?? '')
   const [file, setFile] = useState<File | null>(null)
+  useSaveDraft(reviewKey, { body, rating, waterStatus }, !body.trim() && !rating && !waterStatus, !!saved)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -453,9 +460,13 @@ function ReportForm({ fontID, onPosted, borrador }: {
 }) {
   const { t } = useI18n()
   const toast = useToast()
-  const [message, setMessage] = useState('')
-  const [esIncidencia, setEsIncidencia] = useState(false)
-  const [tipo, setTipo] = useState<IncidentKind>('other')
+  const { user } = useAuth()
+  const commentKey = draftKey(user?.id, `comment:${fontID}`)
+  const saved = useRestoredDraft<{ message: string; esIncidencia: boolean; tipo: IncidentKind }>(commentKey)
+  const [message, setMessage] = useState(saved?.message ?? '')
+  const [esIncidencia, setEsIncidencia] = useState(saved?.esIncidencia ?? false)
+  const [tipo, setTipo] = useState<IncidentKind>(saved?.tipo ?? 'other')
+  useSaveDraft(commentKey, { message, esIncidencia, tipo }, !message.trim(), !!saved)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -527,12 +538,17 @@ function ReportForm({ fontID, onPosted, borrador }: {
 
 function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canManage: boolean; onSaved: () => void; onCancel: () => void }) {
   const { t, lang } = useI18n()
-  const [name, setName] = useState(font.name ?? '')
-  const [description, setDescription] = useState(font.description ?? '')
-  const [source, setSource] = useState<WaterSource | ''>(font.source ?? '')
-  const [drinkable, setDrinkable] = useState<Drinkable | ''>(font.drinkable ?? '')
+  const { user } = useAuth()
+  // Unsaved edits survive the app being closed (lib/drafts). They reappear when the edit
+  // form is opened again, on top of the fountain as it is now.
+  const editKey = draftKey(user?.id, `edit:${font.id}`)
+  const saved = useRestoredDraft<{ name: string; description: string; source: WaterSource | ''; drinkable: Drinkable | ''; lat: number; lng: number }>(editKey)
+  const [name, setName] = useState(saved?.name ?? font.name ?? '')
+  const [description, setDescription] = useState(saved?.description ?? font.description ?? '')
+  const [source, setSource] = useState<WaterSource | ''>(saved?.source ?? font.source ?? '')
+  const [drinkable, setDrinkable] = useState<Drinkable | ''>(saved?.drinkable ?? font.drinkable ?? '')
   const [file, setFile] = useState<File | null>(null)
-  const [coords, setCoords] = useState({ lat: font.latitude, lng: font.longitude })
+  const [coords, setCoords] = useState({ lat: saved?.lat ?? font.latitude, lng: saved?.lng ?? font.longitude })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   // La primera foto la puede poner cualquiera; sustituir una que ya existe, no.
@@ -568,6 +584,12 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
     coords.lat !== font.latitude ||
     coords.lng !== font.longitude
   const [confirmandoDescarte, setConfirmandoDescarte] = useState(false)
+  // Without the photo: see lib/drafts. "Not dirty" is the empty case, so undoing every
+  // change by hand forgets the draft too.
+  const cambiosSinFoto = name !== (font.name ?? '') || description !== (font.description ?? '') ||
+    source !== (font.source ?? '') || drinkable !== (font.drinkable ?? '') ||
+    coords.lat !== font.latitude || coords.lng !== font.longitude
+  useSaveDraft(editKey, { name, description, source, drinkable, lat: coords.lat, lng: coords.lng }, !cambiosSinFoto, !!saved)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -585,6 +607,7 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
       // La ubicación va siempre en la petición, pero el servidor solo la aplica si
       // eres el creador o un admin: para el resto se conserva la que ya tenía.
       await updateFont(font.id, { name, latitude: coords.lat, longitude: coords.lng, image, description: description || undefined, source: source || undefined, drinkable: drinkable || undefined })
+      clearDraft(editKey)
       onSaved()
     } catch (e) {
       setError(describeError(e, t))
@@ -749,7 +772,7 @@ function EditFontForm({ font, canManage, onSaved, onCancel }: { font: Font; canM
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmandoDescarte(false)}>{t('form.keepEditing')}</Button>
-          <Button color="error" onClick={onCancel}>{t('form.discard')}</Button>
+          <Button color="error" onClick={() => { clearDraft(editKey); onCancel() }}>{t('form.discard')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

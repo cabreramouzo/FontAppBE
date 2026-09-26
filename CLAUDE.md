@@ -3788,6 +3788,28 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
   `swift run App vapid-keys`. **Cambiar la pública invalida todas las suscripciones a la
   vez y sin error visible.** Runbook en DEPLOY.md.
 
+## Borradores: lo que se escribe no se pierde al cerrar la app (`lib/drafts.ts`)
+
+- Reportado: se rellenó una fuente nueva, se olvidó pulsar «crear», se bloqueó el móvil y
+  a los diez minutos el formulario había desaparecido. En un móvil es el caso normal: iOS
+  mata una PWA en segundo plano cuando quiere, y con ella todo el `useState`.
+- Cuatro formularios guardan lo escrito **mientras se escribe**, en `localStorage`: alta
+  de fuente, reseña, comentario/incidencia y edición de la ficha. `useRestoredDraft` +
+  `useSaveDraft` (`lib/useDraft.ts`) son el lado React, así que un formulario nuevo solo
+  necesita esas dos líneas.
+- **El alta vuelve con un aviso, no sola**: «Tienes “Font de la Vall” a medias · Continuar
+  · Descartar». Reabrir un formulario sin que nadie lo pida sería una interrupción; los
+  otros tres rellenan sus campos al abrirse, porque ahí ya estás en la pantalla que toca.
+- **Cerrar el formulario NO borra el borrador**, a propósito: la hoja de abajo también se
+  cierra deslizando o tocando fuera, y eso no puede tirar lo escrito. Tirarlo es el
+  «Descartar» del aviso (o el del formulario de edición). Enviar lo borra, también cuando
+  va a la bandeja de salida.
+- **Nada se escribe hasta que el formulario ha tenido algo**: uno que abre vacío —pulsar
+  «+» otra vez— borraría el borrador del anterior en su primera pasada. Pasó al escribirlo.
+- Por cuenta (`draft:<userID>:<formulario>`), siete días de vida, y **sin la foto**: un
+  `File` no cabe en `localStorage` y un Blob en IndexedDB muere en iOS. El borrador dice
+  que había una y el formulario pide volver a elegirla, en vez de perderla callado.
+
 ## La cola de salida tiene dueño, y tiene salida
 
 - **Cada aportación encolada se apunta con QUIÉN la guardó** (`userID` en `outbox.ts`), y
