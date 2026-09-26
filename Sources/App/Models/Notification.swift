@@ -70,6 +70,13 @@ final class Notification: Model, @unchecked Sendable {
         /// no cambia lo que vas a hacer. El `actor` es quien te superó y el `excerpt` va
         /// vacío — el texto lo compone el cliente con el nombre del actor y el de la fuente.
         case mayorTaken
+        /// Someone said "still the same" on your review: another person went to the
+        /// fountain and backs what you reported.
+        ///
+        /// **Bell and not push**, like `commentLike`: it does not change what you are about
+        /// to do. The `excerpt` carries **the review's id**, not text — it is what keeps it
+        /// to one notice per review while unread, and the words are composed by the client.
+        case reviewConfirmed
     }
 
     @ID(key: .id) var id: UUID?

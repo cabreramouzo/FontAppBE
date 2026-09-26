@@ -245,4 +245,29 @@ final class QuickConfirmTests: XCTestCase {
             XCTAssertEqual(confs, 1)
         }
     }
+
+    /// "Still the same" on your review reaches you through the bell: once per review while
+    /// unread, by either path (the detail button and the map's quick chips).
+    func testConfirmingSomeonesReviewTellsThemOnceWhileUnread() async throws {
+        try await withApp { app in
+            let (autora, _) = try await usuario(app, "autora")
+            let (_, t1) = try await usuario(app, "primera")
+            let (_, t2) = try await usuario(app, "segunda")
+            let f = try await fuente(app)
+            let original = try await parte(app, en: f, de: autora, estado: "flowing")
+
+            try await app.test(.POST, "fonts/\(f.requireID())/comments/\(original.requireID())/confirm",
+                               headers: bearer(t1), afterResponse: { res in XCTAssertEqual(res.status, .ok) })
+            try await app.test(.POST, "fonts/\(f.requireID())/comments", headers: bearer(t2),
+                               beforeRequest: { req in
+                try req.content.encode(CreateCommentDTO(body: nil, rating: nil, waterStatus: "flowing",
+                                                        image: nil, confirmIfUnchanged: true))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .ok) })
+
+            let avisos = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == autora.requireID()).all()
+            XCTAssertEqual(avisos.count, 1, "two confirmations of an unread review are one notice")
+            XCTAssertEqual(avisos.first?.kind, .reviewConfirmed)
+        }
+    }
 }

@@ -172,6 +172,8 @@ export function NotificationBell({ desktopLabel = false }: { desktopLabel?: bool
                     ? t('notif.commentLike', { user: n.actorName })
                   : n.kind === 'mayorTaken'
                     ? t('notif.mayorTaken', { user: n.actorName })
+                  : n.kind === 'reviewConfirmed'
+                    ? t('notif.reviewConfirmed', { user: n.actorName })
                     : t('notif.mentionedYou', { user: n.actorName, font: rotulo(n.fontName, t) })}
             </Typography>
             {/* El texto que lo provocó. Sin él hay que abrir la ficha para saber si
@@ -187,6 +189,8 @@ export function NotificationBell({ desktopLabel = false }: { desktopLabel?: bool
                     ? queHaPasado(n.excerpt, n.actorName, t)
                   : n.kind === 'mayorTaken'
                     ? t('notif.mayorTakenBody', { font: rotulo(n.fontName, t) })
+                  : n.kind === 'reviewConfirmed'
+                    ? t('notif.reviewConfirmedBody', { font: rotulo(n.fontName, t) })
                     : n.excerpt}
             </Typography>
             <Box component="span" sx={{ display: 'block', fontSize: 11, color: 'text.disabled', mt: 0.25 }}>

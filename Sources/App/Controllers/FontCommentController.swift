@@ -106,6 +106,7 @@ struct FontCommentController: RouteCollection {
             }
         } else {
             try await FontConfirmation(commentID: commentID, userID: userID).save(on: req.db)
+            try? await Self.notifyConfirmation(of: comment, by: user, on: req.db)
         }
         return try await Self.response(for: comment, viewer: userID, on: req.db)
     }
@@ -276,12 +277,38 @@ struct FontCommentController: RouteCollection {
             .first()
         if ya == nil {
             try await FontConfirmation(commentID: commentID, userID: userID).save(on: req.db)
+            try? await Self.notifyConfirmation(of: comment, by: user, on: req.db)
         }
         let response = Response(status: .ok)
         try response.content.encode(
             try await Self.response(for: comment, viewer: userID, on: req.db,
                                     confirmedInstead: true))
         return response
+    }
+
+    /// Tells the review's author, through the bell, that someone backed it.
+    ///
+    /// Bell and not push: it does not change what they are about to do (see
+    /// `Notification.Kind.reviewConfirmed`). **Never for your own review**, and **one per
+    /// review while unread**: five "still the same" in an afternoon are one piece of news.
+    /// Same trick as the likes, looking at the notifications table itself. Best-effort at
+    /// the call sites (`try?`): losing the confirmation over a notice would be absurd.
+    static func notifyConfirmation(of comment: FontComment, by user: User, on db: any Database) async throws {
+        let actorID = try user.requireID()
+        guard let authorID = comment.$user.id, authorID != actorID else { return }
+        let key = try comment.requireID().uuidString
+        let pending = try await Notification.query(on: db)
+            .filter(\.$user.$id == authorID)
+            .filter(\.$kind == .reviewConfirmed)
+            .filter(\.$readAt == nil)
+            .filter(\.$excerpt == key)
+            .first()
+        guard pending == nil else { return }
+        let font = try await Font.find(comment.$font.id, on: db)
+        try await Notification(userID: authorID, kind: .reviewConfirmed,
+                               actorID: actorID, actorName: user.username,
+                               fontID: comment.$font.id, fontName: font?.name,
+                               excerpt: key).save(on: db)
     }
 
     /// Verifica que la fuente existe (404 si no) y la devuelve.

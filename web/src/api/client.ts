@@ -781,7 +781,7 @@ export async function collectionFonts(source: WaterSource): Promise<CollectionFo
 /** Un aviso de la campana. `fontID` nulo = la fuente ya no existe. */
 export interface NotificationItem {
   id: string
-  kind: 'mention' | 'staleGuarded' | 'fontUpdate' | 'sourceLimit' | 'userOnFire' | 'commentLike' | 'mayorTaken'
+  kind: 'mention' | 'staleGuarded' | 'fontUpdate' | 'sourceLimit' | 'userOnFire' | 'commentLike' | 'mayorTaken' | 'reviewConfirmed'
   actorName: string
   fontID: string | null
   fontName: string | null
