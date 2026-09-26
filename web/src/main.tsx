@@ -6,6 +6,7 @@ import { startOutboxAutoFlush } from './lib/outbox'
 import { captureSource } from './lib/campaign'
 import { trackCampaignVisit, trackInteraction } from './api/client'
 import { recargaSiEsTrozoCaducado } from './lib/staleChunk'
+import { nudgeLayoutOnLaunch } from './lib/iosRelayout'
 
 // PWA (Android/Chromium): captura `beforeinstallprompt` LO ANTES posible. Chrome
 // puede dispararlo antes de que React monte; si en ese instante no hay listener, el
@@ -78,6 +79,9 @@ if (codigoDeCampana) void trackCampaignVisit(codigoDeCampana)
 
 // Envía lo que quedó guardado sin cobertura: al arrancar y al recuperar la red.
 startOutboxAutoFlush()
+
+// iOS home-screen app: fixed bars placed against a wrong height at launch (lib/iosRelayout).
+nudgeLayoutOnLaunch()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

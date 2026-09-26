@@ -32,7 +32,7 @@ export interface DraftStorage {
 }
 
 function defaultStorage(): DraftStorage | null {
-  try { return window.localStorage } catch { return null }
+  try { return (globalThis as { localStorage?: DraftStorage }).localStorage ?? null } catch { return null }
 }
 
 export function draftKey(user: string | null | undefined, form: string): string {

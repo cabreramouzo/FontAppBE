@@ -4091,6 +4091,16 @@ estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la invers
 
 ## El hueco de la tab bar en iOS (sin resolver, con sonda)
 
+- **Intento de arreglo (27/09/2026), pendiente de confirmar en un iPhone:**
+  `lib/iosRelayout.ts`, llamado desde `main.tsx`. La hipótesis es un fallo de WebKit: al
+  lanzar la app desde el icono, iOS maqueta la página durante la animación de apertura,
+  contra un alto de ventana que no es el definitivo, y coloca lo `fixed; bottom: 0`
+  contra él; nada lo recoloca hasta que algo fuerza otra maquetación — que es justo lo que
+  hace cambiar de pestaña. Se fuerza a mano: el `body` crece un píxel y vuelve, tres veces
+  en el primer segundo y al volver del segundo plano, **solo en la app instalada en iOS**.
+  Si no lo arregla, la sonda de abajo sigue siendo el camino para saber cuál de las tres
+  causas es.
+
 - **Síntoma reportado**: en el primer arranque de la app instalada en un iPhone queda una
   franja en blanco en la barra de abajo, y **se arregla al tocar otra pestaña**.
 - **No se ha reproducido, y no se ha intentado adivinar.** Tres causas distintas dan
