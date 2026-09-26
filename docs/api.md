@@ -15,7 +15,9 @@ Token **Bearer** respaldado en BD.
 
 1. `POST /auth/login` con **Basic auth** (`Authorization: Basic base64(username:password)`) → devuelve un `token`.
 2. En las rutas protegidas (🔒), enviar `Authorization: Bearer <token>`.
-3. `POST /auth/logout` revoca el token. TTL por defecto: 30 días.
+3. `POST /auth/logout` revoca el token. Caduca tras **180 días sin usarse**: cada petición
+   autenticada lo renueva (como mucho una escritura al día por token), así que una sesión en
+   uso no caduca. `expiresAt` del login es la caducidad en ese momento, no una fecha fija.
 
 | Ruta | 🔒 | Descripción |
 |------|----|-------------|
