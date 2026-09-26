@@ -135,7 +135,11 @@ export async function googleLoginRequest(credential: string): Promise<LoginRespo
 export interface PasskeySummary { id: string; label: string; createdAt?: string; lastUsedAt?: string }
 export interface InteractionSummary { event: string; clicks: number; sessions: number }
 /** `visits` son sesiones de pestaña, no personas: quien abra el enlace tres días cuenta tres. */
-export interface CampaignSummary { source: string; visits: number; hits: number; signups: number }
+export interface CampaignSummary {
+  source: string; visits: number; hits: number; signups: number
+  /** Today (server UTC date); optional so an older backend still renders. */
+  visitsToday?: number; signupsToday?: number
+}
 /** Una sugerencia de duplicado pendiente. `*Comments` decide cuál conservar: la que tiene
  *  historia detrás es casi siempre la buena. */
 export interface DuplicateSuggestion {

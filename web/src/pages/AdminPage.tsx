@@ -42,6 +42,9 @@ const ANALYTICS_GROUPS = [
   { key: 'navigation', prefixes: ['page_', 'nav_'] },
 ] as const
 
+/** " (+3)" after a campaign count: how much of it came in today. Nothing when zero. */
+const hoy = (n?: number) => (n ? ` (+${n})` : '')
+
 export function AdminPage() {
   const { user, loading } = useAuth()
   const { t, lang } = useI18n()
@@ -215,7 +218,7 @@ export function AdminPage() {
               <ListItem key={c.source} disableGutters>
                 <ListItemText
                   primary={c.source}
-                  secondary={`${c.visits} ${t('campaigns.visits')} · ${c.signups} ${t('campaigns.signups')}${
+                  secondary={`${c.visits}${hoy(c.visitsToday)} ${t('campaigns.visits')} · ${c.signups}${hoy(c.signupsToday)} ${t('campaigns.signups')}${
                     c.visits > 0 ? ` · ${Math.round(c.signups / c.visits * 100)}%` : ''}`}
                 />
               </ListItem>

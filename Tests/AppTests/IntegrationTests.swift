@@ -3269,6 +3269,9 @@ final class IntegrationTests: XCTestCase {
                 let fila = try XCTUnwrap(res.content.decode([CampaignSummary].self).first { $0.source == "cartel" })
                 XCTAssertEqual(fila.visits, 1)
                 XCTAssertEqual(fila.signups, 1)
+                // Both happened today, so both count as today's.
+                XCTAssertEqual(fila.visitsToday, 1)
+                XCTAssertEqual(fila.signupsToday, 1)
             }
             // Y no lo ve cualquiera.
             let curiosa = try await register(app, username: "curiosacamp")

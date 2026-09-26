@@ -140,12 +140,14 @@ struct InteractionAnalyticsController: RouteCollection {
         let days = requested.map { $0 - 1 }
         return try await sql.raw("""
             WITH clics AS (
-                SELECT source, COUNT(DISTINCT session_id)::int AS visits, SUM(hits)::int AS hits
+                SELECT source, COUNT(DISTINCT session_id)::int AS visits, SUM(hits)::int AS hits,
+                       COUNT(DISTINCT session_id) FILTER (WHERE day = CURRENT_DATE)::int AS visits_today
                 FROM campaign_visits
                 WHERE \(bind: days)::int IS NULL OR day >= CURRENT_DATE - \(bind: days)::int
                 GROUP BY source
             ), altas AS (
-                SELECT signup_source AS source, COUNT(*)::int AS signups
+                SELECT signup_source AS source, COUNT(*)::int AS signups,
+                       COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE)::int AS signups_today
                 FROM users
                 WHERE signup_source IS NOT NULL
                   AND (\(bind: days)::int IS NULL OR created_at >= CURRENT_DATE - \(bind: days)::int)
@@ -154,7 +156,9 @@ struct InteractionAnalyticsController: RouteCollection {
             SELECT COALESCE(clics.source, altas.source) AS source,
                    COALESCE(clics.visits, 0) AS visits,
                    COALESCE(clics.hits, 0) AS hits,
-                   COALESCE(altas.signups, 0) AS signups
+                   COALESCE(altas.signups, 0) AS signups,
+                   COALESCE(clics.visits_today, 0) AS "visitsToday",
+                   COALESCE(altas.signups_today, 0) AS "signupsToday"
             FROM clics FULL OUTER JOIN altas ON altas.source = clics.source
             ORDER BY visits DESC, signups DESC
             """).all(decoding: CampaignSummary.self)
@@ -244,4 +248,10 @@ struct InteractionSummary: Content { let event: String; let clicks: Int; let ses
 ///
 /// `visits` son **sesiones de pestaña distintas**, no personas: quien abra el enlace tres
 /// días cuenta tres. Sirve para comparar campañas entre sí, nunca para contar gente.
-struct CampaignSummary: Content { let source: String; let visits: Int; let hits: Int; let signups: Int }
+struct CampaignSummary: Content {
+    let source: String; let visits: Int; let hits: Int; let signups: Int
+    /// Today's share of the two counts, so a poster hung this morning shows up as "+n".
+    /// "Today" is the server's UTC date: `campaign_visits` only stores a day, so that is
+    /// the finest cut both columns share.
+    let visitsToday: Int; let signupsToday: Int
+}
