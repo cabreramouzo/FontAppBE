@@ -24,3 +24,21 @@
 export function fuentesTrasFalloDeRed<T>(previas: T[], deZona: T[] | null): T[] {
   return deZona && deZona.length > 0 ? deZona : previas
 }
+
+interface Box { minLat: number; maxLat: number; minLong: number; maxLong: number }
+
+/**
+ * Whether the saved offline zone can stand in for this view after a failed refresh.
+ *
+ * Only when it covers at least half of what is on screen. Zoomed out over the world, a
+ * failed request — a timeout while Neon wakes up is enough — used to swap the whole map
+ * for the dozen fountains of the saved zone, drawn as one cluster over Barcelona, as if
+ * those were all there are. A zone answers for its own valley, not for a continent.
+ */
+export function zonaCubreLaVista(zona: Box, vista: Box): boolean {
+  const ancho = Math.min(zona.maxLong, vista.maxLong) - Math.max(zona.minLong, vista.minLong)
+  const alto = Math.min(zona.maxLat, vista.maxLat) - Math.max(zona.minLat, vista.minLat)
+  if (ancho <= 0 || alto <= 0) return false
+  const areaVista = (vista.maxLong - vista.minLong) * (vista.maxLat - vista.minLat)
+  return areaVista > 0 && (ancho * alto) / areaVista >= 0.5
+}

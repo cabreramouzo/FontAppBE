@@ -70,7 +70,7 @@ import { ApiError, apiFetch, createComment, createFont, describeError, getRain, 
 import { cajaRedondeada, paramsDeCaja } from '../lib/cajaMapa'
 import { casillaDe } from '../lib/casilla'
 import { cercanasEn, enCaja } from '../lib/zonaOffline'
-import { fuentesTrasFalloDeRed } from '../lib/mapFallback'
+import { fuentesTrasFalloDeRed, zonaCubreLaVista } from '../lib/mapFallback'
 import { recuerdaVistas } from '../lib/fuentesVistas'
 import { zonaGuardada } from '../lib/zonaAlmacen'
 import { nombreFuente } from '../lib/fontName'
@@ -446,14 +446,16 @@ function FontMarkers({
         setTopeHasta(Date.now() + (error.retryAfterSeconds ?? 60) * 1000)
       }
       const zona = await zonaGuardada()
-      const deZona = zona ? enCaja(zona, caja) : null
+      const deZona = zona && zonaCubreLaVista(zona, caja) ? enCaja(zona, caja) : null
       // Sin zona guardada NO se vacía el mapa: se conservan los marcadores que ya
       // estaban (ver `fuentesTrasFalloDeRed`). Vaciar era el bug reportado en el campo —
       // al perder cobertura desaparecían todos los puntos que ya se veían. Va en la forma
       // funcional para leer `prev` sin capturar un `mapData` viejo en este `useCallback`.
+      // Without a zone to show, what was on screen stays as it was, heatmap included:
+      // clearing `clusters` here left a world view with nothing but a failed request.
       setMapData((prev) => {
         const fonts = fuentesTrasFalloDeRed(prev.fonts, deZona)
-        return firmaDeFuentes(prev.fonts) === firmaDeFuentes(fonts) ? prev : { fonts, clusters: [] }
+        return fonts === prev.fonts ? prev : { fonts, clusters: [] }
       })
     } finally {
       if (activeRequest.current === controller) activeRequest.current = null
