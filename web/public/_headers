@@ -1,2 +1,8 @@
 /version.json
   Cache-Control: no-store, max-age=0, must-revalidate
+
+# Read by iOS to open fontapp.net links in the app (universal links) and to offer the
+# site's passkeys in it. No extension, so the type has to be said.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600

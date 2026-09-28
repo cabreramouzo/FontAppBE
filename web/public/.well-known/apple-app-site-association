@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["7V6773B2EX.net.fontapp.FontApp"],
+        "components": [
+          { "/": "/fonts/*", "comment": "A fountain's page opens it in the app" },
+          { "/": "/users/*", "comment": "Someone's public profile" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["7V6773B2EX.net.fontapp.FontApp"]
+  }
+}
