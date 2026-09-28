@@ -38,7 +38,8 @@ enum PushSender {
 
     /// Manda `aviso` a todos los aparatos de `userID`. No lanza nunca.
     static func send(_ aviso: Aviso, to userID: UUID, on db: any Database,
-                     client: any Client, vapid: Vapid?, logger: Logger) async {
+                     client: any Client, vapid: Vapid?, apns: APNs? = nil, logger: Logger) async {
+        if let apns { await sendApple(aviso, to: userID, on: db, client: client, apns: apns, logger: logger) }
         guard let vapid else { return }   // sin claves configuradas no hay push, y no es un error
         do {
             let subs = try await PushSubscription.query(on: db)
@@ -85,6 +86,33 @@ enum PushSender {
     }
 }
 
+extension PushSender {
+    /// Lo mismo para los iPhone con la app: mismo aviso, mismo tope de aparatos, y los
+    /// tokens muertos se borran en el momento por la misma razón que las suscripciones.
+    static func sendApple(_ aviso: Aviso, to userID: UUID, on db: any Database,
+                          client: any Client, apns: APNs, logger: Logger) async {
+        do {
+            let devices = try await ApnsDevice.query(on: db)
+                .filter(\.$user.$id == userID)
+                .limit(maxAparatos)
+                .all()
+            for device in devices {
+                do {
+                    switch try await apns.send(aviso, to: device, client: client) {
+                    case .enviado: break
+                    case .tokenMuerto: try? await device.delete(on: db)
+                    case .fallo(let code): logger.warning("apns rechazado \(code)")
+                    }
+                } catch {
+                    logger.warning("apns no enviado: \(String(reflecting: error))")
+                }
+            }
+        } catch {
+            logger.warning("apns: no se pudieron leer los aparatos")
+        }
+    }
+}
+
 /// Lo que hace falta para poder mandar un push desde un aviso.
 ///
 /// Va en un paquete y no en tres parámetros sueltos porque estos avisos se lanzan desde
@@ -93,13 +121,16 @@ enum PushSender {
 struct PushEnvio: Sendable {
     let client: any Client
     let vapid: Vapid?
+    let apns: APNs?
     let logger: Logger
 
-    /// `nil` si no hay claves configuradas, para que quien llama no tenga que comprobarlo.
+    /// `nil` si no hay ni VAPID ni APNs configurados, para que quien llama no tenga que
+    /// comprobarlo.
     init?(_ app: Application) {
-        guard let v = app.vapid else { return nil }
+        guard app.vapid != nil || app.apns != nil else { return nil }
         self.client = app.client
-        self.vapid = v
+        self.vapid = app.vapid
+        self.apns = app.apns
         self.logger = app.logger
     }
 }

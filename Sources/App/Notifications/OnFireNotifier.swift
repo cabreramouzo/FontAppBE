@@ -59,7 +59,7 @@ enum OnFireNotifier {
                         .init(title: titulo, body: cuerpo, url: "/admin/moderation",
                               tag: "onfire-\(userID)"),
                         to: adminID, on: db, client: push.client,
-                        vapid: push.vapid, logger: push.logger)
+                        vapid: push.vapid, apns: push.apns, logger: push.logger)
                 }
             }
         } catch {

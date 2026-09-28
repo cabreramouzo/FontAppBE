@@ -142,7 +142,7 @@ enum FontWatchNotifier {
                               // forma más rápida de que te silencien.
                               tag: "font-\(fontID)"),
                         to: s.$user.id, on: db, client: push.client,
-                        vapid: push.vapid, logger: push.logger)
+                        vapid: push.vapid, apns: push.apns, logger: push.logger)
                 }
             }
 

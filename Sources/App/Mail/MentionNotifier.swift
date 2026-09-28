@@ -106,7 +106,7 @@ enum MentionNotifier {
                           // Por autor y fuente: tres menciones seguidas en la misma
                           // conversación son un aviso, no tres.
                           tag: "mention-\(fontID)"),
-                    to: uid, on: db, client: push.client, vapid: push.vapid, logger: push.logger)
+                    to: uid, on: db, client: push.client, vapid: push.vapid, apns: push.apns, logger: push.logger)
             }
         }
 

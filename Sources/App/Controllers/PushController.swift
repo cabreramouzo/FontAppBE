@@ -18,6 +18,48 @@ struct PushController: RouteCollection {
         auth.post("subscribe", use: subscribe)
         auth.post("unsubscribe", use: unsubscribe)
         auth.post("test", use: test)
+        // La app de iOS: su token de APNs en vez de una suscripción de navegador.
+        auth.post("apns", use: registerApple)
+        auth.post("apns", "remove", use: removeApple)
+    }
+
+    struct AppleDTO: Content {
+        /// El token del aparato en hexadecimal, como lo da iOS.
+        let token: String
+        /// Instalada desde Xcode: su token solo vale en el servidor de pruebas de Apple.
+        let sandbox: Bool?
+    }
+
+    func registerApple(_ req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        let dto = try req.content.decode(AppleDTO.self)
+        // 32 bytes hoy; Apple avisa de que puede crecer, así que se acepta hasta 200.
+        guard dto.token.range(of: "^[0-9a-fA-F]{64,200}$", options: .regularExpression) != nil else {
+            throw AppError(.badRequest, "push.badToken", "El token del aparato no es válido.")
+        }
+        let token = dto.token.lowercased()
+        // El token es la identidad del aparato: si ya existe se ACTUALIZA, también de
+        // cuenta (otra persona que entra en el mismo teléfono).
+        if let ya = try await ApnsDevice.query(on: req.db).filter(\.$token == token).first() {
+            ya.$user.id = try user.requireID()
+            ya.sandbox = dto.sandbox ?? false
+            try await ya.save(on: req.db)
+        } else {
+            try await ApnsDevice(userID: try user.requireID(), token: token, sandbox: dto.sandbox ?? false)
+                .save(on: req.db)
+        }
+        return .noContent
+    }
+
+    /// Al cerrar sesión: el teléfono deja de recibir los avisos de esa cuenta.
+    func removeApple(_ req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        let dto = try req.content.decode(AppleDTO.self)
+        try await ApnsDevice.query(on: req.db)
+            .filter(\.$token == dto.token.lowercased())
+            .filter(\.$user.$id == user.requireID())
+            .delete()
+        return .noContent
     }
 
     struct KeyResponse: Content {
@@ -89,7 +131,7 @@ struct PushController: RouteCollection {
         await PushSender.send(.init(title: titulo, body: cuerpo, url: "/me/settings",
                                     tag: "fontapp-prueba"),
                               to: try user.requireID(), on: req.db,
-                              client: push.client, vapid: push.vapid, logger: push.logger)
+                              client: push.client, vapid: push.vapid, apns: push.apns, logger: push.logger)
         return .accepted
     }
 

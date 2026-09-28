@@ -95,6 +95,9 @@ public func configure(_ app: Application) async throws {
     app.vapid = Vapid(publicKey: Environment.get("VAPID_PUBLIC_KEY"),
                       privateKey: Environment.get("VAPID_PRIVATE_KEY"),
                       subject: Environment.get("VAPID_SUBJECT"))
+    // Los avisos de la app de iOS (ver `APNs`). Mismo criterio: sin clave, no hay.
+    app.apns = APNs(keyID: Environment.get("APNS_KEY_ID"), teamID: Environment.get("APNS_TEAM_ID"),
+                    key: Environment.get("APNS_KEY"), topic: Environment.get("APNS_TOPIC"))
     if app.vapid == nil, app.environment == .production {
         app.logger.notice("Sin claves VAPID: las notificaciones push están apagadas.")
     }
@@ -183,6 +186,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddDuplicateSuggestionToFontReport()) // «es la misma que aquella», de cualquiera
     app.migrations.add(EnableUnaccent())               // buscar sin que los acentos cuenten
     app.migrations.add(AddRemoteDistanceToFontComment()) // reviews written far from the fountain
+    app.migrations.add(CreateApnsDevice())             // iPhones with the app, for APNs
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

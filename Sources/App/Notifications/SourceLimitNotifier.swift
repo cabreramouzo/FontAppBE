@@ -34,7 +34,7 @@ enum SourceLimitNotifier {
                 await PushSender.send(.init(title: titulo, body: cuerpo, url: "/",
                                             tag: "fontapp-cupo"),
                                       to: userID, on: db, client: push.client,
-                                      vapid: push.vapid, logger: push.logger)
+                                      vapid: push.vapid, apns: push.apns, logger: push.logger)
             }
         } catch {
             // Silencioso: el permiso ya está concedido, que es lo que importaba.

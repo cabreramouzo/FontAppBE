@@ -521,7 +521,7 @@ struct FontReportController: RouteCollection {
                       // Por fuente: tres respuestas seguidas en la misma conversación son
                       // un aviso, no tres. Misma etiqueta que las menciones a propósito.
                       tag: "mention-\(fontID)"),
-                to: autorID, on: db, client: push.client, vapid: push.vapid, logger: push.logger)
+                to: autorID, on: db, client: push.client, vapid: push.vapid, apns: push.apns, logger: push.logger)
         }
     }
 
