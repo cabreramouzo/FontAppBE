@@ -12,26 +12,8 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
 import { isAdminRole } from '../lib/roles'
-
-interface PricingModelStats {
-  count: number
-  priceBreakdown: Record<string, number>
-}
-
-interface PlatformStats {
-  total: number
-  wantsApp: number
-  noApp: number
-  subscription: PricingModelStats
-  oneTime: PricingModelStats
-  /** Wanted the app but would not pay for it. */
-  wouldNotPay: number
-}
-
-interface InterestDashboard {
-  total: number
-  byPlatform: Record<string, PlatformStats>
-}
+import { describeError, getInterestDashboard } from '../api/client'
+import type { InterestDashboard } from '../api/types'
 
 const PLATFORM_LABELS = {
   ios: '🍎 iOS',
@@ -61,18 +43,15 @@ export function AppInterestDashboard() {
 
     const fetchDashboard = async () => {
       try {
-        const response = await fetch('/api/interest/dashboard')
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        const data = await response.json() as InterestDashboard
-        setDashboard(data)
+        setDashboard(await getInterestDashboard())
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Error fetching dashboard')
+        setError(describeError(e, t))
         setDashboard(null)
       }
     }
 
     fetchDashboard()
-  }, [user, loading])
+  }, [user, loading, t])
 
   if (!isAdminRole(user)) return null
 

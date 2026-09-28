@@ -4,7 +4,7 @@ import type { PhotoUploadMeta } from '../lib/image'
 import { creationOptions, credentialJSON, requestOptions } from '../lib/passkeys'
 import { storedSource } from '../lib/campaign'
 import { calientaCacheDeFoto } from '../lib/fijarOffline'
-import type { AdminUser, IncidentKind, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserCapabilityReport, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZonePendingFont, ZoneRanking } from './types'
+import type { AdminUser, IncidentKind, AppPlatform, CommentResponse, Drinkable, FavoriteStatus, Feedback, Flag, Font, FontEdit, FontSummary, GamificationProfile, InterestDashboard, InterestStats, LoginResponse, Missions, ModerationSource, MyComment, Page, RegionStat, ReportResponse, StaffMember, UserCapabilityReport, UserResponse, UserRole, WaterSource, ZoneCoverageResponse, ZoneLocal, ZonePendingFont, ZoneRanking } from './types'
 
 // Dev: Vite hace proxy de /api -> backend (ver vite.config.ts).
 // Prod: VITE_API_URL apunta al origen real del backend (p. ej. https://api.fontapp.com).
@@ -1079,6 +1079,7 @@ export async function submitAppInterest(wants: boolean, platform?: AppPlatform, 
 export async function getInterestStats(): Promise<InterestStats> {
   return apiFetch<InterestStats>('/interest/stats')
 }
+export const getInterestDashboard = () => apiFetch<InterestDashboard>('/interest/dashboard')
 
 // Sugerencia / feedback libre (mensaje + país/email opcionales). Auth opcional.
 export async function submitFeedback(data: { message: string; country?: string; email?: string }): Promise<void> {

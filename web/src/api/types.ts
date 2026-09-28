@@ -465,3 +465,25 @@ export type UserCapabilityReport = {
   capabilitiesEnabled: boolean
   definitivePoints: boolean
 }
+
+// Encuesta de app móvil agregada por plataforma (admin).
+export interface PricingModelStats {
+  count: number
+  priceBreakdown: Record<string, number>
+}
+
+export interface PlatformStats {
+  total: number
+  wantsApp: number
+  noApp: number
+  subscription: PricingModelStats
+  oneTime: PricingModelStats
+  /** Wanted the app but would not pay for it. */
+  wouldNotPay: number
+}
+
+export interface InterestDashboard {
+  total: number
+  byPlatform: Record<string, PlatformStats>
+}
+
