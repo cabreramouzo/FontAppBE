@@ -31,7 +31,6 @@ export function AppInterestBanner() {
   const open = useTurno('interest', listo)
   const [thanks, setThanks] = useState(false)
   const [step, setStep] = useState<'interest' | 'pricing'>('interest')
-  const [wantsApp, setWantsApp] = useState<boolean | null>(null)
 
   useEffect(() => {
     // Ya respondió (o lo cerró) antes: no volvemos a molestar.
@@ -63,7 +62,6 @@ export function AppInterestBanner() {
       setTimeout(() => setListo(false), 2200)
     } else {
       // Si dice que sí, preguntamos el modelo de precio
-      setWantsApp(true)
       setStep('pricing')
     }
   }
@@ -80,7 +78,6 @@ export function AppInterestBanner() {
     setTimeout(() => {
       setListo(false)
       setStep('interest')
-      setWantsApp(null)
     }, 2200)
   }
 
@@ -88,7 +85,6 @@ export function AppInterestBanner() {
     remember('dismissed')
     setListo(false)
     setStep('interest')
-    setWantsApp(null)
   }
 
   return (
