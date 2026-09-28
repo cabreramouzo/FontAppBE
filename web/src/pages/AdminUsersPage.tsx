@@ -108,6 +108,10 @@ export function AdminUsersPage() {
         placeholder={t('admin.usersSearch')}
         size="small"
         fullWidth
+        // type="search" y autoComplete off: sin esto Safari lo confunde con un campo de
+        // login y ofrece rellenar un usuario de Contraseñas, que aquí no tiene sentido.
+        type="search"
+        autoComplete="off"
         sx={{ mb: 2, maxWidth: 420 }}
         slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
       />

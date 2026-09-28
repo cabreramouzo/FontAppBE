@@ -15,7 +15,7 @@ struct InterestController: RouteCollection {
         interest.grouped(UserToken.authenticator(), User.guardMiddleware()).get("stats", use: stats)
     }
 
-    /// POST /interest — registra si el visitante quiere (o no) una app móvil.
+    /// POST /interest — registra si el visitante quiere (o no) una app móvil y qué modelo de precio prefiere.
     /// Si está autenticado, un único voto por usuario (se actualiza si vuelve a votar).
     @Sendable func create(req: Request) async throws -> HTTPStatus {
         try VoteDTO.validate(content: req)
@@ -30,12 +30,13 @@ struct InterestController: RouteCollection {
             if let existing {
                 existing.wants = dto.wants
                 existing.platform = dto.platform
+                existing.pricingPreference = dto.pricingPreference
                 try await existing.save(on: req.db)
             } else {
-                try await AppInterest(userID: userID, wants: dto.wants, platform: dto.platform).save(on: req.db)
+                try await AppInterest(userID: userID, wants: dto.wants, platform: dto.platform, pricingPreference: dto.pricingPreference).save(on: req.db)
             }
         } else {
-            try await AppInterest(wants: dto.wants, platform: dto.platform).save(on: req.db)
+            try await AppInterest(wants: dto.wants, platform: dto.platform, pricingPreference: dto.pricingPreference).save(on: req.db)
         }
         return .noContent
     }
@@ -51,7 +52,7 @@ struct InterestController: RouteCollection {
         // Solo los votos con usuario identificado se listan (los anónimos solo cuentan).
         let voters = all.compactMap { i -> InterestVoter? in
             guard let uid = i.$user.id, let username = names[uid] else { return nil }
-            return InterestVoter(username: username, wants: i.wants, platform: i.platform, at: i.updatedAt ?? i.createdAt)
+            return InterestVoter(username: username, wants: i.wants, platform: i.platform, pricingPreference: i.pricingPreference, at: i.updatedAt ?? i.createdAt)
         }
         return InterestStats(yes: yes, no: all.count - yes, total: all.count, voters: voters)
     }
@@ -60,11 +61,13 @@ struct InterestController: RouteCollection {
 struct VoteDTO: Content {
     let wants: Bool
     let platform: String?
+    let pricingPreference: String? // 'one_time' | 'subscription'
 }
 
 extension VoteDTO: Validatable {
     static func validations(_ validations: inout Validations) {
         validations.add("platform", as: String.self, is: .in("ios", "android", "other"), required: false)
+        validations.add("pricingPreference", as: String.self, is: .in("one_time", "subscription"), required: false)
     }
 }
 
@@ -72,6 +75,7 @@ struct InterestVoter: Content {
     let username: String
     let wants: Bool
     let platform: String?
+    let pricingPreference: String?
     let at: Date?
 }
 

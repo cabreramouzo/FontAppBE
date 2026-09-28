@@ -30,6 +30,8 @@ export function AppInterestBanner() {
   const [listo, setListo] = useState(false)
   const open = useTurno('interest', listo)
   const [thanks, setThanks] = useState(false)
+  const [step, setStep] = useState<'interest' | 'pricing'>('interest')
+  const [wantsApp, setWantsApp] = useState<boolean | null>(null)
 
   useEffect(() => {
     // Ya respondió (o lo cerró) antes: no volvemos a molestar.
@@ -49,20 +51,44 @@ export function AppInterestBanner() {
   }
 
   async function vote(wants: boolean) {
-    remember(wants ? 'yes' : 'no')
+    if (!wants) {
+      remember('no')
+      setThanks(true)
+      try {
+        await submitAppInterest(wants, detectPlatform())
+      } catch {
+        // Medición best-effort: si falla el envío, no molestamos al usuario.
+      }
+      // Cierre suave tras el agradecimiento.
+      setTimeout(() => setListo(false), 2200)
+    } else {
+      // Si dice que sí, preguntamos el modelo de precio
+      setWantsApp(true)
+      setStep('pricing')
+    }
+  }
+
+  async function votePricing(pricingPreference: 'one_time' | 'subscription') {
+    remember('yes')
     setThanks(true)
     try {
-      await submitAppInterest(wants, detectPlatform())
+      await submitAppInterest(true, detectPlatform(), pricingPreference)
     } catch {
       // Medición best-effort: si falla el envío, no molestamos al usuario.
     }
     // Cierre suave tras el agradecimiento.
-    setTimeout(() => setListo(false), 2200)
+    setTimeout(() => {
+      setListo(false)
+      setStep('interest')
+      setWantsApp(null)
+    }, 2200)
   }
 
   function dismiss() {
     remember('dismissed')
     setListo(false)
+    setStep('interest')
+    setWantsApp(null)
   }
 
   return (
@@ -86,17 +112,35 @@ export function AppInterestBanner() {
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
             <PhoneIphoneIcon color="primary" sx={{ mt: 0.25 }} />
             <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                {t('appWish.question')}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button size="small" variant="contained" disableElevation onClick={() => vote(true)}>
-                  {t('appWish.yes')}
-                </Button>
-                <Button size="small" variant="outlined" onClick={() => vote(false)}>
-                  {t('appWish.no')}
-                </Button>
-              </Box>
+              {step === 'interest' ? (
+                <>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                    {t('appWish.question')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button size="small" variant="contained" disableElevation onClick={() => vote(true)}>
+                      {t('appWish.yes')}
+                    </Button>
+                    <Button size="small" variant="outlined" onClick={() => vote(false)}>
+                      {t('appWish.no')}
+                    </Button>
+                  </Box>
+                </>
+              ) : (
+                <>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                    {t('appWish.pricingQuestion')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button size="small" variant="contained" disableElevation onClick={() => votePricing('one_time')}>
+                      {t('appWish.oneTime')}
+                    </Button>
+                    <Button size="small" variant="outlined" onClick={() => votePricing('subscription')}>
+                      {t('appWish.subscription')}
+                    </Button>
+                  </Box>
+                </>
+              )}
             </Box>
             <IconButton size="small" onClick={dismiss} aria-label={t('form.cancel')} sx={{ mt: -0.5, mr: -0.5 }}>
               <CloseIcon fontSize="small" />

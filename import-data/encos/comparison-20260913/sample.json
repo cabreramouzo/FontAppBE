@@ -1,0 +1,1102 @@
+[
+  {
+    "id": "0270",
+    "name": "Font de la plaça dels Estudis",
+    "town": "Vilallonga de Ter",
+    "comarca": "Ripollès",
+    "lat": 42.3315,
+    "lng": 2.3124,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0270",
+    "nearest": {
+      "id": "af69d3b6-0a1d-42f9-b113-90549247a6a0",
+      "name": null,
+      "municipality": "Vilallonga de Ter",
+      "distance_m": 4.0,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/af69d3b6-0a1d-42f9-b113-90549247a6a0"
+    },
+    "within_200m": [
+      {
+        "id": "af69d3b6-0a1d-42f9-b113-90549247a6a0",
+        "name": null,
+        "municipality": "Vilallonga de Ter",
+        "distance_m": 4.0,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/af69d3b6-0a1d-42f9-b113-90549247a6a0"
+      },
+      {
+        "id": "7f277d3a-1916-47d1-8e61-aeaa3bc6efd3",
+        "name": "Font de can Mateu",
+        "municipality": "Vilallonga de Ter",
+        "distance_m": 169.84,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/7f277d3a-1916-47d1-8e61-aeaa3bc6efd3"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "1493",
+    "name": "Font de Can Prat",
+    "town": "Santa Coloma de Farners",
+    "comarca": "Selva",
+    "lat": 41.8695,
+    "lng": 2.655,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=1493",
+    "nearest": {
+      "id": "b5a1128a-689f-4849-a327-b0c959a9fcdf",
+      "name": "Font Esperguer",
+      "municipality": "Santa Coloma de Farners",
+      "distance_m": 21.27,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/b5a1128a-689f-4849-a327-b0c959a9fcdf"
+    },
+    "within_200m": [
+      {
+        "id": "b5a1128a-689f-4849-a327-b0c959a9fcdf",
+        "name": "Font Esperguer",
+        "municipality": "Santa Coloma de Farners",
+        "distance_m": 21.27,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/b5a1128a-689f-4849-a327-b0c959a9fcdf"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "1904",
+    "name": "Font del Daví",
+    "town": "Sant Llorenç Savall",
+    "comarca": "Vallès Occidental",
+    "lat": 41.6602,
+    "lng": 2.0265,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=1904",
+    "nearest": {
+      "id": "22fe83cc-ad18-4f77-8e63-e95858c4f132",
+      "name": "Font del Daví o Fibles del Daví",
+      "municipality": "Sant Llorenç Savall",
+      "distance_m": 13.88,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/22fe83cc-ad18-4f77-8e63-e95858c4f132"
+    },
+    "within_200m": [
+      {
+        "id": "22fe83cc-ad18-4f77-8e63-e95858c4f132",
+        "name": "Font del Daví o Fibles del Daví",
+        "municipality": "Sant Llorenç Savall",
+        "distance_m": 13.88,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/22fe83cc-ad18-4f77-8e63-e95858c4f132"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "0659",
+    "name": "Font de Talltorta",
+    "town": "Talltorta",
+    "comarca": "Cerdanya",
+    "lat": 42.4037,
+    "lng": 1.9,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0659",
+    "nearest": {
+      "id": "f436451b-844a-477f-a76e-05742462a208",
+      "name": null,
+      "municipality": "Bolvir",
+      "distance_m": 6.08,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/f436451b-844a-477f-a76e-05742462a208"
+    },
+    "within_200m": [
+      {
+        "id": "f436451b-844a-477f-a76e-05742462a208",
+        "name": null,
+        "municipality": "Bolvir",
+        "distance_m": 6.08,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/f436451b-844a-477f-a76e-05742462a208"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "1054",
+    "name": "Font de Can Rafel o de la Figuera",
+    "town": "Cervelló",
+    "comarca": "Baix Llobregat",
+    "lat": 41.4091,
+    "lng": 1.931,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=1054",
+    "nearest": {
+      "id": "566ca1fc-5938-4e7b-a2bd-030ad4ef4586",
+      "name": "Font de can Rafel o de la Figuera",
+      "municipality": "Cervelló",
+      "distance_m": 20.05,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/566ca1fc-5938-4e7b-a2bd-030ad4ef4586"
+    },
+    "within_200m": [
+      {
+        "id": "566ca1fc-5938-4e7b-a2bd-030ad4ef4586",
+        "name": "Font de can Rafel o de la Figuera",
+        "municipality": "Cervelló",
+        "distance_m": 20.05,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/566ca1fc-5938-4e7b-a2bd-030ad4ef4586"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "566ca1fc-5938-4e7b-a2bd-030ad4ef4586",
+        "name": "Font de can Rafel o de la Figuera",
+        "municipality": "Cervelló",
+        "distance_m": 20.05,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/566ca1fc-5938-4e7b-a2bd-030ad4ef4586"
+      }
+    ],
+    "status": "within_50m"
+  },
+  {
+    "id": "0929",
+    "name": "Font de Baix del Carrer del Fossar",
+    "town": "Rupit i Pruit",
+    "comarca": "Osona",
+    "lat": 42.0241,
+    "lng": 2.4652,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0929",
+    "nearest": {
+      "id": "59f65b5d-9be0-45f7-9a06-b6ad9e70f071",
+      "name": "Font Bellaneda",
+      "municipality": "Rupit i Pruit",
+      "distance_m": 135.72,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/59f65b5d-9be0-45f7-9a06-b6ad9e70f071"
+    },
+    "within_200m": [
+      {
+        "id": "59f65b5d-9be0-45f7-9a06-b6ad9e70f071",
+        "name": "Font Bellaneda",
+        "municipality": "Rupit i Pruit",
+        "distance_m": 135.72,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/59f65b5d-9be0-45f7-9a06-b6ad9e70f071"
+      },
+      {
+        "id": "8983cca9-dd4c-4ac6-996e-9e54490efea1",
+        "name": "Font Vella",
+        "municipality": "Rupit i Pruit",
+        "distance_m": 183.6,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/8983cca9-dd4c-4ac6-996e-9e54490efea1"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "between_50_and_200m"
+  },
+  {
+    "id": "2812",
+    "name": "Font de la Falzia",
+    "town": "Moià",
+    "comarca": "Moianès",
+    "lat": 41.7947,
+    "lng": 2.0983,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=2812",
+    "nearest": {
+      "id": "8d0dfb7f-cc13-445a-b09c-a8fd2d236363",
+      "name": "Font Falsía",
+      "municipality": "Moià",
+      "distance_m": 19.96,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/8d0dfb7f-cc13-445a-b09c-a8fd2d236363"
+    },
+    "within_200m": [
+      {
+        "id": "8d0dfb7f-cc13-445a-b09c-a8fd2d236363",
+        "name": "Font Falsía",
+        "municipality": "Moià",
+        "distance_m": 19.96,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/8d0dfb7f-cc13-445a-b09c-a8fd2d236363"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "2649",
+    "name": "Font de Sant Cosme o Nova",
+    "town": "Sant Joan Les Fonts",
+    "comarca": "Garrotxa",
+    "lat": 42.1889,
+    "lng": 2.5215,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=2649",
+    "nearest": {
+      "id": "b61e7d0c-41fe-4bab-8d5f-e181240d071b",
+      "name": "Font Sant Cosme (Mina Anna Alzamora)",
+      "municipality": "Sant Joan les Fonts",
+      "distance_m": 5.76,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/b61e7d0c-41fe-4bab-8d5f-e181240d071b"
+    },
+    "within_200m": [
+      {
+        "id": "b61e7d0c-41fe-4bab-8d5f-e181240d071b",
+        "name": "Font Sant Cosme (Mina Anna Alzamora)",
+        "municipality": "Sant Joan les Fonts",
+        "distance_m": 5.76,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/b61e7d0c-41fe-4bab-8d5f-e181240d071b"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "0044",
+    "name": "Font de la Feixa",
+    "town": "Ger",
+    "comarca": "Cerdanya",
+    "lat": 42.4638,
+    "lng": 1.817,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0044",
+    "nearest": {
+      "id": "d12cf342-b30e-41f0-b1cd-2179d85f05f9",
+      "name": "Font de la Feixa",
+      "municipality": "Ger",
+      "distance_m": 8.72,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/d12cf342-b30e-41f0-b1cd-2179d85f05f9"
+    },
+    "within_200m": [
+      {
+        "id": "d12cf342-b30e-41f0-b1cd-2179d85f05f9",
+        "name": "Font de la Feixa",
+        "municipality": "Ger",
+        "distance_m": 8.72,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/d12cf342-b30e-41f0-b1cd-2179d85f05f9"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "d12cf342-b30e-41f0-b1cd-2179d85f05f9",
+        "name": "Font de la Feixa",
+        "municipality": "Ger",
+        "distance_m": 8.72,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/d12cf342-b30e-41f0-b1cd-2179d85f05f9"
+      }
+    ],
+    "status": "within_50m"
+  },
+  {
+    "id": "1207",
+    "name": "Font de la Saleta",
+    "town": "Centelles",
+    "comarca": "Osona",
+    "lat": 41.7729,
+    "lng": 2.2381,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=1207",
+    "nearest": {
+      "id": "404f95a6-392e-48f5-b54b-8872a5883233",
+      "name": "Font de la Saleta",
+      "municipality": "Centelles",
+      "distance_m": 16.59,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/404f95a6-392e-48f5-b54b-8872a5883233"
+    },
+    "within_200m": [
+      {
+        "id": "404f95a6-392e-48f5-b54b-8872a5883233",
+        "name": "Font de la Saleta",
+        "municipality": "Centelles",
+        "distance_m": 16.59,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/404f95a6-392e-48f5-b54b-8872a5883233"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "404f95a6-392e-48f5-b54b-8872a5883233",
+        "name": "Font de la Saleta",
+        "municipality": "Centelles",
+        "distance_m": 16.59,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/404f95a6-392e-48f5-b54b-8872a5883233"
+      }
+    ],
+    "status": "within_50m"
+  },
+  {
+    "id": "2650",
+    "name": "Font dels Capellans",
+    "town": "Sant Joan Les Fonts",
+    "comarca": "Garrotxa",
+    "lat": 42.1883,
+    "lng": 2.5239,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=2650",
+    "nearest": {
+      "id": "555650fd-df95-428a-8069-0afeb221abc3",
+      "name": "Font dels Capellans o Fontica",
+      "municipality": "Sant Joan les Fonts",
+      "distance_m": 11.12,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/555650fd-df95-428a-8069-0afeb221abc3"
+    },
+    "within_200m": [
+      {
+        "id": "555650fd-df95-428a-8069-0afeb221abc3",
+        "name": "Font dels Capellans o Fontica",
+        "municipality": "Sant Joan les Fonts",
+        "distance_m": 11.12,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/555650fd-df95-428a-8069-0afeb221abc3"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "1248",
+    "name": "Font de Can Sàbat",
+    "town": "Gelida",
+    "comarca": "Alt Penedès",
+    "lat": 41.4432,
+    "lng": 1.8585,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=1248",
+    "nearest": {
+      "id": "928e3485-c48d-414a-8a25-b05e22de8bbd",
+      "name": "Font de can Sàbat",
+      "municipality": "Gelida",
+      "distance_m": 0.0,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/928e3485-c48d-414a-8a25-b05e22de8bbd"
+    },
+    "within_200m": [
+      {
+        "id": "928e3485-c48d-414a-8a25-b05e22de8bbd",
+        "name": "Font de can Sàbat",
+        "municipality": "Gelida",
+        "distance_m": 0.0,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/928e3485-c48d-414a-8a25-b05e22de8bbd"
+      },
+      {
+        "id": "71284a9c-e559-4d66-ba07-9880cdc65096",
+        "name": "Font Comellas Albet",
+        "municipality": "Gelida",
+        "distance_m": 66.72,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/71284a9c-e559-4d66-ba07-9880cdc65096"
+      },
+      {
+        "id": "de58e34e-70a2-41d9-9b37-0fe296ebcb33",
+        "name": "Font Felix",
+        "municipality": "Gelida",
+        "distance_m": 112.3,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/de58e34e-70a2-41d9-9b37-0fe296ebcb33"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "928e3485-c48d-414a-8a25-b05e22de8bbd",
+        "name": "Font de can Sàbat",
+        "municipality": "Gelida",
+        "distance_m": 0.0,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/928e3485-c48d-414a-8a25-b05e22de8bbd"
+      }
+    ],
+    "status": "within_50m"
+  },
+  {
+    "id": "2800",
+    "name": "Font de Can Morral del Riu",
+    "town": "Abrera",
+    "comarca": "Baix Llobregat",
+    "lat": 41.5259,
+    "lng": 1.9089,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=2800",
+    "nearest": {
+      "id": "3cdc041d-baad-4505-9323-4eeee7cb43d1",
+      "name": "Font de la Casa Rigla",
+      "municipality": "Abrera",
+      "distance_m": 221.07,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/3cdc041d-baad-4505-9323-4eeee7cb43d1"
+    },
+    "within_200m": [],
+    "same_name_within_1km": [],
+    "status": "beyond_200m"
+  },
+  {
+    "id": "1232",
+    "name": "Font Vella",
+    "town": "Terrassa",
+    "comarca": "Vallès Occidental",
+    "lat": 41.5626,
+    "lng": 2.0121,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=1232",
+    "nearest": {
+      "id": "f8228739-eaf5-49c3-b020-8aefa7bd28aa",
+      "name": "Font Vella",
+      "municipality": "Terrassa",
+      "distance_m": 62.22,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/f8228739-eaf5-49c3-b020-8aefa7bd28aa"
+    },
+    "within_200m": [
+      {
+        "id": "f8228739-eaf5-49c3-b020-8aefa7bd28aa",
+        "name": "Font Vella",
+        "municipality": "Terrassa",
+        "distance_m": 62.22,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/f8228739-eaf5-49c3-b020-8aefa7bd28aa"
+      },
+      {
+        "id": "32dd375d-6943-4924-89b6-e17cc5ae5742",
+        "name": null,
+        "municipality": "Terrassa",
+        "distance_m": 123.0,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/32dd375d-6943-4924-89b6-e17cc5ae5742"
+      },
+      {
+        "id": "a152df8f-8943-4f36-bd25-47f3e45ead46",
+        "name": null,
+        "municipality": "Terrassa",
+        "distance_m": 134.1,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/a152df8f-8943-4f36-bd25-47f3e45ead46"
+      },
+      {
+        "id": "69f7ea40-34ce-4edd-9fe3-9fb21236f428",
+        "name": null,
+        "municipality": "Terrassa",
+        "distance_m": 182.01,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/69f7ea40-34ce-4edd-9fe3-9fb21236f428"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "f8228739-eaf5-49c3-b020-8aefa7bd28aa",
+        "name": "Font Vella",
+        "municipality": "Terrassa",
+        "distance_m": 62.22,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/f8228739-eaf5-49c3-b020-8aefa7bd28aa"
+      }
+    ],
+    "status": "between_50_and_200m"
+  },
+  {
+    "id": "0603",
+    "name": "Font de Sant Josep",
+    "town": "L'Espluga de Francolí",
+    "comarca": "Conca de Barberà",
+    "lat": 41.3729,
+    "lng": 1.1107,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0603",
+    "nearest": {
+      "id": "af2c2e9a-574c-483a-b735-e5f7e43a33f3",
+      "name": "Font de la Santa Fe",
+      "municipality": "L'Espluga de Francolí",
+      "distance_m": 22.24,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/af2c2e9a-574c-483a-b735-e5f7e43a33f3"
+    },
+    "within_200m": [
+      {
+        "id": "af2c2e9a-574c-483a-b735-e5f7e43a33f3",
+        "name": "Font de la Santa Fe",
+        "municipality": "L'Espluga de Francolí",
+        "distance_m": 22.24,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/af2c2e9a-574c-483a-b735-e5f7e43a33f3"
+      },
+      {
+        "id": "b3cf283e-6778-4797-abb7-b395eac7478b",
+        "name": "Font de Sant Jeroni",
+        "municipality": "L'Espluga de Francolí",
+        "distance_m": 67.24,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/b3cf283e-6778-4797-abb7-b395eac7478b"
+      },
+      {
+        "id": "e4bb742e-1112-4e8b-b623-58b351ac34ff",
+        "name": "Font de l'Àngel",
+        "municipality": "L'Espluga de Francolí",
+        "distance_m": 113.98,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/e4bb742e-1112-4e8b-b623-58b351ac34ff"
+      },
+      {
+        "id": "1e62f18d-52c2-431a-8a6d-27ab2d6db9a9",
+        "name": "Font de la Trinitat",
+        "municipality": "L'Espluga de Francolí",
+        "distance_m": 176.64,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/1e62f18d-52c2-431a-8a6d-27ab2d6db9a9"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "2896",
+    "name": "Font de Baix d'Estaon",
+    "town": "Estaon",
+    "comarca": "Pallars Sobirà",
+    "lat": 42.5876,
+    "lng": 1.211,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=2896",
+    "nearest": {
+      "id": "6cb97dac-6da0-4ff9-9e39-07be5d760b3b",
+      "name": "font",
+      "municipality": "Vall de Cardós",
+      "distance_m": 65.39,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/6cb97dac-6da0-4ff9-9e39-07be5d760b3b"
+    },
+    "within_200m": [
+      {
+        "id": "6cb97dac-6da0-4ff9-9e39-07be5d760b3b",
+        "name": "font",
+        "municipality": "Vall de Cardós",
+        "distance_m": 65.39,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/6cb97dac-6da0-4ff9-9e39-07be5d760b3b"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "between_50_and_200m"
+  },
+  {
+    "id": "2256",
+    "name": "Font de la Madriguera o del Gos",
+    "town": "Taradell",
+    "comarca": "Osona",
+    "lat": 41.8858,
+    "lng": 2.2765,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=2256",
+    "nearest": {
+      "id": "4f133367-0451-448a-99ba-0052a121714d",
+      "name": "Font del Gos o Font de la Madriguera",
+      "municipality": "Taradell",
+      "distance_m": 19.94,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/4f133367-0451-448a-99ba-0052a121714d"
+    },
+    "within_200m": [
+      {
+        "id": "4f133367-0451-448a-99ba-0052a121714d",
+        "name": "Font del Gos o Font de la Madriguera",
+        "municipality": "Taradell",
+        "distance_m": 19.94,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/4f133367-0451-448a-99ba-0052a121714d"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "0023",
+    "name": "Font del Senglar",
+    "town": "Teià",
+    "comarca": "Maresme",
+    "lat": 41.5106,
+    "lng": 2.3183,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0023",
+    "nearest": {
+      "id": "57cd3f83-f712-4c1b-8f43-18ff0def4c83",
+      "name": "Font del Senglar",
+      "municipality": "Teià",
+      "distance_m": 18.03,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/57cd3f83-f712-4c1b-8f43-18ff0def4c83"
+    },
+    "within_200m": [
+      {
+        "id": "57cd3f83-f712-4c1b-8f43-18ff0def4c83",
+        "name": "Font del Senglar",
+        "municipality": "Teià",
+        "distance_m": 18.03,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/57cd3f83-f712-4c1b-8f43-18ff0def4c83"
+      },
+      {
+        "id": "bd0e2d76-4538-4ba8-a0ff-be7912a50971",
+        "name": "Font del Grill",
+        "municipality": "Teià",
+        "distance_m": 170.53,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/bd0e2d76-4538-4ba8-a0ff-be7912a50971"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "57cd3f83-f712-4c1b-8f43-18ff0def4c83",
+        "name": "Font del Senglar",
+        "municipality": "Teià",
+        "distance_m": 18.03,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/57cd3f83-f712-4c1b-8f43-18ff0def4c83"
+      }
+    ],
+    "status": "within_50m"
+  },
+  {
+    "id": "2883",
+    "name": "Font de Sant Feliu de Boada",
+    "town": "Sant Feliu de Boada",
+    "comarca": "Baix Empordà",
+    "lat": 41.9741,
+    "lng": 3.1253,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=2883",
+    "nearest": {
+      "id": "7b1524dc-962b-41ea-9455-5b9aed934003",
+      "name": null,
+      "municipality": "Palau-sator",
+      "distance_m": 6.19,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/7b1524dc-962b-41ea-9455-5b9aed934003"
+    },
+    "within_200m": [
+      {
+        "id": "7b1524dc-962b-41ea-9455-5b9aed934003",
+        "name": null,
+        "municipality": "Palau-sator",
+        "distance_m": 6.19,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/7b1524dc-962b-41ea-9455-5b9aed934003"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "3134",
+    "name": "Surgències dels Prats de Baix",
+    "town": "La Vall de Boí",
+    "comarca": "Alta Ribagorça",
+    "lat": 42.5435,
+    "lng": 0.8564,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=3134",
+    "nearest": {
+      "id": "f7c5cd70-9885-458f-a9b5-d3280b567135",
+      "name": "Font de Boí",
+      "municipality": "la Vall de Boí",
+      "distance_m": 2002.83,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/f7c5cd70-9885-458f-a9b5-d3280b567135"
+    },
+    "within_200m": [],
+    "same_name_within_1km": [],
+    "status": "beyond_200m"
+  },
+  {
+    "id": "1692",
+    "name": "Font Negra",
+    "town": "Berga",
+    "comarca": "Berguedà",
+    "lat": 42.1127,
+    "lng": 1.8323,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=1692",
+    "nearest": {
+      "id": "e45063b0-3557-4178-9006-1c435d3bb179",
+      "name": "Font Negra - Ajmt Berga",
+      "municipality": "Berga",
+      "distance_m": 0.0,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/e45063b0-3557-4178-9006-1c435d3bb179"
+    },
+    "within_200m": [
+      {
+        "id": "e45063b0-3557-4178-9006-1c435d3bb179",
+        "name": "Font Negra - Ajmt Berga",
+        "municipality": "Berga",
+        "distance_m": 0.0,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/e45063b0-3557-4178-9006-1c435d3bb179"
+      },
+      {
+        "id": "c029d8b8-f006-4e55-94ad-454a20b6e92c",
+        "name": "Font del Berenador de la Font Negra",
+        "municipality": "Berga",
+        "distance_m": 66.68,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/c029d8b8-f006-4e55-94ad-454a20b6e92c"
+      },
+      {
+        "id": "d08fbf71-7f9f-44bf-8e5e-b4aea1a0e039",
+        "name": "Font de la Mina - Ajmt Berga",
+        "municipality": "Berga",
+        "distance_m": 91.62,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/d08fbf71-7f9f-44bf-8e5e-b4aea1a0e039"
+      },
+      {
+        "id": "f04ce20b-738b-44c0-8720-a70ccc829a63",
+        "name": "Font Nostra",
+        "municipality": "Berga",
+        "distance_m": 126.29,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/f04ce20b-738b-44c0-8720-a70ccc829a63"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "0057",
+    "name": "Font del Sofre",
+    "town": "Llívia",
+    "comarca": "Cerdanya",
+    "lat": 42.4724,
+    "lng": 1.9866,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0057",
+    "nearest": {
+      "id": "dd6b1b1d-45cd-40bb-93a7-a97884213bfd",
+      "name": "Font del Sofre",
+      "municipality": "Llívia",
+      "distance_m": 0.0,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/dd6b1b1d-45cd-40bb-93a7-a97884213bfd"
+    },
+    "within_200m": [
+      {
+        "id": "dd6b1b1d-45cd-40bb-93a7-a97884213bfd",
+        "name": "Font del Sofre",
+        "municipality": "Llívia",
+        "distance_m": 0.0,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/dd6b1b1d-45cd-40bb-93a7-a97884213bfd"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "dd6b1b1d-45cd-40bb-93a7-a97884213bfd",
+        "name": "Font del Sofre",
+        "municipality": "Llívia",
+        "distance_m": 0.0,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/dd6b1b1d-45cd-40bb-93a7-a97884213bfd"
+      }
+    ],
+    "status": "within_50m"
+  },
+  {
+    "id": "3428",
+    "name": "Font del Safareig de les Avellanes",
+    "town": "Les Avellanes",
+    "comarca": "Noguera",
+    "lat": 41.9077,
+    "lng": 0.7654,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=3428",
+    "nearest": {
+      "id": "b9952c38-c60b-41a1-b5bf-c025eb93f418",
+      "name": "Font de les Avellanes",
+      "municipality": "les Avellanes i Santa Linya",
+      "distance_m": 108.29,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/b9952c38-c60b-41a1-b5bf-c025eb93f418"
+    },
+    "within_200m": [
+      {
+        "id": "b9952c38-c60b-41a1-b5bf-c025eb93f418",
+        "name": "Font de les Avellanes",
+        "municipality": "les Avellanes i Santa Linya",
+        "distance_m": 108.29,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/b9952c38-c60b-41a1-b5bf-c025eb93f418"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "between_50_and_200m"
+  },
+  {
+    "id": "3091",
+    "name": "Font dels Enginyers",
+    "town": "Bagà",
+    "comarca": "Berguedà",
+    "lat": 42.268,
+    "lng": 1.8517,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=3091",
+    "nearest": {
+      "id": "620fed58-2702-4b69-b2ff-7aecef0944ce",
+      "name": null,
+      "municipality": "Bagà",
+      "distance_m": 1123.71,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/620fed58-2702-4b69-b2ff-7aecef0944ce"
+    },
+    "within_200m": [],
+    "same_name_within_1km": [],
+    "status": "beyond_200m"
+  },
+  {
+    "id": "0222",
+    "name": "Font del Gavatx",
+    "town": "Argentona",
+    "comarca": "Maresme",
+    "lat": 41.5576,
+    "lng": 2.3802,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0222",
+    "nearest": {
+      "id": "8e8dc4ac-5cc7-4569-8628-bb34d7be9758",
+      "name": "Font del Gavatx",
+      "municipality": "Argentona",
+      "distance_m": 16.5,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/8e8dc4ac-5cc7-4569-8628-bb34d7be9758"
+    },
+    "within_200m": [
+      {
+        "id": "8e8dc4ac-5cc7-4569-8628-bb34d7be9758",
+        "name": "Font del Gavatx",
+        "municipality": "Argentona",
+        "distance_m": 16.5,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/8e8dc4ac-5cc7-4569-8628-bb34d7be9758"
+      },
+      {
+        "id": "8a501566-2777-4115-bb17-6d91093169d4",
+        "name": "Font dels Castanyers",
+        "municipality": "Argentona",
+        "distance_m": 112.57,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/8a501566-2777-4115-bb17-6d91093169d4"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "8e8dc4ac-5cc7-4569-8628-bb34d7be9758",
+        "name": "Font del Gavatx",
+        "municipality": "Argentona",
+        "distance_m": 16.5,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/8e8dc4ac-5cc7-4569-8628-bb34d7be9758"
+      }
+    ],
+    "status": "within_50m"
+  },
+  {
+    "id": "1274",
+    "name": "Font dels Minyons",
+    "town": "Viladrau",
+    "comarca": "Osona",
+    "lat": 41.8194,
+    "lng": 2.4085,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=1274",
+    "nearest": {
+      "id": "15cf2752-42ca-4731-8740-9d91c0229eca",
+      "name": "Font de la Beguda o dels Brucs Bords o dels Minyons",
+      "municipality": "Viladrau",
+      "distance_m": 45.24,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/15cf2752-42ca-4731-8740-9d91c0229eca"
+    },
+    "within_200m": [
+      {
+        "id": "15cf2752-42ca-4731-8740-9d91c0229eca",
+        "name": "Font de la Beguda o dels Brucs Bords o dels Minyons",
+        "municipality": "Viladrau",
+        "distance_m": 45.24,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/15cf2752-42ca-4731-8740-9d91c0229eca"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "1819",
+    "name": "Font del Ferro",
+    "town": "Tona",
+    "comarca": "Osona",
+    "lat": 41.8488,
+    "lng": 2.2174,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=1819",
+    "nearest": {
+      "id": "f349e5ca-76bc-4061-ab65-ad0e07c4f28c",
+      "name": null,
+      "municipality": "Tona",
+      "distance_m": 576.65,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/f349e5ca-76bc-4061-ab65-ad0e07c4f28c"
+    },
+    "within_200m": [],
+    "same_name_within_1km": [],
+    "status": "beyond_200m"
+  },
+  {
+    "id": "0650",
+    "name": "Font de Núria",
+    "town": "Queralbs",
+    "comarca": "Ripollès",
+    "lat": 42.3958,
+    "lng": 2.1522,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0650",
+    "nearest": {
+      "id": "2a166d46-a85a-4795-97d9-533e92b115a1",
+      "name": "Font del doctor Tarrés",
+      "municipality": "Queralbs",
+      "distance_m": 23.22,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/2a166d46-a85a-4795-97d9-533e92b115a1"
+    },
+    "within_200m": [
+      {
+        "id": "2a166d46-a85a-4795-97d9-533e92b115a1",
+        "name": "Font del doctor Tarrés",
+        "municipality": "Queralbs",
+        "distance_m": 23.22,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/2a166d46-a85a-4795-97d9-533e92b115a1"
+      },
+      {
+        "id": "ac755d92-5850-40c5-8455-760b3d09657e",
+        "name": "Font Dr. Bassols",
+        "municipality": "Queralbs",
+        "distance_m": 47.03,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/ac755d92-5850-40c5-8455-760b3d09657e"
+      },
+      {
+        "id": "12e17871-329a-4b63-a7d6-4e5d99354bd0",
+        "name": "Font de Dr. Bassols",
+        "municipality": "Queralbs",
+        "distance_m": 83.86,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/12e17871-329a-4b63-a7d6-4e5d99354bd0"
+      }
+    ],
+    "same_name_within_1km": [],
+    "status": "within_50m"
+  },
+  {
+    "id": "0444",
+    "name": "Font de la plaça del Casino",
+    "town": "Alp",
+    "comarca": "Cerdanya",
+    "lat": 42.3726,
+    "lng": 1.8866,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=0444",
+    "nearest": {
+      "id": "e25ad5f2-f5a7-43e4-9797-6e0e55e77dbd",
+      "name": "Font de la Plaça del Casino",
+      "municipality": "Alp",
+      "distance_m": 5.11,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/e25ad5f2-f5a7-43e4-9797-6e0e55e77dbd"
+    },
+    "within_200m": [
+      {
+        "id": "e25ad5f2-f5a7-43e4-9797-6e0e55e77dbd",
+        "name": "Font de la Plaça del Casino",
+        "municipality": "Alp",
+        "distance_m": 5.11,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/e25ad5f2-f5a7-43e4-9797-6e0e55e77dbd"
+      },
+      {
+        "id": "466eb7e3-6ce4-4e0a-a5d7-4d5b40e01ac3",
+        "name": "Font de la placeta de l’estrella",
+        "municipality": "Alp",
+        "distance_m": 40.03,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/466eb7e3-6ce4-4e0a-a5d7-4d5b40e01ac3"
+      },
+      {
+        "id": "1129b45c-f7f4-4695-8846-baf82b6644cd",
+        "name": "Font de Sant Isidre",
+        "municipality": "Alp",
+        "distance_m": 108.3,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/1129b45c-f7f4-4695-8846-baf82b6644cd"
+      },
+      {
+        "id": "3bccab4d-862b-43a2-8a2c-059f3008ea02",
+        "name": "Font de la Plaça de la Santa Creu",
+        "municipality": "Alp",
+        "distance_m": 124.55,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/3bccab4d-862b-43a2-8a2c-059f3008ea02"
+      },
+      {
+        "id": "c76dc771-303d-4174-ab2a-38138a38028b",
+        "name": "Font de la Mare de Déu de la Guia o de Cal Balet",
+        "municipality": "Alp",
+        "distance_m": 143.45,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/c76dc771-303d-4174-ab2a-38138a38028b"
+      },
+      {
+        "id": "e77093c3-5075-40ed-b72b-01347f66a967",
+        "name": "Font del carrer Migdia",
+        "municipality": "Alp",
+        "distance_m": 169.89,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/e77093c3-5075-40ed-b72b-01347f66a967"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "e25ad5f2-f5a7-43e4-9797-6e0e55e77dbd",
+        "name": "Font de la Plaça del Casino",
+        "municipality": "Alp",
+        "distance_m": 5.11,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/e25ad5f2-f5a7-43e4-9797-6e0e55e77dbd"
+      }
+    ],
+    "status": "within_50m"
+  },
+  {
+    "id": "2653",
+    "name": "Font de la Boada",
+    "town": "Els Hostalets d'en Bas",
+    "comarca": "Garrotxa",
+    "lat": 42.0914,
+    "lng": 2.4624,
+    "source_url": "https://www.encos.cat/fonts/MostraFonts.php?IDprovi=2653",
+    "nearest": {
+      "id": "bffca5c0-755d-41e9-86d4-060f685e811f",
+      "name": "Font de la Boada",
+      "municipality": "La Vall d'en Bas",
+      "distance_m": 107.84,
+      "visible": true,
+      "url": "https://fontapp.net/fonts/bffca5c0-755d-41e9-86d4-060f685e811f"
+    },
+    "within_200m": [
+      {
+        "id": "bffca5c0-755d-41e9-86d4-060f685e811f",
+        "name": "Font de la Boada",
+        "municipality": "La Vall d'en Bas",
+        "distance_m": 107.84,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/bffca5c0-755d-41e9-86d4-060f685e811f"
+      }
+    ],
+    "same_name_within_1km": [
+      {
+        "id": "bffca5c0-755d-41e9-86d4-060f685e811f",
+        "name": "Font de la Boada",
+        "municipality": "La Vall d'en Bas",
+        "distance_m": 107.84,
+        "visible": true,
+        "url": "https://fontapp.net/fonts/bffca5c0-755d-41e9-86d4-060f685e811f"
+      }
+    ],
+    "status": "between_50_and_200m"
+  }
+]

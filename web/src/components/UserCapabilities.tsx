@@ -95,7 +95,20 @@ export function UserCapabilities() {
           // dicho lo que quería, y pedirle además un clic en «Mirar» es un paso de más.
           onChange={(_, v) => { if (typeof v === 'string') { setNombre(v); void mira(v) } }}
           sx={{ flex: 1, maxWidth: 320 }}
-          renderInput={(params) => <TextField {...params} size="small" label={t('admin.caps.search')} />}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              size="small"
+              label={t('admin.caps.search')}
+              // Sin esto Safari lo toma por un campo de usuario y ofrece autocompletar una
+              // credencial de Contraseñas. `autoComplete="off"` más un `name` que no suena
+              // a login lo evita; aquí no vale `type="search"` porque rompería el desplegable.
+              slotProps={{
+                ...params.slotProps,
+                htmlInput: { ...params.slotProps.htmlInput, autoComplete: 'off', name: 'caps-lookup' },
+              }}
+            />
+          )}
         />
         <Button type="submit" variant="outlined" disabled={cargando || !nombre.trim()}>
           {t('admin.caps.lookUp')}

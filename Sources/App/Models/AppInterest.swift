@@ -15,15 +15,18 @@ final class AppInterest: Model, Content, @unchecked Sendable {
     @Field(key: "wants") var wants: Bool
     // Plataforma detectada en el cliente (ios/android/other), solo estadística.
     @OptionalField(key: "platform") var platform: String?
+    // Preferencia de precio si está interesado: 'one_time' o 'subscription', null si dijo que no.
+    @OptionalField(key: "pricing_preference") var pricingPreference: String?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
     @Timestamp(key: "updated_at", on: .update) var updatedAt: Date?
 
     init() {}
 
-    init(id: UUID? = nil, userID: UUID? = nil, wants: Bool, platform: String? = nil) {
+    init(id: UUID? = nil, userID: UUID? = nil, wants: Bool, platform: String? = nil, pricingPreference: String? = nil) {
         self.id = id
         self.$user.id = userID
         self.wants = wants
         self.platform = platform
+        self.pricingPreference = pricingPreference
     }
 }

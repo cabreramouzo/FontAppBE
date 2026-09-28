@@ -1,0 +1,36 @@
+{
+  "backup": "fontapp-20260913-090003.dump",
+  "backup_time": "2026-09-13 09:00:03 CEST",
+  "input_sha256": "aafcbaebca4729181a83541adbd432f630dbf4c052359957b3e6c148a26b462d",
+  "total_encos": 3265,
+  "unique_encos_ids": 3265,
+  "fonts_in_backup": 168823,
+  "with_coordinates": 3260,
+  "within_radius": {
+    "10": 1225,
+    "25": 1818,
+    "50": 2072,
+    "75": 2197,
+    "100": 2295,
+    "150": 2445,
+    "200": 2559,
+    "500": 2889,
+    "1000": 3058
+  },
+  "statuses": {
+    "within_50m": 2072,
+    "between_50_and_200m": 487,
+    "beyond_200m": 701,
+    "invalid_coordinates": 1,
+    "no_coordinates": 4
+  },
+  "sample_seed": 20260920,
+  "sample_statuses": {
+    "within_50m": 21,
+    "between_50_and_200m": 5,
+    "beyond_200m": 4
+  },
+  "beyond_200m_same_name_within_1km": 28,
+  "nearest_hidden": 1,
+  "unusable_coordinates": 5
+}
