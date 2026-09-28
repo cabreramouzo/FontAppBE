@@ -119,7 +119,7 @@ export function AppInterestDashboard() {
           {/* Platform Breakdown */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
             {Object.entries(dashboard.byPlatform).map(([platform, stats]) => (
-              <Grid item xs={12} md={4} key={platform}>
+              <Grid size={{ xs: 12, md: 4 }} key={platform}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
