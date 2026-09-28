@@ -31,12 +31,13 @@ struct InterestController: RouteCollection {
                 existing.wants = dto.wants
                 existing.platform = dto.platform
                 existing.pricingPreference = dto.pricingPreference
+                existing.pricePoint = dto.pricePoint
                 try await existing.save(on: req.db)
             } else {
-                try await AppInterest(userID: userID, wants: dto.wants, platform: dto.platform, pricingPreference: dto.pricingPreference).save(on: req.db)
+                try await AppInterest(userID: userID, wants: dto.wants, platform: dto.platform, pricingPreference: dto.pricingPreference, pricePoint: dto.pricePoint).save(on: req.db)
             }
         } else {
-            try await AppInterest(wants: dto.wants, platform: dto.platform, pricingPreference: dto.pricingPreference).save(on: req.db)
+            try await AppInterest(wants: dto.wants, platform: dto.platform, pricingPreference: dto.pricingPreference, pricePoint: dto.pricePoint).save(on: req.db)
         }
         return .noContent
     }
@@ -52,7 +53,7 @@ struct InterestController: RouteCollection {
         // Solo los votos con usuario identificado se listan (los anónimos solo cuentan).
         let voters = all.compactMap { i -> InterestVoter? in
             guard let uid = i.$user.id, let username = names[uid] else { return nil }
-            return InterestVoter(username: username, wants: i.wants, platform: i.platform, pricingPreference: i.pricingPreference, at: i.updatedAt ?? i.createdAt)
+            return InterestVoter(username: username, wants: i.wants, platform: i.platform, pricingPreference: i.pricingPreference, pricePoint: i.pricePoint, at: i.updatedAt ?? i.createdAt)
         }
         return InterestStats(yes: yes, no: all.count - yes, total: all.count, voters: voters)
     }
@@ -62,12 +63,14 @@ struct VoteDTO: Content {
     let wants: Bool
     let platform: String?
     let pricingPreference: String? // 'one_time' | 'subscription'
+    let pricePoint: String? // '1', '2', '5', '10', '1_month', '2_month', '5_month', '10_month'
 }
 
 extension VoteDTO: Validatable {
     static func validations(_ validations: inout Validations) {
         validations.add("platform", as: String.self, is: .in("ios", "android", "other"), required: false)
         validations.add("pricingPreference", as: String.self, is: .in("one_time", "subscription"), required: false)
+        validations.add("pricePoint", as: String.self, is: .in("1", "2", "5", "10", "1_month", "2_month", "5_month", "10_month"), required: false)
     }
 }
 
@@ -76,6 +79,7 @@ struct InterestVoter: Content {
     let wants: Bool
     let platform: String?
     let pricingPreference: String?
+    let pricePoint: String?
     let at: Date?
 }
 

@@ -30,7 +30,8 @@ export function AppInterestBanner() {
   const [listo, setListo] = useState(false)
   const open = useTurno('interest', listo)
   const [thanks, setThanks] = useState(false)
-  const [step, setStep] = useState<'interest' | 'pricing'>('interest')
+  const [step, setStep] = useState<'interest' | 'pricing' | 'pricePoint'>('interest')
+  const [pricingPreference, setPricingPreference] = useState<'one_time' | 'subscription' | null>(null)
 
   useEffect(() => {
     // Ya respondió (o lo cerró) antes: no volvemos a molestar.
@@ -66,11 +67,16 @@ export function AppInterestBanner() {
     }
   }
 
-  async function votePricing(pricingPreference: 'one_time' | 'subscription') {
+  function selectPricingModel(model: 'one_time' | 'subscription') {
+    setPricingPreference(model)
+    setStep('pricePoint')
+  }
+
+  async function votePricePoint(pricePoint: string) {
     remember('yes')
     setThanks(true)
     try {
-      await submitAppInterest(true, detectPlatform(), pricingPreference)
+      await submitAppInterest(true, detectPlatform(), pricingPreference || undefined, pricePoint)
     } catch {
       // Medición best-effort: si falla el envío, no molestamos al usuario.
     }
@@ -78,6 +84,23 @@ export function AppInterestBanner() {
     setTimeout(() => {
       setListo(false)
       setStep('interest')
+      setPricingPreference(null)
+    }, 2200)
+  }
+
+  async function skipPricePoint() {
+    remember('yes')
+    setThanks(true)
+    try {
+      await submitAppInterest(true, detectPlatform(), pricingPreference || undefined)
+    } catch {
+      // Medición best-effort: si falla el envío, no molestamos al usuario.
+    }
+    // Cierre suave tras el agradecimiento.
+    setTimeout(() => {
+      setListo(false)
+      setStep('interest')
+      setPricingPreference(null)
     }, 2200)
   }
 
@@ -85,6 +108,7 @@ export function AppInterestBanner() {
     remember('dismissed')
     setListo(false)
     setStep('interest')
+    setPricingPreference(null)
   }
 
   return (
@@ -122,19 +146,51 @@ export function AppInterestBanner() {
                     </Button>
                   </Box>
                 </>
-              ) : (
+              ) : step === 'pricing' ? (
                 <>
                   <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
                     {t('appWish.pricingQuestion')}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button size="small" variant="contained" disableElevation onClick={() => votePricing('one_time')}>
+                    <Button size="small" variant="contained" disableElevation onClick={() => selectPricingModel('one_time')}>
                       {t('appWish.oneTime')}
                     </Button>
-                    <Button size="small" variant="outlined" onClick={() => votePricing('subscription')}>
+                    <Button size="small" variant="outlined" onClick={() => selectPricingModel('subscription')}>
                       {t('appWish.subscription')}
                     </Button>
                   </Box>
+                </>
+              ) : (
+                <>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                    {pricingPreference === 'one_time'
+                      ? t('appWish.pricePointQuestionOneTime')
+                      : t('appWish.pricePointQuestionSubscription')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                    {(pricingPreference === 'one_time'
+                      ? ['1', '2', '5', '10']
+                      : ['1_month', '2_month', '5_month', '10_month']
+                    ).map((pricePoint) => (
+                      <Button
+                        key={pricePoint}
+                        size="small"
+                        variant="outlined"
+                        onClick={() => votePricePoint(pricePoint)}
+                        sx={{ minWidth: 'auto', px: 1.5 }}
+                      >
+                        {t(`appWish.price.${pricePoint}`)}
+                      </Button>
+                    ))}
+                  </Box>
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={skipPricePoint}
+                    sx={{ mt: 1, textTransform: 'none', fontSize: '0.875rem' }}
+                  >
+                    {t('appWish.skip')}
+                  </Button>
                 </>
               )}
             </Box>

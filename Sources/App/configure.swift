@@ -187,6 +187,8 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(EnableUnaccent())               // buscar sin que los acentos cuenten
     app.migrations.add(AddRemoteDistanceToFontComment()) // reviews written far from the fountain
     app.migrations.add(CreateApnsDevice())             // iPhones with the app, for APNs
+    app.migrations.add(AddPricingPreferenceToAppInterest()) // one_time vs subscription preference
+    app.migrations.add(AddPricePointToAppInterest())        // specific price point: 1€, 2€, 5€, 10€, etc.
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

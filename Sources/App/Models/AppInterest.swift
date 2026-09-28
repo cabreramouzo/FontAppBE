@@ -17,16 +17,19 @@ final class AppInterest: Model, Content, @unchecked Sendable {
     @OptionalField(key: "platform") var platform: String?
     // Preferencia de precio si está interesado: 'one_time' o 'subscription', null si dijo que no.
     @OptionalField(key: "pricing_preference") var pricingPreference: String?
+    // Punto de precio específico: '1', '2', '5', '10', '1_month', '2_month', '5_month', '10_month'.
+    @OptionalField(key: "price_point") var pricePoint: String?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
     @Timestamp(key: "updated_at", on: .update) var updatedAt: Date?
 
     init() {}
 
-    init(id: UUID? = nil, userID: UUID? = nil, wants: Bool, platform: String? = nil, pricingPreference: String? = nil) {
+    init(id: UUID? = nil, userID: UUID? = nil, wants: Bool, platform: String? = nil, pricingPreference: String? = nil, pricePoint: String? = nil) {
         self.id = id
         self.$user.id = userID
         self.wants = wants
         self.platform = platform
         self.pricingPreference = pricingPreference
+        self.pricePoint = pricePoint
     }
 }
