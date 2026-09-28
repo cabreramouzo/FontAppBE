@@ -7,6 +7,9 @@ import XCTVapor
 final class APNsTests: XCTestCase {
     func testSinClaveNoHayPushDeIOSYNoEsUnError() {
         XCTAssertNil(APNs(keyID: nil, teamID: nil, key: nil, topic: nil))
+        // El topic no hace falta: es el bundle id.
+        let apns = APNs(keyID: "K", teamID: "T", key: P256.Signing.PrivateKey().pemRepresentation, topic: nil)
+        XCTAssertEqual(apns?.topic, "net.fontapp.FontApp")
         XCTAssertNil(APNs(keyID: "K", teamID: "T", key: "no es un pem", topic: "net.fontapp.FontApp"))
     }
 

@@ -16,7 +16,8 @@ import Vapor
 /// - `APNS_KEY_ID`: el identificador de la clave (10 caracteres).
 /// - `APNS_TEAM_ID`: el del equipo.
 /// - `APNS_KEY`: el contenido del `.p8` (PEM). En Fly, un secreto: nunca en el repo.
-/// - `APNS_TOPIC`: el bundle id de la app (`net.fontapp.FontApp`).
+/// - `APNS_TOPIC`: el bundle id de la app. Opcional: por defecto `net.fontapp.FontApp`.
+///   No es un secreto, y faltar solo él dejaba el push de iOS apagado sin decir nada.
 ///
 /// Sin ellas no hay push de iOS y no es un error, igual que sin VAPID.
 ///
@@ -33,8 +34,11 @@ struct APNs: Sendable {
     private let key: P256.Signing.PrivateKey
     private let token = TokenCache()
 
+    static let defaultTopic = "net.fontapp.FontApp"
+
     init?(keyID: String?, teamID: String?, key pem: String?, topic: String?) {
-        guard let keyID, let teamID, let topic, let pem,
+        let topic = topic ?? Self.defaultTopic
+        guard let keyID, let teamID, let pem,
               let key = try? P256.Signing.PrivateKey(pemRepresentation: pem.replacingOccurrences(of: "\\n", with: "\n"))
         else { return nil }
         self.keyID = keyID

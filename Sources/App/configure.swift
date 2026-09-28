@@ -98,6 +98,10 @@ public func configure(_ app: Application) async throws {
     // Los avisos de la app de iOS (ver `APNs`). Mismo criterio: sin clave, no hay.
     app.apns = APNs(keyID: Environment.get("APNS_KEY_ID"), teamID: Environment.get("APNS_TEAM_ID"),
                     key: Environment.get("APNS_KEY"), topic: Environment.get("APNS_TOPIC"))
+    // Que se sepa al arrancar, y no semanas después por un aviso que no llega.
+    if app.apns == nil, app.environment == .production {
+        app.logger.notice("Sin APNS_KEY_ID, APNS_TEAM_ID o APNS_KEY válidos: los avisos de la app de iOS están apagados.")
+    }
     if app.vapid == nil, app.environment == .production {
         app.logger.notice("Sin claves VAPID: las notificaciones push están apagadas.")
     }
