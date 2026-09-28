@@ -1,3 +1,4 @@
+import Crypto
 import Fluent
 import Foundation
 import SQLKit
@@ -15,6 +16,18 @@ private struct StubGoogleVerifier: GoogleTokenVerifying {
     func verify(_ credential: String, clientID: String, on client: any Client) async throws -> GoogleProfile {
         profile
     }
+}
+
+private final class StubAppleSignIn: AppleSigningIn, @unchecked Sendable {
+    let profile: AppleProfile
+    var revoked: [String] = []
+    init(profile: AppleProfile) { self.profile = profile }
+    func verify(_ identityToken: String, clientID: String, on client: any Client) async throws -> AppleProfile {
+        XCTAssertEqual(clientID, "net.fontapp.FontApp")
+        return profile
+    }
+    func refreshToken(for code: String, clientID: String, on client: any Client) async -> String? { "refresh-\(code)" }
+    func revoke(_ refreshToken: String, clientID: String, on client: any Client) async { revoked.append(refreshToken) }
 }
 
 // Tests de integración contra una BD real (fontapp_test). Cada test migra y revierte.
@@ -147,6 +160,86 @@ final class IntegrationTests: XCTestCase {
                 XCTAssertEqual(res.status, .badRequest)
             }
         }
+    }
+
+    func testAppleLoginCreatesAccountAndRevokesOnDeletion() async throws {
+        try await withApp { app in
+            let apple = StubAppleSignIn(profile: AppleProfile(
+                subject: "apple-subject-1", email: "abc123@privaterelay.appleid.com", authoritativeEmail: true))
+            app.appleSignIn = apple
+            var login: LoginResponse?
+            for attempt in 0..<2 {
+                try await app.test(.POST, "auth/apple", beforeRequest: { req in
+                    // Apple only gives the name the first time.
+                    try req.content.encode(AppleLoginDTO(identityToken: "signed", authorizationCode: "code\(attempt)",
+                                                         name: attempt == 0 ? "Marta Rovira" : nil, lang: "ca"))
+                }, afterResponse: { res in
+                    XCTAssertEqual(res.status, .ok)
+                    let answer = try res.content.decode(LoginResponse.self)
+                    XCTAssertEqual(answer.isNewUser, attempt == 0)
+                    XCTAssertEqual(answer.user.name, "Marta Rovira")
+                    XCTAssertEqual(answer.user.username, "marta-rovira")
+                    if let login { XCTAssertEqual(answer.user.id, login.user.id) }
+                    login = answer
+                })
+            }
+            let identity = try await AuthIdentity.query(on: app.db).first()
+            XCTAssertEqual(identity?.refreshToken, "refresh-code1")
+
+            let session = try XCTUnwrap(login)
+            try await app.test(.DELETE, "users/\(session.user.id!)", beforeRequest: { req in
+                req.headers.bearerAuthorization = BearerAuthorization(token: session.token)
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .noContent)
+            })
+            XCTAssertEqual(apple.revoked, ["refresh-code1"])
+        }
+    }
+
+    func testAppleDoesNotLinkThirdPartyEmailNorCreateWithoutEmail() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "existing")
+            let user = try await User.query(on: app.db).first()
+            user?.email = "existing@example.com"
+            try await user?.save(on: app.db)
+            app.appleSignIn = StubAppleSignIn(profile: AppleProfile(
+                subject: "apple-subject-2", email: "existing@example.com", authoritativeEmail: false))
+            try await app.test(.POST, "auth/apple", beforeRequest: { req in
+                try req.content.encode(AppleLoginDTO(identityToken: "signed"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .conflict)
+            })
+            app.appleSignIn = StubAppleSignIn(profile: AppleProfile(
+                subject: "apple-subject-3", email: nil, authoritativeEmail: false))
+            try await app.test(.POST, "auth/apple", beforeRequest: { req in
+                try req.content.encode(AppleLoginDTO(identityToken: "signed"))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .unauthorized)
+            })
+            let identityCount = try await AuthIdentity.query(on: app.db).count()
+            XCTAssertEqual(identityCount, 0)
+        }
+    }
+
+    func testAppleClientSecretIsASignedES256Token() throws {
+        let key = P256.Signing.PrivateKey()
+        XCTAssertNil(AppleClientSecret(keyID: nil, teamID: "T", key: key.pemRepresentation))
+        let secret = try XCTUnwrap(AppleClientSecret(keyID: "KEY", teamID: "TEAM", key: key.pemRepresentation))
+        let jwt = try XCTUnwrap(secret.jwt(clientID: "net.fontapp.FontApp", now: Date(timeIntervalSince1970: 1000)))
+        let parts = jwt.split(separator: ".").map(String.init)
+        XCTAssertEqual(parts.count, 3)
+        func decode(_ s: String) -> Data {
+            var b = s.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+            b += String(repeating: "=", count: (4 - b.count % 4) % 4)
+            return Data(base64Encoded: b)!
+        }
+        let claims = try JSONSerialization.jsonObject(with: decode(parts[1])) as? [String: Any]
+        XCTAssertEqual(claims?["iss"] as? String, "TEAM")
+        XCTAssertEqual(claims?["sub"] as? String, "net.fontapp.FontApp")
+        XCTAssertEqual(claims?["aud"] as? String, "https://appleid.apple.com")
+        XCTAssertEqual(claims?["exp"] as? Int, 1300)
+        let signature = try P256.Signing.ECDSASignature(rawRepresentation: decode(parts[2]))
+        XCTAssertTrue(key.publicKey.isValidSignature(signature, for: Data("\(parts[0]).\(parts[1])".utf8)))
     }
 
     private func withApp(_ test: (Application) async throws -> Void) async throws {

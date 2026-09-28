@@ -516,6 +516,12 @@ struct UserController: RouteCollection {
         // Revoca sesiones y peticiones de reseteo pendientes.
         try await UserToken.query(on: req.db).filter(\.$user.$id == userID).delete()
         try await PasswordReset.query(on: req.db).filter(\.$user.$id == userID).delete()
+        // Apple exige revocar el acceso de la app al borrar la cuenta (App Review 5.1.1(v)).
+        let appleTokens = try await AuthIdentity.query(on: req.db).filter(\.$user.$id == userID)
+            .filter(\.$provider == "apple").all().compactMap(\.refreshToken)
+        for token in appleTokens {
+            await req.application.appleSignIn.revoke(token, clientID: req.application.appleClientID, on: req.client)
+        }
         try await AuthIdentity.query(on: req.db).filter(\.$user.$id == userID).delete()
         try await PasskeyCredential.query(on: req.db).filter(\.$user.$id == userID).delete()
         try await PasskeyChallenge.query(on: req.db).filter(\.$user.$id == userID).delete()

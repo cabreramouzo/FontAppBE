@@ -16,6 +16,8 @@ struct AuthController: RouteCollection {
         auth.grouped(loginThrottle).grouped(UserCredentialsAuthenticator()).post("login", use: login)
         auth.grouped(RateLimitMiddleware(scope: "google-login", max: 10, window: 5 * 60))
             .post("google", use: google)
+        auth.grouped(RateLimitMiddleware(scope: "apple-login", max: 10, window: 5 * 60))
+            .post("apple", use: apple)
 
         // Recuperación de contraseña (público, con rate-limit para evitar spam/enumeración).
         auth.grouped(resetThrottle).post("forgot-password", use: forgotPassword)
@@ -54,46 +56,46 @@ struct AuthController: RouteCollection {
             throw AppError(.unauthorized, "auth.googleInvalid", "La identificación de Google no es válida")
         }
 
-        let user: User
-        var isNewUser = false
-        if let identity = try await AuthIdentity.query(on: req.db)
-            .filter(\.$provider == "google").filter(\.$subject == profile.subject)
-            .with(\.$user).first() {
-            guard identity.user.anonymizedAt == nil else { throw Abort(.unauthorized) }
-            user = identity.user
-        } else if let existing = try await User.query(on: req.db).filter(\.$email == profile.email).first() {
-            // Google solo es autoridad actual sobre Gmail y Workspace. Para una cuenta
-            // Google creada con correo de un tercero, el email no basta para apropiarse
-            // de una cuenta FontApp ya existente.
-            guard profile.authoritativeEmail else {
-                throw AppError(.conflict, "auth.googleLinkRequired",
-                               "Este correo ya tiene cuenta. Entra con tu contraseña para vincular Google")
-            }
-            guard existing.anonymizedAt == nil else { throw Abort(.unauthorized) }
-            try await AuthIdentity(provider: "google", subject: profile.subject,
-                                   userID: existing.requireID()).save(on: req.db)
-            user = existing
-        } else {
-            isNewUser = true
-            let username = try await availableGoogleUsername(email: profile.email, on: req.db)
-            let created = User(name: profile.name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-                                ?? username,
-                               username: username, email: profile.email,
-                               passwordHash: try req.password.hash([UInt8].random(count: 32).base64),
-                               lang: dto.lang, signupSource: UserController.cleanSource(dto.source))
-            try await req.db.transaction { db in
-                try await created.save(on: db)
-                try await AuthIdentity(provider: "google", subject: profile.subject,
-                                       userID: created.requireID()).save(on: db)
-            }
-            user = created
+        let (user, isNewUser) = try await signIn(
+            provider: "google", subject: profile.subject, email: profile.email,
+            authoritativeEmail: profile.authoritativeEmail, name: profile.name,
+            usernameSeed: profile.email.split(separator: "@", maxSplits: 1).first.map(String.init) ?? "google",
+            lang: dto.lang, source: dto.source, on: req)
+        let token = try UserToken.generate(for: user)
+        try await token.save(on: req.db)
+        return LoginResponse(token: token.value, expiresAt: token.expiresAt,
+                             user: UserResponse(user, includeEmail: true), isNewUser: isNewUser)
+    }
 
-            // Igual que el registro con contraseña: la cuenta responde enseguida y la
-            // GeoIP se completa en segundo plano. Nunca se persiste el IP.
-            let app = req.application
-            let ip = req.clientIP
-            let userID = try created.requireID()
-            Task.detached { await enrichSignupLocation(userID: userID, ip: ip, app: app) }
+    /// POST /auth/apple — «Iniciar sesión con Apple» desde la app de iOS (ver `AppleSignIn`).
+    /// Mismas reglas que Google: la identidad estable es `sub`, y un correo solo enlaza con
+    /// una cuenta existente cuando Apple es autoridad sobre él.
+    @Sendable func apple(req: Request) async throws -> LoginResponse {
+        let dto = try req.content.decode(AppleLoginDTO.self)
+        let apple = req.application.appleSignIn
+        let clientID = req.application.appleClientID
+        let profile: AppleProfile
+        do {
+            profile = try await apple.verify(dto.identityToken, clientID: clientID, on: req.client)
+        } catch let error as AbortError {
+            throw error
+        } catch {
+            req.logger.warning("Apple identity token rechazado: \(error)")
+            throw AppError(.unauthorized, "auth.appleInvalid", "La identificación de Apple no es válida")
+        }
+        // Apple solo da el nombre la primera vez, y a la app, no en el token.
+        let name = dto.name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let (user, isNewUser) = try await signIn(
+            provider: "apple", subject: profile.subject, email: profile.email,
+            authoritativeEmail: profile.authoritativeEmail, name: name,
+            usernameSeed: name ?? "apple", lang: dto.lang, source: dto.source, on: req)
+
+        if let code = dto.authorizationCode,
+           let refresh = await apple.refreshToken(for: code, clientID: clientID, on: req.client),
+           let identity = try await AuthIdentity.query(on: req.db)
+               .filter(\.$provider == "apple").filter(\.$subject == profile.subject).first() {
+            identity.refreshToken = refresh
+            try await identity.save(on: req.db)
         }
 
         let token = try UserToken.generate(for: user)
@@ -102,14 +104,60 @@ struct AuthController: RouteCollection {
                              user: UserResponse(user, includeEmail: true), isNewUser: isNewUser)
     }
 
-    private func availableGoogleUsername(email: String, on db: Database) async throws -> String {
-        let local = email.split(separator: "@", maxSplits: 1).first.map(String.init) ?? "google"
-        let allowed = local.lowercased().unicodeScalars.map { scalar -> Character in
+    /// La cuenta de una identidad externa: la ya enlazada, la del mismo correo si el
+    /// proveedor es autoridad sobre él, o una nueva.
+    private func signIn(provider: String, subject: String, email: String?, authoritativeEmail: Bool,
+                        name: String?, usernameSeed: String, lang: String?, source: String?,
+                        on req: Request) async throws -> (User, Bool) {
+        if let identity = try await AuthIdentity.query(on: req.db)
+            .filter(\.$provider == provider).filter(\.$subject == subject)
+            .with(\.$user).first() {
+            guard identity.user.anonymizedAt == nil else { throw Abort(.unauthorized) }
+            return (identity.user, false)
+        }
+        guard let email else {
+            // Sin correo no hay cuenta nueva: no se podría recuperar ni avisar.
+            throw AppError(.unauthorized, "auth.\(provider)NoEmail", "El proveedor no ha compartido un correo verificado")
+        }
+        if let existing = try await User.query(on: req.db).filter(\.$email == email).first() {
+            // El proveedor solo es autoridad sobre sus propios dominios. Con el correo de
+            // un tercero, el email no basta para apropiarse de una cuenta FontApp ya existente.
+            guard authoritativeEmail else {
+                throw AppError(.conflict, "auth.\(provider)LinkRequired",
+                               "Este correo ya tiene cuenta. Entra con tu contraseña para vincular \(provider == "apple" ? "Apple" : "Google")")
+            }
+            guard existing.anonymizedAt == nil else { throw Abort(.unauthorized) }
+            try await AuthIdentity(provider: provider, subject: subject,
+                                   userID: existing.requireID()).save(on: req.db)
+            return (existing, false)
+        }
+        let username = try await availableUsername(seed: usernameSeed, fallback: provider, on: req.db)
+        let created = User(name: name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? username,
+                           username: username, email: email,
+                           passwordHash: try req.password.hash([UInt8].random(count: 32).base64),
+                           lang: lang, signupSource: UserController.cleanSource(source))
+        try await req.db.transaction { db in
+            try await created.save(on: db)
+            try await AuthIdentity(provider: provider, subject: subject,
+                                   userID: created.requireID()).save(on: db)
+        }
+
+        // Igual que el registro con contraseña: la cuenta responde enseguida y la
+        // GeoIP se completa en segundo plano. Nunca se persiste el IP.
+        let app = req.application
+        let ip = req.clientIP
+        let userID = try created.requireID()
+        Task.detached { await enrichSignupLocation(userID: userID, ip: ip, app: app) }
+        return (created, true)
+    }
+
+    private func availableUsername(seed: String, fallback: String, on db: Database) async throws -> String {
+        let allowed = seed.lowercased().folding(options: .diacriticInsensitive, locale: nil).unicodeScalars.map { scalar -> Character in
             CharacterSet.alphanumerics.contains(scalar) || "._-".unicodeScalars.contains(scalar)
                 ? Character(String(scalar)) : "-"
         }
         var base = String(allowed).trimmingCharacters(in: CharacterSet(charactersIn: "._-"))
-        if base.count < 3 { base = "google-\(base)" }
+        if base.count < 3 { base = "\(fallback)-\(base)" }
         base = String(base.prefix(24))
         if Mentions.isMentionable(base), try await User.findByUsername(base, on: db) == nil { return base }
         for _ in 0..<20 {
@@ -253,6 +301,15 @@ struct LoginResponse: Content {
     let expiresAt: Date?
     let user: UserResponse
     var isNewUser: Bool? = nil
+}
+
+struct AppleLoginDTO: Content {
+    let identityToken: String
+    var authorizationCode: String? = nil
+    /// Solo llega la primera vez que la persona autoriza la app.
+    var name: String? = nil
+    var lang: String? = nil
+    var source: String? = nil
 }
 
 struct GoogleLoginDTO: Content {

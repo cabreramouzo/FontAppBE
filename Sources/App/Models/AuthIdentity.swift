@@ -11,6 +11,8 @@ final class AuthIdentity: Model, @unchecked Sendable {
     @Field(key: "subject") var subject: String
     @Parent(key: "user_id") var user: User
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
+    /// Solo Apple: para revocar el acceso cuando se borra la cuenta. Nunca sale de aquí.
+    @OptionalField(key: "refresh_token") var refreshToken: String?
 
     init() {}
     init(provider: String, subject: String, userID: UUID) {

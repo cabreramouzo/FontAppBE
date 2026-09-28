@@ -102,6 +102,12 @@ public func configure(_ app: Application) async throws {
     if app.apns == nil, app.environment == .production {
         app.logger.notice("Sin APNS_KEY_ID, APNS_TEAM_ID o APNS_KEY válidos: los avisos de la app de iOS están apagados.")
     }
+    // Una sola instancia: guarda en caché las claves públicas de Apple.
+    let appleSignIn = LiveAppleSignIn()
+    app.appleSignIn = appleSignIn
+    if !appleSignIn.canRevoke, app.environment == .production {
+        app.logger.notice("Sin APPLE_SIGNIN_KEY_ID o APPLE_SIGNIN_KEY: borrar una cuenta no revoca su acceso con Apple.")
+    }
     if app.vapid == nil, app.environment == .production {
         app.logger.notice("Sin claves VAPID: las notificaciones push están apagadas.")
     }
@@ -193,6 +199,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateApnsDevice())             // iPhones with the app, for APNs
     app.migrations.add(AddPricingPreferenceToAppInterest()) // one_time vs subscription preference
     app.migrations.add(AddPricePointToAppInterest())        // specific price point: 1€, 2€, 5€, 10€, etc.
+    app.migrations.add(AddRefreshTokenToAuthIdentity())   // Sign in with Apple: revoke on account deletion
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
