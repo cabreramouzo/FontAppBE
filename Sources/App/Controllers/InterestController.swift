@@ -86,7 +86,8 @@ struct InterestController: RouteCollection {
                 oneTime: PricingModelStats(
                     count: oneTimeVotes.count,
                     priceBreakdown: breakdownPrices(oneTimeVotes, monthlyPrices: false)
-                )
+                ),
+                wouldNotPay: wantsApp.filter { $0.pricingPreference == "free" }.count
             )
         }
 
@@ -152,6 +153,8 @@ struct PlatformStats: Content {
     let noApp: Int
     let subscription: PricingModelStats
     let oneTime: PricingModelStats
+    /// Wanted the app but answered "free / wouldn't pay".
+    let wouldNotPay: Int
 }
 
 struct InterestDashboard: Content {

@@ -24,6 +24,8 @@ interface PlatformStats {
   noApp: number
   subscription: PricingModelStats
   oneTime: PricingModelStats
+  /** Wanted the app but would not pay for it. */
+  wouldNotPay: number
 }
 
 interface InterestDashboard {
@@ -173,11 +175,18 @@ export function AppInterestDashboard() {
                               label={`One-Time: ${stats.oneTime.count} (${Math.round(stats.oneTime.count / stats.wantsApp * 100)}%)`}
                             />
                           )}
-                          {(stats.subscription.count + stats.oneTime.count) < stats.wantsApp && (
+                          {stats.wouldNotPay > 0 && (
                             <Chip
                               size="small"
                               variant="outlined"
-                              label={`No Preference: ${stats.wantsApp - stats.subscription.count - stats.oneTime.count}`}
+                              label={`Would not pay: ${stats.wouldNotPay} (${Math.round(stats.wouldNotPay / stats.wantsApp * 100)}%)`}
+                            />
+                          )}
+                          {(stats.subscription.count + stats.oneTime.count + stats.wouldNotPay) < stats.wantsApp && (
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              label={`No Preference: ${stats.wantsApp - stats.subscription.count - stats.oneTime.count - stats.wouldNotPay}`}
                             />
                           )}
                         </Box>
