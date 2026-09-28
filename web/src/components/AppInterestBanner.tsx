@@ -18,6 +18,11 @@ import type { AppPlatform } from '../api/types'
 // sesión, el backend liga el voto al usuario.
 const STORAGE_KEY = 'fontapp_app_interest'
 
+/** The dictionary marks words with <b>…</b>; they become <strong>, never HTML. */
+function withBold(text: string) {
+  return text.split(/<b>(.*?)<\/b>/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part))
+}
+
 function detectPlatform(): AppPlatform {
   const ua = navigator.userAgent
   if (/iPhone|iPad|iPod/i.test(ua)) return 'ios'
@@ -170,7 +175,7 @@ export function AppInterestBanner() {
               ) : step === 'pricing' ? (
                 <>
                   <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    {t('appWish.pricingQuestion')}
+                    {withBold(t('appWish.pricingQuestion'))}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     <Button size="small" variant="contained" disableElevation onClick={() => selectPricingModel('one_time')}>
