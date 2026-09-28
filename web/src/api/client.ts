@@ -1071,7 +1071,7 @@ export async function getRegionStats(): Promise<RegionStat[]> {
 }
 
 // Interés por una app móvil nativa (banner). Voto público; si hay token se liga al usuario.
-export async function submitAppInterest(wants: boolean, platform?: AppPlatform, pricingPreference?: 'one_time' | 'subscription', pricePoint?: string): Promise<void> {
+export async function submitAppInterest(wants: boolean, platform?: AppPlatform, pricingPreference?: 'one_time' | 'subscription' | 'free', pricePoint?: string): Promise<void> {
   await apiFetch('/interest', { method: 'POST', body: JSON.stringify({ wants, platform, pricingPreference, pricePoint }) })
 }
 

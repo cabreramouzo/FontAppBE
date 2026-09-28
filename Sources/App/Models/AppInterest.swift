@@ -15,7 +15,7 @@ final class AppInterest: Model, Content, @unchecked Sendable {
     @Field(key: "wants") var wants: Bool
     // Plataforma detectada en el cliente (ios/android/other), solo estadística.
     @OptionalField(key: "platform") var platform: String?
-    // Preferencia de precio si está interesado: 'one_time' o 'subscription', null si dijo que no.
+    // Preferencia de precio si está interesado: 'one_time', 'subscription' o 'free' (no pagaría); null si dijo que no.
     @OptionalField(key: "pricing_preference") var pricingPreference: String?
     // Punto de precio específico: '1', '2', '5', '10', '1_month', '2_month', '5_month', '10_month'.
     @OptionalField(key: "price_point") var pricePoint: String?

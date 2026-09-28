@@ -31,7 +31,7 @@ export function AppInterestBanner() {
   const open = useTurno('interest', listo)
   const [thanks, setThanks] = useState(false)
   const [step, setStep] = useState<'interest' | 'pricing' | 'pricePoint'>('interest')
-  const [pricingPreference, setPricingPreference] = useState<'one_time' | 'subscription' | null>(null)
+  const [pricingPreference, setPricingPreference] = useState<'one_time' | 'subscription' | 'free' | null>(null)
 
   useEffect(() => {
     // Ya respondió (o lo cerró) antes: no volvemos a molestar.
@@ -67,9 +67,30 @@ export function AppInterestBanner() {
     }
   }
 
-  function selectPricingModel(model: 'one_time' | 'subscription') {
+  function selectPricingModel(model: 'one_time' | 'subscription' | 'free') {
+    // Sin esta salida, todo el que quería la app acababa contado como dispuesto a pagar.
+    if (model === 'free') {
+      setPricingPreference(model)
+      void finish('free')
+      return
+    }
     setPricingPreference(model)
     setStep('pricePoint')
+  }
+
+  async function finish(preference: 'free') {
+    remember('yes')
+    setThanks(true)
+    try {
+      await submitAppInterest(true, detectPlatform(), preference)
+    } catch {
+      // Medición best-effort: si falla el envío, no molestamos al usuario.
+    }
+    setTimeout(() => {
+      setListo(false)
+      setStep('interest')
+      setPricingPreference(null)
+    }, 2200)
   }
 
   async function votePricePoint(pricePoint: string) {
@@ -151,12 +172,15 @@ export function AppInterestBanner() {
                   <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
                     {t('appWish.pricingQuestion')}
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     <Button size="small" variant="contained" disableElevation onClick={() => selectPricingModel('one_time')}>
                       {t('appWish.oneTime')}
                     </Button>
                     <Button size="small" variant="outlined" onClick={() => selectPricingModel('subscription')}>
                       {t('appWish.subscription')}
+                    </Button>
+                    <Button size="small" variant="outlined" onClick={() => selectPricingModel('free')}>
+                      {t('appWish.free')}
                     </Button>
                   </Box>
                 </>

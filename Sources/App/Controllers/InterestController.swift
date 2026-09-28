@@ -112,14 +112,14 @@ struct InterestController: RouteCollection {
 struct VoteDTO: Content {
     let wants: Bool
     let platform: String?
-    let pricingPreference: String? // 'one_time' | 'subscription'
+    let pricingPreference: String? // 'one_time' | 'subscription' | 'free' (would not pay)
     let pricePoint: String? // '1', '2', '5', '10', '1_month', '2_month', '5_month', '10_month'
 }
 
 extension VoteDTO: Validatable {
     static func validations(_ validations: inout Validations) {
         validations.add("platform", as: String.self, is: .in("ios", "android", "other"), required: false)
-        validations.add("pricingPreference", as: String.self, is: .in("one_time", "subscription"), required: false)
+        validations.add("pricingPreference", as: String.self, is: .in("one_time", "subscription", "free"), required: false)
         validations.add("pricePoint", as: String.self, is: .in("1", "2", "5", "10", "1_month", "2_month", "5_month", "10_month"), required: false)
     }
 }
