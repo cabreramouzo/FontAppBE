@@ -13,6 +13,7 @@ struct InterestController: RouteCollection {
         interest.grouped(UserToken.authenticator()).post(use: create)
         // Estadística: exige token y rol admin.
         interest.grouped(UserToken.authenticator(), User.guardMiddleware()).get("stats", use: stats)
+        interest.grouped(UserToken.authenticator(), User.guardMiddleware()).get("dashboard", use: dashboard)
     }
 
     /// POST /interest — registra si el visitante quiere (o no) una app móvil y qué modelo de precio prefiere.
@@ -57,6 +58,55 @@ struct InterestController: RouteCollection {
         }
         return InterestStats(yes: yes, no: all.count - yes, total: all.count, voters: voters)
     }
+
+    /// GET /interest/dashboard — estadísticas agregadas por plataforma y preferencias (solo admins).
+    @Sendable func dashboard(req: Request) async throws -> InterestDashboard {
+        let user = try req.auth.require(User.self)
+        guard user.isAdmin else { throw Abort(.forbidden, reason: "Solo para administradores") }
+
+        let all = try await AppInterest.query(on: req.db).all()
+        var platformStats: [String: PlatformStats] = [:]
+
+        for platform in Self.platforms {
+            let platformVotes = all.filter { $0.platform == platform }
+            let wantsApp = platformVotes.filter { $0.wants }
+            let noApp = platformVotes.filter { !$0.wants }
+
+            let subscriptionVotes = wantsApp.filter { $0.pricingPreference == "subscription" }
+            let oneTimeVotes = wantsApp.filter { $0.pricingPreference == "one_time" }
+
+            platformStats[platform] = PlatformStats(
+                total: platformVotes.count,
+                wantsApp: wantsApp.count,
+                noApp: noApp.count,
+                subscription: PricingModelStats(
+                    count: subscriptionVotes.count,
+                    priceBreakdown: breakdownPrices(subscriptionVotes, monthlyPrices: true)
+                ),
+                oneTime: PricingModelStats(
+                    count: oneTimeVotes.count,
+                    priceBreakdown: breakdownPrices(oneTimeVotes, monthlyPrices: false)
+                )
+            )
+        }
+
+        return InterestDashboard(
+            total: all.count,
+            byPlatform: platformStats
+        )
+    }
+
+    private func breakdownPrices(_ votes: [AppInterest], monthlyPrices: Bool) -> [String: Int] {
+        let prices = monthlyPrices
+            ? ["1_month", "2_month", "5_month", "10_month"]
+            : ["1", "2", "5", "10"]
+
+        var breakdown: [String: Int] = [:]
+        for price in prices {
+            breakdown[price] = votes.filter { $0.pricePoint == price }.count
+        }
+        return breakdown
+    }
 }
 
 struct VoteDTO: Content {
@@ -89,4 +139,22 @@ struct InterestStats: Content {
     let total: Int
     /// Votantes identificados (los anónimos solo suman en los recuentos).
     let voters: [InterestVoter]
+}
+
+struct PricingModelStats: Content {
+    let count: Int
+    let priceBreakdown: [String: Int]
+}
+
+struct PlatformStats: Content {
+    let total: Int
+    let wantsApp: Int
+    let noApp: Int
+    let subscription: PricingModelStats
+    let oneTime: PricingModelStats
+}
+
+struct InterestDashboard: Content {
+    let total: Int
+    let byPlatform: [String: PlatformStats]
 }

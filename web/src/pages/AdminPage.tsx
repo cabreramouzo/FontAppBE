@@ -437,7 +437,12 @@ export function AdminPage() {
       </Box>
 
       <Box component="section" sx={{ mt: 3 }}>
-        <Typography variant="h6" gutterBottom>📱 {t('admin.appWish')}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+          <Typography variant="h6" sx={{ mb: 0 }}>📱 {t('admin.appWish')}</Typography>
+          <Button component={RouterLink} to="/admin/app-interest-dashboard" variant="outlined" size="small">
+            {t('admin.appWishDashboard')}
+          </Button>
+        </Box>
         {interest === null && <Skeleton lines={2} />}
         {interest && interest.total === 0 && <Typography color="text.secondary">{t('admin.appWishNone')}</Typography>}
         {interest && interest.total > 0 && (

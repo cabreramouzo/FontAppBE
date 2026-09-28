@@ -40,6 +40,7 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then((m) => (
 const AdminEditsPage = lazy(() => import('./pages/AdminEditsPage').then((m) => ({ default: m.AdminEditsPage })))
 const AdminReportsPage = lazy(() => import('./pages/AdminReportsPage').then((m) => ({ default: m.AdminReportsPage })))
 const AdminModerationPage = lazy(() => import('./pages/AdminModerationPage').then((m) => ({ default: m.AdminModerationPage })))
+const AppInterestDashboard = lazy(() => import('./pages/AppInterestDashboard').then((m) => ({ default: m.AppInterestDashboard })))
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })))
 const NewsPage = lazy(() => import('./pages/NewsPage').then((m) => ({ default: m.NewsPage })))
 const PlacesDirectoryPage = lazy(() => import('./pages/PlacesDirectoryPage').then((m) => ({ default: m.PlacesDirectoryPage })))
@@ -109,6 +110,7 @@ export default function App() {
                   <Route path="/admin/moderation" element={<AdminModerationPage />} />
                   <Route path="/admin/reports" element={<AdminReportsPage />} />
                   <Route path="/admin/activity" element={<AdminActivityPage />} />
+                  <Route path="/admin/app-interest-dashboard" element={<AppInterestDashboard />} />
                   <Route path="/users/:id" element={<UserProfilePage />} />
                   <Route path="/unsubscribe" element={<UnsubscribePage />} />
                   <Route path="/support" element={<SupportPage />} />
