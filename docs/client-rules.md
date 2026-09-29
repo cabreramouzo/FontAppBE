@@ -318,6 +318,13 @@ carries `Retry-After` (R6.3).
   it on the menu's button. Android: a bottom sheet or dialog from the current screen. — Client
 - **R9.7 Hidden easter eggs** never grant drops, permissions, badges nor analytics, and
   respect reduced motion. — Client
+- **R9.8 Every badge or level drawn is tappable** and opens it large, with its name, what
+  it is for and a subtitle (who earned it, or what is missing if it is still free) —
+  profile, showcase, guide and the fountain detail alike (web `Abrible`, iOS
+  `BadgeShowcaseView`). Only the drawing is the button, so a name beside it keeps its
+  own link to the profile; round badges grow a 44 pt target around the art. A badge that
+  cannot be opened reads as decoration, and "still free" only works as an invitation if
+  you can find out what it is (09/2026). — Client
 
 ## 10. What not to port to native clients
 
