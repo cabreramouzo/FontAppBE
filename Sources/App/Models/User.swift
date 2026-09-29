@@ -55,6 +55,11 @@ final class User: Model, @unchecked Sendable {
     @OptionalField(key: "lang") var lang: String?
     // Código del cartel por el que llegó (`?p=castellcir`), si venía con uno.
     @OptionalField(key: "signup_source") var signupSource: String?
+    /// Temporary, statistical: see `SignupPlace`. Never exposed outside the admin totals.
+    @OptionalField(key: "signup_municipality") var signupMunicipality: String?
+    @OptionalField(key: "signup_ine") var signupINE: String?
+    @OptionalField(key: "signup_place_region") var signupPlaceRegion: String?
+    @OptionalField(key: "signup_place_country") var signupPlaceCountry: String?
     @Timestamp(key: "created_at", on: .create) var createdAt: Date?
 
     init() {}

@@ -1877,6 +1877,43 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// The signup place is stored once, only as a region (no coordinates), only for new
+    /// accounts, and the stats route is admin-only.
+    func testSignupPlaceIsStoredOnceAndOnlyForNewAccounts() async throws {
+        try await withApp { app in
+            let seederID = try await register(app, username: "seeder")
+            let seederTok = try await login(app, username: "seeder")
+            let fontID = try await createFont(app, token: seederTok, name: "F", lat: 42.5, long: 1.5)
+            try await (app.db as! SQLDatabase).raw("UPDATE fonts SET country = 'Andorra', region = 'Canillo' WHERE id = \(bind: fontID)").run()
+
+            let newID = try await register(app, username: "newbie")
+            let newTok = try await login(app, username: "newbie")
+            struct Pos: Content { let latitude: Double; let longitude: Double }
+            for (lat, long) in [(42.51, 1.51), (40.0, -3.0)] {
+                try await app.test(.POST, "users/me/signup-place", headers: bearer(newTok), beforeRequest: { req in
+                    try req.content.encode(Pos(latitude: lat, longitude: long))
+                }, afterResponse: { res in XCTAssertEqual(res.status, .noContent) })
+            }
+            let newbie = try await User.find(newID, on: app.db)
+            XCTAssertEqual(newbie?.signupPlaceCountry, "Andorra")   // first answer wins
+            XCTAssertEqual(newbie?.signupPlaceRegion, "Canillo")
+
+            // An old account is ignored.
+            let seeder = try await User.find(seederID, on: app.db)!
+            seeder.createdAt = Date().addingTimeInterval(-30 * 86_400)
+            try await seeder.save(on: app.db)
+            try await app.test(.POST, "users/me/signup-place", headers: bearer(seederTok), beforeRequest: { req in
+                try req.content.encode(Pos(latitude: 42.51, longitude: 1.51))
+            })
+            let seederAfter = try await User.find(seederID, on: app.db)
+            XCTAssertNil(seederAfter?.signupPlaceCountry)
+
+            try await app.test(.GET, "users/stats/signup-places", headers: bearer(newTok)) { res in
+                XCTAssertEqual(res.status, .forbidden)
+            }
+        }
+    }
+
     /// Solo el owner asigna roles; no puede crear otro owner ni cambiar el suyo.
     func testOnlyOwnerCanSetRole() async throws {
         try await withApp { app in

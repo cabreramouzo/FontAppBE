@@ -984,6 +984,12 @@ export async function getSourceStats(): Promise<{ source: string | null; count: 
   return apiFetch('/users/stats/sources')
 }
 
+export type SignupPlaceCount = { municipality: string | null; region: string | null; country: string | null; count: number }
+/** Accounts per signup town (temporary, admin only). See `lib/signupPlace`. */
+export async function getSignupPlaceStats(): Promise<SignupPlaceCount[]> {
+  return apiFetch('/users/stats/signup-places')
+}
+
 // Altas desde una fecha, para el distintivo de "usuarios nuevos" del panel (admin).
 export async function getNewUsers(since: string): Promise<{ count: number; since: string }> {
   return apiFetch(`/users/stats/new?since=${encodeURIComponent(since)}`)

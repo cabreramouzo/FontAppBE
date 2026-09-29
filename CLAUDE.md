@@ -2489,6 +2489,17 @@ que afecte a lo que hace un cliente, actualiza también ese documento.**
 - Ese código se guarda en `users.signup_source` al registrarse (primera visita gana) y se
   agrupa en el panel de administración. Sirve para saber qué cartel/campaña funciona, que es
   justo lo que el geo-IP del registro NO puede decir (resuelve a la cabecera de demarcación).
+- **Municipio de alta, temporal** (`SignupPlace` + `lib/signupPlace.ts` → bloque «Altas
+  por municipio» del panel). Los carteles se imprimen en tandas y se reparten sobre la
+  marcha, así que un `?p=` por pueblo no es viable, y el geo-IP del registro sale en
+  Madrid o Turquía (VPN, operadoras). Se aprovecha la **primera posición que ya da el
+  mapa con un permiso concedido** —normalmente en el tutorial—; **nunca se pide uno
+  nuevo**. Solo los 14 primeros días de la cuenta y una vez (gana la primera). El
+  servidor guarda **solo el municipio** (IGN) o, fuera de España, región y país de la
+  fuente clasificada más cercana; las coordenadas se tiran en la misma función. Dicho en
+  la página legal en los ocho idiomas. Es **temporal**: `swift run App
+  clear-signup-places` vacía las cuatro columnas cuando ya no haga falta (y entonces
+  hay que retirar el texto legal). Anonimizar la cuenta también las borra.
 - Para las redes hay **enlaces cortos** en `web/public/_redirects` (Cloudflare Pages):
   `/in`, `/ig`, `/wa`, `/yt` → `/?p=linkedin|instagram|whatsapp|youtube`. Añadir un canal es
   una línea ahí, y **tiene que ir antes del catch-all del SPA** (`/* /index.html 200`) o se

@@ -1,4 +1,5 @@
 import { SavedOuting } from '../components/SavedOuting'
+import { sendSignupPlace, shouldSendSignupPlace } from '../lib/signupPlace'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { MapContainer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -1773,6 +1774,9 @@ const HELP_BUTTON_SESSIONS = 10
 
 export function MapPage() {
   const { user, promptLocation, dismissLocationPrompt } = useAuth()
+  // Read inside the GPS callback, which is created once; see `lib/signupPlace`.
+  const userRef = useRef(user)
+  userRef.current = user
   const { t } = useI18n()
   const [placing, setPlacing] = useState(false)
   /**
@@ -1993,6 +1997,7 @@ export function MapPage() {
     watchID.current = navigator.geolocation.watchPosition(
       (p) => {
         const c: [number, number] = [p.coords.latitude, p.coords.longitude]
+        if (shouldSendSignupPlace(userRef.current)) sendSignupPlace(userRef.current!.id, c[0], c[1])
         const anterior = ultimaPos.current
         const distM = anterior ? haversineKm(anterior[0], anterior[1], c[0], c[1]) * 1000 : 0
 

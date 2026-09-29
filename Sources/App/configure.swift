@@ -199,7 +199,8 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateApnsDevice())             // iPhones with the app, for APNs
     app.migrations.add(AddPricingPreferenceToAppInterest()) // one_time vs subscription preference
     app.migrations.add(AddPricePointToAppInterest())        // specific price point: 1€, 2€, 5€, 10€, etc.
-    app.migrations.add(AddRefreshTokenToAuthIdentity())   // Sign in with Apple: revoke on account deletion
+    app.migrations.add(AddRefreshTokenToAuthIdentity())
+    app.migrations.add(AddSignupPlaceToUser())           // temporary signup town, for poster stats   // Sign in with Apple: revoke on account deletion
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).
@@ -250,6 +251,7 @@ public func configure(_ app: Application) async throws {
     app.asyncCommands.use(AdoptCoverPhotosCommand(), as: "adopt-cover-photos")
     app.asyncCommands.use(ClearPlaceholderNamesCommand(), as: "clear-placeholder-names")
     app.asyncCommands.use(DedupeImportedCommand(), as: "dedupe-imported")
+    app.asyncCommands.use(ClearSignupPlacesCommand(), as: "clear-signup-places")
 
     // Rutas.
     try routes(app)

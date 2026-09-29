@@ -15,7 +15,7 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import LinearProgress from '@mui/material/LinearProgress'
 import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getCampaignStats, getInteractionStats, getInterestStats, getNewUsers, getOnlineUsers, getRegionStats, getSourceStats, getStaff, getUserActivityRanking, reviewFontEdit, revertFontEdit, setUserRole, type CampaignSummary, type InteractionSummary, type OnlineUser, type UserActivityRanking } from '../api/client'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getCampaignStats, getInteractionStats, getInterestStats, getNewUsers, getOnlineUsers, getRegionStats, getSourceStats, getSignupPlaceStats, type SignupPlaceCount, getStaff, getUserActivityRanking, reviewFontEdit, revertFontEdit, setUserRole, type CampaignSummary, type InteractionSummary, type OnlineUser, type UserActivityRanking } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -59,6 +59,7 @@ export function AdminPage() {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[] | null>(null)
   const [activityRanking, setActivityRanking] = useState<UserActivityRanking | null>(null)
   const [sources, setSources] = useState<{ source: string | null; count: number }[] | null>(null)
+  const [places, setPlaces] = useState<SignupPlaceCount[] | null>(null)
   const [interactions, setInteractions] = useState<InteractionSummary[] | null>(null)
   const [analyticsPeriod, setAnalyticsPeriod] = useState<30 | 180 | 'all'>(30)
   const [campaigns, setCampaigns] = useState<CampaignSummary[] | null>(null)
@@ -84,6 +85,7 @@ export function AdminPage() {
         .then((r) => { setNewUsers(r); markUsersSeen() })
         .catch(() => setNewUsers(null))
       getSourceStats().then(setSources).catch(() => setSources([]))
+      getSignupPlaceStats().then(setPlaces).catch(() => setPlaces([]))
       getOnlineUsers().then(setOnlineUsers).catch(() => setOnlineUsers([]))
       getUserActivityRanking().then(setActivityRanking).catch(() => setActivityRanking({ mostRecent: [], leastRecent: [], untrackedCount: 0 }))
     }
@@ -346,6 +348,20 @@ export function AdminPage() {
             <ListItem key={s.source ?? 'direct'} divider disableGutters
               secondaryAction={<Typography sx={{ fontWeight: 700 }}>{s.count}</Typography>}>
               <ListItemText primary={s.source ?? t('admin.sourceDirect')} />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+
+      <Box component="section" sx={{ mt: 3 }}>
+        <Typography variant="h6" gutterBottom>📍 {t('admin.signupPlaces')}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('admin.signupPlacesHint')}</Typography>
+        {places === null && <Skeleton lines={2} />}
+        {places?.length === 0 && <Typography color="text.secondary">{t('admin.signupPlacesEmpty')}</Typography>}
+        <List disablePadding>
+          {places?.map((p, i) => (
+            <ListItem key={i} divider disableGutters secondaryAction={<Typography sx={{ fontWeight: 700 }}>{p.count}</Typography>}>
+              <ListItemText primary={p.municipality ?? p.region ?? p.country} secondary={p.municipality ? undefined : p.country} />
             </ListItem>
           ))}
         </List>

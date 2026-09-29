@@ -23,6 +23,8 @@ struct UserController: RouteCollection {
         protected.get("stats", "regions", use: regionStats)  // admin
         protected.get("stats", "new", use: newUsers)         // admin: altas recientes
         protected.get("stats", "sources", use: sourceStats)  // admin: altas por cartel
+        protected.get("stats", "signup-places", use: SignupPlace.stats) // admin: altas por municipio
+        protected.post("me", "signup-place", use: SignupPlace.record)
         protected.get("stats", "online", use: onlineUsers)   // admin: presencia reciente
         protected.get("stats", "activity-ranking", use: activityRanking) // admin: retorno e inactividad
         protected.post("source-limit-exemption-request", use: requestSourceLimitExemption)
@@ -511,6 +513,10 @@ struct UserController: RouteCollection {
         // Contraseña aleatoria e inrecuperable: el login queda inutilizado.
         user.passwordHash = try req.password.hash([UInt8].random(count: 32).base64)
         user.anonymizedAt = Date()
+        user.signupMunicipality = nil
+        user.signupINE = nil
+        user.signupPlaceRegion = nil
+        user.signupPlaceCountry = nil
         try await user.save(on: req.db)
 
         // Revoca sesiones y peticiones de reseteo pendientes.
