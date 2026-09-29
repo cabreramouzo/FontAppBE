@@ -151,6 +151,24 @@ struct FontCommentController: RouteCollection {
             return try await respuestaDeConfirmacion(confirmada, user: user, on: req)
         }
 
+        // ## Repetir tu propio parte reciente no publica nada
+        //
+        // Solo estado, el mismo que tu último parte, y de hace menos de un día: no aporta
+        // respaldo (es tuyo) ni actualidad (es de hoy). Antes se publicaba, y la ficha se
+        // llenaba de reseñas gemelas: el caso real fue dar el estado al crear la fuente y
+        // tocar el mismo chip justo después. Un **cambio** de estado, o algo escrito, una
+        // nota o una foto, se publica siempre. Mismo plazo que confirmar lo propio
+        // (`selfConfirmCooldown`), que es la misma pregunta hecha por otro botón.
+        //
+        // **409 y no un 200 con bandera**: no se ha guardado nada, y un cliente viejo que
+        // recibiera un 200 ofrecería «deshacer» sobre el id devuelto — borraría el parte
+        // original. Un error no puede romper nada; la bandeja de salida lo trata como
+        // definitivo y lo quita, que es lo correcto.
+        if try await repiteTuParteReciente(dto, body: body, font: font, user: user, on: req.db) {
+            throw AppError(.conflict, "comment.alreadyReported",
+                           "Ya dijiste este estado hace menos de un día")
+        }
+
         let comment = FontComment(
             fontID: fontID,
             userID: try user.requireID(),
@@ -244,6 +262,23 @@ struct FontCommentController: RouteCollection {
     ///    de ese día el atajo devolvería un 403 a alguien que está delante de la fuente.
     ///    Repetir tu propio parte al menos refresca la fecha, que es información cierta.
     /// 4. **Reciente**, con el corte que sale de la curva de frescura del baremo.
+    /// Solo estado, igual que tu último parte con estado, y dentro de `selfConfirmCooldown`.
+    private func repiteTuParteReciente(_ dto: CreateCommentDTO, body: String, font: Font,
+                                       user: User, on db: any Database) async throws -> Bool {
+        guard body.isEmpty, dto.rating == nil, dto.image == nil,
+              let estado = dto.waterStatus else { return false }
+        guard let ultimo = try await FontComment.query(on: db)
+            .filter(\.$font.$id == font.requireID())
+            .filter(\.$waterStatus != nil)
+            .sort(\.$createdAt, .descending)
+            .first(),
+            ultimo.waterStatus == estado,
+            ultimo.$user.id == (try user.requireID()),
+            let cuando = ultimo.createdAt else { return false }
+        let hace = Date().timeIntervalSince(cuando)
+        return hace >= 0 && hace < Self.selfConfirmCooldown
+    }
+
     private func confirmacionEnLugarDeParte(_ dto: CreateCommentDTO, body: String, font: Font,
                                             user: User, on db: any Database) async throws -> FontComment? {
         guard body.isEmpty, dto.rating == nil, dto.image == nil,

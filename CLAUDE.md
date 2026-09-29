@@ -1630,6 +1630,13 @@ que afecte a lo que hace un cliente, actualiza también ese documento.**
   convertir en un pulgar lo que alguien escribió tira lo más caro que aporta—, **el mismo
   estado** —decir otra cosa es un desacuerdo y tiene que quedar como parte propio o
   `confidenceOf` no ve la contradicción—, **de otra persona**, y **reciente**.
+- **Y repetir tu propio parte reciente no publica nada** (09/2026): solo estado, el mismo
+  que tu último parte y de hace menos de 24 h (`selfConfirmCooldown`) → **409
+  `comment.alreadyReported`**, nada guardado. Se publicaban reseñas gemelas (estado al
+  crear la fuente y el mismo chip justo después). Un cambio de estado, texto, nota o foto
+  se publican siempre. Es un error y no un 200 con bandera porque un cliente viejo
+  ofrecería «deshacer» sobre el id devuelto y borraría el parte original. Lo de abajo
+  («repetir tu propio parte al menos refresca la fecha») sigue valiendo pasado ese día.
 - Lo de «otra persona» no es solo que confirmarte a ti mismo no dé respaldo: confirmar el
   parte propio tiene una **espera de 24 h** (ver `confirm`), así que dentro de ese día el
   atajo acabaría devolviendo un **403 a alguien que está delante de la fuente** y no

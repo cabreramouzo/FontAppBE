@@ -25,6 +25,7 @@ struct RemoteReviewController: RouteCollection {
         let mod = routes.grouped("moderation", "remote-reviews")
             .grouped(UserToken.authenticator(), User.guardMiddleware())
         mod.get(use: index)
+        mod.get("summary", use: summary)
         mod.post(":commentID", "checked", use: markChecked)
     }
 
@@ -41,6 +42,56 @@ struct RemoteReviewController: RouteCollection {
         let createdAt: Date
         /// Remote reviews by the same person in the window, this one included.
         let authorRemoteCount: Int
+    }
+
+    /// How common it is, not who: the lane lists rows, this answers "how many people
+    /// review from the sofa?" before looking at any one of them.
+    struct Summary: Content {
+        let windowDays: Int
+        /// Status reviews in the window, remote or not: what the share is of.
+        let reviews: Int
+        let remote: Int
+        let remoteAuthors: Int
+        /// Remote reviews still in the lane.
+        let unchecked: Int
+        /// The people with most remote reviews in the window, most first (at most 10).
+        let topAuthors: [Author]
+        struct Author: Content {
+            let username: String?
+            let remote: Int
+            let reviews: Int
+        }
+    }
+
+    /// GET /moderation/remote-reviews/summary
+    @Sendable func summary(req: Request) async throws -> Summary {
+        let actor = try req.auth.require(User.self)
+        guard actor.canModerate else { throw Abort(.forbidden) }
+        guard let sql = req.db as? SQLDatabase else { throw Abort(.internalServerError) }
+        let cutoff = Date().addingTimeInterval(-Double(Self.windowDays) * 86_400)
+        struct Totals: Decodable { let reviews: Int; let remote: Int; let authors: Int; let unchecked: Int }
+        let totals = try await sql.raw("""
+            SELECT count(*)::int AS "reviews",
+                   count(remote_distance_m)::int AS "remote",
+                   count(DISTINCT user_id) FILTER (WHERE remote_distance_m IS NOT NULL)::int AS "authors",
+                   count(*) FILTER (WHERE remote_distance_m IS NOT NULL AND remote_checked_at IS NULL)::int AS "unchecked"
+            FROM font_comments
+            WHERE water_status IS NOT NULL AND created_at >= \(bind: cutoff)
+            """).first(decoding: Totals.self)
+        let top = try await sql.raw("""
+            SELECT u.username AS "username",
+                   count(c.remote_distance_m)::int AS "remote",
+                   count(*)::int AS "reviews"
+            FROM font_comments c
+            LEFT JOIN users u ON u.id = c.user_id
+            WHERE c.water_status IS NOT NULL AND c.created_at >= \(bind: cutoff)
+            GROUP BY c.user_id, u.username
+            HAVING count(c.remote_distance_m) > 0
+            ORDER BY count(c.remote_distance_m) DESC, count(*) DESC
+            LIMIT 10
+            """).all(decoding: Summary.Author.self)
+        return Summary(windowDays: Self.windowDays, reviews: totals?.reviews ?? 0, remote: totals?.remote ?? 0,
+                       remoteAuthors: totals?.authors ?? 0, unchecked: totals?.unchecked ?? 0, topAuthors: top)
     }
 
     /// GET /moderation/remote-reviews — unchecked remote reviews of the last 30 days.

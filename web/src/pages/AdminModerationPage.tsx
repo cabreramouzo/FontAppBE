@@ -14,7 +14,7 @@ import type { Flag, ModerationSource } from '../api/types'
 import type { DuplicateSuggestion } from '../api/client'
 import {
   approvePhotoRemoval, approveSourceLimitExemption, assetUrl, deleteComment, deleteSecondaryPhoto, describeError, dismissFlag,
-  getDuplicateSuggestions, getFlags, getRemoteReviews, markRemoteReviewChecked, type RemoteReview, getModerationSources, hideFontAbuse, markDuplicate, resolveReport, restoreFontAbuse,
+  getDuplicateSuggestions, getFlags, getRemoteReviews, getRemoteReviewSummary, markRemoteReviewChecked, type RemoteReview, type RemoteReviewSummary, getModerationSources, hideFontAbuse, markDuplicate, resolveReport, restoreFontAbuse,
   restrictUserPosting, reviewModerationSource,
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -40,6 +40,7 @@ export function AdminModerationPage() {
   const [sources, setSources] = useState<ModerationSource[] | null>(null)
   const [dups, setDups] = useState<DuplicateSuggestion[] | null>(null)
   const [remote, setRemote] = useState<RemoteReview[] | null>(null)
+  const [remoteSummary, setRemoteSummary] = useState<RemoteReviewSummary | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -49,6 +50,7 @@ export function AdminModerationPage() {
     getModerationSources().then(setSources).catch((e) => setError(describeError(e, t)))
     getDuplicateSuggestions().then(setDups).catch(() => setDups([]))
     getRemoteReviews().then(setRemote).catch(() => setRemote([]))
+    getRemoteReviewSummary().then(setRemoteSummary).catch(() => setRemoteSummary(null))
   }
 
   useEffect(() => {
@@ -180,6 +182,33 @@ export function AdminModerationPage() {
             here acts on the review: "checked" only takes it out of the list, and a real
             problem goes through the tools that already exist (delete, restrict). The
             author's count is what matters: one remote review says little, many is a pattern. */}
+        {/* Before any one row, how common it is: the share of all status reviews and who
+            writes most of them. A share that grows, or one person far above the rest, is
+            where to look; the list below is where to act. */}
+        {filter === 'remote' && remoteSummary && (
+          <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+            <Typography>
+              {t('moderation.remoteSummary', {
+                remote: String(remoteSummary.remote),
+                reviews: String(remoteSummary.reviews),
+                pct: remoteSummary.reviews ? String(Math.round((remoteSummary.remote / remoteSummary.reviews) * 100)) : '0',
+                people: String(remoteSummary.remoteAuthors),
+                days: String(remoteSummary.windowDays),
+              })}
+            </Typography>
+            {remoteSummary.topAuthors.length > 0 && (
+              <Box component="ul" sx={{ m: 0, mt: 1, pl: 2.5 }}>
+                {remoteSummary.topAuthors.map((a, i) => (
+                  <Typography component="li" variant="body2" key={i}
+                              color={a.remote > 3 ? 'warning.main' : 'text.secondary'}>
+                    {a.username ? `@${a.username}` : t('font.unnamed')}
+                    {' · '}{t('moderation.remoteAuthorShare', { remote: String(a.remote), reviews: String(a.reviews) })}
+                  </Typography>
+                ))}
+              </Box>
+            )}
+          </Box>
+        )}
         {filter === 'remote' && remote !== null && remote.length === 0 && <Alert severity="success">{t('moderation.empty')}</Alert>}
         {filter === 'remote' && (remote ?? []).map((r) => (
           <Box key={r.commentID} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>

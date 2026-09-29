@@ -60,8 +60,12 @@ same status** is disabled (with "you said so {when}; if it changed, tap the new 
 the **other chips stay available**, and "still the same" is hidden. This includes the
 status given when **creating** the fountain, stored as its first review.
 Self-confirmations refresh the date but never add corroboration and never score.
-*Candidate for the server:* fold a status-only report that repeats your own status of
-the last 24 h into a no-op, so no client can publish the twin.
+**The server enforces it** (09/2026): a status-only review (no text, rating nor photo)
+that repeats the status of your own latest report, less than 24 h old, is not saved and
+gets **409 `comment.alreadyReported`** (`err.comment.alreadyReported`). An error and not
+a 200 on purpose: nothing was created, and an old client given a 200 would offer "undo"
+on the returned id and delete the original. The outbox treats it as final and drops it.
+Clients still disable the chip so the error is rarely seen.
 
 ### R1.5 Undo for 10 seconds — Client
 A review changes the pin for everyone, pays drops and, if `flowing`, auto-resolves open

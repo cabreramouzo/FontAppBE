@@ -122,6 +122,35 @@ final class RemoteReviewTests: XCTestCase {
         }
     }
 
+    /// The summary says how common it is before any one row: share of status reviews,
+    /// how many people, and who writes most of them.
+    func testSummaryCountsShareAndTopAuthors() async throws {
+        try await withApp { app in
+            let (_, sofa) = try await user(app, "sofa")
+            let (_, near) = try await user(app, "local")
+            let (_, mod) = try await user(app, "mod", role: .moderator)
+            let f = try await fountain(app)
+            let g = try await fountain(app)
+            try await review(app, f, token: sofa, distance: 12_000)
+            try await review(app, g, token: sofa, distance: 3_000)
+            try await review(app, f, token: near, distance: nil)
+
+            try await app.test(.GET, "moderation/remote-reviews/summary", headers: bearer(mod), afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+                let s = try res.content.decode(RemoteReviewController.Summary.self)
+                XCTAssertEqual(s.reviews, 3)
+                XCTAssertEqual(s.remote, 2)
+                XCTAssertEqual(s.remoteAuthors, 1)
+                XCTAssertEqual(s.unchecked, 2)
+                XCTAssertEqual(s.topAuthors.count, 1)
+                XCTAssertEqual(s.topAuthors.first?.remote, 2)
+            })
+            try await app.test(.GET, "moderation/remote-reviews/summary", headers: bearer(sofa), afterResponse: { res in
+                XCTAssertEqual(res.status, .forbidden)
+            })
+        }
+    }
+
     /// Vigilance is for the team: a regular account gets 403, not the list.
     func testLaneIsForbiddenToRegularUsers() async throws {
         try await withApp { app in

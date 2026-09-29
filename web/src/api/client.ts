@@ -565,6 +565,12 @@ export interface RemoteReview {
   authorRemoteCount: number
 }
 export const getRemoteReviews = () => apiFetch<RemoteReview[]>('/moderation/remote-reviews')
+/** How common remote reviews are in the window, and who writes most of them. */
+export interface RemoteReviewSummary {
+  windowDays: number; reviews: number; remote: number; remoteAuthors: number; unchecked: number
+  topAuthors: { username?: string | null; remote: number; reviews: number }[]
+}
+export const getRemoteReviewSummary = () => apiFetch<RemoteReviewSummary>('/moderation/remote-reviews/summary')
 /** Takes a remote review out of the lane. The review itself is not touched. */
 export const markRemoteReviewChecked = (commentID: string) =>
   apiFetch<void>(`/moderation/remote-reviews/${commentID}/checked`, { method: 'POST' })

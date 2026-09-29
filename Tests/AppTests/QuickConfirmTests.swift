@@ -156,11 +156,11 @@ final class QuickConfirmTests: XCTestCase {
         }
     }
 
-    /// **Solo se cambia el parte de OTRA persona.** Confirmar el tuyo tiene una espera de
-    /// 24 h, así que dentro de ese día el atajo acabaría devolviendo un 403 a alguien que
-    /// está delante de la fuente y no publicaría nada. Repetir el tuyo al menos refresca la
-    /// fecha, que es información cierta.
-    func testElParteQueYaEsTuyoNoSeConfirmaSoloYNuncaDaError() async throws {
+    /// Tu propio parte no se confirma solo (confirmarlo tiene una espera de 24 h), y
+    /// repetirlo dentro de ese día **no publica nada**: 409 `comment.alreadyReported`. Antes
+    /// se publicaba una reseña gemela; pasó al dar el estado al crear la fuente y tocar el
+    /// mismo chip justo después.
+    func testTuPropioParteRecienteNoSeRepite() async throws {
         try await withApp { app in
             let (yo, token) = try await usuario(app, "vecina")
             let f = try await fuente(app)
@@ -171,9 +171,43 @@ final class QuickConfirmTests: XCTestCase {
                 try req.content.encode(CreateCommentDTO(body: nil, rating: nil, waterStatus: "flowing",
                                                         image: nil, confirmIfUnchanged: true))
             }, afterResponse: { res in
-                XCTAssertEqual(res.status, .created, "nunca un 403: quien está delante publica")
-                XCTAssertFalse(try res.content.decode(CommentResponse.self).confirmedInstead)
+                XCTAssertEqual(res.status, .conflict)
+                XCTAssertTrue(res.body.string.contains("comment.alreadyReported"))
             })
+            let cuantos = try await partes(app, de: f)
+            XCTAssertEqual(cuantos, 1, "no se guarda la gemela")
+        }
+    }
+
+    /// La otra mitad: un **cambio** de estado se publica siempre, y pasado el día también
+    /// el mismo (refresca la fecha, que entonces sí es información nueva). Con texto, igual.
+    func testTuPropioParteSiCambiaOPasadoUnDiaOConTextoSePublica() async throws {
+        try await withApp { app in
+            let (yo, token) = try await usuario(app, "vecina")
+            let f = try await fuente(app)
+            try await parte(app, en: f, de: yo, estado: "flowing")
+
+            func publica(_ estado: String, _ texto: String? = nil) async throws -> HTTPStatus {
+                var status = HTTPStatus.ok
+                try await app.test(.POST, "fonts/\(f.requireID())/comments", headers: bearer(token),
+                                   beforeRequest: { req in
+                    try req.content.encode(CreateCommentDTO(body: texto, rating: nil, waterStatus: estado,
+                                                            image: nil, confirmIfUnchanged: true))
+                }, afterResponse: { res in status = res.status })
+                return status
+            }
+            let conTexto = try await publica("flowing", "sigue rajando fuerte")
+            XCTAssertEqual(conTexto, .created)
+            let cambio = try await publica("dry")
+            XCTAssertEqual(cambio, .created)
+
+            let g = try await fuente(app)
+            try await parte(app, en: g, de: yo, estado: "flowing", hace: 1.5)
+            try await app.test(.POST, "fonts/\(g.requireID())/comments", headers: bearer(token),
+                               beforeRequest: { req in
+                try req.content.encode(CreateCommentDTO(body: nil, rating: nil, waterStatus: "flowing",
+                                                        image: nil, confirmIfUnchanged: true))
+            }, afterResponse: { res in XCTAssertEqual(res.status, .created) })
         }
     }
 
