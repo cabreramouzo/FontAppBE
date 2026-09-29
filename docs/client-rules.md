@@ -244,6 +244,131 @@ current date and a good fix.
 Never claim upload success for a queued item ("saved, will be sent"), and never invent
 community impact figures.
 
+The rules below were read from the web's offline code (`lib/outbox.ts`,
+`components/PendingUploads.tsx`, `PendingDetails.tsx`, `lib/offlineSession.ts`,
+`lib/zonaOffline.ts`, `lib/zonaAlmacen.ts`, `lib/mapFallback.ts`, `lib/drafts.ts`,
+`public/sw.js`) so a native client keeps them without re-reading it.
+
+### R5.5 What is sent, in what order, and what is retried — Client
+Items go out **in the order they were saved**, oldest first, and a flush **stops at the
+first transient failure** (no network, 429, 5xx): a contribution is never dropped for
+something that does not depend on it. A **401** marks the item "needs sign-in" and stops;
+a new session clears that mark. Any other **4xx** (validation, fountain deleted, someone
+put a photo meanwhile → 403) will never go in: **three attempts and it is dropped**, so it
+does not block the queue for ever. A queued new fountain carries its first status with it
+(a review of a fountain that does not exist yet cannot be sent); if that status fails
+after the fountain was created, it is not queued again.
+When it is flushed: when the network comes back, when the app returns to the front, after
+signing in, and on the person's tap ("send now"). Native adds the background refresh; the
+PWA cannot on iOS (no Background Sync).
+
+### R5.6 The connectivity notice — Client
+One notice on the map says the state of the queue, and **never says more than is true**:
+
+| State | Title | Detail |
+|---|---|---|
+| offline, something pending | `offline.offlinePending` | `offline.savedSafe` |
+| offline, nothing pending | `offline.banner` | `offline.connectionHint` |
+| sending | `offline.syncing` | — |
+| just sent everything (4 s) | `offline.synced` | `offline.syncedHint` |
+| online, pending, some of another account | `offline.pending` | `offline.otherAccount` |
+| online, pending, needs sign-in | `offline.pending` | `offline.needsLogin` |
+| online, pending, a flush already failed | `offline.pending` | `offline.retryHint` |
+| online, pending, not tried yet | `offline.pending` | `offline.pendingHint` |
+
+It is **not shown** when online with nothing pending and nothing just sent.
+- **Colour.** Anything the person still has to care about (something pending) is
+  **orange** — the app's colour for "this is not resolved" (MUI `warning`: `#ed6c02` on
+  light, `#ffa726` on dark). Only informative states (offline with nothing pending) are
+  neutral, so the app does not shout about something that asks nothing of the person.
+  "All synced" is green.
+- **It shrinks.** After **3 s** the card becomes a small chip **with the same label**
+  (so nothing is hidden), **even with things pending**: the queue can take hours, or never
+  empty if what is pending is another account's, and a three-line card pinned over the
+  map covers a third of it. The timer **re-arms on every real change** (network lost or
+  back, number pending, session expired, another account's items) so news is seen whole;
+  tapping the chip expands it and it shrinks again by itself. It does **not** shrink
+  while sending or during the 4 s "synced" confirmation: both go away on their own.
+- The chip must be tappable (web bug: it was drawn but inert inside a strip that ignores
+  touches). Movement respects "reduce motion": the change is instant.
+- Never claim success for what is only queued (R5.4).
+
+### R5.7 See, copy and save what is waiting — Client
+The person can always see what is on the phone and unsent (`offline.seeDetails`, from the
+notice, whether it is a card or a chip). It exists because a stuck contribution left the
+person blind: trust it is saved, or discard it and lose it. The list is **oldest first**;
+each item shows its kind (new fountain / review / photo), the fields that carry something
+(name, coordinates, water status, rating, text, fountain id), its **photo**, when it was
+queued and how many attempts it has had, and is marked "another account" / "needs sign-in".
+- **Copy all** puts a JSON on the clipboard: the fields, `queuedAt` (ISO) and `attempts`,
+  **never the photo bytes**. Say it was copied, or that it could not be.
+- **Save the photo** through the system share sheet (the reliable way to the gallery).
+- Empty list says there is nothing pending.
+
+### R5.8 A way out: discard — Client
+A contribution that can never go out (another account's, already published by hand,
+rejected in a way the queue takes for transient) must not retry for ever behind a
+permanent notice. Discarding exists, is **destructive** (the data exist only on this
+phone) and therefore **asks first, saying how many**. It is small text, not a prominent
+button: the exit must exist, not invite.
+- If some items are another account's and some are the current one's, the discard offered
+  is **only the other account's**; if all are of one kind, all of them.
+- Shown when there is something pending and (something is another account's, or nothing is
+  being sent right now).
+- "Send now" is **forced**: it ignores any "in flight" mark. It is hidden when every
+  pending item is another account's (nothing it could do), and replaced by "sign in" when
+  the session expired.
+- After deleting an account, what it queued can never be sent and is discarded with it.
+
+### R5.9 The session survives no signal — Client
+**Only a 401 signs out.** A network failure while restoring the account says nothing about
+the token: keep the session and use the last known user (cached). Web bug: launching
+without signal showed the app signed out ("My profile" led to sign-in, the add button said
+"no session") and the queue had no owner. On a mountain, the worst moment for it.
+
+### R5.10 A failed refresh never empties the map — Client
+When `GET /fonts/map` fails (no signal, 429, 5xx) the pins already on screen stay: an empty
+map reads as "no fountains here". A fallback replaces them **only if it has fountains**.
+The fallback is the saved zone and what was seen before, and a saved zone stands in **only
+if it covers at least half of the view**: zoomed out over a continent, a timeout must not
+swap the map for the dozen fountains of one saved valley drawn as a single cluster. Outside
+every saved zone say nothing false: no "nearby" list ordered by distance to fountains 900 km
+away.
+
+### R5.11 Saved zones (data first, map second) — Client
+A saved zone is the **data** of a box, saved once: its fountains, from which "near me" is
+computed on the phone (sort by distance, what the server does). Photos and map are a
+**second step, offered with their size**, because they are two orders of magnitude bigger
+(web estimate: 489 KB per photo, measured in production). A zone with no fountains is not
+saved ("0 saved" in green would send someone to the mountain believing they carry it).
+Sizes are shown as estimates and the real size after downloading. The zone says when it was
+saved (data ages). Reviews and incidents are **not** saved: say so when showing from a zone
+(`offline.fromZone`). The web saves one zone and no tiles (it pins the shell, fountains and
+photos, and lets the browser keep the tiles seen); native can keep several zones and saves
+the map with them (vector tiles are light: see `docs/vector-tiles.md`).
+
+### R5.12 Map tiles are kept, and not asked for twice — Client
+What the map has drawn stays on the phone, so a part already seen is never downloaded
+again and is still there without signal. Web (`sw.js`): tiles of every base layer's host,
+cache-first, up to **3,000** tiles (~18 MB), the **whole tile cache expires after 30
+days** by one stamp (cross-origin tiles are opaque: no per-tile date), trimmed only when
+the count is exceeded and **below** the limit (hysteresis), and **no timeout on tiles**
+(aborting a tile is final: nobody asks for it again, and it queues nothing behind it,
+since the tile hosts are not the API's). A tile from a **saved zone is never evicted** to
+make room ("pinned"): what was prepared on Friday must still be there on Saturday after
+browsing another valley. Native: MapLibre's ambient cache keeps every tile seen, evicting
+the least recently used past its size; the zones' offline packs are separate and never
+evicted; a saved zone's tiles are the ones kept for sure.
+
+### R5.13 Reads and drafts survive no signal — Client
+A read that fails for lack of network answers with what the same read returned last time
+(fountain page, profile, news, favourites), stored **under the account** so another account
+never sees it; never for something whose freshness matters and can be fetched (with signal
+the app always asks). A fountain seen on the map opens its page without a saved zone: the
+map's summary is kept and used when the page's read fails. Drafts (half-filled forms)
+follow the drafts rule of the forms section: per account, text and choices only (never the photo), seven
+days, cleared on send or explicit discard, never on close.
+
 ## 6. Map, location and navigation
 
 - **R6.1 Map loading.** `GET /fonts/map` with bbox and viewport size; clamp lat to ±90
