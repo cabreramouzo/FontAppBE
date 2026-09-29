@@ -151,7 +151,22 @@ by default. The (?) help explains every type and drinkability, includes "unknown
 one confused with "untreated") and closes with "no natural fountain has sanitary
 guarantee". Where there is a choice to make, tapping a row in the help selects it.
 
-### R2.8 Duplicates: anyone suggests, a moderator decides — Server
+### R2.8 A new fountain is on the map at once, and visible — Client
+After "created", the author must **see** the fountain there, or they add it again and a
+duplicate is born (it happened on the web and on iOS, 09/2026). Three causes, three
+musts:
+- **Don't wait for a reload.** Insert the created fountain into the map's data right
+  away, and keep it for a while even if an answer for the area does not bring it yet
+  (caches, in-flight requests). The server's copy wins when it arrives.
+- **Filters never hide it.** A new fountain is always "never checked", so "only
+  confirmed" or "only with water" would hide it in front of its author. Exempt it from
+  the filters for a while (iOS: 30 min).
+- **The location dot covers it.** It was created exactly where the person stands, so the
+  blue dot is drawn on top of the pin. Select it after creating (raised pin, its card
+  open), which also invites the next step (photo, status).
+Queued (offline) fountains have no id yet; say they are saved on the phone.
+
+### R2.9 Duplicates: anyone suggests, a moderator decides — Server
 `POST /fonts/:id/report` with `duplicateOf` is a suggestion; it hides nothing and is
 never an incident. Marking as duplicate is level 5 / staff. Whoever can mark does not see
 "suggest".
