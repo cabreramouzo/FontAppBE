@@ -1848,6 +1848,35 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    /// Deleting from moderation with a reason records it and notifies the author; an
+    /// unknown reason is rejected and the content stays.
+    func testModeratorDeletionWithReasonNotifiesAuthor() async throws {
+        try await withApp { app in
+            let authorID = try await register(app, username: "author")
+            let authorTok = try await login(app, username: "author")
+            let fontID = try await createFont(app, token: authorTok, name: "F", lat: 40, long: -3)
+            let commentID = try await addComment(app, token: authorTok, fontID: fontID, body: "hola")
+            let modID = try await register(app, username: "mod")
+            try await setRole(app, userID: modID, role: .moderator)
+            let modTok = try await login(app, username: "mod")
+
+            try await app.test(.DELETE, "fonts/\(fontID)/comments/\(commentID)?reason=bogus", headers: bearer(modTok)) { res in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+            try await app.test(.DELETE, "fonts/\(fontID)/comments/\(commentID)?reason=spam", headers: bearer(modTok)) { res in
+                XCTAssertEqual(res.status, .noContent)
+            }
+            let notices = try await Notification.query(on: app.db)
+                .filter(\.$user.$id == authorID).filter(\.$kind == .contentRemoved).all()
+            XCTAssertEqual(notices.map(\.excerpt), ["comment:spam"])
+            XCTAssertNil(notices.first?.$actor.id)
+            let rows = try await (app.db as! SQLDatabase)
+                .raw("SELECT reason FROM moderation_actions WHERE action = 'remove_comment'")
+                .all(decodingColumn: "reason", as: String.self)
+            XCTAssertEqual(rows, ["spam"])
+        }
+    }
+
     /// Solo el owner asigna roles; no puede crear otro owner ni cambiar el suyo.
     func testOnlyOwnerCanSetRole() async throws {
         try await withApp { app in

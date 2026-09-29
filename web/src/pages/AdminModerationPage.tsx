@@ -8,6 +8,7 @@ import CardContent from '@mui/material/CardContent'
 import Chip from '@mui/material/Chip'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import type { Flag, ModerationSource } from '../api/types'
 import type { DuplicateSuggestion } from '../api/client'
@@ -127,8 +128,8 @@ export function AdminModerationPage() {
       const item = group.first
       const fontID = item.fontID ?? (item.targetType === 'font' ? item.targetID : null)
       if (item.targetType === 'font') await hideFontAbuse(item.targetID, reason)
-      else if (item.targetType === 'comment' && fontID) await deleteComment(fontID, item.targetID)
-      else if (item.targetType === 'photo' && fontID) await deleteSecondaryPhoto(fontID, item.targetID)
+      else if (item.targetType === 'comment' && fontID) await deleteComment(fontID, item.targetID, reason)
+      else if (item.targetType === 'photo' && fontID) await deleteSecondaryPhoto(fontID, item.targetID, reason)
       await clear(group)
     })
   }
@@ -265,6 +266,7 @@ export function AdminModerationPage() {
             onApprove={() => approve(group, 1)}
             onApprove7={() => approve(group, 7)}
             onRemove={(reason) => remove(group, reason)}
+            fontTarget={group.first.targetType === 'font'}
             removalRequest={group.first.targetType === 'cover_photo_removal'}
             sourceLimitRequest={group.first.targetType === 'source_limit_exemption'}
             onRestrict={isOwner(user) ? () => restrict(group.first.targetAuthorID, group.key) : undefined}
@@ -290,6 +292,7 @@ export function AdminModerationPage() {
             busy={busy === `new:${source.id}`}
             onApprove={() => reviewSource(source)}
             onRemove={(reason) => hideSource(source, reason)}
+            fontTarget
             onRestrict={isOwner(user) ? () => restrict(source.authorID, `new:${source.id}`) : undefined}
             t={t}
           />
@@ -307,9 +310,14 @@ function ModerationCard(props: {
   chips: string[]; busy: boolean; onApprove: () => void
   onRemove: (reason: Reason) => void; onRestrict?: () => void
   removalRequest?: boolean; sourceLimitRequest?: boolean; onApprove7?: () => void
+  fontTarget: boolean
   t: (key: string, params?: Record<string, string | number>) => string
 }) {
   const { t } = props
+  // Fake, spam and abuse have the same consequences; only the recorded label differs.
+  // What changes is the target: a fountain is hidden (reversible, with a strike), while
+  // a review or photo is deleted outright with no strike — see `remove` above.
+  const removeEffect = t(props.fontTarget ? 'moderation.help.hideFont' : 'moderation.help.deleteContent')
   return (
     <Card variant="outlined">
       <CardContent sx={{ display: 'grid', gridTemplateColumns: props.image ? { xs: '1fr', sm: '140px 1fr' } : '1fr', gap: 2 }}>
@@ -344,19 +352,40 @@ function ModerationCard(props: {
                 <Button size="small" variant="outlined" color="success" disabled={props.busy} onClick={props.onApprove7}>{t('moderation.grant7')}</Button>
               </>
             ) : (
-              <Button size="small" variant="contained" color="success" disableElevation disabled={props.busy} onClick={props.onApprove}>{props.removalRequest ? t('moderation.removePhoto') : t('moderation.approve')}</Button>
+              props.removalRequest
+                ? <Button size="small" variant="contained" color="success" disableElevation disabled={props.busy} onClick={props.onApprove}>{t('moderation.removePhoto')}</Button>
+                : <Explained text={[t('moderation.help.approve'), t('moderation.help.reporter')]}>
+                    <Button size="small" variant="contained" color="success" disableElevation disabled={props.busy} onClick={props.onApprove}>{t('moderation.approve')}</Button>
+                  </Explained>
             )}
             {props.removalRequest || props.sourceLimitRequest ? (
               <Button size="small" disabled={props.busy} onClick={() => props.onRemove('fake')}>{t('moderation.rejectRequest')}</Button>
             ) : <>
-              <Button size="small" color="error" disabled={props.busy} onClick={() => props.onRemove('fake')}>{t('moderation.fake')}</Button>
-              <Button size="small" color="error" disabled={props.busy} onClick={() => props.onRemove('spam')}>{t('moderation.spam')}</Button>
-              <Button size="small" color="error" disabled={props.busy} onClick={() => props.onRemove('abuse')}>{t('moderation.abuse')}</Button>
+              {(['fake', 'spam', 'abuse'] as const).map((reason) => (
+                <Explained key={reason} text={[t(`moderation.help.${reason}`), removeEffect, t('moderation.help.reporter')]}>
+                  <Button size="small" color="error" disabled={props.busy} onClick={() => props.onRemove(reason)}>{t(`moderation.${reason}`)}</Button>
+                </Explained>
+              ))}
             </>}
-            {props.onRestrict && !props.sourceLimitRequest && <Button size="small" variant="outlined" color="error" disabled={props.busy} onClick={props.onRestrict}>{t('moderation.restrict7')}</Button>}
+            {props.onRestrict && !props.sourceLimitRequest && (
+              <Explained text={[t('moderation.help.restrict')]}>
+                <Button size="small" variant="outlined" color="error" disabled={props.busy} onClick={props.onRestrict}>{t('moderation.restrict7')}</Button>
+              </Explained>
+            )}
           </Stack>
         </Box>
       </CardContent>
     </Card>
+  )
+}
+
+/** Explains a moderation button's consequences. The span keeps the tooltip working
+ *  while the button is disabled, and `enterTouchDelay={0}` makes it show on a tap. */
+function Explained(props: { text: string[]; children: React.ReactElement }) {
+  return (
+    <Tooltip arrow enterTouchDelay={0} leaveTouchDelay={6000}
+             title={<Stack spacing={0.5}>{props.text.map((line) => <span key={line}>{line}</span>)}</Stack>}>
+      <span>{props.children}</span>
+    </Tooltip>
   )
 }

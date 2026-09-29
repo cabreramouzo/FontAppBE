@@ -77,6 +77,9 @@ final class Notification: Model, @unchecked Sendable {
         /// to do. The `excerpt` carries **the review's id**, not text — it is what keeps it
         /// to one notice per review while unread, and the words are composed by the client.
         case reviewConfirmed
+        /// A moderator removed or hid something you published (`ModerationNotice`).
+        /// No actor; the excerpt is `<target>:<reason>`, e.g. `comment:spam`.
+        case contentRemoved
     }
 
     @ID(key: .id) var id: UUID?

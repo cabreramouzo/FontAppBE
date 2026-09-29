@@ -501,8 +501,10 @@ export async function updateComment(fontID: string, commentID: string, data: New
   })
 }
 
-export async function deleteComment(fontID: string, commentID: string): Promise<void> {
-  await apiFetch(`/fonts/${fontID}/comments/${commentID}`, { method: 'DELETE' })
+/** `reason` only from moderation: the server records it and notifies the author. */
+export async function deleteComment(fontID: string, commentID: string, reason?: string): Promise<void> {
+  const q = reason ? `?reason=${encodeURIComponent(reason)}` : ''
+  await apiFetch(`/fonts/${fontID}/comments/${commentID}${q}`, { method: 'DELETE' })
 }
 
 /** 👍 "sigue igual": confirma (o deshace) que el estado del comentario sigue vigente. */
@@ -781,7 +783,7 @@ export async function collectionFonts(source: WaterSource): Promise<CollectionFo
 /** Un aviso de la campana. `fontID` nulo = la fuente ya no existe. */
 export interface NotificationItem {
   id: string
-  kind: 'mention' | 'staleGuarded' | 'fontUpdate' | 'sourceLimit' | 'userOnFire' | 'commentLike' | 'mayorTaken' | 'reviewConfirmed'
+  kind: 'mention' | 'staleGuarded' | 'fontUpdate' | 'sourceLimit' | 'userOnFire' | 'commentLike' | 'mayorTaken' | 'reviewConfirmed' | 'contentRemoved'
   actorName: string
   fontID: string | null
   fontName: string | null
@@ -1042,8 +1044,9 @@ export async function reviewModerationSource(id: string): Promise<void> {
   await apiFetch(`/fonts/${id}/moderation/review`, { method: 'POST' })
 }
 
-export async function deleteSecondaryPhoto(fontID: string, photoID: string): Promise<void> {
-  await apiFetch(`/fonts/${fontID}/photos/${photoID}`, { method: 'DELETE' })
+export async function deleteSecondaryPhoto(fontID: string, photoID: string, reason?: string): Promise<void> {
+  const q = reason ? `?reason=${encodeURIComponent(reason)}` : ''
+  await apiFetch(`/fonts/${fontID}/photos/${photoID}${q}`, { method: 'DELETE' })
 }
 
 // Historial de ediciones de información de fuentes (admin): listar, revertir, revisar.

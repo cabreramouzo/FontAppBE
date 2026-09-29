@@ -192,6 +192,11 @@ struct FontPhotoController: RouteCollection {
         // porque ya hay tope de 3 fotos por persona y fuente y son denunciables.
         let puede = foto.$uploader.id == userID || user.canModerate
         guard puede else { throw AppError(.forbidden, "photo.deleteForbidden", "No puedes borrar esta foto") }
+        if let reason = try ModerationNotice.reason(from: req), user.canModerate {
+            try await ModerationNotice.record(on: req.db, target: "photo", reason: reason,
+                                              fontID: foto.$font.id, subjectID: foto.$uploader.id,
+                                              actorID: userID)
+        }
         // El fichero se borra en best-effort, igual que en fuentes y reseñas: si falla,
         // queda un huérfano en el disco y no una petición rota.
         try? await req.imageStorage.delete(foto.url)

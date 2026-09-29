@@ -400,6 +400,11 @@ struct FontCommentController: RouteCollection {
     @Sendable func destroy(req: Request) async throws -> HTTPStatus {
         let user = try req.auth.require(User.self)
         let comment = try await requireOwnComment(req, user: user)
+        if let reason = try ModerationNotice.reason(from: req), user.canModerate {
+            try await ModerationNotice.record(on: req.db, target: "comment", reason: reason,
+                                              fontID: comment.$font.id, subjectID: comment.$user.id,
+                                              actorID: user.id)
+        }
         if let image = comment.image { try? await req.imageStorage.delete(image) }
         try await comment.delete(on: req.db)
         return .noContent

@@ -400,6 +400,12 @@ struct FontController: RouteCollection {
             }
             try await Self.audit(db, fontID: font.id, subjectID: creatorID, actorID: actor.id,
                                  action: "hide", reason: dto.reason)
+            // Only the notice: the "hide" row above is already the audit record.
+            if let creatorID, creatorID != actor.id {
+                try await Notification(userID: creatorID, kind: .contentRemoved, actorID: nil, actorName: "",
+                                       fontID: font.id, fontName: font.name,
+                                       excerpt: "font:\(dto.reason)").save(on: db)
+            }
         }
         return font
     }

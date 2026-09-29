@@ -174,6 +174,8 @@ export function NotificationBell({ desktopLabel = false }: { desktopLabel?: bool
                     ? t('notif.mayorTaken', { user: n.actorName })
                   : n.kind === 'reviewConfirmed'
                     ? t('notif.reviewConfirmed', { user: n.actorName })
+                  : n.kind === 'contentRemoved'
+                    ? t('notif.contentRemoved', { font: rotulo(n.fontName, t) })
                     : t('notif.mentionedYou', { user: n.actorName, font: rotulo(n.fontName, t) })}
             </Typography>
             {/* El texto que lo provocó. Sin él hay que abrir la ficha para saber si
@@ -191,6 +193,8 @@ export function NotificationBell({ desktopLabel = false }: { desktopLabel?: bool
                     ? t('notif.mayorTakenBody', { font: rotulo(n.fontName, t) })
                   : n.kind === 'reviewConfirmed'
                     ? t('notif.reviewConfirmedBody', { font: rotulo(n.fontName, t) })
+                  : n.kind === 'contentRemoved'
+                    ? motivoRetirada(n.excerpt, t)
                     : n.excerpt}
             </Typography>
             <Box component="span" sx={{ display: 'block', fontSize: 11, color: 'text.disabled', mt: 0.25 }}>
@@ -201,4 +205,13 @@ export function NotificationBell({ desktopLabel = false }: { desktopLabel?: bool
       </Menu>
     </>
   )
+}
+
+/** `comment:spam` → "Your review was removed: spam…". An unknown code falls back to a
+ *  generic line rather than printing a raw key (old clients, new reasons). */
+function motivoRetirada(code: string, t: (k: string) => string): string {
+  const [target, reason] = code.split(':')
+  const known = ['font', 'comment', 'photo'].includes(target) && ['fake', 'spam', 'abuse'].includes(reason)
+  if (!known) return t('notif.removed.generic')
+  return `${t(`notif.removed.${target}`)} ${t(`notif.removedReason.${reason}`)}`
 }
