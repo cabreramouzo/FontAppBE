@@ -27,23 +27,41 @@ export function isIndexingCrawler(userAgent: string | null, verifiedBotCategory?
 }
 
 const TTL_MS = 60 * 60 * 1000
-let cached: { ids: Set<string>; at: number } | null = null
+const cached = new Map<string, { keys: Set<string>; at: number }>()
 
 /**
- * The fountain ids the sitemap offers, refreshed at most hourly per isolate — and the
- * request itself is cached an hour at the edge, so this costs about one API call an hour.
- * `null` when it cannot be fetched: the caller then behaves as before (asks the API), so a
- * failure here can never hide a fountain that should be indexed.
+ * The keys a sitemap endpoint offers (`id` for fountains, `slug` for places), refreshed at
+ * most hourly per isolate — and the request itself is cached an hour at the edge, so this
+ * costs about one API call an hour per list. `null` when it cannot be fetched: the caller
+ * then behaves as before (asks the API), so a failure here can never hide a page that
+ * should be indexed.
  */
-export async function sitemapFontIDs(api: string, now = Date.now()): Promise<Set<string> | null> {
-  if (cached && now - cached.at < TTL_MS) return cached.ids
+async function sitemapKeys(api: string, path: string, field: 'id' | 'slug', now: number): Promise<Set<string> | null> {
+  const hit = cached.get(path)
+  if (hit && now - hit.at < TTL_MS) return hit.keys
   try {
-    const res = await fetch(`${api}/sitemap/fonts`, { cf: { cacheTtl: 3600, cacheEverything: true } } as RequestInit)
-    if (!res.ok) return cached?.ids ?? null
-    const rows = (await res.json()) as { id: string }[]
-    cached = { ids: new Set(rows.map((r) => r.id.toLowerCase())), at: now }
-    return cached.ids
+    const res = await fetch(`${api}${path}`, { cf: { cacheTtl: 3600, cacheEverything: true } } as RequestInit)
+    if (!res.ok) return hit?.keys ?? null
+    const rows = (await res.json()) as Record<string, string>[]
+    const keys = new Set(rows.map((r) => String(r[field]).toLowerCase()))
+    cached.set(path, { keys, at: now })
+    return keys
   } catch {
-    return cached?.ids ?? null
+    return hit?.keys ?? null
   }
+}
+
+export const sitemapFontIDs = (api: string, now = Date.now()) => sitemapKeys(api, '/sitemap/fonts', 'id', now)
+
+/**
+ * Same gate for town pages. Measured 28–29/09/2026: with fountains gated, ~5,500 place-page
+ * queries in 31 h (about three a minute, night included) kept Neon from ever suspending.
+ * Only towns outside the sitemap (fewer than three fountains, already `noindex`) are cut;
+ * the indexable ones keep their full page, since being found is their whole point.
+ */
+export const sitemapPlaceSlugs = (api: string, now = Date.now()) => sitemapKeys(api, '/sitemap/places', 'slug', now)
+
+/** JSON safe inside a `<script>`: `<` escaped so a name can never close the tag. */
+export function inlineJSON(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
 }

@@ -1245,6 +1245,11 @@ export interface PlacePage {
 
 /** La página de un pueblo: «Fonts a Moià». Pública, sin sesión. */
 export async function fetchPlace(slug: string): Promise<PlacePage> {
+  // Crawlers get the town inlined by the Pages Function (functions/places/[slug].ts) so
+  // that rendering the page does not reach the API and wake the database. Used once.
+  const w = window as { __PLACE__?: PlacePage }
+  const inlined = w.__PLACE__
+  if (inlined?.place?.slug === slug) { delete w.__PLACE__; return inlined }
   return apiFetch<PlacePage>(`/places/${encodeURIComponent(slug)}`)
 }
 

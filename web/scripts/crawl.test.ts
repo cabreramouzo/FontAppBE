@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { isIndexingCrawler } from '../functions/_crawl.ts'
+import { inlineJSON, isIndexingCrawler } from '../functions/_crawl.ts'
 
 test('search and AI crawlers are recognised', () => {
   assert.ok(isIndexingCrawler('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)'))
@@ -22,4 +22,11 @@ test('link-preview scrapers and people are not crawlers: shared cards must stay 
   ]) assert.equal(isIndexingCrawler(ua), false, ua)
   assert.equal(isIndexingCrawler('Mozilla/5.0', 'Page Preview'), false)
   assert.equal(isIndexingCrawler(null), false)
+})
+
+test('inlined JSON cannot close its script tag', () => {
+  const out = inlineJSON({ name: '</script><script>alert(1)</script>', sep: ' ' })
+  assert.ok(!out.includes('<'))
+  assert.ok(!out.includes(' '))
+  assert.deepEqual(JSON.parse(out), { name: '</script><script>alert(1)</script>', sep: ' ' })
 })

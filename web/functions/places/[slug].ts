@@ -1,3 +1,5 @@
+import { inlineJSON, isIndexingCrawler, sitemapPlaceSlugs } from '../_crawl'
+import { crawlerStub } from '../_stub'
 import { apiOrigin, esc, PLACE_META, recorta, shareCard, shareLang, siteOrigin, type Env } from '../_meta'
 
 /**
@@ -23,6 +25,9 @@ import { apiOrigin, esc, PLACE_META, recorta, shareCard, shareLang, siteOrigin, 
  */
 const MIN_FUENTES_INDEXABLE = 3
 
+/** How long a crawler's copy of a town lives at the edge. */
+const CRAWLER_TTL_S = 24 * 60 * 60
+
 interface PlaceDTO {
   slug: string
   name: string
@@ -45,12 +50,25 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   // un enlace roto y no merece una petición de red por visita.
   if (!api || !/^[a-z0-9-]{1,80}$/.test(slug)) return pagina
 
+  // A search crawler on a town the sitemap does not offer: generic page, noindex, no
+  // scripts and no API call — the same gate as fountains (see _crawl.ts).
+  const cf = ctx.request.cf as { verifiedBotCategory?: string } | undefined
+  const crawler = isIndexingCrawler(ctx.request.headers.get('user-agent'), cf?.verifiedBotCategory)
+  if (crawler) {
+    const offered = await sitemapPlaceSlugs(api)
+    if (offered && !offered.has(slug)) return crawlerStub(pagina)
+  }
+
   let datos: PlacePage
   try {
     const res = await fetch(`${api}/places/${slug}`, {
       // Una hora: el contenido de un pueblo cambia cuando alguien reseña, no cada minuto,
       // y estas páginas van a recibir rastreadores más que personas.
-      cf: { cacheTtl: 3600, cacheEverything: true },
+      // For crawlers, a day and under its own key: they re-crawl the same towns over and
+      // over, and a day-old status is fine for indexing — people keep the one-hour copy.
+      cf: crawler
+        ? { cacheTtl: CRAWLER_TTL_S, cacheEverything: true, cacheKey: `${api}/places/${slug}#crawler` }
+        : { cacheTtl: 3600, cacheEverything: true },
     })
     if (!res.ok) return pagina
     datos = await res.json()
@@ -107,10 +125,15 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
           `<link rel="canonical" href="${esc(canonica)}">` +
           (place.fontCount < MIN_FUENTES_INDEXABLE
             ? `<meta name="robots" content="noindex,follow">`
-            : ''),
+            : '') +
+          // Crawlers that render JavaScript (Applebot, Google) booted React, which asked
+          // fly.dev for the town again — uncached, so each render woke Neon. The page now
+          // carries the data it already fetched from the edge, and React uses it instead.
+          (crawler ? `<script>window.__PLACE__=${inlineJSON(datos)}</script>` : ''),
           { html: true },
         )
       },
     })
     .transform(pagina)
 }
+

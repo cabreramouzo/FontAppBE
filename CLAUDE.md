@@ -3499,6 +3499,21 @@ que afecte a lo que hace un cliente, actualiza también ese documento.**
     `font_comments`/`font_confirmations` ~1.470, `font_reports` ~1.380, `font_comments`
     +`users` ~1.380 — o sea, **las cuatro consultas de abrir una ficha**. Todo lo demás
     (sesiones, analítica, `places`, insignias, avisos) fueron decenas, no miles.
+- **El mismo corte vale para `/places/`** (`sitemapPlaceSlugs` + `crawlerStub` en
+  `_crawl.ts`). Medido el 28–29/09/2026 con la API de Neon: 31 h sin suspenderse ni una
+  vez, con ~5.500 consultas de página de pueblo (unas tres por minuto, también de noche).
+  Solo se cortan los pueblos **fuera del sitemap** (menos de 3 fuentes, que ya llevaban
+  `noindex`); los indexables siguen con la página completa porque existen para que los
+  encuentren.
+- **Y los indexables se sirven del borde a los rastreadores**: la función ya pedía el
+  pueblo (caché de Cloudflare) para las etiquetas; a un rastreador se le incrusta ese JSON
+  en `window.__PLACE__` y `fetchPlace` lo usa en vez de ir a fly.dev, así que un Applebot
+  que renderiza JavaScript no toca la API. Su copia vive **24 h** con clave propia
+  (`#crawler`); las personas siguen con la de 1 h. `inlineJSON` escapa `<`, `U+2028` y
+  `U+2029`: un nombre de pueblo no puede cerrar el `<script>`, y hay test.
+  `crawlerStub` vive en `_stub.ts` y no en `_crawl.ts` porque este lo importan tests de
+  Node, donde `HTMLRewriter` no existe. Ojo al probar con `wrangler pages dev`: si falla
+  por la fecha de compatibilidad, `--compatibility-date 2026-08-01`.
 - **Applebot, Googlebot y compañía no se tocan**: son los que traen gente. Si el cupo
   vuelve a apretar, lo primero es medir quién es con el `tail` de arriba **antes** de
   bloquear nada.
