@@ -2108,8 +2108,11 @@ final class IntegrationTests: XCTestCase {
             try await dry.save(on: app.db)
 
             for (index, expectedCode) in ["recovered:trickle", "review:trickle"].enumerated() {
+                // The second report carries text: a bare repeat of your own fresh status is
+                // refused with 409 (`repiteTuParteReciente`), and that is not what this tests.
+                let body = index == 0 ? ["waterStatus": "trickle"] : ["waterStatus": "trickle", "body": "Still a trickle"]
                 try await app.test(.POST, "fonts/\(fontID)/comments", headers: bearer(token), beforeRequest: { req in
-                    try req.content.encode(["waterStatus": "trickle"])
+                    try req.content.encode(body)
                 }, afterResponse: { res in
                     XCTAssertEqual(res.status, .created)
                 })
