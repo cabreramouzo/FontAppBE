@@ -46,16 +46,22 @@ different words (`popup.confirmedThanks`) and **don't** recolour the pin: the st
 not change, only the confidence. The outbox queues the same intent, not a decision.
 [«Tocar el chip que ya consta es CONFIRMAR»]
 
-### R1.4 Your own recent report is not repeated — Both
-Confirming your own report is refused for **24 h** since the report and since your last
-self-confirmation (server: `FontCommentController.selfConfirmCooldown`, 403
-`confirm.tooSoon`; web: `lib/selfConfirm.ts`). While the latest status report on a
-fountain is yours and inside that window, clients hide the chips and the "still the
-same" button and show your status with `err.confirm.tooSoon`. This includes the status
-given when **creating** the fountain, which is stored as its first review.
+### R1.4 Your own recent report: same status is noise, a change is news — Both
+Two different things, and mixing them was a bug (iOS, 09/2026):
+- **A new report** is always allowed, by anyone, at any time — a change of status is
+  exactly what the app wants to hear, and the full review form never blocks it.
+- **Repeating your own status** adds nothing: no corroboration, and within a day not
+  even freshness. Confirming your own report ("still the same") is refused for **24 h**
+  since the report and since your last self-confirmation (server:
+  `FontCommentController.selfConfirmCooldown`, 403 `confirm.tooSoon`; web:
+  `lib/selfConfirm.ts`).
+So while the latest status report is yours and inside that window, the chip of **that
+same status** is disabled (with "you said so {when}; if it changed, tap the new one"),
+the **other chips stay available**, and "still the same" is hidden. This includes the
+status given when **creating** the fountain, stored as its first review.
 Self-confirmations refresh the date but never add corroboration and never score.
-*Candidate for the server:* reject or fold a repeated own status report within 24 h, so
-clients do not need to mirror it.
+*Candidate for the server:* fold a status-only report that repeats your own status of
+the last 24 h into a no-op, so no client can publish the twin.
 
 ### R1.5 Undo for 10 seconds — Client
 A review changes the pin for everyone, pays drops and, if `flowing`, auto-resolves open
