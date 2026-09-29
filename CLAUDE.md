@@ -11,6 +11,9 @@ Su sección 13 contiene las tareas pendientes, el orden recomendado y los criter
 aceptación para retomarlas; son propuestas, no funcionalidades implementadas.
 La sección 14 compara PWA, Capacitor, React Native, Flutter y Swift/Kotlin con
 estimaciones de esfuerzo asistido por IA; FA-09 deja pendiente validar la inversión móvil.
+Las **reglas de producto que todo cliente debe cumplir** (web, iOS, Android) están resumidas
+en [docs/client-rules.md](docs/client-rules.md). **Al tomar o cambiar una decisión de producto
+que afecte a lo que hace un cliente, actualiza también ese documento.**
 
 ## Stack
 - **Backend:** Swift 6.3 · Vapor 4 · Fluent + PostgreSQL · SwiftPM (sin proyecto Xcode).
