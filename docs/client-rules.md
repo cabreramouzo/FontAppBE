@@ -300,7 +300,13 @@ carries `Retry-After` (R6.3).
   more" (only if > 60 characters are hidden) and never folds back. — Client
 - **R9.5 Don't offer an action that can only fail** (resolve a comment, "send now" on
   other-account items, confirm your own report too soon). — Client
-- **R9.6 Hidden easter eggs** never grant drops, permissions, badges nor analytics, and
+- **R9.6 Confirmations come from what asked, on the screen you are on.** A "delete?" or
+  "discard?" is attached to the control or row that triggered it, never to the page:
+  on iOS 26 a confirmation dialog springs from the view it hangs on (Apple's current
+  action-sheet guidance), so hung on a page it floats at the top, and hung on a page
+  underneath a pushed screen it opens on the wrong screen (09/2026). From a menu, hang
+  it on the menu's button. Android: a bottom sheet or dialog from the current screen. — Client
+- **R9.7 Hidden easter eggs** never grant drops, permissions, badges nor analytics, and
   respect reduced motion. — Client
 
 ## 10. What not to port to native clients
