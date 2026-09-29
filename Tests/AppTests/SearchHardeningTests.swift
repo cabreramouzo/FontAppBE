@@ -61,4 +61,18 @@ final class SearchHardeningTests: XCTestCase {
         XCTAssertNil(SearchTerm.likePatterns(""))
         XCTAssertNil(SearchTerm.likePatterns("   "))
     }
+
+    // MARK: - Ranking
+
+    func testInOrderPatternAllowsWordsInBetween() {
+        // "font roure" must rank «Font del Roure» high although the phrase never matches it.
+        XCTAssertEqual(SearchTerm.inOrderPattern("font roure"), "font%roure%")
+        XCTAssertEqual(SearchTerm.inOrderPattern(" 50% "), "50\\%%")
+        XCTAssertNil(SearchTerm.inOrderPattern("  "))
+    }
+
+    func testWholeWordPatternsEscapeRegex() {
+        XCTAssertEqual(SearchTerm.wholeWordPatterns("roure"), ["\\mroure\\M"])
+        XCTAssertEqual(SearchTerm.wholeWordPatterns("a.b"), ["\\ma\\.b\\M"])
+    }
 }

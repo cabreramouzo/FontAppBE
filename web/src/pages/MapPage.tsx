@@ -888,6 +888,11 @@ function ZoomControls() {
   )
 }
 
+/** `&lat=&long=` rounded to about a kilometre: enough to order matches by distance. */
+function cerca(me: [number, number] | null): string {
+  return me ? `&lat=${me[0].toFixed(2)}&long=${me[1].toFixed(2)}` : ''
+}
+
 function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f: RecentFountain) => void; onSelectPlace: (p: Place) => void; me: [number, number] | null; historyScope: string }) {
   const { t, lang } = useI18n()
   const theme = useTheme()
@@ -897,6 +902,10 @@ function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f
   const compacto = useMediaQuery(theme.breakpoints.down('sm'))
   const [abierto, setAbierto] = useState(!compacto)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Where the person is, for the server to put the nearest matches first. A ref and not
+  // a dependency: every GPS fix would search again.
+  const meRef = useRef(me)
+  meRef.current = me
   const [q, setQ] = useState('')
   const [matches, setMatches] = useState<Font[]>([])
   const [places, setPlaces] = useState<Place[]>([])
@@ -960,7 +969,7 @@ function SearchBox({ onSelect, onSelectPlace, me, historyScope }: { onSelect: (f
     const timer = setTimeout(() => {
       trackInteraction('search_run')
       Promise.all([
-        apiFetch<Page<Font>>(`/fonts?search=${encodeURIComponent(term)}&per=6`).then((p) => p.items).catch(() => [] as Font[]),
+        apiFetch<Page<Font>>(`/fonts?search=${encodeURIComponent(term)}&per=6${cerca(meRef.current)}`).then((p) => p.items).catch(() => [] as Font[]),
         searchPlaces(term, lang, ctrl.signal),
       ]).then(([fonts, foundPlaces]) => {
         if (!active) return

@@ -629,16 +629,43 @@ struct FontController: RouteCollection {
                 )))
             }
         }
-        // Rank before pagination so an exact name cannot fall outside the six suggestions.
-        if let phrase = req.query[String.self, at: "search"].flatMap(SearchTerm.rankingPhrase) {
+        // Rank before pagination: only the first page reaches the app (six on the web,
+        // twenty on iOS), and alphabetical order used to cut the right fountain off.
+        // "font roure" matches 54 names; none contains the literal phrase (there is a
+        // «del» in between), so they all tied and «Font de …» filled the page before any
+        // «Font del Roure» came up.
+        //
+        // 0 the exact name · 1 the words, whole and in order from the start («Font del
+        // Roure») · 2 the words whole, anywhere · 3 in order but inside a longer word
+        // («Font de la Roureda») · 4 the rest. Within a tier, the nearest first when the
+        // client says where it is: of forty «Font del Roure», the one down the road.
+        let raw = req.query[String.self, at: "search"]
+        if let raw, let phrase = SearchTerm.rankingPhrase(raw), let inOrder = SearchTerm.inOrderPattern(raw) {
+            let name = SQLRaw("unaccent(fonts.name)")
+            let wholeWords = SearchTerm.wholeWordPatterns(raw)
+                .map { SQLBinaryExpression(left: name, op: SQLRaw("~*"), right: SQLFunction("unaccent", args: SQLBind($0))) }
+            let allWhole: any SQLExpression = wholeWords.dropFirst().reduce(wholeWords[0] as any SQLExpression) {
+                SQLBinaryExpression(left: $0, op: SQLBinaryOperator.and, right: $1)
+            }
             query.sort(.sql(embed: """
                 CASE
                     WHEN unaccent(trim(regexp_replace(fonts.name, '[[:space:]]+', ' ', 'g'))) ILIKE unaccent(\(bind: phrase)) THEN 0
-                    WHEN unaccent(fonts.name) ILIKE unaccent(\(bind: phrase + "%")) THEN 1
-                    WHEN unaccent(fonts.name) ILIKE unaccent(\(bind: "%" + phrase + "%")) THEN 2
-                    ELSE 3
+                    WHEN unaccent(fonts.name) ILIKE unaccent(\(bind: inOrder)) AND \(allWhole) THEN 1
+                    WHEN \(allWhole) THEN 2
+                    WHEN unaccent(fonts.name) ILIKE unaccent(\(bind: inOrder)) THEN 3
+                    ELSE 4
                 END
                 """))
+            if let lat = req.query[Double.self, at: "lat"], let long = req.query[Double.self, at: "long"],
+               (-90...90).contains(lat), (-180...180).contains(long) {
+                // Plain degrees, the longitude shrunk by latitude: enough to tell near from
+                // far between fountains that already match, and cheap on every row.
+                let k = cos(lat * .pi / 180)
+                query.sort(.sql(embed: """
+                    (fonts.latitude - \(literal: lat)) * (fonts.latitude - \(literal: lat)) + \
+                    ((fonts.longitude - \(literal: long)) * \(literal: k)) * ((fonts.longitude - \(literal: long)) * \(literal: k))
+                    """))
+            }
         }
         query.sort(\.$name).sort(\.$id)
         return try await query.paginate(SafePage.from(req))

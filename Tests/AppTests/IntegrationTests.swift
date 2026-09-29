@@ -118,6 +118,30 @@ final class IntegrationTests: XCTestCase {
         }
     }
 
+    func testSearchRanksWholeWordsAndTheNearestFirst() async throws {
+        try await withApp { app in
+            guard let sql = app.db as? SQLDatabase else { return XCTFail("Postgres requerido") }
+            // Alphabetically «Font de la Roureda» and «Font de Mas Roure» come first; the
+            // one wanted is the «Font del Roure» near where the search is made.
+            try await sql.raw("""
+                INSERT INTO fonts (id, name, latitude, longitude, created_at) VALUES
+                  ('00000000-0000-0000-0000-0000000000a1', 'Font de la Roureda', 41.76, 2.16, now()),
+                  ('00000000-0000-0000-0000-0000000000a2', 'Font de Mas Roure', 41.80, 2.90, now()),
+                  ('00000000-0000-0000-0000-0000000000a3', 'Font del Roure', 42.45, 0.79, now()),
+                  ('00000000-0000-0000-0000-0000000000a4', 'Font del Roure', 41.76, 2.16, now())
+                """).run()
+            try await app.test(.GET, "fonts?search=font%20roure&per=2&lat=41.7609&long=2.1630") { res in
+                XCTAssertEqual(res.status, .ok)
+                struct Item: Decodable { let id: UUID }
+                struct Found: Decodable { let items: [Item] }
+                let page = try res.content.decode(Found.self)
+                // The nearest whole-word match, then the next nearest; «Roureda», on the very
+                // same spot, stays behind both.
+                XCTAssertEqual(page.items.map { String($0.id.uuidString.suffix(2)) }, ["A4", "A2"])
+            }
+        }
+    }
+
     func testMapEndpointReturnsEverythingOrExactServerClusters() async throws {
         try await withApp { app in
             guard let sql = app.db as? SQLDatabase else { return XCTFail("Postgres requerido") }

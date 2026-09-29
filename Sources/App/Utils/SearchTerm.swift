@@ -61,6 +61,35 @@ enum SearchTerm {
         return escapa(words.joined(separator: " "))
     }
 
+    /// The words of a search, bounded as in `likePatterns`, unescaped.
+    static func words(_ raw: String) -> [String] {
+        String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxLength))
+            .split(whereSeparator: { $0.isWhitespace }).prefix(maxWords).map(String.init)
+    }
+
+    /// `font%roure%`: the words in the order typed, from the start of the name, whatever
+    /// sits between them. «Font del Roure» for "font roure": the literal phrase never
+    /// matches it, because of the «del».
+    static func inOrderPattern(_ raw: String) -> String? {
+        let w = words(raw)
+        return w.isEmpty ? nil : w.map(escapa).joined(separator: "%") + "%"
+    }
+
+    /// One PostgreSQL regex per word, matching it as a whole word (`\mroure\M`): «Roure»
+    /// and not only «Roureda».
+    static func wholeWordPatterns(_ raw: String) -> [String] {
+        words(raw).map { "\\m" + escapaRegex($0) + "\\M" }
+    }
+
+    private static func escapaRegex(_ s: String) -> String {
+        var out = ""
+        for c in s {
+            if "\\.^$*+?()[]{}|".contains(c) { out.append("\\") }
+            out.append(c)
+        }
+        return out
+    }
+
     /// Escapa los comodines de `LIKE`. La barra invertida primero, o se escaparían las que
     /// añadimos después. Sin esto, buscar `%` devolvía la tabla entera.
     private static func escapa(_ s: String) -> String {
