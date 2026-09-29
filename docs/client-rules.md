@@ -363,6 +363,25 @@ map's summary is kept and used when the page's read fails. Drafts (half-filled f
 follow the drafts rule of the forms section: per account, text and choices only (never the photo), seven
 days, cleared on send or explicit discard, never on close.
 
+### R5.14 One notice, not two — Client
+Offline is said **once**. When the connectivity notice (R5.6) is showing "no connection",
+the map must not also show a "no connection to the server" banner: they said the same twice
+and the second covered the map. Other errors (a 5xx, a rate limit) keep their own banner.
+The web's notice and the old error text are never stacked for the same fact.
+
+### R5.15 A photo the person picked is always seen — Client
+The photo of a form (new fountain, review, gallery) is a **placeholder, not two bare
+buttons** (web `ImagePicker` with `placeholder`): a large dashed zone (≥ 96 px high) with a
+camera and "Add photo"; tapping it offers *take* / *choose from library* (only *choose* if
+there is no camera). Once there is a photo, its **thumbnail** (~140 px) stays visible with a
+✕ to remove it. Between choosing and having the thumbnail there is a visible "working" state,
+and if the file **cannot be read** the form says so. What must never happen: choosing from
+the library and seeing the form unchanged — the person cannot tell "not chosen" from "chosen
+and lost", and a fountain queued or sent **without its photo** looks like the app dropped it.
+The photo is prepared once (R5.3) and the same bytes are what the queue keeps.
+A queued item that has a photo shows it in every place that lists the queue (R5.7 and the
+profile's pending list), so it can be checked that it was attached.
+
 ## 6. Map, location and navigation
 
 - **R6.1 Map loading.** `GET /fonts/map` with bbox and viewport size; clamp lat to ±90
