@@ -144,14 +144,8 @@ creator or an admin (or the `relocateAnyFont` capability). Edits are snapshotted
 revertible. Names: `fonts.name` may be **null** — show "unnamed fountain" in the
 reader's language; never invent a name.
 
-### R2.6 Photos: add yes, replace no — Server
-The **first** cover photo can be set by anyone (`PUT /fonts/:id/photo`, a single
-action, not a review). Replacing is creator/admin. A review photo on a fountain without
-cover becomes its cover automatically (`coverAdopted` in the response — say it). Tell the
-user **before** choosing the photo that it will become the fountain's. Secondary photos:
-`document` anyone signed in; `fountain`/`context` need level 3 and max 3 per person and
-fountain. Documents never compete for the cover and carry a "not certified" note.
-Delete: uploader or moderator, not the fountain's creator.
+### R2.6 Photos — see section 11
+Everything about photos (cover, review photos, other photos, EXIF, removal) is in §11.
 
 ### R2.7 Drinkability — Client (ordering), Server (values)
 Values: `yes` · `untreated` · `conditional` · `no`, plus unknown (`null`). Order is
@@ -450,6 +444,93 @@ carries `Retry-After` (R6.3).
   own link to the profile; round badges grow a 44 pt target around the art. A badge that
   cannot be opened reads as decoration, and "still free" only works as an invitation if
   you can find out what it is (09/2026). — Client
+
+## 11. Photos
+
+The rule behind all of them is one **asymmetry**: adding where there was nothing can
+only improve a fountain; replacing or removing someone's photo is a decision about
+their work. [«La foto de la reseña es la foto de la fuente», «Fotos de una fuente»]
+
+### R11.1 Three places a photo lives — Server
+- **Cover** (`fonts.image`): the fountain's photo, one per fountain.
+- **Review photo** (`font_comments.image`): part of what someone reported that day.
+- **Other photos** (`font_photos`, `GET /fonts/:id/photos`): extra photos with a kind.
+  Loaded **only when opened** — no count on the detail page (it would cost a count per
+  fountain on the map).
+
+### R11.2 The first cover anyone, replacing only creator or admin — Server
+`PUT /fonts/:id/photo` sets the cover; anyone signed in may set the **first** one (most
+imported fountains have no creator to ask). Replacing an existing cover is the creator's
+or an admin's (403 `font.photoExists`). Every cover change leaves an edit in the history,
+so it is revertible from the panel. It is **its own action, not a review**: never make
+someone fill a status or rating to add a photo.
+
+### R11.3 A review photo becomes the cover when there is none — Server
+Publishing a review with a photo on a fountain without cover **adopts it as cover**
+(copied, so deleting the review keeps the cover). It **never replaces**. The response
+says it (`coverAdopted`); **say it out loud** ("your photo is now the fountain's"), and
+tell the user **before** choosing the photo that it will be. "Use as main photo" on a
+review follows R11.2's permissions. A failed adoption never costs the review.
+
+### R11.4 Undo your cover for 5 minutes, then ask — Both
+Whoever set the current cover can **undo it for 5 min** (`GET
+/fonts/:id/photo-removal-request` → `canUndo`; server checks the time too, 403
+`font.photoUndoExpired`). After that, they can only **request its removal**
+(`POST`/`DELETE …/photo-removal-request`, `canRequest`/`pending`), which a moderator
+approves. The request is tied to **the exact edit** that installed the photo: an old
+request can never remove a cover someone replaced later. Creator/admin just remove it,
+confirmed first. Removal controls only on the cover slide.
+
+### R11.5 Other photos: kinds and who — Server
+Kinds (`PhotoKind`): `fountain` · `context` · `document`. A **document** (e.g. a water
+quality report) is shown apart, with a "provided by whoever had it, not certified by the
+app" note, and **never competes for the cover**. Who may upload: `document` anyone
+signed in (the person who has it may have registered this morning); `fountain` and
+`context` need **level 3** (`addSecondaryPhoto`) and at most **3 per person and
+fountain**. Only say what is really missing when blocked (R7.6). Captions optional.
+Delete: the uploader or a **moderator** — not the fountain's creator (it is not theirs,
+and it may be someone's analysis). Photos can be flagged (`content_flags` type `photo`).
+
+### R11.6 Offer the camera and the library — Client
+Wherever a photo is added (new fountain, review, cover slot, other photos, after a quick
+review), offer **take a photo** and **choose one**. Standing in front of the fountain is
+when there is something to photograph. Hide "take" on devices without a camera.
+
+### R11.7 Prepare once: EXIF first, then compress — Client
+`POST /images` (jpg/png/webp, max 8 MB, **30 uploads/h per user**, 429
+`image.rateLimit`). Read the original's date (`DateTimeOriginal`) and GPS **before**
+compressing, and send them as separate meta fields: re-encoding strips EXIF, and reading
+it afterwards returns nothing without any error. Compress to the web's size (longest side
+1280 px, JPEG 0.72). A **camera shot** has no EXIF: send the current date and the fix if
+permission is granted and its accuracy is usable. Prepare **once** — preparing again in
+the offline branch would queue it without EXIF.
+
+### R11.8 EXIF is for moderation only — Server
+Stored per image (`photo_exif`), shown **only to admins** (`GET /images/meta`, 403 to
+everyone else, the uploader included), and shown as **the distance to the fountain**,
+never coordinates. It is claimed by the client and cannot be verified: it guides a
+person and **never voids points or hides anything by itself**.
+
+### R11.9 Offline photos — Client
+A photo taken without signal goes to the outbox (the cover as `kind: photo`, a review's
+with its review, a new fountain's with the fountain), with its meta, under the account
+that took it. Drafts do **not** keep the photo: the form says to choose it again.
+
+### R11.10 Where to ask for a photo — Client
+- The empty cover slot is **discreet** (one thin row): almost every fountain lacks a
+  photo, and a loud slot would push photos over "how is the water", which is what the
+  app is for.
+- After a quick review, offer a photo **only if the fountain has none** (R1.7), with the
+  drops it pays from `/gamification/scale`; then after the photo, ask the status.
+- Nobody signed out gets a tappable slot; it says what to do instead.
+
+### R11.11 Showing photos — Client
+Carousel: cover first, then review photos by review date, each labelled (cover vs review,
+date, author, reported status). Only the active slide is loaded, the next prefetched, no
+autoplay. The shortcut to the latest review's photo only if that review is the latest and
+under 30 days old (confirmations never refresh a photo's age). Fullscreen viewer with
+pinch and double-tap zoom. Photos are **CC BY-SA 4.0**, credited to FontApp and its
+contributors.
 
 ## 10. What not to port to native clients
 
