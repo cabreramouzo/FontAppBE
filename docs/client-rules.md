@@ -294,9 +294,17 @@ person blind: trust it is saved, or discard it and lose it. The list is **oldest
 each item shows its kind (new fountain / review / photo), the fields that carry something
 (name, coordinates, water status, rating, text, fountain id), its **photo**, when it was
 queued and how many attempts it has had, and is marked "another account" / "needs sign-in".
-- **Copy all** puts a JSON on the clipboard: the fields, `queuedAt` (ISO) and `attempts`,
-  **never the photo bytes**. Say it was copied, or that it could not be.
-- **Save the photo** through the system share sheet (the reliable way to the gallery).
+- **Copy all** puts **text a person can read** on the clipboard, in their language: per
+  contribution its kind, the labelled fields (name, coordinates with a map link, water
+  status, type, drinkability, rating, text), "photo attached", when it was queued and the
+  attempts, separated by a blank line. **Never** JSON, internal keys, ids or file names, and
+  never the photo bytes (the web copies JSON; a native client should not: nobody reads it).
+  Say it was copied, or that it could not be.
+- **Save the photo** must end **in the phone's photo library**, not in a share menu that may
+  not offer "Save" (web: share sheet, the only route from a PWA; native has a real one).
+  Ask only for add-only access, say the result (saved / no access, and where to allow it /
+  failed), and put back the date and position read before compressing, since the queued
+  JPEG carries no EXIF (R5.3).
 - Empty list says there is nothing pending.
 
 ### R5.8 A way out: discard — Client
