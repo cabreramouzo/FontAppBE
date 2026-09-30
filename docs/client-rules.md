@@ -270,7 +270,7 @@ One notice on the map says the state of the queue, and **never says more than is
 | State | Title | Detail |
 |---|---|---|
 | offline, something pending | `offline.offlinePending` | `offline.savedSafe` |
-| offline, nothing pending | `offline.banner` | `offline.connectionHint` |
+| offline or server unreachable, nothing pending | `offline.banner` | `offline.connectionHint` |
 | sending | `offline.syncing` | — |
 | just sent everything (4 s) | `offline.synced` | `offline.syncedHint` |
 | online, pending, some of another account | `offline.pending` | `offline.otherAccount` |
@@ -279,10 +279,8 @@ One notice on the map says the state of the queue, and **never says more than is
 | online, pending, not tried yet | `offline.pending` | `offline.pendingHint` |
 
 It is **not shown** when online with nothing pending and nothing just sent.
-- **Colour.** Anything the person still has to care about (something pending) is
-  **orange** — the app's colour for "this is not resolved" (MUI `warning`: `#ed6c02` on
-  light, `#ffa726` on dark). Only informative states (offline with nothing pending) are
-  neutral, so the app does not shout about something that asks nothing of the person.
+- **Colour.** Pending work or a missing connection is **orange** — the app's colour
+  for "this is not resolved" (MUI `warning`: `#ed6c02` on light, `#ffa726` on dark).
   "All synced" is green.
 - **It shrinks.** After **3 s** the card becomes a small chip **with the same label**
   (so nothing is hidden), **even with things pending**: the queue can take hours, or never
@@ -380,9 +378,10 @@ follow the drafts rule of the forms section: per account, text and choices only 
 days, cleared on send or explicit discard, never on close.
 
 ### R5.14 One notice, not two — Client
-Offline is said **once**. When the connectivity notice (R5.6) is showing "no connection",
-the map must not also show a "no connection to the server" banner: they said the same twice
-and the second covered the map. Other errors (a 5xx, a rate limit) keep their own banner.
+Offline or a failed server connection is said **once**. The map must not show the old
+"no connection to the server" banner; its transport failure drives the orange connectivity
+notice even if iOS still sees an available network path. Other errors (a 5xx, a rate
+limit) keep their own banner.
 The web's notice and the old error text are never stacked for the same fact.
 
 ### R5.15 A photo the person picked is always seen — Client
