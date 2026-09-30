@@ -387,6 +387,9 @@ and if the file **cannot be read** the form says so. What must never happen: cho
 the library and seeing the form unchanged — the person cannot tell "not chosen" from "chosen
 and lost", and a fountain queued or sent **without its photo** looks like the app dropped it.
 The photo is prepared once (R5.3) and the same bytes are what the queue keeps.
+*iOS, 30/09/2026:* the library option is hidden for now and the placeholder opens the camera
+directly — some library photos (kept in iCloud, offline) cannot be read on a phone; the code
+stays with a TODO (`PhotoSlot.offersLibrary`). The web keeps both.
 A queued item that has a photo shows it in every place that lists the queue (R5.7 and the
 profile's pending list), so it can be checked that it was attached.
 
