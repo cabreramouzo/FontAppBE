@@ -214,6 +214,14 @@ mark as read — opening the panel does.
 ### R4.4 Following = favourite — Server
 There is no separate subscription: a favourite is followed.
 
+### R4.5 Passing-by notices are for people who can check — iOS client
+The local notice at a fountain's geofence is sent only with a fresh location fix and
+positive Motion & Fitness evidence of walking, running or cycling. Suppress it for an
+automotive activity, travel speed, or uncertain movement (including missing motion
+permission or a failed background query). A stopped car is still a car. Suppressed
+events do not consume the fountain's notice cooldown. This prevents prompts to people
+driving past and avoids asking them to report what they did not inspect.
+
 ## 5. Offline
 
 ### R5.1 The outbox has an owner — Client
