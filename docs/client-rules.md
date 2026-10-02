@@ -86,6 +86,9 @@ iOS (02/10/2026): the chips are in the detail sheet's short card, so the offer a
 there, merged with the thanks into one row so the buttons stay inside the short card —
 camera first, library second — also after a review queued offline; the photo is queued
 too. Without the drops for now: the author does not want the game to eclipse the UI.
+After the photo, still one at a time in that same slot: kind of water, drinkability,
+name — each with "not now / I don't know" beside it. Never add the questions as rows
+below the chips: in a sheet of fixed height they end up out of sight.
 
 ### R1.8 Water confidence is a category — Both
 `web/src/lib/confidence.ts`. Levels: **confirmed** (`verified`) · **recent** ·
