@@ -490,3 +490,34 @@ la prueba del endpoint verifica el aviso al favorito, la exclusión del autor y 
 apagar push mantiene la campana, sin repetir la recuperación en el siguiente parte;
 los cambios en ocho idiomas están incluidos en el build web. No se enviaron push a
 usuarios reales. Prueba física de entrega y evaluación de retención siguen pendientes.
+
+## 16. Ideas para más adelante
+
+### FA-10 · Idea · Modo avanzado para personas expertas
+
+**Origen:** conversación con un geólogo (02/10/2026). Ya hubo un precedente: otro geólogo
+trajo el informe de salubridad y de ahí nacieron las fotos de tipo `document`.
+
+**Qué es.** Un modo que cada persona activa en su perfil (no un nivel ni un permiso) y que
+muestra campos y herramientas que al público general le sobran. El formulario por defecto
+sigue igual de corto: el modo avanzado añade, nunca sustituye.
+
+**Ideas a validar con quien lo pidió, no decididas:**
+- **Geolocalización precisa:** coordenadas editables a mano (grados decimales y
+  sexagesimales, quizá UTM), precisión del GPS y nº de satélites si el sistema lo da,
+  promedio de varias lecturas antes de fijar el punto, altitud.
+- **Campos de la fuente:** caudal medido (l/min, con fecha y método), temperatura, pH o
+  conductividad, origen del agua (acuífero, manantial, captación), litología o contexto
+  geológico, tipo de surgencia, estacionalidad observada.
+- **Exportación** de esos datos (CSV/GeoJSON), como ya hace el inventario municipal.
+
+**Preguntas abiertas antes de diseñar:**
+- Qué datos tienen valor para otros y cuáles solo para quien los mide; los primeros
+  podrían mostrarse en la ficha, los segundos quedarse como notas.
+- Confianza: una medida no es un estado del agua. No debe mezclarse con la confianza
+  del caudal (confirmada · reciente · …) ni presentarse como afirmación sanitaria (ver
+  el principio del inicio de este documento).
+- Licencia (ODbL, como el resto de datos comunitarios) y si encaja con OSM (`flow_rate`,
+  `ele`…) para no inventar un esquema propio.
+- Afecta al backend (nuevas columnas o tabla de medidas con fecha y autor) y a ambos
+  clientes; definirlo aquí y en `docs/client-rules.md` antes de construirlo en iOS.

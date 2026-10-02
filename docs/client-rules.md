@@ -82,6 +82,10 @@ After a quick review, offer a photo **only if the fountain has none**, with the 
 pays read from `/gamification/scale` (no number if unknown). Order of usefulness:
 status → photo → rating → text. After adding a photo, ask the status ("how does it
 flow?") with the three chips. [«Y después del toque, la foto»]
+iOS (02/10/2026): the chips are in the detail sheet's short card, so the offer appears
+there, merged with the thanks into one row so the buttons stay inside the short card —
+camera first, library second — also after a review queued offline; the photo is queued
+too. Without the drops for now: the author does not want the game to eclipse the UI.
 
 ### R1.8 Water confidence is a category — Both
 `web/src/lib/confidence.ts`. Levels: **confirmed** (`verified`) · **recent** ·
@@ -137,6 +141,10 @@ typed **while typing**, per account, for **7 days**. Closing the form keeps the 
 it. Nothing is written until the form has had content (an empty form must not overwrite
 the previous draft). The photo is not kept: the form says to choose it again. A
 half-filled new fountain comes back with a notice (continue / discard), not by itself.
+Once the form is sent, queued or discarded it must **never write the draft again**: late
+changes while the form closes (a location fix moving the pin, the map reporting its
+centre) re-saved the whole sent fountain, and the next "new fountain" opened with the
+previous one's name and position (iOS field test, 02/10/2026).
 
 ### R2.5 Open editing, guarded location — Server
 Anyone can edit information (name, description, type, drinkability). Location: only the
