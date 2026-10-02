@@ -77,9 +77,12 @@ async function parse(res: Response) {
 const READ_TIMEOUT_MS = 5_000
 const REQUEST_TIMEOUT_MS = 12_000
 const UPLOAD_TIMEOUT_MS = 45_000
+// The weekly digest builds every user's summary in the request: it takes far longer than
+// a normal read, and cutting it off showed up as "no connection to the server".
+const DIGEST_TIMEOUT_MS = 120_000
 
 /** fetch con timeout; cualquier fallo de red (o corte por tiempo) es ApiError(0). */
-async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
+async function safeFetch(input: string, init?: RequestInit, timeoutMs?: number): Promise<Response> {
   const isUpload = init?.body instanceof FormData
   // Sin `method` es un GET: así lo llama `fetch`, y así lo llaman casi todas las lecturas
   // de este fichero.
@@ -92,7 +95,7 @@ async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
   const abortFromCaller = () => controller.abort()
   if (externalSignal?.aborted) controller.abort()
   else externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
-  const espera = isUpload ? UPLOAD_TIMEOUT_MS : isRead ? READ_TIMEOUT_MS : REQUEST_TIMEOUT_MS
+  const espera = timeoutMs ?? (isUpload ? UPLOAD_TIMEOUT_MS : isRead ? READ_TIMEOUT_MS : REQUEST_TIMEOUT_MS)
   const timer = setTimeout(() => controller.abort(), espera)
   try {
     return await fetch(input, { ...init, signal: controller.signal })
@@ -104,14 +107,14 @@ async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
   }
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiFetch<T>(path: string, options: RequestInit = {}, timeoutMs?: number): Promise<T> {
   const headers = new Headers(options.headers)
   const token = getToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  const res = await safeFetch(`${BASE}${path}`, { ...options, headers })
+  const res = await safeFetch(`${BASE}${path}`, { ...options, headers }, timeoutMs)
   if (res.status === 204) return undefined as T
   return (await parse(res)) as T
 }
@@ -1005,11 +1008,11 @@ export interface DigestResult {
 }
 
 export async function previewWeeklyDigest(): Promise<DigestResult> {
-  return apiFetch('/admin/weekly-digest')
+  return apiFetch('/admin/weekly-digest', {}, DIGEST_TIMEOUT_MS)
 }
 
 export async function sendWeeklyDigest(): Promise<DigestResult> {
-  return apiFetch('/admin/weekly-digest', { method: 'POST' })
+  return apiFetch('/admin/weekly-digest', { method: 'POST' }, DIGEST_TIMEOUT_MS)
 }
 
 // Moderación: denunciar contenido; listar/descartar denuncias (admin).
