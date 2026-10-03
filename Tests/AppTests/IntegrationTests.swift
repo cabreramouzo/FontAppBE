@@ -5229,4 +5229,102 @@ final class IntegrationTests: XCTestCase {
             XCTAssertNotNil(ganada, "la fuente sin zona debe heredar la de su vecina a 2 km")
         }
     }
+
+    // MARK: Clients (docs/clients.md)
+
+    func testClientHeaderAndOldIOSUserAgentAreRecognised() {
+        XCTAssertEqual(ClientInfo.parse(header: "ios/1.0 (212)", userAgent: nil),
+                       ClientInfo(platform: .ios, version: "1.0 (212)"))
+        XCTAssertEqual(ClientInfo.parse(header: "Android/1.2 (7)", userAgent: nil).platform, .android)
+        XCTAssertEqual(ClientInfo.parse(header: "web/0.1.0", userAgent: navegadorUA).platform, .web)
+        // iOS builds from before the header: URLSession's own user agent.
+        XCTAssertEqual(ClientInfo.parse(header: nil, userAgent: "FontApp/212 CFNetwork/3826 Darwin/25.0.0"),
+                       ClientInfo(platform: .ios, version: "(212)"))
+        // A browser without the header, a script, an invented platform: unknown.
+        XCTAssertEqual(ClientInfo.parse(header: nil, userAgent: navegadorUA), .unknown)
+        XCTAssertEqual(ClientInfo.parse(header: "unknown/1", userAgent: nil), .unknown)
+        XCTAssertEqual(ClientInfo.parse(header: "windows/1", userAgent: nil), .unknown)
+    }
+
+    func testOnlySuccessfulWritesOnFountainsCountAsContributions() {
+        XCTAssertTrue(ClientActivityMiddleware.isContribution(method: .POST, path: "/fonts"))
+        XCTAssertTrue(ClientActivityMiddleware.isContribution(method: .POST, path: "/fonts/\(UUID())/comments"))
+        XCTAssertTrue(ClientActivityMiddleware.isContribution(method: .POST, path: "/images"))
+        XCTAssertFalse(ClientActivityMiddleware.isContribution(method: .GET, path: "/fonts/map"))
+        XCTAssertFalse(ClientActivityMiddleware.isContribution(method: .POST, path: "/fonts/\(UUID())/favorite"))
+        XCTAssertFalse(ClientActivityMiddleware.isContribution(method: .POST, path: "/auth/login"))
+    }
+
+    /// One row per person, day and platform; contributing marks it; the admin summary
+    /// counts people per platform. Anonymous requests and unknown clients leave nothing.
+    func testClientDaysAreRecordedPerPlatformAndSummarised() async throws {
+        try await withApp { app in
+            _ = try await register(app, username: "andando")
+            let token = try await login(app, username: "andando")
+            let ios: HTTPHeaders = ["Authorization": "Bearer \(token)", "X-FontApp-Client": "ios/1.0 (9)"]
+            let web: HTTPHeaders = ["Authorization": "Bearer \(token)", "X-FontApp-Client": "web/0.1.0"]
+            // Browsing from iOS twice, then contributing from iOS; browsing from the web.
+            try await app.test(.GET, "/auth/me", headers: ios) { XCTAssertEqual($0.status, .ok) }
+            try await app.test(.GET, "/auth/me", headers: ios) { XCTAssertEqual($0.status, .ok) }
+            _ = try await createFontWithHeaders(app, headers: ios)
+            try await app.test(.GET, "/auth/me", headers: web) { XCTAssertEqual($0.status, .ok) }
+            // Without a session or from an unknown client: nothing to note.
+            try await app.test(.GET, "/stats", headers: ["X-FontApp-Client": "ios/1.0 (9)"]) { _ in }
+            try await app.test(.GET, "/auth/me", headers: ["Authorization": "Bearer \(token)"]) { _ in }
+
+            struct Row: Decodable { let platform: String; let contributed: Bool; let version: String? }
+            let sql = try XCTUnwrap(app.db as? SQLDatabase)
+            let rows = try await sql.raw("SELECT platform, contributed, version FROM client_days ORDER BY platform")
+                .all(decoding: Row.self)
+            XCTAssertEqual(rows.map(\.platform), ["ios", "web"])
+            XCTAssertEqual(rows.map(\.contributed), [true, false])
+            XCTAssertEqual(rows.first?.version, "1.0 (9)")
+
+            let admin = try await register(app, username: "adminclients")
+            try await makeAdmin(app, userID: admin)
+            let adminToken = try await login(app, username: "adminclients")
+            try await app.test(.GET, "/admin/analytics/clients?days=30",
+                               headers: ["Authorization": "Bearer \(adminToken)"]) { res in
+                XCTAssertEqual(res.status, .ok)
+                let summary = try res.content.decode([ClientAnalyticsController.PlatformSummary].self)
+                let iosRow = try XCTUnwrap(summary.first { $0.platform == "ios" })
+                XCTAssertEqual(iosRow.people, 1)
+                XCTAssertEqual(iosRow.contributors, 1)
+                XCTAssertEqual(iosRow.returning, 0, "One day is not coming back.")
+                XCTAssertEqual(iosRow.today, 1)
+            }
+            try await app.test(.GET, "/admin/analytics/clients",
+                               headers: ["Authorization": "Bearer \(token)"]) { XCTAssertEqual($0.status, .forbidden) }
+        }
+    }
+
+    /// Every custom header the web sends must pass the browser's preflight. The queued-
+    /// offline one did not, and the web's queued contributions were blocked for weeks.
+    func testPreflightAllowsTheHeadersTheWebSends() async throws {
+        try await withApp { app in
+            try await app.test(.OPTIONS, "fonts", headers: [
+                "Origin": "https://fontapp.net",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "authorization,content-type,x-fontapp-client,x-fontapp-queued-offline",
+            ]) { res in
+                let allowed = res.headers.first(name: "Access-Control-Allow-Headers")?.lowercased() ?? ""
+                XCTAssertTrue(allowed.contains("x-fontapp-client"), allowed)
+                XCTAssertTrue(allowed.contains("x-fontapp-queued-offline"), allowed)
+            }
+        }
+    }
+
+    private func createFontWithHeaders(_ app: Application, headers: HTTPHeaders) async throws -> UUID {
+        var id: UUID?
+        try await app.test(.POST, "fonts", headers: headers, beforeRequest: { req in
+            var dto = CreateFontDTO(name: "Font del camí", latitude: 41.8, longitude: 2.1, image: nil,
+                                    description: nil, source: nil, drinkable: nil)
+            dto.allowNearbyDuplicate = true
+            try req.content.encode(dto)
+        }, afterResponse: { res in
+            XCTAssertEqual(res.status, .created)
+            id = try res.content.decode(FontJSON.self).id
+        })
+        return try XCTUnwrap(id)
+    }
 }

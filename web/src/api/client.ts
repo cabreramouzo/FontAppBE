@@ -82,6 +82,9 @@ const UPLOAD_TIMEOUT_MS = 45_000
 const DIGEST_TIMEOUT_MS = 120_000
 
 /** fetch con timeout; cualquier fallo de red (o corte por tiempo) es ApiError(0). */
+/** `web/<version>`: the platform the server counts this client as (docs/clients.md). */
+const CLIENT_ID = `web/${__APP_VERSION__}`
+
 async function safeFetch(input: string, init?: RequestInit, timeoutMs?: number): Promise<Response> {
   const isUpload = init?.body instanceof FormData
   // Sin `method` es un GET: así lo llama `fetch`, y así lo llaman casi todas las lecturas
@@ -98,7 +101,10 @@ async function safeFetch(input: string, init?: RequestInit, timeoutMs?: number):
   const espera = timeoutMs ?? (isUpload ? UPLOAD_TIMEOUT_MS : isRead ? READ_TIMEOUT_MS : REQUEST_TIMEOUT_MS)
   const timer = setTimeout(() => controller.abort(), espera)
   try {
-    return await fetch(input, { ...init, signal: controller.signal })
+    // Which client this is, for the server's per-platform figures (docs/clients.md).
+    const headers = new Headers(init?.headers)
+    headers.set('X-FontApp-Client', CLIENT_ID)
+    return await fetch(input, { ...init, headers, signal: controller.signal })
   } catch {
     throw new ApiError(0, 'network')
   } finally {

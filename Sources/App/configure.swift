@@ -64,7 +64,11 @@ public func configure(_ app: Application) async throws {
     let cors = CORSMiddleware(configuration: .init(
         allowedOrigin: allowedOrigin,
         allowedMethods: [.GET, .POST, .PUT, .DELETE, .OPTIONS],
-        allowedHeaders: [.accept, .authorization, .contentType, .origin],
+        // Every custom header the web sends must be listed, or the browser's preflight
+        // refuses the request: X-FontApp-Queued-Offline was missing and the web's queued
+        // contributions were blocked (found 03/10/2026). X-FontApp-Client: docs/clients.md.
+        allowedHeaders: [.accept, .authorization, .contentType, .origin,
+                         .init(ClientInfo.header), .init("X-FontApp-Queued-Offline")],
         // The licence headers must be readable from browser code too, not only by curl.
         exposedHeaders: [.link, .init("X-Data-License"), .init("X-Attribution")]
     ))
@@ -80,6 +84,8 @@ public func configure(_ app: Application) async throws {
     app.middleware.use(cors)
     app.middleware.use(CodedErrorMiddleware())
     app.middleware.use(DataLicenseMiddleware())
+    // Which client (web, ios, android) and, for signed-in people, a row per day: docs/clients.md.
+    app.middleware.use(ClientActivityMiddleware())
 
     // Sin APP_SECRET los enlaces de baja del resumen semanal se firman con una clave
     // aleatoria por proceso: dejarían de valer en cada reinicio (y un enlace de baja
@@ -204,6 +210,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddPricePointToAppInterest())        // specific price point: 1€, 2€, 5€, 10€, etc.
     app.migrations.add(AddRefreshTokenToAuthIdentity())
     app.migrations.add(AddSignupPlaceToUser())           // temporary signup town, for poster stats   // Sign in with Apple: revoke on account deletion
+    app.migrations.add(CreateClientDays())               // who uses which client, per day (docs/clients.md)
 
     // Migración automática al arrancar si AUTO_MIGRATE=true (cómodo en despliegues
     // de un solo contenedor: la app migra sola en el primer boot).

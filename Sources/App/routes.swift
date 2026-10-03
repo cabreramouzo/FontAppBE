@@ -13,6 +13,7 @@ func routes(_ app: Application) throws {
     try app.register(collection: AuthController())
     try app.register(collection: PasskeyController())
     try app.register(collection: InteractionAnalyticsController())
+    try app.register(collection: ClientAnalyticsController())
     try app.register(collection: UserController())
     try app.register(collection: MentionController())
     try app.register(collection: FontController())
