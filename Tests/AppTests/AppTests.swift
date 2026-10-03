@@ -504,3 +504,26 @@ final class AppTests: XCTestCase {
         XCTAssertEqual(Mentions.names(in: muchos).count, Mentions.maxPerMessage)
     }
 }
+
+final class DataLicenseHeaderTests: XCTestCase {
+    func testReadsCarryLicenceAndErrorsDoNot() async throws {
+        let app = try await Application.make(.testing)
+        app.middleware.use(DataLicenseMiddleware())
+        app.get("ok") { _ in "x" }
+        app.get("missing") { _ -> String in throw Abort(.notFound) }
+        app.post("ok") { _ in "x" }
+        try await app.test(.GET, "ok") { res in
+            XCTAssertEqual(res.headers.first(name: "X-Data-License"), "ODbL-1.0")
+            XCTAssertTrue(res.headers[.link].contains { $0.contains("odbl") && $0.contains("rel=\"license\"") })
+            XCTAssertTrue(res.headers[.link].contains { $0.contains("by-sa/4.0") })
+            XCTAssertNotNil(res.headers.first(name: "X-Attribution"))
+        }
+        try await app.test(.GET, "missing") { res in
+            XCTAssertNil(res.headers.first(name: "X-Data-License"))
+        }
+        try await app.test(.POST, "ok") { res in
+            XCTAssertNil(res.headers.first(name: "X-Data-License"))
+        }
+        try await app.asyncShutdown()
+    }
+}

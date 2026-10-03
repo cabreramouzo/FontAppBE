@@ -230,6 +230,20 @@ No sustituir observación por «¿te gustaría una app nativa?» o «¿usarías 
 
 Asignar códigos distintos por colaboración y soporte, por ejemplo `club-moianes-oct26` y `qr-castellcir-f1`, mediante el mecanismo de campañas existente. Son ejemplos de etiquetas, no campañas creadas. Mantener ventanas temporales comparables al evaluar resultados.
 
+### Mensaje diferencial: los datos no son nuestros (03/10/2026)
+
+**Idea:** a diferencia de otras apps de agua, FontApp no es dueña de los datos. El inventario comunitario se publica bajo ODbL y las fotos bajo CC BY-SA 4.0, las dos licencias de *compartir igual*: cualquiera puede reutilizarlos si comparte del mismo modo lo que derive de ellos. Y nunca se bloqueará el acceso a ellos (ni muro de pago ni cuenta obligatoria para consultar), coherente con «monetización que no limite el acceso básico al agua» (sección 11).
+
+**Por qué funciona como argumento:** quien aporta una fuente o una foto teme trabajar gratis para un tercero que luego cierre o cobre; aquí su aportación sigue siendo de todos aunque FontApp desapareciera. Encaja con clubes, entidades y ayuntamientos (sección 6), que prefieren colaborar con datos reutilizables.
+
+**Dónde aparece:** diapositiva del tutorial de bienvenida de la app iOS (`ios.welcome.openTitle` / `ios.welcome.openBody`, icono de globo con candado abierto: mundo compartido, acceso que no se cierra). Pendiente llevarlo a la bienvenida web y a la página legal.
+
+**Frases para campaña:**
+- «Los datos no son nuestros: son de todos, con licencia libre, y nunca cerraremos su acceso».
+- Para entidades: «Lo que aportéis se queda abierto bajo ODbL; podéis reutilizarlo en vuestros mapas».
+
+**Cuidado:** no nombrar competidores ni afirmar cómo licencian sus datos sin comprobarlo; «a diferencia de otras apps» se mantiene genérico. La promesa de no bloquear el acceso es un compromiso público: cualquier decisión de monetización debe respetarla.
+
 ## 11. Qué aplazar
 
 App nativa como apuesta principal; feed social generalista; nuevas clasificaciones; cobertura masiva de más países; motor completo de navegación; publicidad amplia; múltiples redes con contenido distinto; nuevos paneles municipales; monetización que limite el acceso básico al agua. Ninguno resuelve por sí mismo la utilidad de la segunda salida.

@@ -535,6 +535,11 @@ que afecte a lo que hace un cliente, actualiza también ese documento.**
   **Pendiente y necesario para que eso sea sólido:** decirlo también **en el momento de
   aportar** (registro y formulario de reseña). Un aviso legal que nadie ha visto al enviar
   es más débil que una casilla junto al botón.
+- **Cada lectura lleva la licencia en las cabeceras** (`DataLicenseMiddleware`): `Link`
+  con `rel="license"` a la ODbL y a CC BY-SA 4.0, `rel="terms-of-service"` a `/legal`,
+  `X-Data-License: ODbL-1.0` y `X-Attribution`. Quien barre `/fonts/in-bounds` no ve nunca
+  la página legal; así las condiciones viajan con los datos. Solo en GET/HEAD con 2xx, y
+  expuestas por CORS. `X-Attribution` va **sin acentos**: una cabecera HTTP es ASCII.
 - **El límite de 600/h por IP en las lecturas del mapa no protege de que te copien**, y
   conviene no venderlo como tal: cualquier tope que permita usar el mapa con normalidad
   permite también las treinta peticiones que hacen falta. Lo que evita es el **gasto** —un

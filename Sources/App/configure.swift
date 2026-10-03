@@ -64,7 +64,9 @@ public func configure(_ app: Application) async throws {
     let cors = CORSMiddleware(configuration: .init(
         allowedOrigin: allowedOrigin,
         allowedMethods: [.GET, .POST, .PUT, .DELETE, .OPTIONS],
-        allowedHeaders: [.accept, .authorization, .contentType, .origin]
+        allowedHeaders: [.accept, .authorization, .contentType, .origin],
+        // The licence headers must be readable from browser code too, not only by curl.
+        exposedHeaders: [.link, .init("X-Data-License"), .init("X-Attribution")]
     ))
     // La pila se monta **desde cero**, y esto no es una manía de orden. Vapor añade su
     // `ErrorMiddleware` por su cuenta, y como queda **por dentro** del nuestro atrapa el
@@ -77,6 +79,7 @@ public func configure(_ app: Application) async throws {
     app.middleware = .init()
     app.middleware.use(cors)
     app.middleware.use(CodedErrorMiddleware())
+    app.middleware.use(DataLicenseMiddleware())
 
     // Sin APP_SECRET los enlaces de baja del resumen semanal se firman con una clave
     // aleatoria por proceso: dejarían de valer en cada reinicio (y un enlace de baja
