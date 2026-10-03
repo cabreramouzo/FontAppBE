@@ -9,7 +9,8 @@ struct GoogleProfile: Sendable {
 }
 
 protocol GoogleTokenVerifying: Sendable {
-    func verify(_ credential: String, clientID: String, on client: Client) async throws -> GoogleProfile
+    /// `clientIDs`: the OAuth clients a token may be issued to (the web's, the iOS app's).
+    func verify(_ credential: String, clientIDs: [String], on client: Client) async throws -> GoogleProfile
 }
 
 /// Verifica firma y claims localmente con las claves públicas rotatorias de Google.
@@ -18,12 +19,14 @@ protocol GoogleTokenVerifying: Sendable {
 final class LiveGoogleTokenVerifier: GoogleTokenVerifying, @unchecked Sendable {
     private let cache = GoogleJWKSCache()
 
-    func verify(_ credential: String, clientID: String, on client: Client) async throws -> GoogleProfile {
+    func verify(_ credential: String, clientIDs: [String], on client: Client) async throws -> GoogleProfile {
         let json = try await cache.jwks(on: client)
         let keys = JWTKeyCollection()
         try await keys.add(jwksJSON: json)
         let token = try await keys.verify(credential, as: GoogleIdentityToken.self)
-        try token.audience.verifyIntendedAudience(includes: clientID)
+        guard clientIDs.contains(where: { token.audience.value.contains($0) }) else {
+            throw Abort(.unauthorized, reason: "El token de Google es para otra aplicación")
+        }
         guard token.emailVerified?.value == true,
               let email = token.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
               !email.isEmpty else {

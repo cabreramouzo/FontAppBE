@@ -13,8 +13,11 @@ private let navegadorUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Apple
 
 private struct StubGoogleVerifier: GoogleTokenVerifying {
     let profile: GoogleProfile
-    func verify(_ credential: String, clientID: String, on client: any Client) async throws -> GoogleProfile {
-        profile
+    /// Solo acepta tokens para este cliente, como el verificador real.
+    var issuedTo: String? = nil
+    func verify(_ credential: String, clientIDs: [String], on client: any Client) async throws -> GoogleProfile {
+        if let issuedTo, !clientIDs.contains(issuedTo) { throw Abort(.unauthorized) }
+        return profile
     }
 }
 
@@ -96,6 +99,23 @@ final class IntegrationTests: XCTestCase {
             XCTAssertEqual(saved?.signupRegion, "Galicia")
             XCTAssertEqual(saved?.signupCity, "A Coruña")
             XCTAssertEqual(saved?.signupSource, "cartell-galicia")
+        }
+    }
+
+    func testGoogleAcceptsTheIOSAppClient() async throws {
+        setenv("GOOGLE_CLIENT_ID", "web-client", 1)
+        setenv("GOOGLE_IOS_CLIENT_ID", "ios-client", 1)
+        defer { unsetenv("GOOGLE_CLIENT_ID"); unsetenv("GOOGLE_IOS_CLIENT_ID") }
+        try await withApp { app in
+            app.googleTokenVerifier = StubGoogleVerifier(profile: GoogleProfile(
+                subject: "google-subject-ios", email: "ios.person@gmail.com", name: nil,
+                authoritativeEmail: true
+            ), issuedTo: "ios-client")
+            try await app.test(.POST, "auth/google", beforeRequest: { req in
+                try req.content.encode(GoogleLoginDTO(credential: "signed-id-token", lang: "es", source: nil))
+            }, afterResponse: { res in
+                XCTAssertEqual(res.status, .ok)
+            })
         }
     }
 

@@ -42,13 +42,16 @@ struct AuthController: RouteCollection {
 
     /// POST /auth/google — verifica el ID token y emite la sesión normal de FontApp.
     @Sendable func google(req: Request) async throws -> LoginResponse {
-        guard let clientID = Environment.get("GOOGLE_CLIENT_ID"), !clientID.isEmpty else {
+        // El cliente web y el de la app de iOS: cada uno firma sus tokens con su propio ID.
+        let clientIDs = ["GOOGLE_CLIENT_ID", "GOOGLE_IOS_CLIENT_ID"]
+            .compactMap { Environment.get($0) }.filter { !$0.isEmpty }
+        guard !clientIDs.isEmpty else {
             throw Abort(.serviceUnavailable, reason: "El acceso con Google no está configurado")
         }
         let dto = try req.content.decode(GoogleLoginDTO.self)
         let profile: GoogleProfile
         do {
-            profile = try await req.application.googleTokenVerifier.verify(dto.credential, clientID: clientID, on: req.client)
+            profile = try await req.application.googleTokenVerifier.verify(dto.credential, clientIDs: clientIDs, on: req.client)
         } catch let error as AbortError {
             throw error
         } catch {
