@@ -25,6 +25,14 @@ X-FontApp-Client: <platform>/<version>
   the web's queued contributions (`X-FontApp-Queued-Offline`) were silently blocked from
   17 August to 3 October 2026. `testPreflightAllowsTheHeadersTheWebSends` guards both.
 
+- **Deploy order.** A new header sent by the web must reach production **after** the
+  backend that allows it. The web (Cloudflare Pages) publishes in a minute and the backend
+  only after CI's tests: on 3 October 2026 the web shipped `X-FontApp-Client` first and,
+  until the backend caught up, the browser refused **every** API request (empty site and
+  admin panel for about ten minutes). Ship the backend change first, deploy it, then the
+  web; or deploy the backend by hand (`fly deploy --remote-only -a fontapp`) before pushing
+  the web.
+
 Parsed by `ClientInfo` in `Sources/App/Middleware/ClientActivity.swift`; available in any
 handler as `req.fontAppClient` (not `req.client`, which is Vapor's HTTP client).
 
