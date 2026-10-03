@@ -438,6 +438,22 @@ profile's pending list), so it can be checked that it was attached.
   any base layer's own. Community data is ODbL, photos CC BY-SA 4.0. — Client
 - **R6.9 Hidden fountains.** Moderation state is `visible`/`pending`/`hidden`; a link to
   a hidden fountain still opens and explains why it is not on the map. — Both
+- **R6.10 Imported routes (GPX).** The file is read on the device and never sent to the
+  server: only the route's bounding box, widened by the largest corridor, is asked for.
+  The fountains are ordered by route kilometre, the driest stretch counts both ends, and
+  the GPX export keeps the EXCLUDED fountains (so a wider corridor brings new ones in).
+  Where routes are remembered they stay private to the person (web: `localStorage` per
+  account; iOS: the device and their own iCloud, never FontApp's server). When a client keeps **several** routes (iOS today,
+  the web keeps the last one): every route not hidden is drawn on the map; one at a time
+  is *open* (its fountains loaded, a chip naming it on the map); hiding is per device and
+  closes it; name and colour belong to the route. Colours come from a **closed palette**
+  that avoids the water-status green/amber/red and the staff purple (R6.7) — a free
+  picker would draw lines that read as water states. New routes take the next colour.
+  Deleting asks first; renaming to blank is ignored. **Only the route's fountains**
+  (iOS, 03/10/2026): a switch, per device and only while a route is open, that leaves on
+  the map just the fountains inside the open route's corridor and no clusters, so the
+  line can be read. It never shrinks the pins (touch targets, R-touch) and never hides
+  every fountain (the water is what the route is for); filters still apply on top. — Client
 
 ## 7. Accounts, errors and language
 
