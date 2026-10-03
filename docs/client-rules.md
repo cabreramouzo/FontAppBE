@@ -450,9 +450,9 @@ profile's pending list), so it can be checked that it was attached.
   that avoids the water-status green/amber/red and the staff purple (R6.7) — a free
   picker would draw lines that read as water states. New routes take the next colour.
   Deleting asks first; renaming to blank is ignored. **Only the route's fountains**
-  (iOS, 03/10/2026): a switch, per device and only while a route is open, that leaves on
-  the map just the fountains inside the open route's corridor and no clusters, so the
-  line can be read. It never shrinks the pins (touch targets, R-touch) and never hides
+  (iOS, 03/10/2026): a switch, per device, that leaves on the map just the fountains
+  inside the corridor of every visible route (not only the open one: a trip in stages is
+  several files) and no clusters, so the lines can be read. It never shrinks the pins (touch targets, R-touch) and never hides
   every fountain (the water is what the route is for); filters still apply on top. — Client
 
 ## 7. Accounts, errors and language
