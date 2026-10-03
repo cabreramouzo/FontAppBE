@@ -59,6 +59,23 @@ El ID del cliente no es un secreto. El backend verifica firma, emisor, caducidad
 y correo verificado antes de crear una sesión. La migración `CreateAuthIdentity` guarda el
 `sub` estable de Google; con `AUTO_MIGRATE=true` se aplica al desplegar el backend.
 
+#### Google en la app de iOS
+
+La app nativa usa **su propio cliente OAuth** (tipo **iOS**, bundle `net.fontapp.FontApp`),
+así que sus ID tokens llevan otra audiencia y el backend los rechaza si no lo conoce.
+
+1. El ID está en el repo de iOS: `FontAppiOS/FontApp/FontApp/Session/GoogleSignIn.swift`
+   (`clientID`). Hoy: `665465134161-2rpp6kaubdssnetpvnm1vshlg22kd196.apps.googleusercontent.com`.
+   Si se crea un cliente nuevo en Google Cloud, cambia allí `clientID` **y** `scheme`.
+2. Inicia sesión en Fly si hace falta (`fly auth login`) y ponlo como secreto:
+   `fly secrets set GOOGLE_IOS_CLIENT_ID="…apps.googleusercontent.com" -a fontapp`.
+   Reinicia las máquinas; no hace falta desplegar.
+3. Comprueba que está: `fly secrets list -a fontapp | grep GOOGLE` (deben salir los dos).
+
+`/auth/google` acepta tokens de `GOOGLE_CLIENT_ID` y de `GOOGLE_IOS_CLIENT_ID`. Sin el
+segundo, el login con Google en iOS responde 401 («El token de Google es para otra
+aplicación») mientras la web sigue funcionando, así que el fallo solo se ve en el iPhone.
+
 ### Migraciones
 
 - Opción A: `AUTO_MIGRATE=true` (migra en el primer boot).
