@@ -444,9 +444,10 @@ profile's pending list), so it can be checked that it was attached.
   the GPX export keeps the EXCLUDED fountains (so a wider corridor brings new ones in).
   Where routes are remembered they stay private to the person (web: `localStorage` per
   account; iOS: the device and their own iCloud, never FontApp's server). When a client keeps **several** routes (iOS today,
-  the web keeps the last one): every route not hidden is drawn on the map; one at a time
-  is *open* (its fountains loaded, a chip naming it on the map); hiding is per device and
-  closes it; name and colour belong to the route. Colours come from a **closed palette**
+  the web keeps the last one): every route not hidden is drawn on the map and tapping a
+  line opens that route (a fountain under the finger wins); something on the map says
+  what the lines are (iOS: a chip with their colours and count, opening the list); a route
+  is *open* (its fountains loaded) only while its own view is up; hiding is per device; name and colour belong to the route. Colours come from a **closed palette**
   that avoids the water-status green/amber/red and the staff purple (R6.7) — a free
   picker would draw lines that read as water states. New routes take the next colour.
   Deleting asks first; renaming to blank is ignored. **Only the route's fountains**
