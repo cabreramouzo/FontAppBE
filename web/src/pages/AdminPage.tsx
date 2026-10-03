@@ -15,7 +15,7 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import LinearProgress from '@mui/material/LinearProgress'
 import type { Feedback, Flag, FontEdit, InterestStats, RegionStat, StaffMember, UserRole } from '../api/types'
-import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getCampaignStats, getInteractionStats, getInterestStats, getNewUsers, getOnlineUsers, getRegionStats, getSourceStats, getSignupPlaceStats, type SignupPlaceCount, getStaff, getUserActivityRanking, reviewFontEdit, revertFontEdit, setUserRole, type CampaignSummary, type InteractionSummary, type OnlineUser, type UserActivityRanking } from '../api/client'
+import { assetUrl, describeError, dismissFlag, getFeedback, getFlags, getFontEdits, getCampaignStats, getClientStats, getInteractionStats, getInterestStats, getNewUsers, getOnlineUsers, getRegionStats, getSourceStats, getSignupPlaceStats, type SignupPlaceCount, getStaff, getUserActivityRanking, reviewFontEdit, revertFontEdit, setUserRole, type CampaignSummary, type ClientPlatformSummary, type InteractionSummary, type OnlineUser, type UserActivityRanking } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { Skeleton } from '../components/Skeleton'
@@ -63,6 +63,7 @@ export function AdminPage() {
   const [interactions, setInteractions] = useState<InteractionSummary[] | null>(null)
   const [analyticsPeriod, setAnalyticsPeriod] = useState<30 | 180 | 'all'>(30)
   const [campaigns, setCampaigns] = useState<CampaignSummary[] | null>(null)
+  const [clients, setClients] = useState<ClientPlatformSummary[] | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -98,6 +99,7 @@ export function AdminPage() {
     setInteractions(null)
     getInteractionStats(analyticsPeriod).then(setInteractions).catch(() => setInteractions([]))
     getCampaignStats(analyticsPeriod).then(setCampaigns).catch(() => setCampaigns([]))
+    getClientStats(analyticsPeriod).then(setClients).catch(() => setClients([]))
   }, [user, analyticsPeriod])
 
   async function changeRole(id: string, role: UserRole) {
@@ -222,6 +224,26 @@ export function AdminPage() {
                   primary={c.source}
                   secondary={`${c.visits}${hoy(c.visitsToday)} ${t('campaigns.visits')} · ${c.signups}${hoy(c.signupsToday)} ${t('campaigns.signups')}${
                     c.visits > 0 ? ` · ${Math.round(c.signups / c.visits * 100)}%` : ''}`}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
+
+      {/* Who uses each client, signed in: what the native apps have to prove (FA-09) is
+          people who come back and contribute from them, not installs. docs/clients.md. */}
+      {isAdminRole(user) && clients && (
+        <Box component="section" sx={{ mt: 3 }}>
+          <Typography variant="h6" gutterBottom>📱 {t('clients.title')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('clients.hint')}</Typography>
+          {clients.length === 0 && <Typography color="text.secondary">{t('clients.empty')}</Typography>}
+          <List dense>
+            {clients.map((c) => (
+              <ListItem key={c.platform} disableGutters>
+                <ListItemText
+                  primary={t(`clients.platform.${c.platform}`)}
+                  secondary={`${c.people}${hoy(c.today)} ${t('clients.people')} · ${c.contributors} ${t('clients.contributors')} · ${c.returning} ${t('clients.returning')}`}
                 />
               </ListItem>
             ))}

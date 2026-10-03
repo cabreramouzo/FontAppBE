@@ -48,7 +48,8 @@ The native apps have to prove that people come back and contribute from them (FA
 `contributors`, `returning` (active on at least two different days in the period: the
 "second outing") and `today`.
 
-Not built yet: showing it in the web admin panel next to the campaign table.
+In the web admin panel (`AdminPage`, admins only) as "Use per platform", under the campaign
+table and with the same period selector ("all" shows 180 days, what the server keeps).
 
 ## Push per platform
 

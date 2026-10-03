@@ -220,6 +220,15 @@ export function trackPlatformOnce() {
   void Promise.all([trackInteraction(platform), trackInteraction(standalone ? 'platform_mode_pwa' : 'platform_mode_browser')])
 }
 
+/** Per client platform (web, ios, android): signed-in people, those who contributed,
+ *  those who came back on another day, and today. Server keeps 180 days. */
+export interface ClientPlatformSummary {
+  platform: 'web' | 'ios' | 'android' | string
+  people: number; contributors: number; returning: number; today: number
+}
+export const getClientStats = (days: 30 | 180 | 'all' = 30) =>
+  apiFetch<ClientPlatformSummary[]>(`/admin/analytics/clients?days=${days === 'all' ? 180 : days}`)
+
 export const getCampaignStats = (days: 30 | 180 | 'all' = 30) =>
   apiFetch<CampaignSummary[]>(`/admin/analytics/campaigns${days === 'all' ? '' : `?days=${days}`}`)
 
